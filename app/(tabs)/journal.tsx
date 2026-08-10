@@ -4,12 +4,12 @@ import { Bell, BookOpen, Flame } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QueryError } from '@/components/ui/query-error';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { colors, streakColor } from '@/constants/theme';
 import { DayCard } from '@/features/journal/components/day-card';
@@ -20,7 +20,6 @@ import { toDateKey } from '@/lib/date';
 
 export default function JournalScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const todayKey = toDateKey(new Date());
@@ -34,9 +33,10 @@ export default function JournalScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <View style={{ paddingTop: insets.top + 8 }} className="gap-5 px-5 pb-2">
-        <View className="flex-row items-center justify-between">
-          <Text variant="heading">{t('tabs.journal')}</Text>
+      <ScreenHeader
+        title={t('tabs.journal')}
+        showBack={false}
+        right={
           <View className="flex-row items-center gap-3">
             {streak > 0 && (
               <View className="flex-row items-center gap-1">
@@ -55,8 +55,10 @@ export default function JournalScreen() {
               <Bell size={19} color={colors[scheme].foreground} />
             </Pressable>
           </View>
-        </View>
+        }
+      />
 
+      <View className="gap-5 px-5 pb-2 pt-3">
         <Button
           label={todayEntry ? t('journal.continueEntry') : t('journal.writeEntry')}
           variant="accent"

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import {
   getBudgetSettings,
@@ -49,6 +50,7 @@ export function useBudgetSettings() {
  * the single cached transaction list.
  */
 export function useBudgetOverview(period: Period, anchorTime: number) {
+  const scheme = useColorScheme() ?? 'light';
   const { data: transactions = [], isLoading, isError, refetch } = useTransactions();
   const { data: settings } = useBudgetSettings();
 
@@ -60,12 +62,12 @@ export function useBudgetOverview(period: Period, anchorTime: number) {
     return {
       periodTransactions: inPeriod,
       summary: summarize(inPeriod),
-      categories: expenseByCategory(inPeriod),
+      categories: expenseByCategory(inPeriod, scheme),
       accounts: accountBalances(transactions),
       trend: monthlyTrend(transactions, 6),
       hasAny: transactions.length > 0,
     };
-  }, [transactions, period, anchorTime]);
+  }, [transactions, period, anchorTime, scheme]);
 
   return {
     isLoading,

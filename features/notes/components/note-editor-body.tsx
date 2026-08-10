@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { MarkdownToolbar } from '@/features/notes/components/markdown-toolbar';
@@ -49,7 +50,7 @@ export function NoteEditorBody({ value, onChangeText, placeholder }: Props) {
       </View>
 
       {mode === 'edit' ? (
-        <View className="overflow-hidden rounded-2xl border border-border bg-card">
+        <View className={cardClass({ padding: 'none' }, 'overflow-hidden')}>
           <TextInput
             value={value}
             onChangeText={onChangeText}
@@ -71,7 +72,7 @@ export function NoteEditorBody({ value, onChangeText, placeholder }: Props) {
           />
         </View>
       ) : (
-        <View className="rounded-2xl border border-border bg-card p-4">
+        <View className={cardClass({ padding: 'md' })}>
           <NoteBodyView
             body={value}
             onToggleChecklist={(index) => onChangeText(toggleChecklistAt(value, index))}

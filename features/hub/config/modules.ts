@@ -14,7 +14,7 @@ import {
 } from 'lucide-react-native';
 import { format } from 'date-fns';
 
-import { moduleTints } from '@/constants/design-tokens';
+import { moduleTints, type TintPair } from '@/constants/design-tokens';
 import type { SearchResultKind } from '@/features/search/services/global-search';
 
 /**
@@ -32,8 +32,15 @@ export type HubModule = {
   titleKey: string;
   subtitleKey: string;
   icon: LucideIcon;
-  /** Per-module identity color — readable on both light and dark cards. */
-  tint: string;
+  /**
+   * Per-module identity color, designed for BOTH themes.
+   *
+   * Resolve it at the point of render with `resolveTint(module.tint, scheme)`.
+   * Never reach for `.light` directly: every entry here used to do exactly
+   * that, so the whole Hub grid kept its light-mode tints on a near-black
+   * ground and no amount of dark-mode work in the token file reached it.
+   */
+  tint: TintPair;
   status: ModuleStatus;
   /** Resolved lazily so date-dependent destinations (timeline) stay correct. */
   getRoute: () => string;
@@ -78,7 +85,7 @@ export const HUB_SECTIONS: HubSection[] = [
         titleKey: 'hubModule.goalsTitle',
         subtitleKey: 'hubModule.goalsSubtitle',
         icon: Target,
-        tint: moduleTints.goals.light,
+        tint: moduleTints.goals,
         status: 'ready',
         getRoute: () => '/goals',
         tables: ['goals', 'goal_milestones', 'goal_progress_logs'],
@@ -90,7 +97,7 @@ export const HUB_SECTIONS: HubSection[] = [
         titleKey: 'hubModule.studyTitle',
         subtitleKey: 'hubModule.studySubtitle',
         icon: GraduationCap,
-        tint: moduleTints.study.light,
+        tint: moduleTints.study,
         status: 'ready',
         getRoute: () => '/study',
         tables: ['study_subjects', 'study_sessions', 'study_settings'],
@@ -102,7 +109,7 @@ export const HUB_SECTIONS: HubSection[] = [
         titleKey: 'hubModule.notesTitle',
         subtitleKey: 'hubModule.notesSubtitle',
         icon: StickyNote,
-        tint: '#eab308',
+        tint: moduleTints.notes,
         status: 'ready',
         getRoute: () => '/notes',
         tables: ['note_categories', 'notes', 'note_tags', 'note_tag_links', 'note_attachments'],
@@ -114,7 +121,7 @@ export const HUB_SECTIONS: HubSection[] = [
         titleKey: 'hubModule.timelineTitle',
         subtitleKey: 'hubModule.timelineSubtitle',
         icon: Clock3,
-        tint: moduleTints.calendar.light,
+        tint: moduleTints.calendar,
         status: 'ready',
         getRoute: () => `/timeline/${format(new Date(), 'yyyy-MM-dd')}`,
         tables: ['calendar_events'],
@@ -132,7 +139,7 @@ export const HUB_SECTIONS: HubSection[] = [
         titleKey: 'hubModule.sleepTitle',
         subtitleKey: 'hubModule.sleepSubtitle',
         icon: Moon,
-        tint: moduleTints.sleep.light,
+        tint: moduleTints.sleep,
         status: 'ready',
         getRoute: () => '/sleep',
         tables: ['sleep_sessions', 'sleep_settings'],
@@ -144,7 +151,7 @@ export const HUB_SECTIONS: HubSection[] = [
         titleKey: 'hubModule.waterTitle',
         subtitleKey: 'hubModule.waterSubtitle',
         icon: GlassWater,
-        tint: moduleTints.water.light,
+        tint: moduleTints.water,
         status: 'ready',
         getRoute: () => '/water-intake/history',
         tables: ['water_intake_logs'],
@@ -162,7 +169,7 @@ export const HUB_SECTIONS: HubSection[] = [
         titleKey: 'hubModule.budgetTitle',
         subtitleKey: 'hubModule.budgetSubtitle',
         icon: Wallet,
-        tint: moduleTints.budget.light,
+        tint: moduleTints.budget,
         status: 'ready',
         getRoute: () => '/budget',
         tables: ['budget_transactions', 'savings_goals', 'budget_settings', 'budget_debts'],
@@ -176,7 +183,7 @@ export const HUB_SECTIONS: HubSection[] = [
         icon: Users,
         // Shares Budget's teal deliberately: this is money, and the hue wheel
         // has no room left for a 12th identity that clears the others by 30°.
-        tint: moduleTints.budget.light,
+        tint: moduleTints.budget,
         status: 'ready',
         getRoute: () => '/split',
         tables: [],
@@ -194,7 +201,7 @@ export const HUB_SECTIONS: HubSection[] = [
         titleKey: 'hubModule.galleryTitle',
         subtitleKey: 'hubModule.gallerySubtitle',
         icon: Images,
-        tint: moduleTints.gallery.light,
+        tint: moduleTints.gallery,
         status: 'ready',
         getRoute: () => '/gallery',
         tables: ['gallery_albums', 'gallery_photos'],
@@ -206,7 +213,7 @@ export const HUB_SECTIONS: HubSection[] = [
         titleKey: 'hubModule.musicTitle',
         subtitleKey: 'hubModule.musicSubtitle',
         icon: Music2,
-        tint: moduleTints.music.light,
+        tint: moduleTints.music,
         status: 'ready',
         getRoute: () => '/music',
         tables: ['songs', 'playlists', 'playlist_songs'],
@@ -224,7 +231,7 @@ export const HUB_SECTIONS: HubSection[] = [
         titleKey: 'hubModule.settingsTitle',
         subtitleKey: 'hubModule.settingsSubtitle',
         icon: Settings,
-        tint: '#737373',
+        tint: moduleTints.settings,
         status: 'ready',
         getRoute: () => '/settings',
         tables: [],

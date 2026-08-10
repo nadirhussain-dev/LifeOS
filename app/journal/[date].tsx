@@ -9,11 +9,12 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { cardClass } from '@/components/ui/card';
 import { AttachmentStrip } from '@/components/ui/attachment-strip';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { VoiceNoteRecorder } from '@/components/ui/voice-note-recorder';
-import { moduleTint } from '@/constants/design-tokens';
+import { moduleTint, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { MoodCheckin } from '@/features/journal/components/mood-checkin';
 import { ReflectionPromptList } from '@/features/journal/components/reflection-prompt-list';
@@ -63,7 +64,9 @@ export default function JournalEntryScreen() {
 
   if (!entry) return null;
 
-  const wash = entry.mood ? `${MOOD_TINT[entry.mood]}33` : `${colors[scheme].accent}1a`;
+  const wash = entry.mood
+    ? `${resolveTint(MOOD_TINT[entry.mood], scheme)}33`
+    : `${colors[scheme].accent}1a`;
 
   const toggleReason = (reason: string) => {
     const current = new Set(entry.moodReasons ?? []);
@@ -181,7 +184,7 @@ export default function JournalEntryScreen() {
           placeholder={t('journal.howWasToday')}
           placeholderTextColor={colors[scheme].mutedForeground}
           style={{ fontFamily: 'Literata_400Regular', fontSize: 17, lineHeight: 25 }}
-          className="min-h-32 rounded-2xl border border-border bg-card p-4 text-foreground"
+          className={cardClass({ padding: 'md' }, 'min-h-32 text-foreground')}
           textAlignVertical="top"
         />
 

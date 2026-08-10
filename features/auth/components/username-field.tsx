@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TextInput, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { colors as semanticColors } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
@@ -91,7 +92,7 @@ export function UsernameField({ value, onChangeText, onStatusChange }: Props) {
 
   return (
     <View className="gap-1.5">
-      <View className="flex-row items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3">
+      <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
         <AtSign size={16} color={colors[scheme].mutedForeground} />
         <TextInput
           value={value}

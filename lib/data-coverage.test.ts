@@ -50,8 +50,14 @@ function schemaTables(): { variable: string; table: string }[] {
  * space into a file that lands in Files, Drive, or a chat — undoing the whole
  * feature in one tap. The private space is deliberately not backed up; the
  * setup screen says so before a PIN is chosen.
+ *
+ * `sync_conflicts` holds copies of rows the user already has — it is this
+ * device's note of which edits a newer version overwrote, and every snapshot in
+ * it is a duplicate of content exported from its own table. Including it would
+ * put stale copies of notes and tasks in the backup alongside the real ones,
+ * which is worse than useless in a file somebody may restore from.
  */
-const EXPORT_EXEMPT = new Set(['notification_log', 'private_entries']);
+const EXPORT_EXEMPT = new Set(['notification_log', 'private_entries', 'sync_conflicts']);
 
 describe('schema coverage', () => {
   it('finds the schema (guards against the regex silently matching nothing)', () => {

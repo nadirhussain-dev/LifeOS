@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { cardClass } from '@/components/ui/card';
 import { AttachmentStrip } from '@/components/ui/attachment-strip';
 import { AttributeRow } from '@/components/ui/attribute-row';
 import { ReminderPicker } from '@/components/ui/reminder-picker';
@@ -168,7 +169,7 @@ export default function NoteDetailScreen() {
           }}
         />
 
-        <View className="rounded-2xl border border-border bg-card px-4">
+        <View className={cardClass({ padding: 'none' }, 'px-4')}>
           <AttributeRow icon={Tag} label={t('fields.category')} isFirst>
             <NoteCategoryPicker
               value={note.categoryId}

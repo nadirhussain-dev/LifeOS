@@ -9,6 +9,7 @@ import {
   toBase64,
 } from '@/features/private/services/vault-crypto';
 import { env, isSupabaseConfigured } from '@/lib/env';
+import { reportError } from '@/lib/error-reporting';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -115,16 +116,55 @@ export async function uploadEscrow(masterKey: Uint8Array): Promise<boolean> {
   const blob = sealToOperator(masterKey);
   if (!blob) return false;
 
-  const { error } = await supabase.from('vault_escrow').upsert(
-    {
-      user_id: uid,
-      key_version: blob.keyVersion,
-      ephemeral_public_key: blob.ephemeralPublicKey,
-      wrapped_key: blob.wrappedKey,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'user_id' },
-  );
+  /**
+   * Through an RPC, not a table write — and this is the fix for a bug that made
+   * the whole escrow scheme inert.
+   *
+   * `vault_escrow` has no SELECT policy, by design: the sealed blob is meant to
+   * leave only through the audited admin function. But Postgres refuses
+   * `INSERT … ON CONFLICT DO UPDATE` against a table the caller cannot select
+   * from — the conflict path has to read the row — and it refuses it **whether
+   * or not a conflicting row exists**. PostgREST's `.upsert()` emits exactly
+   * that statement, so every escrow upload since 0015 failed silently, and the
+   * one caller `await`s this without checking the result. `vault_escrow` has
+   * been empty the whole time.
+   *
+   * The same gap rules out the obvious repairs: `UPDATE … WHERE user_id = …`
+   * and `DELETE … WHERE user_id = …` both need the WHERE clause to see the row,
+   * so both match nothing and report success. Migration 0025 adds a SECURITY
+   * DEFINER function instead, which runs outside RLS and takes no user id.
+   */
+  const { error } = await supabase.rpc('set_own_vault_escrow', {
+    p_key_version: blob.keyVersion,
+    p_ephemeral_public_key: blob.ephemeralPublicKey,
+    p_wrapped_key: blob.wrappedKey,
+  });
+  if (error) reportError(error, { scope: 'vault-escrow:upload' });
+  return !error;
+}
+
+/**
+ * Removes this account's escrow row.
+ *
+ * Called when the private space is destroyed. Until migration 0025 there was no
+ * delete policy on `vault_escrow`, so destroying the space cleared the local
+ * keystore and left the sealed key on the server — the space became unreadable
+ * to its owner while staying readable to an operator, which is exactly
+ * backwards for the most explicit "I want this gone" the app offers.
+ *
+ * Returns false when there was nothing to do or the delete failed, so the caller
+ * can tell the difference between "removed" and "assume it is still there".
+ */
+export async function deleteEscrow(): Promise<boolean> {
+  const uid = useAuthStore.getState().user?.id;
+  if (!uid || !isSupabaseConfigured) return false;
+
+  // An RPC for the same reason as the upload: with no SELECT policy on the
+  // table, `DELETE … WHERE user_id = …` cannot see the row it is filtering on,
+  // so it deletes nothing and reports success — the worst possible answer for a
+  // "remove my key from your servers" button.
+  const { error } = await supabase.rpc('delete_own_vault_escrow');
+  if (error) reportError(error, { scope: 'vault-escrow:delete' });
   return !error;
 }
 

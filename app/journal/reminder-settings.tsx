@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, Switch, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { cardClass } from '@/components/ui/card';
 import { AttributeRow } from '@/components/ui/attribute-row';
 import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -86,7 +87,7 @@ export default function JournalReminderSettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <CategoryOffNotice category="journal" />
-        <View className="rounded-2xl border border-border bg-card px-4 shadow-e1">
+        <View className={cardClass({ padding: 'none', elevation: 'e1' }, 'px-4')}>
           <AttributeRow icon={Bell} label={t('reminders.dailyReminder')} isFirst>
             <View className="flex-row items-center justify-between">
               <Text variant="muted">{t('journal.nudgeToWrite')}</Text>

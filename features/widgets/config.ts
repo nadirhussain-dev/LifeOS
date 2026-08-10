@@ -13,3 +13,19 @@ export const WIDGET_LINKS = {
   habits: 'lifeos:///habits',
   water: 'lifeos:///water-intake/history',
 } as const;
+
+/** The habit check-off widget. Its own widget rather than more rows on
+ *  "Today", because a list needs height and a glance needs none. */
+export const HABITS_WIDGET_NAME = 'LifeOSHabits';
+
+/**
+ * Custom click actions the task handler answers.
+ *
+ * These are not deep links — they do work and redraw without opening the app,
+ * which is the entire point of a check-off widget. Anything that has to open a
+ * screen stays on `OPEN_URI`.
+ */
+export const WIDGET_ACTIONS = {
+  addWater: 'ADD_WATER',
+  toggleHabit: 'TOGGLE_HABIT',
+} as const;

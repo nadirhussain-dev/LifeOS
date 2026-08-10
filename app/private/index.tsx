@@ -5,7 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
+import { resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { PRIVATE_MODULES } from '@/features/private/config/private-modules';
 import { privateRecordCounts } from '@/features/private/services/private-repository';
@@ -40,7 +42,13 @@ export default function PrivateHomeScreen() {
 
   if (!key) return null;
 
-  const modules = PRIVATE_MODULES.filter((m) => enabled.includes(m.id));
+  // A `requiresRealSpace` module (shared albums) is visible to the server as
+  // ordinary membership metadata, independent of which local key unlocked
+  // this device — the decoy space must not surface it even though `key` is
+  // non-null here too. See private-modules.ts's header for the full reasoning.
+  const modules = PRIVATE_MODULES.filter(
+    (m) => enabled.includes(m.id) && (!m.requiresRealSpace || space === 'real'),
+  );
 
   return (
     <View className="flex-1 bg-background">
@@ -89,18 +97,22 @@ export default function PrivateHomeScreen() {
           {modules.map((module) => {
             const Icon = module.icon;
             const count = counts[module.id] ?? 0;
+            const tint = resolveTint(module.tint, scheme);
             return (
               <Pressable
                 key={module.id}
                 accessibilityRole="button"
                 onPress={() => router.push(module.route as never)}
-                className="flex-row items-center gap-3.5 rounded-2xl border border-border bg-card px-4 py-4"
+                className={cardClass(
+                  { padding: 'none' },
+                  'flex-row items-center gap-3.5 px-4 py-4',
+                )}
               >
                 <View
                   className="h-12 w-12 items-center justify-center rounded-2xl"
-                  style={{ backgroundColor: alpha(module.tint, 0.16) }}
+                  style={{ backgroundColor: alpha(tint, 0.16) }}
                 >
-                  <Icon size={22} color={module.tint} strokeWidth={1.9} />
+                  <Icon size={22} color={tint} strokeWidth={1.9} />
                 </View>
                 <View className="flex-1">
                   <Text className="font-sora-medium text-foreground">{t(module.titleKey)}</Text>
@@ -116,7 +128,7 @@ export default function PrivateHomeScreen() {
         <Pressable
           accessibilityRole="button"
           onPress={() => router.push('/private/settings')}
-          className="flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5"
+          className={cardClass({ padding: 'rowLg' }, 'flex-row items-center gap-3')}
         >
           <Settings2 size={19} color={theme.mutedForeground} />
           <Text className="flex-1 font-sora-medium text-foreground">

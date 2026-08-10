@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
+import { resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { MOOD_TINT } from '@/features/journal/constants';
 import type { JournalEntry, MoodOption } from '@/features/journal/types/journal.types';
@@ -43,7 +45,7 @@ export function MoodMonthStrip({ monthAnchor, entries, onSelectDate }: Props) {
   const leadingBlanks = getDay(start);
 
   return (
-    <View className="gap-2 rounded-2xl border border-border bg-card p-4 shadow-e1">
+    <View className={cardClass({ padding: 'md', elevation: 'e1' }, 'gap-2')}>
       <Text variant="micro" className="font-sora-semibold">
         {format(monthAnchor, 'MMMM')}
       </Text>
@@ -67,7 +69,7 @@ export function MoodMonthStrip({ monthAnchor, entries, onSelectDate }: Props) {
         {days.map((day) => {
           const dateKey = toDateKey(day);
           const mood = moodByDate.get(dateKey);
-          const tint = mood ? MOOD_TINT[mood] : undefined;
+          const tint = mood ? resolveTint(MOOD_TINT[mood], scheme) : undefined;
           const today = isToday(day);
           const isFuture = dateKey > todayKey;
 

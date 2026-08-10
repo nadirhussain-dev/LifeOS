@@ -57,6 +57,55 @@ const PRELUDE = `
   -- "permission denied for schema auth" for every authenticated request.
   grant usage on schema auth to anon, authenticated, service_role;
   grant execute on function auth.uid() to anon, authenticated, service_role;
+
+  -- -------------------------------------------------------------------------
+  -- Storage, stubbed to the shape 0026 uses.
+  --
+  -- Supabase's storage schema is part of the platform rather than of any
+  -- migration, so without this the media bucket, its four isolation policies
+  -- and its quota trigger could not be applied here — which would mean the one
+  -- part of the schema that decides whether one account can read another's
+  -- photos was the one part with no test.
+  --
+  -- The metadata->>'size' expression is where Storage records object size, and
+  -- the quota trigger reads exactly that, so the stub keeps the column as jsonb
+  -- rather than inventing a tidier shape the real thing does not have.
+  --
+  -- NOTE: this prelude is a JS template literal. No backticks in these comments
+  -- — one terminates the string, and the failure surfaces as a SyntaxError
+  -- pointing at a SQL identifier, which is a confusing half-hour.
+  -- -------------------------------------------------------------------------
+  create schema if not exists storage;
+
+  create table if not exists storage.buckets (
+    id text primary key,
+    name text not null,
+    public boolean not null default false,
+    file_size_limit bigint,
+    allowed_mime_types text[]
+  );
+
+  create table if not exists storage.objects (
+    id uuid primary key default gen_random_uuid(),
+    bucket_id text not null references storage.buckets (id),
+    name text not null,
+    owner uuid,
+    metadata jsonb default '{}'::jsonb,
+    created_at timestamptz not null default now()
+  );
+
+  alter table storage.objects enable row level security;
+
+  -- The real signature: splits a path into its segments, 1-indexed.
+  create or replace function storage.foldername(name text) returns text[]
+  language sql immutable as $fn$
+    select string_to_array(name, '/');
+  $fn$;
+
+  grant usage on schema storage to anon, authenticated, service_role;
+  grant execute on function storage.foldername(text) to anon, authenticated, service_role;
+  grant select, insert, update, delete on storage.objects to authenticated, service_role;
+  grant select on storage.buckets to anon, authenticated, service_role;
 `;
 
 export async function bootDatabase() {

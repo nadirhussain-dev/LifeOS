@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { ChevronForward } from '@/components/ui/directional-icon';
 import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -66,7 +67,7 @@ export default function BudgetSettingsScreen() {
           <Pressable
             accessibilityRole="button"
             onPress={() => router.push('/budget/currency')}
-            className="flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5"
+            className={cardClass({ padding: 'rowLg' }, 'flex-row items-center gap-3')}
           >
             <View className="h-10 w-10 items-center justify-center rounded-xl bg-muted">
               <Text className="font-sora-bold text-foreground">{currencySymbol(code)}</Text>
@@ -83,7 +84,7 @@ export default function BudgetSettingsScreen() {
           <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
             {t('budget.monthlyBudgetOptional')}
           </Text>
-          <View className="flex-row items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3">
+          <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
             <Text className="font-sora-bold text-lg text-foreground">{currencySymbol(code)}</Text>
             <TextInput
               value={monthlyBudget}

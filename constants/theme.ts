@@ -18,7 +18,7 @@
  * a second system.
  */
 
-import { colors as tokens } from '@/constants/design-tokens';
+import { colors as tokens, contentPalette } from '@/constants/design-tokens';
 
 export const colors = {
   light: {
@@ -34,6 +34,14 @@ export const colors = {
     destructive: tokens.light.error,
     success: tokens.light.success,
     successForeground: tokens.light.successForeground,
+    // `warning` and `info` were missing from this bridge entirely, so the two
+    // semantics with no key here were the two that screens kept re-typing as
+    // raw hex (#f59e0b, #0ea5e9). A token nobody can reach is a token nobody
+    // uses.
+    warning: tokens.light.warning,
+    warningForeground: tokens.light.warningForeground,
+    info: tokens.light.info,
+    infoForeground: tokens.light.infoForeground,
     accent: tokens.light.accent,
     accentForeground: tokens.light.accentForeground,
   },
@@ -49,6 +57,10 @@ export const colors = {
     destructive: tokens.dark.error,
     success: tokens.dark.success,
     successForeground: tokens.dark.successForeground,
+    warning: tokens.dark.warning,
+    warningForeground: tokens.dark.warningForeground,
+    info: tokens.dark.info,
+    infoForeground: tokens.dark.infoForeground,
     accent: tokens.dark.accent,
     accentForeground: tokens.dark.accentForeground,
   },
@@ -66,14 +78,10 @@ export type ThemeName = keyof typeof colors;
  * screen rendering a category name in its color must pass it through
  * `readableTint()` from design-tokens first.
  */
-export const categoryColorPalette = [
-  '#f97316', // orange
-  '#eab308', // yellow
-  '#22c55e', // green
-  '#0ea5e9', // sky
-  '#8b5cf6', // violet
-  '#ec4899', // pink
-] as const;
+export const categoryColorPalette = contentPalette.map((pair) => pair.light);
+
+/** The same six, per theme — prefer this in new code. */
+export const categoryColorPairs = contentPalette;
 
 /**
  * Task priority as a traffic-light ladder (calm blue → amber caution → red

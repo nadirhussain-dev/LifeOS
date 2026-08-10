@@ -34,7 +34,9 @@ type Action = {
     | { pathname: '/timeline/event/new'; params: { date: string } };
 };
 
-const ACTIONS: Action[] = [
+/** Shared with the dashboard's radial menu so the tap path and the long-press
+ *  path can never offer different actions. */
+export const QUICK_ACTIONS: Action[] = [
   { labelKey: 'dashboard.newTask', icon: CheckSquare, getHref: () => '/task/new' },
   { labelKey: 'dashboard.newNote', icon: StickyNote, getHref: () => '/note/new' },
   {
@@ -83,7 +85,7 @@ export const QuickActionsSheet = forwardRef<BottomSheetModal>(
           <Text variant="subheading" className="px-2 pb-2">
             {t('dashboard.quickActions')}
           </Text>
-          {ACTIONS.map((action) => (
+          {QUICK_ACTIONS.map((action) => (
             <Pressable
               accessibilityRole="button"
               key={action.labelKey}

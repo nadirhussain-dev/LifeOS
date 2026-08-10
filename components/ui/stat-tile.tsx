@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
+import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { alpha } from '@/lib/color';
 
@@ -25,7 +26,7 @@ export function StatTile({ icon: Icon, value, label, tint, index = 0 }: Props) {
   return (
     <Animated.View
       entering={reducedMotion ? undefined : FadeInDown.delay(index * 60).duration(320)}
-      className="flex-1 items-center gap-2 rounded-3xl border border-border bg-card py-4"
+      className={cardClass({ padding: 'none' }, 'flex-1 items-center gap-2 py-4')}
     >
       <View
         className="h-9 w-9 items-center justify-center rounded-full"

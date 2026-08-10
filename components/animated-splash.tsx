@@ -11,14 +11,31 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { LifeOSMark } from '@/components/ui/lifeos-mark';
+import { colors } from '@/constants/design-tokens';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-// Per-theme brand grounds — these match the native splash backgroundColor
-// (app.json expo-splash-screen light/dark), so the hand-off from the OS splash
-// to this animated one is seamless in both light and dark.
+// Per-theme brand grounds. Derived rather than hand-typed: all eight values
+// were an exact copy of the corresponding token, so the table looked correct
+// while being one retune away from a splash that doesn't match the app it
+// hands off to.
+//
+// These also have to match the native splash backgroundColor in app.json
+// (expo-splash-screen light/dark) for the OS-splash hand-off to be seamless —
+// that one is a JSON config and can't import from here, so if `background`
+// ever changes, app.json needs the same edit by hand.
 const THEME = {
-  light: { bg: '#f8fbf9', mark: '#188b61', glyph: '#ffffff', word: '#161c19' },
-  dark: { bg: '#0e1210', mark: '#47d19f', glyph: '#0f241c', word: '#eef3f0' },
+  light: {
+    bg: colors.light.background,
+    mark: colors.light.accent,
+    glyph: colors.light.accentForeground,
+    word: colors.light.foreground,
+  },
+  dark: {
+    bg: colors.dark.background,
+    mark: colors.dark.accent,
+    glyph: colors.dark.accentForeground,
+    word: colors.dark.foreground,
+  },
 } as const;
 
 /**

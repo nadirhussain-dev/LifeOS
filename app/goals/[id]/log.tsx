@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { GradientButton } from '@/components/ui/gradient-button';
 import { SheetHeader } from '@/components/ui/sheet-header';
 import { Text } from '@/components/ui/text';
@@ -29,7 +30,7 @@ export default function LogProgressScreen() {
   const [note, setNote] = useState('');
 
   if (!goal) return null;
-  const meta = goalCategoryMeta(goal.category);
+  const meta = goalCategoryMeta(goal.category, scheme);
   const isCount = goal.progressMode === 'count';
 
   // Percent mode works on a 0–1 fraction; count mode adds to currentValue.
@@ -97,7 +98,7 @@ export default function LogProgressScreen() {
         </View>
 
         {isCount ? (
-          <View className="gap-4 rounded-2xl border border-border bg-card p-5 shadow-e1">
+          <View className={cardClass({ padding: 'lg', elevation: 'e1' }, 'gap-4')}>
             <View className="flex-row items-center justify-center gap-6">
               <Pressable
                 accessibilityRole="button"
@@ -143,7 +144,7 @@ export default function LogProgressScreen() {
             </View>
           </View>
         ) : (
-          <View className="gap-4 rounded-2xl border border-border bg-card p-5 shadow-e1">
+          <View className={cardClass({ padding: 'lg', elevation: 'e1' }, 'gap-4')}>
             <Text
               className="text-center font-sora-extrabold text-4xl"
               style={{ color: meta.tint, fontVariant: ['tabular-nums'] }}
@@ -194,7 +195,7 @@ export default function LogProgressScreen() {
             placeholder={t('goals.notePlaceholder')}
             placeholderTextColor={colors[scheme].mutedForeground}
             multiline
-            className="min-h-12 rounded-2xl border border-border bg-card px-4 py-3 text-foreground"
+            className={cardClass({ padding: 'row' }, 'min-h-12 text-foreground')}
           />
         </View>
 

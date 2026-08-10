@@ -2,6 +2,7 @@ import { ArrowDownLeft, ArrowUpRight, BellRing } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/design-tokens';
@@ -29,7 +30,7 @@ export function DebtCard({ debt, onPress }: Props) {
   return (
     <Pressable
       onPress={() => onPress(debt)}
-      className="gap-3 rounded-2xl border border-border bg-card p-4 shadow-e1"
+      className={cardClass({ padding: 'md', elevation: 'e1' }, 'gap-3')}
       accessibilityRole="button"
     >
       <View className="flex-row items-center gap-3">

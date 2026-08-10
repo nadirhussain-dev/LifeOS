@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { cardClass } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -136,7 +137,7 @@ export default function TaskDetailScreen() {
           }}
         />
 
-        <View className="rounded-2xl border border-border bg-card px-4 shadow-e1">
+        <View className={cardClass({ padding: 'none', elevation: 'e1' }, 'px-4')}>
           <AttributeRow icon={Flag} label={t('fields.priority')} isFirst>
             <PriorityPicker
               value={task.priority}
@@ -201,7 +202,10 @@ export default function TaskDetailScreen() {
             accessibilityLabel={t('tasks.taskNotes')}
             placeholder={t('tasks.addNotes')}
             placeholderTextColor={colors[scheme].mutedForeground}
-            className="min-h-24 rounded-2xl border border-border bg-card p-4 text-base text-foreground shadow-e1"
+            className={cardClass(
+              { padding: 'md', elevation: 'e1' },
+              'min-h-24 text-base text-foreground',
+            )}
             textAlignVertical="top"
           />
         </View>

@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { BarChart, type BarDatum } from '@/components/ui/bar-chart';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Segmented } from '@/components/ui/segmented';
 import { Text } from '@/components/ui/text';
-import { moduleTint } from '@/constants/design-tokens';
+import { ledgerTints, moduleTint, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { ExpenseDonut } from '@/features/budget/components/expense-donut';
 import { periodLabel, type Period } from '@/features/budget/services/budget-stats';
@@ -16,6 +17,11 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function BudgetReportsScreen() {
   const scheme = useColorScheme() ?? 'light';
+  const ledger = {
+    income: resolveTint(ledgerTints.income, scheme),
+    expense: resolveTint(ledgerTints.expense, scheme),
+    savings: resolveTint(ledgerTints.savings, scheme),
+  };
   const { t, i18n } = useTranslation();
   const [period, setPeriod] = useState<Period>('month');
   const [anchorTime] = useState(() => Date.now());
@@ -29,21 +35,21 @@ export default function BudgetReportsScreen() {
   const { currency, summary, categories, trend } = useBudgetOverview(period, anchorTime);
 
   const incomeVsExpense: BarDatum[] = [
-    { label: t('budget.income'), value: summary.incomeCents / 100, color: '#22c55e' },
-    { label: t('budget.expenses'), value: summary.expenseCents / 100, color: '#ef4444' },
-    { label: t('budget.savings'), value: summary.savingsCents / 100, color: '#6366f1' },
+    { label: t('budget.income'), value: summary.incomeCents / 100, color: ledger.income },
+    { label: t('budget.expenses'), value: summary.expenseCents / 100, color: ledger.expense },
+    { label: t('budget.savings'), value: summary.savingsCents / 100, color: ledger.savings },
   ];
 
   const expenseTrend: BarDatum[] = trend.map((point) => ({
     label: point.label,
     value: point.expenseCents / 100,
-    color: '#ef4444',
+    color: ledger.expense,
   }));
 
   const summaryRows = [
-    { label: t('budget.income'), value: summary.incomeCents, color: '#22c55e' },
-    { label: t('budget.expenses'), value: summary.expenseCents, color: '#ef4444' },
-    { label: t('budget.savings'), value: summary.savingsCents, color: '#6366f1' },
+    { label: t('budget.income'), value: summary.incomeCents, color: ledger.income },
+    { label: t('budget.expenses'), value: summary.expenseCents, color: ledger.expense },
+    { label: t('budget.savings'), value: summary.savingsCents, color: ledger.savings },
     {
       label: t('budget.netBalance'),
       value: summary.balanceCents,
@@ -65,7 +71,7 @@ export default function BudgetReportsScreen() {
           {periodLabel(period, new Date(anchorTime), t, i18n.language)}
         </Text>
 
-        <View className="gap-2.5 rounded-2xl border border-border bg-card p-4">
+        <View className={cardClass({ padding: 'md' }, 'gap-2.5')}>
           {summaryRows.map((row, index) => (
             <View
               key={row.label}
@@ -91,18 +97,18 @@ export default function BudgetReportsScreen() {
           ))}
         </View>
 
-        <View className="gap-3 rounded-2xl border border-border bg-card p-4">
+        <View className={cardClass({ padding: 'md' }, 'gap-3')}>
           <Text variant="subheading">{t('budget.incomeVsExpenses')}</Text>
           <BarChart data={incomeVsExpense} height={160} />
         </View>
 
-        <View className="gap-3 rounded-2xl border border-border bg-card p-4">
+        <View className={cardClass({ padding: 'md' }, 'gap-3')}>
           <Text variant="subheading">{t('budget.expensesLast6Months')}</Text>
-          <BarChart data={expenseTrend} color="#ef4444" height={160} />
+          <BarChart data={expenseTrend} color={ledger.expense} height={160} />
         </View>
 
         {categories.length > 0 && (
-          <View className="gap-3 rounded-2xl border border-border bg-card p-4">
+          <View className={cardClass({ padding: 'md' }, 'gap-3')}>
             <Text variant="subheading">{t('budget.byCategory')}</Text>
             <ExpenseDonut
               categories={categories}

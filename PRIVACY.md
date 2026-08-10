@@ -1,6 +1,6 @@
 # LifeOS — Privacy Policy
 
-_Last updated: 2026-08-06_
+_Last updated: 2026-08-10_
 
 LifeOS ("the app", "we") is a personal life-organization app. Your privacy is
 central to how it's built: **LifeOS is local-first — your data lives on your
@@ -105,7 +105,7 @@ the app on purpose:
 - **It is encrypted, and locked behind a separate PIN.** Everything in the
   private space — including which modules you use and the dates on your entries
   — is stored as encrypted data. Nobody with your phone but not your PIN can
-  read it. **LifeOS staff can** — see "What LifeOS staff can access" above.
+  read it. See "What LifeOS staff can access" below for whether we can.
 - **There is no PIN recovery.** If you forget it, you lose access to your
   private space and we cannot restore it for you. You are told this before you
   choose a PIN.
@@ -164,29 +164,31 @@ and devices you have, and your account standing.
 access the records for the modules you sync, in order to investigate abuse,
 respond to legal requests, and operate the service.
 
-**Your private space, including the Vault, Cycle, Recovery and Us modules.**
-When you create a private space on an account, a copy of its encryption key is
-stored on our servers, sealed so that only LifeOS staff can open it. This means
-**we can access the contents of your private space** — including photos and
-files in the Vault, cycle and symptom records, recovery logs, and diary entries.
-
-We do this to investigate abuse and to comply with law. We are telling you
-plainly because you should decide what to put in this app knowing it, not
-discover it later.
-
 **Controls on that access:**
 
 - Staff access requires being on an internal roster **and** connecting from a
   registered device or network. A stolen password alone is not enough.
-- Opening a private space requires a written reason, and **every access is
-  recorded in an audit log** — who, when, from where, and why.
-- Simply checking whether a private space exists is separate from opening it,
-  and logged separately.
+- Every access to a specific account's data is recorded in an audit log —
+  who, when, from where, and why.
+
+**Your private space, including the Vault, Cycle, Recovery and Us modules.**
+LifeOS is built with the _capability_ to support staff access here — a copy of
+its encryption key sealed so that only LifeOS staff could open it, for abuse
+investigation and legal compliance. **We are not switching this on.** No key is
+generated or uploaded, on this account or any other, so nobody but you can
+decrypt your private space — including us.
+
+If that ever changes, this section will say so in plain terms — which key,
+which modules, and why — before it takes effect, not after, and never silently
+in an app update. Were it ever switched on, opening a private space would still
+require a written reason of its own, separate from and in addition to the
+roster/device/audit controls above, and a check for whether a private space
+merely _exists_ would be logged separately from opening it. Those controls
+exist in the code today; there is simply nothing for them to gate here yet.
 
 **What we cannot access:**
 
-- Private spaces on **guest (signed-out) devices**. With no account, there is
-  nothing to attach a key copy to, and those stay readable only by you.
+- Your private space, on any account — see above.
 - Anything you have not synced. If a module's sync is off, those records stay
   on your device.
 - Your PIN. We cannot recover it or tell you what it is.

@@ -1,7 +1,9 @@
 import { getRawDb } from '@/database/client';
 import { trackModuleWrites } from '@/features/analytics/store/usage-store';
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { uploadPendingMedia } from '@/features/media-sync/services/media-uploader';
 import { currentStatus } from '@/features/moderation/services/account-standing';
+import { recordConflict } from '@/features/sync/services/conflict-repository';
 import {
   SYNC_DEVICE_LOCAL_COLUMNS,
   SYNC_MODULES,
@@ -139,7 +141,22 @@ function afterCursor(cursor: SyncCursor, keyColumn: string): { sql: string; para
  * time. Returns how many rows moved, which is also the app's measure of
  * "writes" per module — see the rollup in runSync().
  */
-async function pushTable(uid: string, table: SyncTable, cursors: CursorBatch): Promise<number> {
+async function pushTable(
+  uid: string,
+  table: SyncTable,
+  cursors: CursorBatch,
+  /**
+   * Filled with the key of every row this run uploaded.
+   *
+   * This is what makes conflict detection precise. Push runs immediately before
+   * pull for the same table, so a key in here is a row *this device edited since
+   * it last synced* — and if the pull then brings back something newer for that
+   * same key, the local edit is genuinely being thrown away. Without it, every
+   * ordinary remote update would look like a conflict, since "local is older
+   * than remote" is the normal case for a row somebody else changed.
+   */
+  pushedKeys: Set<string>,
+): Promise<number> {
   const raw = getRawDb();
   const keyColumn = table.key ?? 'id';
   let cursor = cursors.get(cursorKey('push', table.name)) ?? { at: 0, key: '' };
@@ -171,6 +188,8 @@ async function pushTable(uid: string, table: SyncTable, cursors: CursorBatch): P
       .upsert(payload, { onConflict: keyColumn === 'user_id' ? 'user_id' : 'id' });
     if (error) throw new Error(`push ${table.name}: ${error.message}`);
 
+    for (const row of rows) pushedKeys.add(String(row[keyColumn] ?? ''));
+
     const last = rows[rows.length - 1];
     cursor = { at: Number(last.updated_at ?? 0), key: String(last[keyColumn] ?? '') };
     cursors.set(cursorKey('push', table.name), cursor);
@@ -186,7 +205,13 @@ async function pushTable(uid: string, table: SyncTable, cursors: CursorBatch): P
  * Downloads server rows changed since the last pull for one table, applying
  * each only if it is newer than the local copy (last-write-wins).
  */
-async function pullTable(uid: string, table: SyncTable, cursors: CursorBatch): Promise<void> {
+async function pullTable(
+  uid: string,
+  table: SyncTable,
+  cursors: CursorBatch,
+  pushedKeys: Set<string>,
+  moduleKey: string,
+): Promise<void> {
   const raw = getRawDb();
   const keyColumn = table.key ?? 'id';
   const shape = tableShape(table.name);
@@ -213,7 +238,9 @@ async function pullTable(uid: string, table: SyncTable, cursors: CursorBatch): P
     // leave a child row referring to a parent that never arrived.
     raw.execSync('BEGIN');
     try {
-      for (const remote of rows) applyRemoteRow(table, remote, shape, keyColumn);
+      for (const remote of rows) {
+        applyRemoteRow(table, remote, shape, keyColumn, pushedKeys, moduleKey);
+      }
       raw.execSync('COMMIT');
     } catch (e) {
       raw.execSync('ROLLBACK');
@@ -238,7 +265,14 @@ async function pullTable(uid: string, table: SyncTable, cursors: CursorBatch): P
  * pulled after an edit on another phone would have kept its caption and lost
  * the file it points at.
  */
-function applyRemoteRow(table: SyncTable, remote: Row, shape: TableShape, keyColumn: string) {
+function applyRemoteRow(
+  table: SyncTable,
+  remote: Row,
+  shape: TableShape,
+  keyColumn: string,
+  pushedKeys: Set<string>,
+  moduleKey: string,
+) {
   const raw = getRawDb();
   const key = remote[keyColumn] as string;
   const lookup = keyColumn === 'user_id' ? LOCAL_USER_ID : key;
@@ -249,6 +283,33 @@ function applyRemoteRow(table: SyncTable, remote: Row, shape: TableShape, keyCol
   );
   // Last-write-wins: skip if the local copy is the same age or newer.
   if (local && Number(local.updated_at ?? 0) >= Number(remote.updated_at ?? 0)) return;
+
+  /**
+   * About to overwrite a row this device edited since its last sync.
+   *
+   * Last-write-wins still wins — this only records what it discarded, so the
+   * user can be told and can ask for it back. The full local row is read only
+   * here, on the rare path, rather than widening the cheap existence check
+   * above into a `SELECT *` on every pulled row.
+   *
+   * Inside the caller's transaction, so a page that rolls back cannot leave a
+   * conflict describing an overwrite that never happened.
+   */
+  if (local && pushedKeys.has(String(remote[keyColumn] ?? ''))) {
+    const snapshot = raw.getFirstSync<Row>(`SELECT * FROM ${table.name} WHERE ${keyColumn} = ?`, [
+      lookup,
+    ]);
+    if (snapshot) {
+      recordConflict({
+        tableName: table.name,
+        rowKey: String(lookup),
+        module: moduleKey,
+        localSnapshot: snapshot,
+        localUpdatedAt: Number(local.updated_at ?? 0),
+        remoteUpdatedAt: Number(remote.updated_at ?? 0),
+      });
+    }
+  }
 
   const row: Row = { ...remote, user_id: LOCAL_USER_ID };
   const writable = Object.keys(row).filter((c) => shape.columns.has(c) && !DEVICE_LOCAL.has(c));
@@ -336,7 +397,9 @@ export async function evacuateBeforeWipe(): Promise<{ pushed: number; unsaved: S
     }
     try {
       for (const table of mod.tables) {
-        pushed += await pushTable(uid, table, cursors);
+        // Discarded: an evacuation only pushes, and nothing pulls afterwards to
+        // overwrite anything, so there is no conflict to detect.
+        pushed += await pushTable(uid, table, cursors, new Set());
       }
     } catch {
       // Best effort by design. A module that fails to upload — the window has
@@ -422,8 +485,11 @@ async function runSync(force: boolean): Promise<void> {
       // right, and it counts real content rather than button presses.
       let pushed = 0;
       for (const table of mod.tables) {
-        pushed += await pushTable(uid, table, cursors);
-        await pullTable(uid, table, cursors);
+        // Per table, and discarded after: the set only means anything for the
+        // pull that immediately follows its own push.
+        const pushedKeys = new Set<string>();
+        pushed += await pushTable(uid, table, cursors, pushedKeys);
+        await pullTable(uid, table, cursors, pushedKeys, mod.key);
       }
       if (pushed > 0) trackModuleWrites(mod.key, pushed);
     }
@@ -431,6 +497,17 @@ async function runSync(force: boolean): Promise<void> {
     useSyncStore.getState().setStatus('idle');
     useSyncStore.getState().setLastSyncedAt(Date.now());
     useSyncStore.getState().setNextAttemptAt(null);
+
+    /**
+     * Bytes last, and outside the try that owns sync's status.
+     *
+     * Media is the least urgent thing here and the most likely to fail — a big
+     * file, a slow connection, a quota. Running it after the cursors are
+     * committed and the status is `idle` means an upload problem cannot make a
+     * successful row sync look failed, and cannot roll back cursors that
+     * legitimately advanced. It no-ops unless the user opted in.
+     */
+    void uploadPendingMedia().catch(() => undefined);
   } catch (e) {
     const failures = useSyncStore.getState().consecutiveFailures + 1;
     useSyncStore.getState().commitCursors(cursors);

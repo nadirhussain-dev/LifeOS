@@ -3,6 +3,7 @@ import { isToday } from 'date-fns';
 import { listDebts } from '@/features/budget/services/debts-repository';
 import { listHabitsWithToday } from '@/features/habits/services/habits-repository';
 import { getEntryByDate } from '@/features/journal/services/journal-repository';
+import { moduleMayBeNamed } from '@/features/notifications/services/notification-visibility';
 import { useNotificationsStore } from '@/features/notifications/store/notifications-store';
 import { listTasks } from '@/features/tasks/services/tasks-repository';
 import { getDailyTotal } from '@/features/water-intake/services/water-intake-repository';
@@ -28,6 +29,13 @@ export type DigestSummary = {
  * fixed text once scheduled, so this is recomputed and the digest rescheduled
  * on every app open (see {@link syncDigest}) — the numbers reflect the state
  * at last launch, which is the best a local-only reminder can do.
+ *
+ * Every line is gated on its own module. The digest is the one notification
+ * that names several modules in a single sentence, so it cannot be redacted the
+ * way an ordinary reminder is (see notification-visibility.ts) — "you have a
+ * reminder" would be the entire digest the moment one module went private.
+ * Dropping the line instead keeps the rest of the summary useful and leaks
+ * nothing: an omitted line is indistinguishable from having nothing due.
  */
 export function buildDigestSummary(): DigestSummary {
   let tasksDueToday = 0;
@@ -36,34 +44,39 @@ export function buildDigestSummary(): DigestSummary {
   let journalPending = false;
   let waterBehind = false;
 
-  try {
-    tasksDueToday = listTasks('active', 'due-date').filter(
-      (t) => t.dueDate != null && isToday(t.dueDate),
-    ).length;
-  } catch {
-    // A module's table not being ready yet shouldn't sink the whole digest.
-  }
-  try {
-    habitsRemaining = listHabitsWithToday().filter((h) => h.todayStatus === 'not_yet').length;
-  } catch {
-    /* ignore */
-  }
-  try {
-    moneyDue = listDebts().filter((d) => d.status === 'overdue' || d.status === 'due_soon').length;
-  } catch {
-    /* ignore */
-  }
-  try {
-    journalPending = getEntryByDate(toDateKey(new Date())) == null;
-  } catch {
-    /* ignore */
-  }
-  try {
-    waterBehind =
-      getDailyTotal(toDateKey(new Date())) < (useWaterSettingsStore.getState().goalMl ?? 2000);
-  } catch {
-    /* ignore */
-  }
+  /** Reads one line, unless its module is switched off or private, and never
+   *  lets a module's missing table sink the whole digest. */
+  const line = <T>(moduleId: string, read: () => T, fallback: T): T => {
+    if (!moduleMayBeNamed(moduleId)) return fallback;
+    try {
+      return read();
+    } catch {
+      return fallback;
+    }
+  };
+
+  tasksDueToday = line(
+    'tasks',
+    () =>
+      listTasks('active', 'due-date').filter((t) => t.dueDate != null && isToday(t.dueDate)).length,
+    0,
+  );
+  habitsRemaining = line(
+    'habits',
+    () => listHabitsWithToday().filter((h) => h.todayStatus === 'not_yet').length,
+    0,
+  );
+  moneyDue = line(
+    'budget',
+    () => listDebts().filter((d) => d.status === 'overdue' || d.status === 'due_soon').length,
+    0,
+  );
+  journalPending = line('journal', () => getEntryByDate(toDateKey(new Date())) == null, false);
+  waterBehind = line(
+    'water',
+    () => getDailyTotal(toDateKey(new Date())) < (useWaterSettingsStore.getState().goalMl ?? 2000),
+    false,
+  );
 
   return { tasksDueToday, habitsRemaining, moneyDue, journalPending, waterBehind };
 }

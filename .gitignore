@@ -43,3 +43,10 @@ google-play-service-account.json
 # generated native folders
 /ios
 /android
+
+# Claude Code personal overrides (permission mode, local allowlists). The
+# shared settings.json is checked in; this one must not be — it is per-machine,
+# and a committed "bypassPermissions" would auto-approve tool calls for anyone
+# who clones the repo.
+.claude/settings.local.json
+.claude/settings.json.tmp*

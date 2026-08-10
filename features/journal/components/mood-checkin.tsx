@@ -11,13 +11,15 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
+import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
-import { moduleTint } from '@/constants/design-tokens';
+import { moduleTint, resolveTint, type TintPair } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { MOOD_EMOJI, MOOD_LABEL_KEY, MOOD_TINT } from '@/features/journal/constants';
+import { alpha } from '@/lib/color';
 import { MOOD_REASONS, type MoodOption } from '@/features/journal/types/journal.types';
 
-const MOODS: { value: MoodOption; emoji: string; labelKey: string; tint: string }[] = (
+const MOODS: { value: MoodOption; emoji: string; labelKey: string; tint: TintPair }[] = (
   ['great', 'good', 'okay', 'low', 'rough'] as const
 ).map((value) => ({
   value,
@@ -71,7 +73,9 @@ function MoodButton({
       accessibilityState={{ checked: selected }}
       accessibilityLabel={t(option.labelKey)}
       className="items-center gap-1.5 rounded-2xl px-2 py-3"
-      style={{ backgroundColor: selected ? `${option.tint}1f` : 'transparent' }}
+      style={{
+        backgroundColor: selected ? alpha(resolveTint(option.tint, scheme), 0.12) : 'transparent',
+      }}
     >
       <Animated.View
         style={[{ height: 40, alignItems: 'center', justifyContent: 'center' }, animatedStyle]}
@@ -81,7 +85,9 @@ function MoodButton({
       <Text
         variant="caption"
         className="font-sora-medium"
-        style={{ color: selected ? option.tint : colors[scheme].mutedForeground }}
+        style={{
+          color: selected ? resolveTint(option.tint, scheme) : colors[scheme].mutedForeground,
+        }}
       >
         {t(option.labelKey)}
       </Text>
@@ -196,7 +202,7 @@ export function MoodCheckin({
   const reasons = new Set(moodReasons ?? []);
 
   return (
-    <View className="gap-5 rounded-2xl border border-border bg-card p-4 shadow-e1">
+    <View className={cardClass({ padding: 'md', elevation: 'e1' }, 'gap-5')}>
       <View className="flex-row justify-between" accessibilityRole="radiogroup">
         {MOODS.map((option) => (
           <MoodButton

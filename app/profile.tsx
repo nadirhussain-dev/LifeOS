@@ -5,8 +5,10 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { moduleTints } from '@/constants/design-tokens';
 import { SettingsRow } from '@/components/ui/settings-row';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -89,7 +91,11 @@ export default function ProfileScreen() {
   if (!session) {
     return (
       <View className="flex-1 bg-background">
-        <ScreenHeader title={t('profile.title')} eyebrow={t('settings.eyebrow')} tint="#737373" />
+        <ScreenHeader
+          title={t('profile.title')}
+          eyebrow={t('settings.eyebrow')}
+          tint={moduleTints.settings}
+        />
         <View className="flex-1 items-center justify-center gap-5 px-8">
           <View className="h-20 w-20 items-center justify-center rounded-3xl bg-surface">
             <UserCircle size={36} color={theme.mutedForeground} strokeWidth={1.6} />
@@ -113,7 +119,11 @@ export default function ProfileScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader title={t('profile.title')} eyebrow={t('settings.eyebrow')} tint="#737373" />
+      <ScreenHeader
+        title={t('profile.title')}
+        eyebrow={t('settings.eyebrow')}
+        tint={moduleTints.settings}
+      />
       <ScrollView
         contentContainerClassName="gap-6 px-5 py-4 pb-12"
         showsVerticalScrollIndicator={false}
@@ -177,14 +187,14 @@ export default function ProfileScreen() {
             onBlur={() => void saveName()}
             placeholder={t('onboarding.yourName')}
             placeholderTextColor={theme.mutedForeground}
-            className="rounded-2xl border border-border bg-card px-4 py-3.5 text-foreground"
+            className={cardClass({ padding: 'rowLg' }, 'text-foreground')}
             style={{ fontFamily: 'Sora_400Regular' }}
           />
         </View>
 
         <View className="gap-2">
           <Text variant="micro">{t('profile.account')}</Text>
-          <View className="rounded-2xl border border-border bg-card px-4">
+          <View className={cardClass({ padding: 'none' }, 'px-4')}>
             <SettingsRow
               icon={UserCircle}
               label={t('profile.username')}
@@ -209,7 +219,7 @@ export default function ProfileScreen() {
 
         <View className="gap-2">
           <Text variant="micro">{t('settings.privacy')}</Text>
-          <View className="rounded-2xl border border-border bg-card px-4">
+          <View className={cardClass({ padding: 'none' }, 'px-4')}>
             <SettingsRow
               icon={ShieldCheck}
               label={t('sync.title')}

@@ -4,6 +4,7 @@ import { GitCompareArrows, ImagePlus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { ArrowForward } from '@/components/ui/directional-icon';
 import { moduleTint } from '@/constants/design-tokens';
@@ -73,7 +74,7 @@ export function SubjectCard({ album, onPress, onCompare }: Props) {
       onPress={() => onPress(album)}
       accessibilityRole="button"
       accessibilityLabel={album.name}
-      className="gap-3 rounded-2xl border border-border bg-card p-3.5"
+      className={cardClass({ padding: 'sm' }, 'gap-3')}
     >
       <View className="flex-row items-center gap-2">
         <Icon size={15} color={colors[scheme].mutedForeground} />

@@ -3,8 +3,10 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
+import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { ChipRow, PrivateScreen } from '@/features/private/components/private-screen';
 import { privateModule } from '@/features/private/config/private-modules';
@@ -32,11 +34,12 @@ const TARGETS: RecoveryTarget[] = [
   'gambling',
   'other',
 ];
-const TINT = privateModule('recovery')?.tint ?? '#2f9e73';
+const TINT = privateModule('recovery')?.tint ?? moduleTints.recovery;
 
 export default function RecoveryScreen() {
   const scheme = useColorScheme() ?? 'light';
   const theme = colors[scheme];
+  const tint = resolveTint(TINT, scheme);
   const { t } = useTranslation();
 
   // See cycle.tsx: explicit reload rather than a counter dependency.
@@ -86,7 +89,7 @@ export default function RecoveryScreen() {
     <PrivateScreen
       title={t('private.recoveryTitle')}
       subtitle={t('private.recoverySubtitle')}
-      tint={TINT}
+      tint={tint}
       footer={
         <View className="flex-row gap-2">
           <View className="flex-1">
@@ -122,13 +125,13 @@ export default function RecoveryScreen() {
                 onPress={() => setTarget(option)}
                 className="rounded-full border px-4 py-2"
                 style={{
-                  borderColor: active ? TINT : theme.border,
-                  backgroundColor: active ? alpha(TINT, 0.12) : 'transparent',
+                  borderColor: active ? tint : theme.border,
+                  backgroundColor: active ? alpha(tint, 0.12) : 'transparent',
                 }}
               >
                 <Text
                   className="font-sora-medium text-sm"
-                  style={{ color: active ? TINT : theme.foreground }}
+                  style={{ color: active ? tint : theme.foreground }}
                 >
                   {t(`private.target_${option}`)}
                 </Text>
@@ -141,10 +144,10 @@ export default function RecoveryScreen() {
       <View className="flex-row gap-3">
         <View
           className="flex-1 gap-1 rounded-2xl px-4 py-3.5"
-          style={{ backgroundColor: alpha(TINT, 0.12) }}
+          style={{ backgroundColor: alpha(tint, 0.12) }}
         >
           <Text variant="caption">{t('private.currentStreak')}</Text>
-          <Text className="font-sora-extrabold text-2xl" style={{ color: TINT }}>
+          <Text className="font-sora-extrabold text-2xl" style={{ color: tint }}>
             {stats.currentStreak === null
               ? t('private.noRelapses')
               : t('private.days', { count: stats.currentStreak })}
@@ -170,7 +173,7 @@ export default function RecoveryScreen() {
       </View>
 
       {stats.topRelapseTriggers.length > 0 ? (
-        <View className="gap-2 rounded-2xl border border-border bg-card px-4 py-3.5">
+        <View className={cardClass({ padding: 'rowLg' }, 'gap-2')}>
           <Text variant="micro">{t('private.watchFor')}</Text>
           <Text className="text-foreground">
             {stats.topRelapseTriggers.map((x) => t(`private.trigger_${x.trigger}`)).join(' · ')}
@@ -192,13 +195,13 @@ export default function RecoveryScreen() {
                 onPress={() => setIntensity(level)}
                 className="flex-1 items-center rounded-2xl border py-3"
                 style={{
-                  borderColor: active ? TINT : theme.border,
-                  backgroundColor: active ? alpha(TINT, 0.12) : 'transparent',
+                  borderColor: active ? tint : theme.border,
+                  backgroundColor: active ? alpha(tint, 0.12) : 'transparent',
                 }}
               >
                 <Text
                   className="font-sora-medium"
-                  style={{ color: active ? TINT : theme.foreground }}
+                  style={{ color: active ? tint : theme.foreground }}
                 >
                   {level}
                 </Text>
@@ -213,7 +216,7 @@ export default function RecoveryScreen() {
         <ChipRow
           options={TRIGGERS}
           selected={triggers}
-          tint={TINT}
+          tint={tint}
           labelFor={(x) => t(`private.trigger_${x}`)}
           onToggle={(x) =>
             setTriggers((prev) => (prev.includes(x) ? prev.filter((y) => y !== x) : [...prev, x]))
@@ -227,7 +230,7 @@ export default function RecoveryScreen() {
         placeholder={t('private.notePlaceholder')}
         placeholderTextColor={theme.mutedForeground}
         multiline
-        className="min-h-[80px] rounded-2xl border border-border bg-card px-4 py-3 text-foreground"
+        className={cardClass({ padding: 'row' }, 'min-h-[80px] text-foreground')}
         style={{ fontFamily: 'Sora_400Regular', textAlignVertical: 'top' }}
       />
 
@@ -240,7 +243,7 @@ export default function RecoveryScreen() {
               onLongPress={() => confirmDelete(entry.id)}
               accessibilityRole="button"
               accessibilityHint={t('private.longPressDelete')}
-              className="gap-1 rounded-2xl border border-border bg-card px-4 py-3"
+              className={cardClass({ padding: 'row' }, 'gap-1')}
             >
               <View className="flex-row items-center justify-between">
                 <Text className="font-sora-medium text-foreground">
@@ -248,7 +251,7 @@ export default function RecoveryScreen() {
                 </Text>
                 <Text
                   variant="caption"
-                  style={{ color: entry.outcome === 'resisted' ? TINT : theme.mutedForeground }}
+                  style={{ color: entry.outcome === 'resisted' ? tint : theme.mutedForeground }}
                 >
                   {t(`private.${entry.outcome}`)}
                 </Text>

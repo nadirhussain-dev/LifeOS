@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import type { PrivateModuleId } from '@/features/private/config/private-modules';
+import { PRIVATE_MODULES, type PrivateModuleId } from '@/features/private/config/private-modules';
 import type { VaultSpace } from '@/features/private/services/vault-keys';
 
 /**
@@ -47,6 +47,22 @@ type PrivateState = {
    * "private" invites people to assume the stronger one.
    */
   privatised: string[];
+  /**
+   * Takes the private-space row out of the Settings screen entirely.
+   *
+   * Until now the row's *existence* was treated as acceptable to disclose — the
+   * contents are the secret, and hiding the only way back in is worse than an
+   * onlooker knowing the feature is there. That reasoning holds right up to the
+   * point where somebody is scrolling through your Settings with you watching,
+   * and it is the one place the app still says "this person has something to
+   * hide".
+   *
+   * So the row can be removed, but only once there is another way in: a
+   * long-press on the version number in Settings → About. The gesture works
+   * whether or not the row is hidden, so it can become habit before it becomes
+   * the only route, and the confirmation that turns this on spells it out.
+   */
+  hiddenFromSettings: boolean;
   /** Set once the user finishes the private-space setup flow. */
   setUpComplete: boolean;
   hydrated: boolean;
@@ -59,6 +75,7 @@ type PrivateState = {
   toggleModule: (id: PrivateModuleId) => void;
   setPrivatised: (ids: string[]) => void;
   togglePrivatised: (id: string) => void;
+  setHiddenFromSettings: (hidden: boolean) => void;
   setSetUpComplete: (complete: boolean) => void;
   /** Forgets the preferences too — used when the space is destroyed. */
   reset: () => void;
@@ -72,6 +89,7 @@ export const usePrivateStore = create<PrivateState>()(
       backgroundedAt: null,
       enabledModules: [],
       privatised: [],
+      hiddenFromSettings: false,
       setUpComplete: false,
       hydrated: false,
 
@@ -94,6 +112,7 @@ export const usePrivateStore = create<PrivateState>()(
             ? s.privatised.filter((m) => m !== id)
             : [...s.privatised, id],
         })),
+      setHiddenFromSettings: (hiddenFromSettings) => set({ hiddenFromSettings }),
       setSetUpComplete: (setUpComplete) => set({ setUpComplete }),
 
       reset: () =>
@@ -103,6 +122,10 @@ export const usePrivateStore = create<PrivateState>()(
           backgroundedAt: null,
           enabledModules: [],
           privatised: [],
+          // Deliberately cleared. Destroying the space and leaving the row
+          // hidden would take the feature out of Settings for somebody who no
+          // longer has a vault to get back into.
+          hiddenFromSettings: false,
           setUpComplete: false,
         }),
     }),
@@ -115,6 +138,7 @@ export const usePrivateStore = create<PrivateState>()(
       partialize: (s) => ({
         enabledModules: s.enabledModules,
         privatised: s.privatised,
+        hiddenFromSettings: s.hiddenFromSettings,
         setUpComplete: s.setUpComplete,
       }),
       onRehydrateStorage: () => () => {
@@ -151,10 +175,29 @@ export function privatisedModules(): string[] {
   return usePrivateStore.getState().privatised;
 }
 
-/** Modules to show, which is the intersection of "switched on" and "unlocked".
+/** Every enabled module id that is `requiresRealSpace` — computed once so
+ *  `visiblePrivateModules()` doesn't re-derive it on every call. */
+const REAL_SPACE_ONLY_MODULES = new Set(
+  PRIVATE_MODULES.filter((m) => m.requiresRealSpace).map((m) => m.id),
+);
+
+/**
+ * Modules to show, which is the intersection of "switched on" and "unlocked".
  * Locked returns nothing at all, so no caller can accidentally render a hint
- * that a module exists. */
+ * that a module exists.
+ *
+ * The decoy space also unlocks with a non-null key, and for every module up
+ * to this one that was enough: real-space content is encrypted under a key
+ * the decoy genuinely does not have, so there was nothing to hide beyond the
+ * card itself. Shared albums broke that assumption — their membership is
+ * ordinary server-side metadata, unrelated to which local key unlocked this
+ * device — so anything marked `requiresRealSpace` is filtered out here
+ * whenever `space !== 'real'`, on top of the card being hidden. This is the
+ * fix for that gap; see private-modules.ts's header for the full reasoning.
+ */
 export function visiblePrivateModules(): PrivateModuleId[] {
   const state = usePrivateStore.getState();
-  return state.key ? state.enabledModules : [];
+  if (!state.key) return [];
+  if (state.space === 'real') return state.enabledModules;
+  return state.enabledModules.filter((id) => !REAL_SPACE_ONLY_MODULES.has(id));
 }

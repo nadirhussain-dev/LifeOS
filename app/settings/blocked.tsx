@@ -2,6 +2,7 @@ import { UserX } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -81,7 +82,7 @@ export default function BlockedAccountsScreen() {
             description={t('moderation.blockedEmptyBody')}
           />
         ) : (
-          <View className="rounded-2xl border border-border bg-card px-4">
+          <View className={cardClass({ padding: 'none' }, 'px-4')}>
             {accounts.map((account, index) => {
               // Both may be null on an account that never set a name. A uuid is
               // not a label a person recognises, so fall back to prose.

@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { InlineError } from '@/components/ui/query-error';
 import { SheetHeader } from '@/components/ui/sheet-header';
@@ -229,7 +230,7 @@ export default function SplitMembersScreen() {
           contentContainerClassName="gap-6 px-5 pt-3 pb-10"
           keyboardShouldPersistTaps="handled"
         >
-          <View className="rounded-2xl border border-border bg-card px-4">
+          <View className={cardClass({ padding: 'none' }, 'px-4')}>
             {members.map((member, index) => {
               const label = member.displayName || member.email || t('split.someone');
               const pending = member.userId === null;
@@ -302,7 +303,7 @@ export default function SplitMembersScreen() {
               <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
                 {t('split.formerMembers')}
               </Text>
-              <View className="rounded-2xl border border-border bg-card px-4">
+              <View className={cardClass({ padding: 'none' }, 'px-4')}>
                 {removed.map((member, index) => {
                   const label = member.displayName || member.email || t('split.someone');
                   const net = netOf(member.id);
@@ -344,7 +345,7 @@ export default function SplitMembersScreen() {
               {t('split.addPeople')}
             </Text>
 
-            <View className="flex-row items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3">
+            <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
               <Mail size={16} color={colors[scheme].mutedForeground} />
               <TextInput
                 value={email}
@@ -360,7 +361,7 @@ export default function SplitMembersScreen() {
               />
             </View>
 
-            <View className="flex-row items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3">
+            <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
               <UserPlus size={16} color={colors[scheme].mutedForeground} />
               <TextInput
                 value={name}

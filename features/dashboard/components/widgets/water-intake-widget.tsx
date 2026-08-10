@@ -21,9 +21,11 @@ import {
   useTodayWaterTotal,
   useWaterIntakeMutations,
 } from '@/features/water-intake/hooks/use-water-intake';
-import { useWaterSettingsStore } from '@/features/water-intake/store/water-settings-store';
+import {
+  GLASS_ML,
+  useWaterSettingsStore,
+} from '@/features/water-intake/store/water-settings-store';
 
-const GLASS_ML = 250;
 const QUICK_ADD_ML = [500, 1000] as const;
 
 export function WaterIntakeWidget() {

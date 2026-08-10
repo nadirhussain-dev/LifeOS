@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Image } from 'expo-image';
 import { Dimensions, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
@@ -143,7 +144,7 @@ export default function PhotoDetailScreen() {
         )}
 
         <View className="gap-5 px-5">
-          <View className="flex-row items-center justify-between rounded-2xl border border-border bg-card px-4 py-3">
+          <View className={cardClass({ padding: 'row' }, 'flex-row items-center justify-between')}>
             <View className="flex-row items-center gap-2">
               <CalendarDays size={16} color={colors[scheme].mutedForeground} />
               <Text className="font-sora-medium text-foreground">{t('gallery.date')}</Text>
@@ -187,7 +188,7 @@ export default function PhotoDetailScreen() {
               placeholder={t('gallery.captionPlaceholder')}
               placeholderTextColor={colors[scheme].mutedForeground}
               multiline
-              className="min-h-12 rounded-2xl border border-border bg-card px-4 py-3 text-foreground"
+              className={cardClass({ padding: 'row' }, 'min-h-12 text-foreground')}
             />
           </View>
 

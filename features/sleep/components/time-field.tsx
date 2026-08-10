@@ -3,6 +3,7 @@ import { type LucideIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { formatClock, minutesOfDay } from '@/features/sleep/services/sleep-stats';
 
@@ -26,7 +27,7 @@ export function TimeField({ icon: Icon, label, value, onChange, tint }: Props) {
   };
 
   return (
-    <View className="flex-1 items-center gap-2 rounded-2xl border border-border bg-card p-4">
+    <View className={cardClass({ padding: 'md' }, 'flex-1 items-center gap-2')}>
       <View
         className="h-10 w-10 items-center justify-center rounded-xl"
         style={{ backgroundColor: `${tint}1f` }}

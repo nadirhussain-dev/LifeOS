@@ -45,15 +45,43 @@ export function darken(hex: string, amount: number): string {
   return mix(hex, '#000000', amount);
 }
 
+/**
+ * The darkest a tint has to get before white text on it clears `minRatio`.
+ *
+ * The module tints are tuned to clear 3:1 as *fills on a white card* — a ring,
+ * a dot, a chart series. Painting one as the *background* for white text is a
+ * different and stricter job, and 13 of the 16 did not clear AA at it: habit
+ * 3.77, calendar 3.68, recovery 3.36, and so on down. That gap survived every
+ * audit of the token table because it isn't a property of the tint, it's a
+ * property of the gradient derived from it at render time.
+ *
+ * Measured against the LIGHTEST stop, since that is the worst case and the one
+ * the icon chip sits on. Self-limiting by construction: a tint that already
+ * clears the bar (study, gallery) is returned untouched, so this darkens only
+ * what has to be darkened and never drifts a hue.
+ */
+function inkSafe(hex: string, minRatio: number): string {
+  for (let amount = 0; amount <= 0.9; amount += 0.02) {
+    const base = darken(hex, amount);
+    if (contrastRatio('#ffffff', lighten(base, 0.18)) >= minRatio) return base;
+  }
+  return darken(hex, 0.9);
+}
+
 /** Two-stop gradient derived from a module tint: a brighter top-left flowing
- * into a deeper bottom-right, for hero cards, rings and FAB-like surfaces. */
+ * into a deeper bottom-right, for hero cards, rings and FAB-like surfaces.
+ *
+ * Content on these is white, so the base is first driven dark enough to carry
+ * it — see `inkSafe`. */
 export function tintGradient(hex: string): [string, string] {
-  return [lighten(hex, 0.12), darken(hex, 0.24)];
+  const base = inkSafe(hex, 4.5);
+  return [lighten(base, 0.12), darken(base, 0.24)];
 }
 
 /** Even richer three-stop gradient for large hero washes. */
 export function tintGradientTriple(hex: string): [string, string, string] {
-  return [lighten(hex, 0.18), hex, darken(hex, 0.28)];
+  const base = inkSafe(hex, 4.5);
+  return [lighten(base, 0.18), base, darken(base, 0.28)];
 }
 
 /** Alpha-suffixed hex for subtle tinted fills (e.g. `${tint}1f`). `a` is 0–1. */

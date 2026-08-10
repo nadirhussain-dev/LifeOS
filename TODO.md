@@ -78,16 +78,25 @@ Still to do here:
       leaked-password protection. `features/auth/services/password-policy.ts` is
       advisory until that is done — it improves the choice, it does not stop a
       crafted request.
-- [ ] **Media bytes.** `remote_path` exists on every media table and nothing
-      writes it. Uploading the files needs Storage buckets with per-user RLS, a
-      resumable upload queue, per-user quotas and a download-on-demand cache —
-      and at ten million users it is the line item that dominates the bill, so
-      it wants a quota and an opt-in before it wants code.
-- [ ] **The expense-group policies still use membership functions** that take a
-      per-row argument and so cannot be hoisted the way 0017 hoisted the owner
-      policies. Making those cheap means turning the membership check into a
-      join the planner can see through — worth doing, easy to get wrong in a way
-      that leaks between groups.
+- [x] **Media bytes** (0026). A private bucket, four isolation policies on one
+      predicate (the first path segment is your own uid), a per-account quota
+      enforced by a trigger rather than a policy, an opt-in that is off by
+      default, and download-on-demand. Resumable by construction: each file is
+      one request and `remote_path` is the record that it succeeded, so an
+      interrupted run resumes by finding the rows whose column is still null.
+- [ ] ⚠️ **Set the media quota.** `public.media_quota_bytes()` returns 2 GiB,
+      which is a placeholder chosen to be obviously finite, not a costed
+      decision. At a million accounts the difference between 2 GB and 20 GB is
+      the difference between a hobby bill and a funding round. One statement to
+      change, and it is the number the app and the trigger both read.
+- [x] **The expense-group policies are hoistable now** (0023). Inverted rather
+      than optimised: instead of "is the caller in _this row's_ group?" per row,
+      "which groups is the caller in?" once per statement, tested with
+      `group_id in (select public.my_expense_group_ids())`. Same predicate, so
+      the whole existing 0003–0021 group suite passes unchanged — which is the
+      evidence that mattered, given how this could have leaked. Three new tests
+      cover the failure the new shape could introduce: a set that spans groups
+      instead of scoping to one.
 - [ ] **Nothing here has run against a real Supabase project or a real device.**
       The migrations are executed by `npm run test:sql` against WASM Postgres and
       the local schema by `npm test`; neither proves behaviour on hardware.
@@ -122,18 +131,55 @@ Still to do here:
       screen to undo one. Enforcement is server-side across all three contact
       routes. `features/moderation/moderation-wiring.test.ts` fails if any of it
       becomes unreachable again.
-- [ ] **Operator console UI.** All of this is SQL in the editor today. Fine for
-      one owner; poor for a moderator working a queue, and worse at 3am.
-      `operator_report_queue()` is the screen that wants building first.
+- [x] **Operator console** — `app/settings/operator.tsx`. The report queue
+      (already triaged by open-report count) and the global module switches,
+      which asked for a uuid typed by hand until now. Deliberately a view over
+      the existing RPCs and not a second permission system: the report gate, the
+      admin/staff split and every audit row stay in the database, because rules
+      the console enforced itself would be rules anybody could bypass with
+      `curl`. The row is hidden unless `is_staff()` says otherwise, and defaults
+      to hidden if the check fails.
+- [ ] **An account page inside the console.** The queue hands over each uuid to
+      copy, because acting on an account still means an RPC. Per-account module
+      overrides (0024), status changes and report resolution all want that
+      screen rather than a uuid field bolted onto a global list.
 - [ ] **Wipe needs a cooperating client.** A modified build can decline to run
       it. The server-side denial cannot be declined; the local wipe can. Worth
       stating in any T&S policy rather than implying devices are controllable.
-- [ ] **Appeals have no route back in.** The block screen offers an email link.
-      A blocked user cannot read their own data to export it, so a data-access
-      request has to be served by an admin running `admin_user_rows` by hand —
-      which is a GDPR obligation currently met by a person remembering to.
+- [x] **A blocked account can get its own data** (0022). "Download my data" on
+      the block screen calls `export_own_data`, which is SECURITY DEFINER so it
+      sees past the block, includes the soft-deleted rows a purge left behind,
+      and takes **no user id at all** — it reads `auth.uid()` and nothing else,
+      which is the whole of its safety argument. A test asserts no overload
+      taking a uuid exists, so adding one fails the build rather than review.
+      `private_entries` stays out and the exported file says why: the server
+      holds ciphertext sealed to a key it never had.
+- [ ] **Appeals are still a mailto.** The data-access half is automated now;
+      deciding an appeal is not, and probably should not be.
 - [ ] **No staging project exists yet.** The runner supports one; nothing has
       been run against either database.
+
+## 🔑 Sign-in providers (code done, consoles are yours) — docs/AUTH_PROVIDERS.md
+
+Google and Apple sign-in are built and bundle clean. **Neither has run against a
+real provider**, and cannot from here. Until the consoles are configured both
+buttons appear (whenever the Supabase vars are set) and fail with "That sign-in
+method is not switched on for this project yet." Email and guest are unaffected.
+
+- [ ] **Google Cloud** — OAuth consent screen + a **Web** OAuth client whose
+      redirect URI is `https://<project-ref>.supabase.co/auth/v1/callback`. That
+      is Supabase's URL, not the app's; Google redirects to Supabase and Supabase
+      redirects to the app.
+- [ ] **Supabase → Providers → Google** — client id + secret.
+- [ ] **Supabase → URL Configuration → Redirect URLs** — add both
+      `lifeos://auth/callback` and `lifeos:///auth/callback`. An unlisted
+      redirect is refused before the user sees anything.
+- [ ] **Apple** — needs the paid developer account (same one blocking the iOS
+      widget): App ID capability, a Sign in with Apple key (`.p8`, one download
+      only), a Services ID, then Supabase → Providers → Apple.
+- [ ] ⚠️ **Guideline 4.8**: Sign in with Apple must be offered wherever another
+      third-party login is. Shipping Google to iOS without Apple is a rejection —
+      they go live together. Android can ship Google alone.
 
 ## 🔒 Needs you (blocked on account / asset / decision)
 
@@ -158,16 +204,22 @@ Still to do here:
 - [ ] **SQLCipher underneath it** (`docs/SQLCIPHER.md`). Private rows are already
       encrypted field-by-field, so this is defence in depth rather than a
       prerequisite — but it would also cover the _other_ modules' data at rest.
-- [ ] **Hidden entry point.** The Settings row reveals the feature exists (not
-      what is in it). A "hide from Settings" option with a re-entry gesture
-      (long-press the version number) would close that gap.
+- [x] **Hidden entry point.** The private-space row can now be removed from
+      Settings, from inside the space itself. The way back is a long-press on
+      the version number under Settings → About — wired up unconditionally,
+      hidden or not, so the gesture can become habit before it becomes the only
+      route. The confirmation names it and asks you to try it once.
 - [ ] **Vault video support.** Images only today — the 8 MB ceiling exists
       because encryption runs in JavaScript. Needs a native crypto module.
 - [ ] **Encrypted E2E sync for private modules.** The `sensitive` flag in
       `sync-tables.ts` was built for this: upload ciphertext only, so the server
       cannot read it. Requires key transfer between devices, which is its own
       design problem (QR-based key exchange is the usual answer).
-- [ ] **Private media is not covered by the media-metadata sync.** Vault images
+- [ ] **Private media is not covered by the media-metadata sync** — and cannot
+      be until the key-exchange question below is answered, since syncing it
+      means either uploading ciphertext the other device cannot open or
+      uploading the key. Belongs with "E2E sync for private modules", not with
+      the media work. Vault images
       live in `private-vault/` and are encrypted field-by-field; they are not in
       `gallery_photos` and nothing in 0016 touches them.
 
@@ -192,12 +244,30 @@ been rewritten to say so.
 - [ ] **Store review will ask.** Cycle/intimacy data is GDPR Art. 9
       special-category and App Store 5.1.3 governs the health parts. Expect to
       justify operator access in the review notes and the data-safety form.
-- [ ] **Escrow is not written for accounts that create a vault while signed out,
-      or for vaults created before 0015.** Those stay unreadable. Decide whether
-      to backfill on next unlock or leave them alone.
-- [ ] **Deleting a vault locally does not remove the server escrow.** It goes
-      with the account. Consider wiring `destroyVaultKeys()` to also delete the
-      `vault_escrow` row, or say so in the UI.
+- [x] **DECIDED (2026-08-10): stay end-to-end encrypted, do not switch escrow
+      on.** `vault_escrow` had no SELECT policy, so Postgres refused `INSERT …
+ON CONFLICT DO UPDATE` against it regardless of whether a conflicting row
+      existed. PostgREST's `.upsert()` emitted exactly that, `uploadEscrow()`
+      was the only writer, and `setup.tsx` never checked its result — the table
+      was empty and every private space to date was accidentally end-to-end
+      encrypted, while PRIVACY.md claimed staff could read it. 0025 fixed the
+      write path (it now works, if configured), but the call here is to leave
+      `EXPO_PUBLIC_VAULT_ESCROW_PUBLIC_KEY` unset — Art. 9 health data (cycle,
+      recovery) server-side in decryptable form is a bigger breach target and
+      harder App Store conversation than the abuse-handling case for it — and
+      PRIVACY.md's "What LifeOS staff can access" section is rewritten to say
+      plainly that this capability exists in code but is switched off, rather
+      than asserting access that doesn't happen. Revisit only with a concrete
+      abuse/legal need, and update PRIVACY.md before flipping the switch, not
+      after.
+- [x] **Escrow is backfilled on unlock** for a vault created while signed out or
+      before 0015. Real space only: sealing the decoy's key would escrow the
+      wrong vault, and a row that changes between unlocks is itself evidence a
+      second space exists.
+- [x] **Destroying a vault removes the server escrow** (`delete_own_vault_escrow`).
+      It cleared the local keystore and nothing else, so the most explicit
+      "I want this gone" the app offers left the space unreadable to its owner
+      and readable to an operator.
 
 ## 🤝 Sharing & E2E sync — DESIGNED, NOT BUILT
 
@@ -212,6 +282,18 @@ the UI:
 - [ ] Invite carries the space key **out of band** — a QR code or a link
       fragment that never reaches the server. This is the whole design; anything
       that posts the key to Supabase silently converts this to server-readable.
+      **The mechanism for this now exists**: `features/private/services/key-transfer.ts`
+      is exactly a two-channel out-of-band key handoff, built for moving a vault
+      between one person's devices, and a space invite is the same protocol with
+      a different key. Reuse it rather than writing a second one.
+- [ ] ⚠️ **DECIDE FIRST: what actually goes in a shared space.** This is the
+      open question, and it is a product one rather than a cryptographic one.
+      The key exchange, the ciphertext-at-rest pattern and the viewer all exist
+      or are specified; what does not exist is an answer to "a couple shares…
+      what?" — a note, a photo album, a whole module, a chat. The table shape,
+      the sync rules and the revocation story all follow from that answer and
+      none of them can be sensibly designed before it. Building the storage
+      first would mean guessing, and a guess here is a migration to undo.
 - [ ] Viewer: `SecureContentView` is already built (screenshot block, watermark,
       no save/share, report button). Wire it to real shared content.
 - [ ] ⚠️ **Revocation is partial and must be said so in the UI.** Removing a
@@ -219,43 +301,79 @@ the UI:
       they already hold, so anything they already downloaded stays readable.
       Rotating the key on removal fixes future content only.
 
-**E2E sync for private modules** — same key-exchange problem:
+**E2E sync for private modules** — ✅ done, and most of it already was:
 
-- [ ] `sensitive: true` in `sync-tables.ts` was built for this. Upload ciphertext
-      only; the server column is opaque.
-- [ ] Needs the vault key on the second device, which means QR-based transfer
-      between two devices the user holds. Do not add a "recover my vault" server
-      path — that is escrow by another name.
+- [x] `private_entries.payload` has been `base64(nonce || AES-GCM(...))` since
+      the vault was built, 0015 gave the server a table with per-user RLS, and
+      the sync engine moves it like any other row. **Private modules have always
+      synced end-to-end**; this entry was describing work that was finished.
+- [x] **The vault key now moves between devices** — the part that was genuinely
+      missing, and without which the second device receives ciphertext it can
+      only ever render as noise. Two channels: the payload (the key wrapped
+      under PBKDF2(one-time code, fresh salt)) travels however the user likes,
+      and the code travels separately, ideally spoken. Neither reaches our
+      server. `adoptVault` installs it under this device's own PIN — reusing
+      `setUpVault` would mint a fresh master key and leave every already-synced
+      private row permanently unreadable while looking like it worked.
+- [x] No "recover my vault" server path, as instructed. It would be escrow by
+      another name, and this app already has one escrow scheme it is honest
+      about.
+- [ ] **QR instead of paste.** The payload is already QR-sized, so this is a
+      rendering change rather than a redesign — it needs `expo-camera` for
+      scanning, which is a native module that cannot be verified without a
+      device build. Same call as native Google sign-in.
 
 ## 🎛 Module switches (0011 shipped — these finish it)
 
-- [ ] **Admin UI for the switches.** Today it is
-      `select public.admin_set_module_enabled('split', false, 'reason');` in the
-      SQL editor. Fine for one operator, poor under pressure at 3am.
-- [ ] **Privatised modules still write notifications.** Reminders are scheduled
-      by module, and a privatised module's reminder text would name its content
-      on a lock screen. Either suppress those reminders while a module is
-      privatised, or fall back to generic text.
-- [ ] **Widget respects neither switch yet.** The Android widget reads tasks /
-      habits / water directly; if one of those is privatised or disabled it will
-      keep rendering. Needs the same check as the route guard.
-- [ ] **Per-user switches.** 0011 is global. A per-account override would allow
-      staged rollouts and one-off support fixes; needs a second table and a
-      merge rule (user override wins, absence falls through to global).
+- [x] **Privatised modules no longer write legible notifications.** A privatised
+      module's reminders still fire and still deep-link, with text that names
+      nothing ("You have a reminder") — dropping them would penalise somebody
+      for using a privacy feature. An operator-_disabled_ module is suppressed
+      outright instead, which is a different problem with a different answer.
+      Both flip a full reminder resync, because the OS owns the text of anything
+      already queued and will not let us edit it. See
+      `features/notifications/services/notification-visibility.ts`.
+- [x] **Widget respects both switches.** Visibility is decided in the app and
+      baked into the snapshot, since the widget's task handler runs headless
+      where those stores are not reliably available. `EMPTY_SNAPSHOT` defaults
+      every row to hidden so an upgrade stops leaking immediately rather than on
+      next launch.
+- [x] **The widget speaks all four languages.** Strings are formatted in the app
+      with i18next's own plural rules and put in the snapshot, for the same
+      reason `show` is — i18next is not safe to initialise in the headless task
+      handler. A language change rewrites the snapshot, because nothing else
+      would ever invalidate it.
+- [x] **Per-user switches** (0024). A user override wins; absence falls through
+      to the global switch; absence of both means enabled. The override is a
+      tri-state rather than a boolean, which is the load-bearing part — without
+      a middle value there is no way to say "on for this account while off
+      globally", and that is exactly what a staged rollout is. The client reads
+      the merged `my_module_flags()` instead of the table. The internal
+      per-account note is never returned to its subject; only the global row's
+      user-facing `message` is.
+- [x] **Admin UI for the global switches** — now in the operator console, with a
+      confirmation and a field for the message users will see. Per-account
+      overrides still want an account page; see the operator section.
 
 ## 📊 Operator surface (0010 shipped — these finish it)
 
 - [ ] **Seed the admin roster** — `insert into public.admins (user_id, note) values ('<your-uuid>', 'owner');`
       from the SQL editor. Nothing in `admin_*` works until this row exists, and
       the table is invisible to clients by design.
-- [ ] **Hard block should also ban in GoTrue** — `account_status = 'blocked'`
-      stops the shared surfaces via RLS and pauses sync in the app, but the JWT
-      stays valid. An edge function calling
-      `auth.admin.updateUserById(uid, { ban_duration })` is what actually kills
-      live sessions. Until then, blocking is defence-in-depth, not a hard stop.
+- [x] **A hard block now ends the session** —
+      `supabase/functions/ban-account` calls
+      `auth.admin.updateUserById(uid, { ban_duration })`, which is what actually
+      invalidates the token a blocked account is already holding. It reads the
+      caller's JWT and asks the database `is_admin()` _as that caller_, so a
+      client cannot claim its own privileges; banning yourself is refused,
+      because it locks the only account that could unban anybody. **Needs
+      `supabase functions deploy ban-account`.**
 - [ ] **Admin dashboard** — point Metabase (or a small internal page) at
       `admin_active_users()` / `admin_module_reach()`. Don't build a custom UI
-      before there are numbers worth looking at.
+      before there are numbers worth looking at. Same reasoning parks the
+      operator console and the module-switch UI: every capability behind them is
+      callable from the SQL editor today, and this account has no users yet, so
+      a bespoke console would be built against imagined usage.
 - [ ] **Tune the thresholds** — 20 invitations/hr and 10 groups/day are guesses.
       Check `abuse_counters` against real traffic after a week before trusting
       them.
@@ -266,21 +384,57 @@ the UI:
 
 ## 🔁 Sync v2 (deeper coverage)
 
-- [ ] Sync child/log tables (habit logs & skips, note tags/links, goal milestones & progress logs, journal reflections, study sessions, water logs, entry links) — need `updated_at` + a change strategy for append/join tables.
-- [ ] Sync per-module settings rows (sleep/study/budget settings — single-row, no id).
-- [ ] Media sync via Supabase Storage (gallery photos/videos, note & journal attachments, music files).
-- [ ] Account switch handling (clear-and-pull when a different uid signs in on a device).
-- [ ] Conflict surfacing (currently silent last-write-wins).
+> Most of this list was **already delivered by 0016/0017** and the section had
+> not been updated — child/log tables, per-module settings rows and media
+> metadata all sync, and account-switch handling shipped as
+> `features/sync/services/account-reconcile.ts`. What is genuinely left:
+
+- [x] Media **bytes** via Supabase Storage (0026) — see the sync-hardening
+      section above for the design and the one number still to set.
+- [x] **Conflict surfacing.** Last-write-wins still wins — losing is just no
+      longer silent. A local edit overwritten by a newer one from another device
+      is recorded with a snapshot and offered back from Settings → Sync.
+      Detection keys off the set of rows the push _just uploaded_, which is
+      exactly "edited here since the last sync"; without that, every ordinary
+      remote update would read as a conflict. Restoring stamps `updated_at` to
+      now so the other device converges, rather than being undone by the next
+      pull.
+
+## 🚀 First run (rebuilt — what is left)
+
+- [ ] **Nothing here has been seen on a device.** The seeding writes real habit
+      rows and real settings on a real database; `expo export` proves it bundles,
+      not that it runs.
+- [ ] **Starter habits are a guess.** Thirteen suggestions across nine focus
+      areas, written blind. Worth revisiting once anyone has actually used them.
+- [x] **Dead locale keys swept**, and `npm run check:i18n` now fails the build on
+      a key used in code that no locale defines, or a key English has that
+      another language does not. Its first run found six of the former — four of
+      which predated the onboarding rewrite, including a gender step that had
+      been rendering `onboarding.genderQuestion` on screen as literal text.
 
 ---
 
 ## 🟢 Buildable next (verifiable only on a device build)
 
 - [ ] **iOS widget** — "Today at a glance" via `expo-widgets` (SwiftUI/Expo UI).
-- [ ] **Water "+1 glass" widget** — quick-add button (needs headless background-write wiring).
-- [ ] **Habits check-off widget** — Streaks-style tappable habit list.
-- [ ] **Widget polish** — picker preview image; light/dark render variants.
-- [ ] **Instant widget refresh** on more events (currently launch + mutations + 30-min tick).
+      Still blocked on the paid Apple Developer account.
+- [x] **Water "+1 glass"** — a button on the Today widget. The headless handler
+      cannot write to SQLite, so a tap queues an intent and nudges the snapshot;
+      the app turns intents into rows on its next run. The action carries the
+      **local date of the tap**, so a glass logged at 11:50pm is not filed
+      against tomorrow.
+- [x] **Habits check-off widget** — its own widget (`LifeOSHabits`), because a
+      list needs height and a glance needs none. Marks done; does not un-tick —
+      a home-screen control has no undo, and `logHabit`'s upsert is what makes
+      the safe direction replay-proof.
+- [x] **Light/dark render variants** — `renderWidget` takes `{ light, dark }`
+      and the launcher picks. The light accents are darkened rather than
+      inverted, because #34d399 on white is about 1.8:1.
+- [ ] **Widget picker preview image** — still needs a real PNG asset, which is
+      an asset question rather than a code one.
+- [x] **Both widgets refresh together** on every sync, so ticking a habit in the
+      app does not leave a placed Habits widget stale until the half-hour tick.
 
 ---
 
@@ -293,4 +447,11 @@ the UI:
 ## 🔵 Later / optional
 
 - [ ] **FCM (server push)** — only if we add remote/server-driven notifications. Local reminders don't need it.
-- [ ] **Re-enable Goals/Study/Streak categories** — currently hidden (no scheduler). Build goal-deadline & study reminders to bring their toggles back.
+- [x] **Goals and Study categories are back.** Both have schedulers now:
+      `features/goals/services/goal-reminders.ts` (one dated reminder per goal
+      with a due date, capped at twelve and horizoned at 120 days, because iOS
+      silently discards past 64 pending) and
+      `features/study/services/study-reminders.ts` (one weekly trigger per
+      selected weekday, not a daily one — a DAILY trigger nags on the days it
+      was told not to). `streak` stays hidden, and its exclusion now carries the
+      reason in the code: it genuinely needs to evaluate state at fire time.

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Linking, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -58,7 +59,7 @@ export function UsageConsentCard() {
       style={{ paddingBottom: insets.bottom + 76 }}
       pointerEvents="box-none"
     >
-      <View className="gap-3 rounded-3xl border border-border bg-card p-5 shadow-e1">
+      <View className={cardClass({ padding: 'lg', elevation: 'e1' }, 'gap-3')}>
         <View className="flex-row items-center gap-3">
           <View className="h-10 w-10 items-center justify-center rounded-2xl bg-surface">
             <BarChart3 size={19} color={theme.primary} strokeWidth={1.8} />

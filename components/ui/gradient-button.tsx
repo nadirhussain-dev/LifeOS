@@ -29,6 +29,8 @@ type Props = {
 export function GradientButton({ label, onPress, tint, icon: Icon, disabled, size = 'lg' }: Props) {
   const scale = useSharedValue(1);
   const [start, end] = tintGradient(tint);
+  // White is safe on any tintGradient: the gradient darkens itself until it is.
+  const ink = '#ffffff';
   const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const height = size === 'lg' ? 56 : 46;
 
@@ -66,10 +68,10 @@ export function GradientButton({ label, onPress, tint, icon: Icon, disabled, siz
             gap: 8,
           }}
         >
-          {Icon && <Icon size={size === 'lg' ? 20 : 17} color="#ffffff" strokeWidth={2.4} />}
+          {Icon && <Icon size={size === 'lg' ? 20 : 17} color={ink} strokeWidth={2.4} />}
           <Text
             className="font-sora-bold"
-            style={{ color: '#ffffff', fontSize: size === 'lg' ? 16 : 15 }}
+            style={{ color: ink, fontSize: size === 'lg' ? 16 : 15 }}
           >
             {label}
           </Text>

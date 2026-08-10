@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { cardClass } from '@/components/ui/card';
 import { AttributeRow } from '@/components/ui/attribute-row';
 import { Button } from '@/components/ui/button';
 import { SheetHeader } from '@/components/ui/sheet-header';
@@ -118,7 +119,7 @@ export default function NewCalendarEventScreen() {
           />
         </View>
 
-        <View className="rounded-2xl border border-border bg-card px-4">
+        <View className={cardClass({ padding: 'none' }, 'px-4')}>
           <AttributeRow icon={Clock} label={t('timeline.time')} isFirst>
             {Platform.OS === 'ios' ? (
               <DateTimePicker
@@ -245,7 +246,7 @@ export default function NewCalendarEventScreen() {
             accessibilityLabel={t('timeline.eventDetails')}
             placeholder={t('timeline.detailsPlaceholder')}
             placeholderTextColor={colors[scheme].mutedForeground}
-            className="min-h-20 rounded-2xl border border-border bg-card p-4 text-base text-foreground"
+            className={cardClass({ padding: 'md' }, 'min-h-20 text-base text-foreground')}
             textAlignVertical="top"
           />
         </View>

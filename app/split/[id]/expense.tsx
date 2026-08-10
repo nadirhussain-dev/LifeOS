@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { InlineError } from '@/components/ui/query-error';
 import { SheetHeader } from '@/components/ui/sheet-header';
@@ -269,7 +270,7 @@ export default function SplitExpenseScreen() {
                 placeholder="0.00"
                 keyboardType="decimal-pad"
                 placeholderTextColor={colors[scheme].mutedForeground}
-                className="rounded-2xl border border-border bg-card px-4 py-3 text-2xl text-foreground"
+                className={cardClass({ padding: 'row' }, 'text-2xl text-foreground')}
               />
             </View>
             <View className="gap-2">
@@ -278,7 +279,7 @@ export default function SplitExpenseScreen() {
                 onPress={() => setShowDatePicker(true)}
                 accessibilityRole="button"
                 accessibilityLabel={`${t('split.date')}: ${format(spentAt, 'PPP')}`}
-                className="flex-row items-center gap-2 rounded-2xl border border-border bg-card px-4"
+                className={cardClass({ padding: 'none' }, 'flex-row items-center gap-2 px-4')}
                 style={{ height: 56 }}
               >
                 <CalendarDays size={16} color={colors[scheme].mutedForeground} />
@@ -383,7 +384,7 @@ export default function SplitExpenseScreen() {
               </View>
             </View>
 
-            <View className="rounded-2xl border border-border bg-card px-4">
+            <View className={cardClass({ padding: 'none' }, 'px-4')}>
               {members.map((m, index) => {
                 const included = participants.includes(m.id);
                 const share = shares.find((s) => s.memberId === m.id);

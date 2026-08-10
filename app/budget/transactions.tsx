@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
-import { categoryMetaFor } from '@/features/budget/config/budget-config';
+import { categoryLabelFor } from '@/features/budget/config/budget-config';
 import { TransactionRow } from '@/features/budget/components/transaction-row';
 import { formatMoney } from '@/features/budget/services/money';
 import { useBudgetSettings, useTransactions } from '@/features/budget/hooks/use-budget';
@@ -52,7 +52,7 @@ export default function TransactionsScreen() {
     const filtered = transactions.filter((t) => {
       if (filter !== 'all' && t.type !== filter) return false;
       if (q) {
-        const label = categoryMetaFor(t.type, t.category).label.toLowerCase();
+        const label = categoryLabelFor(t.type, t.category).toLowerCase();
         if (!(t.note ?? '').toLowerCase().includes(q) && !label.includes(q)) return false;
       }
       return true;

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Segmented } from '@/components/ui/segmented';
 import { SheetHeader } from '@/components/ui/sheet-header';
@@ -25,15 +26,11 @@ import {
   useTransaction,
 } from '@/features/budget/hooks/use-budget';
 import type { BudgetAccount, TransactionType } from '@/features/budget/types/budget.types';
+import { ledgerTints, resolveTint } from '@/constants/design-tokens';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { confirm } from '@/lib/dialog-store';
 
 const ACCOUNT_OPTIONS = ACCOUNTS.map((a) => ({ value: a.id, label: a.label }));
-const TYPE_TINT: Record<TransactionType, string> = {
-  income: '#22c55e',
-  expense: '#ef4444',
-  savings: '#6366f1',
-};
 
 export default function TransactionScreen() {
   const { id, savingsGoalId: presetGoalId } = useLocalSearchParams<{
@@ -136,7 +133,7 @@ export default function TransactionScreen() {
     });
   };
 
-  const tint = TYPE_TINT[type];
+  const tint = resolveTint(ledgerTints[type], scheme);
 
   return (
     <View className="flex-1 bg-background">
@@ -249,7 +246,7 @@ export default function TransactionScreen() {
           />
         </View>
 
-        <View className="flex-row items-center justify-between rounded-2xl border border-border bg-card px-4 py-3">
+        <View className={cardClass({ padding: 'row' }, 'flex-row items-center justify-between')}>
           <View className="flex-row items-center gap-2">
             <CalendarDays size={16} color={colors[scheme].mutedForeground} />
             <Text className="font-sora-medium text-foreground">{t('budget.date')}</Text>
@@ -287,7 +284,7 @@ export default function TransactionScreen() {
           onChangeText={setNote}
           placeholder={t('budget.noteOptional')}
           placeholderTextColor={colors[scheme].mutedForeground}
-          className="rounded-2xl border border-border bg-card px-4 py-3 text-foreground"
+          className={cardClass({ padding: 'row' }, 'text-foreground')}
         />
 
         <Button

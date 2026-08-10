@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
@@ -27,7 +28,7 @@ type StepperProps = {
 function Stepper({ label, value, onDecrease, onIncrease }: StepperProps) {
   const scheme = useColorScheme() ?? 'light';
   return (
-    <View className="flex-row items-center justify-between rounded-2xl border border-border bg-card px-4 py-3">
+    <View className={cardClass({ padding: 'row' }, 'flex-row items-center justify-between')}>
       <Text className="font-sora-medium text-foreground">{label}</Text>
       <View className="flex-row items-center gap-4">
         <Pressable
@@ -151,7 +152,7 @@ export default function StudySettingsScreen() {
           {subjects.map((subject) => (
             <View
               key={subject.id}
-              className="flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3"
+              className={cardClass({ padding: 'row' }, 'flex-row items-center gap-3')}
             >
               <View
                 className="h-3 w-3 rounded-full"

@@ -4,6 +4,7 @@ import { HandCoins } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { ArrowForward } from '@/components/ui/directional-icon';
 import { EmptyState } from '@/components/ui/empty-state';
 import { InlineError } from '@/components/ui/query-error';
@@ -97,7 +98,7 @@ export default function SettleUpScreen() {
                 // The visual row reads "A → B" with the amount in a chip below;
                 // spoken, that needs to be one sentence.
                 accessibilityLabel={t('split.settleA11y', { from, to, amount })}
-                className="gap-3 rounded-2xl border border-border bg-card p-4"
+                className={cardClass({ padding: 'md' }, 'gap-3')}
                 style={{ opacity: settleUp.isPending ? 0.6 : 1 }}
               >
                 <View className="flex-row items-center gap-2">

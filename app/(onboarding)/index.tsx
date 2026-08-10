@@ -1,316 +1,287 @@
 import { useRouter } from 'expo-router';
-import { Leaf, ShieldCheck } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ArrowBack } from '@/components/ui/directional-icon';
-import { Button } from '@/components/ui/button';
-import { Text } from '@/components/ui/text';
-import { colors } from '@/constants/theme';
-import { FOCUS_AREAS, GENDER_OPTIONS, focusTint } from '@/features/profile/constants';
-import type { FocusArea, Gender } from '@/features/profile/store/profile-store';
+import { useAuthStore } from '@/features/auth/services/auth-store';
+import { AboutYouStep } from '@/features/onboarding/components/about-you-step';
+import { AccountStep } from '@/features/onboarding/components/account-step';
+import { FocusStep } from '@/features/onboarding/components/focus-step';
+import { LockStep } from '@/features/onboarding/components/lock-step';
+import { ReadyStep } from '@/features/onboarding/components/ready-step';
+import { ShapeStep, hasAnythingToShape } from '@/features/onboarding/components/shape-step';
+import { WelcomeStep } from '@/features/onboarding/components/welcome-step';
+import {
+  applyOnboardingSeed,
+  type SeedResult,
+} from '@/features/onboarding/services/seed-from-onboarding';
+import { useOnboardingDraftStore } from '@/features/onboarding/store/onboarding-draft-store';
 import { useProfileStore } from '@/features/profile/store/profile-store';
 import {
   authenticate,
   getBiometricLabel,
   isBiometricAvailable,
 } from '@/features/security/lib/biometrics';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
-import { alpha } from '@/lib/color';
+import { useTheme } from '@/hooks/use-theme';
+import { deviceCurrencyCode } from '@/lib/locale';
 
-const TOTAL_STEPS = 5;
+/**
+ * First-run setup.
+ *
+ * ## What changed and why
+ *
+ * This used to be five inlined screens in one file that asked for a name, a
+ * gender, some focus areas and a biometric lock, then dropped the user on an
+ * empty dashboard. Every answer was recorded and none of it produced anything,
+ * which is the standard way an app loses somebody in the first minute: they have
+ * told it everything about themselves and it has given them nothing back.
+ *
+ * Two structural changes fix that.
+ *
+ * **The account offer moved in here, and the welcome moved in front of it.**
+ * `app/index.tsx` used to send every unauthenticated visitor to `(auth)/login`,
+ * so the first screen of the app was a password field belonging to an app that
+ * had not yet demonstrated doing anything. Now the value comes first and the
+ * account is a real three-way choice one step in.
+ *
+ * **The focus answers now seed the app.** They decide what the "make it yours"
+ * step offers, that step writes real habits and real settings, and the final
+ * screen names what was created. Setup ends with an app that has the user's name
+ * on it and something on it to do.
+ *
+ * ## Steps are a list, not a number
+ *
+ * The flow is a filtered array rather than an index into a fixed set, because two
+ * steps are conditional — the account step disappears once there is a session,
+ * and "make it yours" has nothing to offer to somebody who picked no focus
+ * areas. Hardcoding indices around conditional screens is how a back button ends
+ * up on a screen that no longer exists.
+ */
+type StepId = 'welcome' | 'account' | 'about' | 'focus' | 'shape' | 'lock' | 'ready';
 
 export default function OnboardingScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const scheme = useColorScheme() ?? 'light';
+  const { c } = useTheme();
   const { t } = useTranslation();
   const reducedMotion = useReducedMotion();
-  const completeOnboarding = useProfileStore((s) => s.completeOnboarding);
 
-  const [step, setStep] = useState(0);
-  const [name, setName] = useState('');
-  const [gender, setGender] = useState<Gender | null>(null);
-  const [focus, setFocus] = useState<FocusArea[]>([]);
+  const completeOnboarding = useProfileStore((s) => s.completeOnboarding);
+  const session = useAuthStore((s) => s.session);
+  const isGuest = useAuthStore((s) => s.isGuest);
+  const continueAsGuest = useAuthStore((s) => s.continueAsGuest);
+  const authProfile = useAuthStore((s) => s.profile);
+
+  const draft = useOnboardingDraftStore();
+  const {
+    step,
+    name,
+    gender,
+    focusAreas,
+    shape,
+    setStep,
+    setName,
+    setGender,
+    toggleFocus,
+    toggleStarterHabit,
+    setWaterGoal,
+    setCurrencyCode,
+    reset: resetDraft,
+  } = draft;
+
   const [bioAvailable, setBioAvailable] = useState(false);
   const [bioLabel, setBioLabel] = useState('Biometrics');
+  const [seed, setSeed] = useState<SeedResult>({
+    habitsCreated: 0,
+    waterGoalMl: null,
+    currencyCode: null,
+  });
 
   useEffect(() => {
-    isBiometricAvailable().then(setBioAvailable);
-    getBiometricLabel().then(setBioLabel);
+    void isBiometricAvailable().then(setBioAvailable);
+    void getBiometricLabel().then(setBioLabel);
   }, []);
 
-  const toggleFocus = (id: FocusArea) =>
-    setFocus((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  /**
+   * Prefill from whatever we already know.
+   *
+   * Somebody who just signed in with Google has already told us their name;
+   * asking for it again is the app not paying attention. Same for the currency —
+   * the phone knows the region, so a 90-entry picker is a question with an
+   * already-known answer. Both only fill a *blank* field, so neither can
+   * overwrite something the user typed or chose.
+   */
+  useEffect(() => {
+    const known = authProfile?.displayName?.trim();
+    if (known && !name.trim()) setName(known);
+  }, [authProfile?.displayName, name, setName]);
 
-  const finish = (appLockEnabled: boolean) => {
-    completeOnboarding({ name, gender, focusAreas: focus, appLockEnabled });
-    router.replace('/(tabs)');
-  };
+  useEffect(() => {
+    if (shape.currencyCode) return;
+    const local = deviceCurrencyCode();
+    if (local) setCurrencyCode(local);
+  }, [shape.currencyCode, setCurrencyCode]);
 
-  const enableLock = async () => {
-    const ok = await authenticate(`Confirm ${bioLabel}`);
-    if (ok) finish(true);
-  };
+  const authed = !!session || isGuest;
+
+  const steps = useMemo<StepId[]>(() => {
+    const list: StepId[] = ['welcome'];
+    // Skipped once there is a session or an explicit guest choice — including on
+    // the way back from the email flow, which is exactly when re-asking would be
+    // most confusing.
+    if (!authed) list.push('account');
+    list.push('about', 'focus');
+    if (hasAnythingToShape(focusAreas)) list.push('shape');
+    list.push('lock', 'ready');
+    return list;
+  }, [authed, focusAreas]);
+
+  /**
+   * Clamped, because the step list can shrink underneath a stored index — signing
+   * in removes the account step, and deselecting every focus area removes
+   * "make it yours". A persisted draft pointing past the end would otherwise
+   * render nothing at all.
+   */
+  const index = Math.min(step, steps.length - 1);
+  const current = steps[index];
+
+  useEffect(() => {
+    if (step !== index) setStep(index);
+  }, [step, index, setStep]);
+
+  const goNext = useCallback(
+    () => setStep(Math.min(index + 1, steps.length - 1)),
+    [index, steps.length, setStep],
+  );
+  const goBack = useCallback(() => setStep(Math.max(index - 1, 0)), [index, setStep]);
+
+  /**
+   * Runs the seed on the way into the final screen, not on the way out of it.
+   *
+   * The last screen's whole job is to say what was created, so the creating has
+   * to have happened by the time it renders — and doing it here rather than in
+   * `finish` also means a user who force-quits on the summary still keeps the
+   * habits they chose.
+   */
+  const goToReady = useCallback(() => {
+    setSeed(applyOnboardingSeed(shape));
+    setStep(steps.indexOf('ready'));
+  }, [shape, steps, setStep]);
+
+  const finish = useCallback(
+    (appLockEnabled: boolean) => {
+      completeOnboarding({ name, gender, focusAreas, appLockEnabled });
+      // The draft has served its purpose; a stale one is a bug waiting for the
+      // next person who resets the app.
+      resetDraft();
+      router.replace('/(tabs)');
+    },
+    [completeOnboarding, name, gender, focusAreas, resetDraft, router],
+  );
+
+  const [lockChoice, setLockChoice] = useState(false);
+
+  const enableLock = useCallback(async () => {
+    const ok = await authenticate(t('onboarding.confirmMethod', { method: bioLabel }));
+    if (!ok) return;
+    setLockChoice(true);
+    goToReady();
+  }, [bioLabel, goToReady, t]);
 
   return (
     <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
-      {/* progress + back */}
       <View className="h-12 flex-row items-center justify-center px-5">
-        {step > 0 ? (
+        {index > 0 && current !== 'ready' ? (
           <Pressable
             accessibilityRole="button"
-            onPress={() => setStep((s) => s - 1)}
+            accessibilityLabel={t('common.back')}
+            onPress={goBack}
             hitSlop={10}
             className="absolute start-5"
-            accessibilityLabel={t('common.back')}
           >
-            <ArrowBack size={22} color={colors[scheme].foreground} />
+            <ArrowBack size={22} color={c.foreground} />
           </Pressable>
         ) : null}
+
         <View className="flex-row gap-1.5">
-          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+          {steps.map((id, i) => (
             <View
-              key={i}
+              key={id}
               className="h-1.5 rounded-full"
               style={{
-                width: i === step ? 22 : 6,
-                backgroundColor: i <= step ? colors[scheme].accent : colors[scheme].border,
+                width: i === index ? 22 : 6,
+                backgroundColor: i <= index ? c.accent : c.border,
               }}
             />
           ))}
         </View>
       </View>
 
-      <KeyboardAvoidingView
+      <Animated.View
+        key={current}
+        entering={reducedMotion ? undefined : FadeIn.duration(240)}
         className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <Animated.View
-          key={step}
-          entering={reducedMotion ? undefined : FadeIn.duration(260)}
-          className="flex-1 px-6"
-        >
-          {step === 0 ? (
-            <View className="flex-1 justify-center gap-6">
-              <View
-                className="h-20 w-20 items-center justify-center rounded-3xl"
-                style={{ backgroundColor: colors[scheme].accent }}
-              >
-                <Leaf size={38} color="#ffffff" strokeWidth={2} />
-              </View>
-              <View className="gap-3">
-                <Text className="font-sora-extrabold text-4xl tracking-tight text-foreground">
-                  {t('onboarding.welcomeTitle')}
-                </Text>
-                <Text className="text-muted-foreground" style={{ fontSize: 17, lineHeight: 26 }}>
-                  {t('onboarding.welcomeBody')}
-                </Text>
-              </View>
-            </View>
-          ) : null}
+        {current === 'welcome' ? (
+          <WelcomeStep onNext={goNext} onSignIn={() => router.push('/(auth)/login')} />
+        ) : null}
 
-          {step === 1 ? (
-            <View className="flex-1 gap-6 pt-8">
-              <View className="gap-2">
-                <Text variant="micro">{t('onboarding.aboutYou')}</Text>
-                <Text className="font-sora-extrabold text-3xl tracking-tight text-foreground">
-                  {t('onboarding.whatToCallYou')}
-                </Text>
-                <Text variant="muted">{t('onboarding.nameHint')}</Text>
-              </View>
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                accessibilityLabel={t('onboarding.yourName')}
-                placeholder={t('onboarding.yourName')}
-                placeholderTextColor={colors[scheme].mutedForeground}
-                autoFocus
-                returnKeyType="next"
-                onSubmitEditing={() => name.trim() && setStep(2)}
-                className="rounded-2xl border border-border bg-card px-4 py-4 text-lg text-foreground"
-                style={{ fontFamily: 'Sora_400Regular' }}
-              />
-            </View>
-          ) : null}
-
-          {step === 2 ? (
-            <View className="flex-1 gap-5 pt-8">
-              <View className="gap-2">
-                <Text variant="micro">{t('onboarding.aboutYou')}</Text>
-                <Text className="font-sora-extrabold text-3xl tracking-tight text-foreground">
-                  {t('onboarding.genderQuestion')}
-                </Text>
-                {/* Says what it is for, because an app asking this without a
-                    reason is an app people close. */}
-                <Text variant="muted">{t('onboarding.genderWhy')}</Text>
-              </View>
-              <View className="gap-2.5">
-                {GENDER_OPTIONS.map((option) => {
-                  const selected = gender === option.id;
-                  return (
-                    <Pressable
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected }}
-                      key={option.id}
-                      onPress={() => setGender(selected ? null : option.id)}
-                      className="flex-row items-center justify-between rounded-2xl border px-4 py-4"
-                      style={{
-                        borderColor: selected ? colors[scheme].accent : colors[scheme].border,
-                        backgroundColor: selected
-                          ? alpha(colors[scheme].accent, 0.12)
-                          : 'transparent',
-                      }}
-                    >
-                      <Text
-                        className="font-sora-medium"
-                        style={{
-                          color: selected ? colors[scheme].accent : colors[scheme].foreground,
-                        }}
-                      >
-                        {t(option.labelKey)}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-          ) : null}
-
-          {step === 3 ? (
-            <View className="flex-1 gap-5 pt-8">
-              <View className="gap-2">
-                <Text variant="micro">{t('dashboard.yourFocus')}</Text>
-                <Text className="font-sora-extrabold text-3xl tracking-tight text-foreground">
-                  {t('onboarding.whatMatters')}
-                </Text>
-                <Text variant="muted">{t('onboarding.pickAFew')}</Text>
-              </View>
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerClassName="flex-row flex-wrap gap-2.5 pb-4"
-              >
-                {FOCUS_AREAS.map((area) => {
-                  const selected = focus.includes(area.id);
-                  const tint = focusTint(area.module, scheme);
-                  const Icon = area.icon;
-                  return (
-                    <Pressable
-                      accessibilityRole="button"
-                      key={area.id}
-                      onPress={() => toggleFocus(area.id)}
-                      className="flex-row items-center gap-2 rounded-full border px-4 py-2.5"
-                      style={{
-                        borderColor: selected ? tint : colors[scheme].border,
-                        backgroundColor: selected ? alpha(tint, 0.14) : 'transparent',
-                      }}
-                    >
-                      <Icon size={17} color={selected ? tint : colors[scheme].mutedForeground} />
-                      <Text
-                        className="font-sora-medium"
-                        style={{ color: selected ? tint : colors[scheme].foreground }}
-                      >
-                        {t(area.labelKey)}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          ) : null}
-
-          {step === 4 ? (
-            <View className="flex-1 justify-center gap-6">
-              <View className="h-20 w-20 items-center justify-center rounded-3xl bg-surface">
-                <ShieldCheck size={36} color={colors[scheme].accent} strokeWidth={1.8} />
-              </View>
-              <View className="gap-3">
-                <Text className="font-sora-extrabold text-3xl tracking-tight text-foreground">
-                  {t('onboarding.keepPrivate')}
-                </Text>
-                <Text className="text-muted-foreground" style={{ fontSize: 17, lineHeight: 26 }}>
-                  {bioAvailable
-                    ? t('onboarding.lockBody', { method: bioLabel })
-                    : t('onboarding.noBiometrics')}
-                </Text>
-              </View>
-            </View>
-          ) : null}
-        </Animated.View>
-      </KeyboardAvoidingView>
-
-      {/* footer — one primary action per step */}
-      <View className="gap-3 px-6" style={{ paddingBottom: insets.bottom + 16, paddingTop: 12 }}>
-        {step === 0 ? (
-          <Button
-            variant="accent"
-            size="lg"
-            label={t('onboarding.getStarted')}
-            onPress={() => setStep(1)}
+        {current === 'account' ? (
+          <AccountStep
+            onSignedIn={goNext}
+            onContinueAsGuest={() => {
+              continueAsGuest();
+              goNext();
+            }}
+            onUseEmail={() => router.push('/(auth)/sign-up')}
           />
         ) : null}
-        {step === 1 ? (
-          <Button
-            variant="accent"
-            size="lg"
-            label={t('common.continue')}
-            disabled={!name.trim()}
-            onPress={() => setStep(2)}
+
+        {current === 'about' ? (
+          <AboutYouStep
+            name={name}
+            onChangeName={setName}
+            gender={gender}
+            onChangeGender={setGender}
+            onNext={goNext}
           />
         ) : null}
-        {step === 2 ? (
-          <Button
-            variant="accent"
-            size="lg"
-            label={gender ? t('common.continue') : t('onboarding.skipForNow')}
-            onPress={() => setStep(3)}
+
+        {current === 'focus' ? (
+          <FocusStep selected={focusAreas} onToggle={toggleFocus} onNext={goNext} />
+        ) : null}
+
+        {current === 'shape' ? (
+          <ShapeStep
+            focusAreas={focusAreas}
+            shape={shape}
+            onToggleHabit={toggleStarterHabit}
+            onSetWaterGoal={setWaterGoal}
+            onSetCurrency={setCurrencyCode}
+            onNext={goNext}
           />
         ) : null}
-        {step === 3 ? (
-          <Button
-            variant="accent"
-            size="lg"
-            label={focus.length ? t('common.continue') : t('onboarding.skipForNow')}
-            onPress={() => setStep(4)}
+
+        {current === 'lock' ? (
+          <LockStep
+            available={bioAvailable}
+            methodLabel={bioLabel}
+            onEnable={() => void enableLock()}
+            onSkip={() => {
+              setLockChoice(false);
+              goToReady();
+            }}
           />
         ) : null}
-        {step === 4 ? (
-          bioAvailable ? (
-            <>
-              <Button
-                variant="accent"
-                size="lg"
-                label={t('onboarding.enableMethod', { method: bioLabel })}
-                onPress={enableLock}
-              />
-              <Button
-                variant="ghost"
-                size="lg"
-                label={t('onboarding.notNow')}
-                onPress={() => finish(false)}
-              />
-            </>
-          ) : (
-            <Button
-              variant="accent"
-              size="lg"
-              label={t('onboarding.finishSetup')}
-              onPress={() => finish(false)}
-            />
-          )
+
+        {current === 'ready' ? (
+          <ReadyStep name={name} seed={seed} onFinish={() => finish(lockChoice)} />
         ) : null}
-      </View>
+      </Animated.View>
     </View>
   );
 }

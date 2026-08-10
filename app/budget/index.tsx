@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { ChevronBack, ChevronForward } from '@/components/ui/directional-icon';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QueryError } from '@/components/ui/query-error';
@@ -176,7 +177,7 @@ export default function BudgetScreen() {
               return (
                 <View
                   key={entry.account}
-                  className="flex-1 items-center gap-1.5 rounded-2xl border border-border bg-card py-3.5"
+                  className={cardClass({ padding: 'none' }, 'flex-1 items-center gap-1.5 py-3.5')}
                 >
                   <Icon size={16} color={colors[scheme].mutedForeground} />
                   <Text className="font-sora-bold text-foreground">
@@ -192,7 +193,7 @@ export default function BudgetScreen() {
           <Pressable
             accessibilityRole="button"
             onPress={() => router.push('/budget/debts')}
-            className="flex-row items-center gap-3 rounded-2xl border border-border bg-card p-4"
+            className={cardClass({ padding: 'md' }, 'flex-row items-center gap-3')}
           >
             <View
               className="h-11 w-11 items-center justify-center rounded-xl"
@@ -216,7 +217,7 @@ export default function BudgetScreen() {
 
           {/* Budget vs actual */}
           {monthlyBudgetCents != null && monthlyBudgetCents > 0 && (
-            <View className="gap-2.5 rounded-2xl border border-border bg-card p-4">
+            <View className={cardClass({ padding: 'md' }, 'gap-2.5')}>
               <View className="flex-row items-center justify-between">
                 <Text variant="subheading">{t('budget.monthlyBudget')}</Text>
                 <Text variant="caption">
@@ -226,7 +227,7 @@ export default function BudgetScreen() {
               </View>
               <ProgressBar
                 progress={Math.min(1, budgetRatio)}
-                color={overBudget ? '#ef4444' : '#22c55e'}
+                color={overBudget ? colors[scheme].destructive : colors[scheme].success}
                 height={8}
               />
               <Text
@@ -247,7 +248,7 @@ export default function BudgetScreen() {
 
           {/* Expense donut */}
           {categories.length > 0 && (
-            <View className="gap-3 rounded-2xl border border-border bg-card p-4">
+            <View className={cardClass({ padding: 'md' }, 'gap-3')}>
               <Text variant="subheading">{t('budget.whereItWent')}</Text>
               <ExpenseDonut
                 categories={categories}

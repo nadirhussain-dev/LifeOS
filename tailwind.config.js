@@ -65,17 +65,36 @@ module.exports = {
         goals: 'hsl(var(--goals) / <alpha-value>)',
         budget: 'hsl(var(--budget) / <alpha-value>)',
         study: 'hsl(var(--study) / <alpha-value>)',
+        gallery: 'hsl(var(--gallery) / <alpha-value>)',
+        music: 'hsl(var(--music) / <alpha-value>)',
+        notes: 'hsl(var(--notes) / <alpha-value>)',
+        // the private space — same colour language, reached only via the vault
+        vault: 'hsl(var(--vault) / <alpha-value>)',
+        cycle: 'hsl(var(--cycle) / <alpha-value>)',
+        recovery: 'hsl(var(--recovery) / <alpha-value>)',
+        intimacy: 'hsl(var(--intimacy) / <alpha-value>)',
+        albums: 'hsl(var(--albums) / <alpha-value>)',
         border: 'hsl(var(--border) / <alpha-value>)',
         input: 'hsl(var(--input) / <alpha-value>)',
         ring: 'hsl(var(--ring) / <alpha-value>)',
       },
       // 8-point rhythm on a 4px base (mirrors constants/design-tokens.ts).
+      //
+      // `3xl` MUST be listed even though nothing in the app should reach past
+      // `2xl` for a card: Tailwind's own default `3xl` is 24px, which — once
+      // `2xl` is overridden to 28 — is SMALLER than the step below it. Fifteen
+      // surfaces had picked `rounded-3xl` meaning "the big one" and were
+      // silently rendering tighter than the 249 `rounded-2xl` cards beside
+      // them. Overriding it restores a monotonic scale so the class names can
+      // be trusted; reserve it for genuinely large squares (80pt+ icon
+      // plinths, 160pt media tiles) where 28 looks pinched.
       borderRadius: {
         sm: '8px',
         md: '12px',
         lg: '16px',
         xl: '20px',
         '2xl': '28px',
+        '3xl': '32px',
       },
       letterSpacing: {
         tightest: '-1px',

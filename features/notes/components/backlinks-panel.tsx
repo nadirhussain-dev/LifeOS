@@ -3,6 +3,7 @@ import { Link2 } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import type { NoteBacklink } from '@/features/notes/types/note.types';
@@ -26,7 +27,7 @@ export function BacklinksPanel({ backlinks }: Props) {
           Linked mentions
         </Text>
       </View>
-      <View className="gap-1 rounded-2xl border border-border bg-card px-4">
+      <View className={cardClass({ padding: 'none' }, 'gap-1 px-4')}>
         {backlinks.map((backlink, index) => (
           <Pressable
             accessibilityRole="button"

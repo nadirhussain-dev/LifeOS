@@ -6,13 +6,16 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'rea
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { AuthField } from '@/features/auth/components/auth-field';
+import { SocialAuthButtons } from '@/features/auth/components/social-auth-buttons';
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { useTheme } from '@/hooks/use-theme';
 import { useSplashStore } from '@/hooks/use-splash-store';
 import { isSupabaseConfigured } from '@/lib/env';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { c } = useTheme();
   const signIn = useAuthStore((s) => s.signIn);
   const continueAsGuest = useAuthStore((s) => s.continueAsGuest);
   // Don't autofocus while the cold-start splash is still up — it would raise
@@ -55,6 +58,19 @@ export default function LoginScreen() {
           <Text variant="caption" className="text-warning">
             {t('auth.cloudSyncOff')}
           </Text>
+        )}
+
+        {/* Above the form, because it is the faster path and burying the faster
+            path under the slower one is a choice made for the developer's
+            convenience. Renders nothing when the build has no credentials. */}
+        <SocialAuthButtons onError={setError} disabled={busy} />
+
+        {isSupabaseConfigured && (
+          <View className="flex-row items-center gap-3">
+            <View className="h-px flex-1" style={{ backgroundColor: c.border }} />
+            <Text variant="caption">{t('common.or')}</Text>
+            <View className="h-px flex-1" style={{ backgroundColor: c.border }} />
+          </View>
         )}
 
         <View className="gap-4">

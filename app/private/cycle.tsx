@@ -3,8 +3,10 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, TextInput, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
+import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { ChipRow, PrivateScreen } from '@/features/private/components/private-screen';
 import { privateModule } from '@/features/private/config/private-modules';
@@ -27,11 +29,12 @@ import { alpha } from '@/lib/color';
 import { confirm } from '@/lib/dialog-store';
 
 const FLOWS: Flow[] = ['spotting', 'light', 'medium', 'heavy'];
-const TINT = privateModule('cycle')?.tint ?? '#e0518a';
+const TINT = privateModule('cycle')?.tint ?? moduleTints.cycle;
 
 export default function CycleScreen() {
   const scheme = useColorScheme() ?? 'light';
   const theme = colors[scheme];
+  const tint = resolveTint(TINT, scheme);
   const { t } = useTranslation();
 
   // Entries are held in state and reloaded explicitly rather than derived
@@ -81,7 +84,7 @@ export default function CycleScreen() {
     <PrivateScreen
       title={t('private.cycleTitle')}
       subtitle={t('private.cycleSubtitle')}
-      tint={TINT}
+      tint={tint}
       footer={
         <Button
           variant="accent"
@@ -96,10 +99,10 @@ export default function CycleScreen() {
       <View className="flex-row gap-3">
         <View
           className="flex-1 gap-1 rounded-2xl px-4 py-3.5"
-          style={{ backgroundColor: alpha(TINT, 0.12) }}
+          style={{ backgroundColor: alpha(tint, 0.12) }}
         >
           <Text variant="caption">{t('private.dayOfCycle')}</Text>
-          <Text className="font-sora-extrabold text-2xl" style={{ color: TINT }}>
+          <Text className="font-sora-extrabold text-2xl" style={{ color: tint }}>
             {currentDay ?? '—'}
           </Text>
         </View>
@@ -137,13 +140,13 @@ export default function CycleScreen() {
                 onPress={() => setFlow(active ? null : option)}
                 className="flex-1 items-center rounded-2xl border py-3"
                 style={{
-                  borderColor: active ? TINT : theme.border,
-                  backgroundColor: active ? alpha(TINT, 0.12) : 'transparent',
+                  borderColor: active ? tint : theme.border,
+                  backgroundColor: active ? alpha(tint, 0.12) : 'transparent',
                 }}
               >
                 <Text
                   className="font-sora-medium text-sm"
-                  style={{ color: active ? TINT : theme.foreground }}
+                  style={{ color: active ? tint : theme.foreground }}
                 >
                   {t(`private.flow_${option}`)}
                 </Text>
@@ -158,7 +161,7 @@ export default function CycleScreen() {
         <ChipRow
           options={SYMPTOMS}
           selected={symptoms}
-          tint={TINT}
+          tint={tint}
           labelFor={(s) => t(`private.symptom_${s}`)}
           onToggle={(s) =>
             setSymptoms((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
@@ -172,7 +175,7 @@ export default function CycleScreen() {
         placeholder={t('private.notePlaceholder')}
         placeholderTextColor={theme.mutedForeground}
         multiline
-        className="min-h-[88px] rounded-2xl border border-border bg-card px-4 py-3 text-foreground"
+        className={cardClass({ padding: 'row' }, 'min-h-[88px] text-foreground')}
         style={{ fontFamily: 'Sora_400Regular', textAlignVertical: 'top' }}
       />
 
@@ -183,7 +186,7 @@ export default function CycleScreen() {
           {periods.slice(0, 6).map((period) => (
             <View
               key={period.start}
-              className="flex-row items-center justify-between rounded-2xl border border-border bg-card px-4 py-3"
+              className={cardClass({ padding: 'row' }, 'flex-row items-center justify-between')}
             >
               <Text className="font-sora-medium text-foreground">
                 {format(parseISO(period.start), 'd MMM yyyy')}
@@ -203,14 +206,14 @@ export default function CycleScreen() {
               onLongPress={() => confirmDelete(entry.id)}
               accessibilityRole="button"
               accessibilityHint={t('private.longPressDelete')}
-              className="gap-1 rounded-2xl border border-border bg-card px-4 py-3"
+              className={cardClass({ padding: 'row' }, 'gap-1')}
             >
               <View className="flex-row items-center justify-between">
                 <Text className="font-sora-medium text-foreground">
                   {format(parseISO(entry.date), 'd MMM yyyy')}
                 </Text>
                 {entry.flow ? (
-                  <Text variant="caption" style={{ color: TINT }}>
+                  <Text variant="caption" style={{ color: tint }}>
                     {t(`private.flow_${entry.flow}`)}
                   </Text>
                 ) : null}

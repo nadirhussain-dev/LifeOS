@@ -8,10 +8,13 @@ import {
   Download,
   Droplet,
   FileText,
+  GraduationCap,
   Info,
   Languages,
   LifeBuoy,
   Scale,
+  ShieldAlert,
+  Target,
   Upload,
   UserCircle,
   Laptop,
@@ -27,7 +30,9 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, Pressable, ScrollView, Switch, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { moduleTints } from '@/constants/design-tokens';
 import { SettingsRow } from '@/components/ui/settings-row';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -37,7 +42,9 @@ import { clearAllData } from '@/lib/data-management';
 import { queryClient } from '@/lib/query-client';
 import { confirm, notify } from '@/lib/dialog-store';
 import { toast } from '@/lib/toast-store';
+import { isOperator as checkOperator } from '@/features/operator/services/operator-repository';
 import { isVaultSetUp } from '@/features/private/services/vault-keys';
+import { usePrivateStore } from '@/features/private/store/private-store';
 import { useProfileStore } from '@/features/profile/store/profile-store';
 import {
   authenticate,
@@ -84,6 +91,31 @@ export default function SettingsScreen() {
   // Decides whether the private-space row leads to setup or the PIN pad. Says
   // nothing about what is inside, only whether a space exists.
   const [privateSetUp, setPrivateSetUp] = useState(false);
+  const privateHidden = usePrivateStore((state) => state.hiddenFromSettings);
+
+  /**
+   * Whether to show the operator console at all.
+   *
+   * Asked of the server, not inferred from anything local. A row that appears
+   * for everybody and errors for most is worse than no row: it tells every user
+   * the console exists and invites them to poke at it. The answer defaults to
+   * no, so a failed check hides it rather than revealing it.
+   */
+  const [isOperator, setIsOperator] = useState(false);
+
+  /**
+   * The way into the private space.
+   *
+   * Called by the visible row and — always, hidden or not — by a long-press on
+   * the version number. Wired up unconditionally on purpose: a gesture that
+   * only starts working once it is the only way in is a gesture nobody has ever
+   * successfully performed, and the first attempt would be made by someone who
+   * had just locked themselves out.
+   */
+  const openPrivateSpace = () => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push(privateSetUp ? '/private/unlock' : '/private/setup');
+  };
 
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -93,6 +125,7 @@ export default function SettingsScreen() {
     isBiometricAvailable().then(setBioAvailable);
     getBiometricLabel().then(setBioLabel);
     void isVaultSetUp().then(setPrivateSetUp);
+    void checkOperator().then(setIsOperator);
   }, []);
 
   const toggleAppLock = async (next: boolean) => {
@@ -197,14 +230,18 @@ export default function SettingsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader title={t('settings.title')} eyebrow={t('settings.eyebrow')} tint="#737373" />
+      <ScreenHeader
+        title={t('settings.title')}
+        eyebrow={t('settings.eyebrow')}
+        tint={moduleTints.settings}
+      />
       <ScrollView
         contentContainerClassName="gap-6 px-5 py-4 pb-10"
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-2">
           <SectionLabel>{t('settings.appearance')}</SectionLabel>
-          <View className="flex-row gap-2 rounded-2xl border border-border bg-card p-2">
+          <View className={cardClass({ padding: 'none' }, 'flex-row gap-2 p-2')}>
             {THEME_OPTIONS.map((option) => {
               const selected = themePreference === option.value;
               const Icon = option.icon;
@@ -240,7 +277,7 @@ export default function SettingsScreen() {
               );
             })}
           </View>
-          <View className="rounded-2xl border border-border bg-card px-4">
+          <View className={cardClass({ padding: 'none' }, 'px-4')}>
             <SettingsRow
               icon={Languages}
               label={t('settings.language')}
@@ -253,7 +290,7 @@ export default function SettingsScreen() {
 
         <View className="gap-2">
           <SectionLabel>{t('settings.notifications')}</SectionLabel>
-          <View className="rounded-2xl border border-border bg-card px-4">
+          <View className={cardClass({ padding: 'none' }, 'px-4')}>
             <SettingsRow
               icon={Bell}
               label={t('settings.notifications')}
@@ -273,6 +310,18 @@ export default function SettingsScreen() {
               subtitle={t('settings.journalReminderSubtitle')}
               onPress={() => router.push('/journal/reminder-settings')}
             />
+            <SettingsRow
+              icon={Target}
+              label={t('settings.goalReminders')}
+              subtitle={t('settings.goalRemindersSubtitle')}
+              onPress={() => router.push('/goals/reminder-settings')}
+            />
+            <SettingsRow
+              icon={GraduationCap}
+              label={t('settings.studyReminders')}
+              subtitle={t('settings.studyRemindersSubtitle')}
+              onPress={() => router.push('/study/reminder-settings')}
+            />
           </View>
           <Text variant="caption" className="px-1">
             {t('settings.perItemReminderNote')}
@@ -281,7 +330,7 @@ export default function SettingsScreen() {
 
         <View className="gap-2">
           <SectionLabel>{t('settings.privacy')}</SectionLabel>
-          <View className="rounded-2xl border border-border bg-card px-4">
+          <View className={cardClass({ padding: 'none' }, 'px-4')}>
             <SettingsRow
               icon={LockKeyhole}
               label={t('settings.appLock')}
@@ -301,32 +350,39 @@ export default function SettingsScreen() {
                 />
               }
             />
-            {/*
-              The one visible entry point to the private space. Its *existence*
-              is not the secret — its contents are, and those need a separate
-              PIN. Hiding this row too would leave no way back in, which is a
-              worse failure than an onlooker knowing the feature exists at all.
-            */}
             <SettingsRow
               icon={UserCircle}
               label={t('profile.title')}
               subtitle={t('profile.settingsSubtitle')}
               onPress={() => router.push('/profile')}
             />
-            <SettingsRow
-              icon={EyeOff}
-              label={t('private.entryLabel')}
-              subtitle={
-                privateSetUp ? t('private.entrySubtitleSetUp') : t('private.entrySubtitleNew')
-              }
-              onPress={() => router.push(privateSetUp ? '/private/unlock' : '/private/setup')}
-            />
+            {/*
+              The visible entry point to the private space. Its *existence* is
+              normally treated as safe to disclose — the contents are the secret
+              and they need a separate PIN — so this row is shown by default,
+              because a feature with no visible way in is a feature people lose.
+
+              It can be removed from inside the space itself, for the case the
+              default does not cover: somebody scrolling your Settings while you
+              watch. When it is gone, the long-press on the version number below
+              is the way back, and the toggle that hides it says so.
+            */}
+            {privateHidden ? null : (
+              <SettingsRow
+                icon={EyeOff}
+                label={t('private.entryLabel')}
+                subtitle={
+                  privateSetUp ? t('private.entrySubtitleSetUp') : t('private.entrySubtitleNew')
+                }
+                onPress={openPrivateSpace}
+              />
+            )}
           </View>
         </View>
 
         <View className="gap-2">
           <SectionLabel>{t('settings.data')}</SectionLabel>
-          <View className="rounded-2xl border border-border bg-card px-4">
+          <View className={cardClass({ padding: 'none' }, 'px-4')}>
             <SettingsRow
               icon={Download}
               label={isExporting ? t('settings.preparingExport') : t('settings.exportData')}
@@ -357,12 +413,21 @@ export default function SettingsScreen() {
 
         <View className="gap-2">
           <SectionLabel>{t('settings.about')}</SectionLabel>
-          <View className="rounded-2xl border border-border bg-card px-4">
+          <View className={cardClass({ padding: 'none' }, 'px-4')}>
+            {/*
+              Long-press re-enters the private space. Chosen because it is the
+              one row in Settings that is unambiguously inert — nobody
+              long-presses a version number by accident, and nobody exploring
+              somebody else's phone thinks to. It carries no chevron, no hint and
+              no button role, so the row is indistinguishable from the version
+              number it was before.
+            */}
             <SettingsRow
               icon={Info}
               label={t('settings.version')}
               value={Constants.expoConfig?.version ?? '1.0.0'}
               isFirst
+              onLongPress={openPrivateSpace}
             />
             <SettingsRow
               icon={Database}
@@ -384,6 +449,16 @@ export default function SettingsScreen() {
               subtitle={t('moderation.blockedAccountsSubtitle')}
               onPress={() => router.push('/settings/blocked')}
             />
+            {/* Only for accounts the server confirms are operators. Everyone
+                else never learns the screen exists. */}
+            {isOperator ? (
+              <SettingsRow
+                icon={ShieldAlert}
+                label={t('operator.title')}
+                subtitle={t('operator.rowHint')}
+                onPress={() => router.push('/settings/operator')}
+              />
+            ) : null}
             <SettingsRow
               icon={FileText}
               label={t('settings.privacyPolicy')}

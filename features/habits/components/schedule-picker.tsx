@@ -4,6 +4,7 @@ import { Pressable, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Text } from '@/components/ui/text';
+import { WeekdayPicker } from '@/components/ui/weekday-picker';
 import { colors } from '@/constants/theme';
 import type { HabitScheduleType } from '@/features/habits/types/habit.types';
 
@@ -14,16 +15,6 @@ const SCHEDULE_OPTIONS: { value: HabitScheduleType; labelKey: string }[] = [
   { value: 'custom_days', labelKey: 'schedule.certainDays' },
   { value: 'every_x_days', labelKey: 'schedule.everyXDays' },
   { value: 'flexible', labelKey: 'schedule.flexible' },
-];
-
-const WEEKDAYS = [
-  { value: 0, label: 'S' },
-  { value: 1, label: 'M' },
-  { value: 2, label: 'T' },
-  { value: 3, label: 'W' },
-  { value: 4, label: 'T' },
-  { value: 5, label: 'F' },
-  { value: 6, label: 'S' },
 ];
 
 type Props = {
@@ -45,15 +36,6 @@ export function SchedulePicker({
 }: Props) {
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
-  const selectedDays = new Set(scheduleDays ?? []);
-
-  const toggleDay = (day: number) => {
-    Haptics.selectionAsync();
-    const next = new Set(selectedDays);
-    if (next.has(day)) next.delete(day);
-    else next.add(day);
-    onChangeDays([...next].sort());
-  };
 
   return (
     <View className="gap-3">
@@ -91,35 +73,7 @@ export function SchedulePicker({
       </View>
 
       {scheduleType === 'custom_days' && (
-        <View className="flex-row gap-2">
-          {WEEKDAYS.map((day) => {
-            const selected = selectedDays.has(day.value);
-            return (
-              <Pressable
-                accessibilityRole="button"
-                key={day.value}
-                onPress={() => toggleDay(day.value)}
-                className="h-9 w-9 items-center justify-center rounded-full border"
-                style={{
-                  borderColor: selected ? colors[scheme].accent : colors[scheme].border,
-                  backgroundColor: selected ? colors[scheme].accent : 'transparent',
-                }}
-              >
-                <Text
-                  variant="caption"
-                  className="font-sora-semibold"
-                  style={{
-                    color: selected
-                      ? colors[scheme].accentForeground
-                      : colors[scheme].mutedForeground,
-                  }}
-                >
-                  {day.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <WeekdayPicker value={scheduleDays ?? []} onChange={onChangeDays} />
       )}
 
       {scheduleType === 'every_x_days' && (

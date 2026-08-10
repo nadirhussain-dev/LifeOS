@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChevronBack } from '@/components/ui/directional-icon';
 import { Text } from '@/components/ui/text';
+import { resolveTint, type TintPair } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { alpha } from '@/lib/color';
@@ -29,9 +30,18 @@ type Props = {
   /** Uppercase micro label above the title — module identity on landing
    *  screens, parent-module breadcrumb on inner screens. */
   eyebrow?: string;
-  /** Module tint — colors the eyebrow and the back-chip icon. When omitted the
-   *  header stays neutral (used by module-less screens like Journal). */
-  tint?: string;
+  /**
+   * Module tint — colors the eyebrow and the back-chip icon. When omitted the
+   * header stays neutral (used by module-less screens like Journal).
+   *
+   * Accepts a `TintPair` as well as a bare hex, and resolves it here. Ten
+   * chrome screens were passing a flat `'#737373'` — the same grey in both
+   * themes, and the one grey in the app with no emerald bias, so those headers
+   * read as a different family from everything around them. Taking the pair
+   * means a caller writes `tint={moduleTints.settings}` and gets the right
+   * value per theme without threading `useColorScheme` through the screen.
+   */
+  tint?: string | TintPair;
   /** Defaults to router.back(). */
   onBack?: () => void;
   /** Hide the back affordance entirely (root-of-stack screens). */
@@ -51,7 +61,7 @@ type Props = {
 export function ScreenHeader({
   title,
   eyebrow,
-  tint,
+  tint: tintProp,
   onBack,
   showBack = true,
   actions,
@@ -62,6 +72,7 @@ export function ScreenHeader({
   const scheme = useColorScheme() ?? 'light';
   const insets = useSafeAreaInsets();
   const c = colors[scheme];
+  const tint = typeof tintProp === 'string' ? tintProp : tintProp && resolveTint(tintProp, scheme);
 
   const handleBack = onBack ?? (() => router.back());
 

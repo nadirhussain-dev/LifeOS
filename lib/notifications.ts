@@ -5,6 +5,7 @@ import {
   deleteLogByNotificationId,
   logScheduledNotification,
 } from '@/features/notifications/services/notification-log-repository';
+import { resolveNotificationContent } from '@/features/notifications/services/notification-visibility';
 import {
   shiftDailyOutOfQuietHours,
   shiftTimestampOutOfQuietHours,
@@ -294,6 +295,26 @@ function passesCategoryGate(payload?: NotificationPayload): boolean {
   return true;
 }
 
+/**
+ * Second gate, on top of the category switches: what the *module* behind this
+ * reminder currently allows to be said.
+ *
+ * Returns the text to schedule, or null to schedule nothing. Kept separate from
+ * `passesCategoryGate` because it can do something that gate cannot — let the
+ * reminder through with different words. See notification-visibility.ts for why
+ * a privatised module is redacted rather than silenced.
+ */
+function resolveContent(params: {
+  title: string;
+  body: string;
+  data?: NotificationPayload;
+}): { title: string; body: string } | null {
+  return resolveNotificationContent(params.data?.category, {
+    title: params.title,
+    body: params.body,
+  });
+}
+
 function nextDailyOccurrence(hour: number, minute: number): number {
   const next = new Date();
   next.setHours(hour, minute, 0, 0);
@@ -314,6 +335,8 @@ export async function scheduleOneTimeNotification(params: {
   const Notifications = getNotifications();
   if (!Notifications) return null;
   if (!passesCategoryGate(params.data)) return null;
+  const content = resolveContent(params);
+  if (!content) return null;
 
   const category = params.data?.category;
   let triggerAt = params.date;
@@ -333,7 +356,7 @@ export async function scheduleOneTimeNotification(params: {
   const data = params.data ? { ...params.data, ...(logId ? { logId } : {}) } : {};
 
   const scheduleId = await Notifications.scheduleNotificationAsync({
-    content: { title: params.title, body: params.body, data, sound: 'default' },
+    content: { title: content.title, body: content.body, data, sound: 'default' },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: triggerAt,
@@ -345,9 +368,12 @@ export async function scheduleOneTimeNotification(params: {
     logScheduledNotification({
       id: logId,
       notificationId: scheduleId,
+      // The inbox gets the same redaction. It is readable without unlocking
+      // the vault, so logging the real text there would hand back exactly what
+      // was just withheld from the lock screen.
       category: params.data.category,
-      title: params.title,
-      body: params.body,
+      title: content.title,
+      body: content.body,
       route: params.data.route,
       params: params.data.params,
       scheduledAt: triggerAt,
@@ -370,6 +396,8 @@ export async function scheduleDailyNotification(params: {
   const Notifications = getNotifications();
   if (!Notifications) return null;
   if (!passesCategoryGate(params.data)) return null;
+  const content = resolveContent(params);
+  if (!content) return null;
 
   const category = params.data?.category;
   let { hour, minute } = params;
@@ -386,7 +414,7 @@ export async function scheduleDailyNotification(params: {
   const data = params.data ? { ...params.data, ...(logId ? { logId } : {}) } : {};
 
   const scheduleId = await Notifications.scheduleNotificationAsync({
-    content: { title: params.title, body: params.body, data, sound: 'default' },
+    content: { title: content.title, body: content.body, data, sound: 'default' },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
       hour,
@@ -400,8 +428,8 @@ export async function scheduleDailyNotification(params: {
       id: logId,
       notificationId: scheduleId,
       category: params.data.category,
-      title: params.title,
-      body: params.body,
+      title: content.title,
+      body: content.body,
       route: params.data.route,
       params: params.data.params,
       scheduledAt,
@@ -432,6 +460,8 @@ export async function scheduleWeeklyNotification(params: {
   const Notifications = getNotifications();
   if (!Notifications) return null;
   if (!passesCategoryGate(params.data)) return null;
+  const content = resolveContent(params);
+  if (!content) return null;
 
   const category = params.data?.category;
   let { hour, minute } = params;
@@ -447,7 +477,7 @@ export async function scheduleWeeklyNotification(params: {
   const data = params.data ? { ...params.data, ...(logId ? { logId } : {}) } : {};
 
   const scheduleId = await Notifications.scheduleNotificationAsync({
-    content: { title: params.title, body: params.body, data, sound: 'default' },
+    content: { title: content.title, body: content.body, data, sound: 'default' },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
       weekday: ((params.weekday % 7) + 7) % 7 === 0 ? 1 : (((params.weekday % 7) + 7) % 7) + 1,
@@ -462,8 +492,8 @@ export async function scheduleWeeklyNotification(params: {
       id: logId,
       notificationId: scheduleId,
       category: params.data.category,
-      title: params.title,
-      body: params.body,
+      title: content.title,
+      body: content.body,
       route: params.data.route,
       params: params.data.params,
       scheduledAt: nextWeeklyOccurrence(params.weekday, hour, minute),

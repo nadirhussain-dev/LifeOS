@@ -16,6 +16,19 @@ type Props = {
   isFirst?: boolean;
   disabled?: boolean;
   onPress?: () => void;
+  /**
+   * A deliberately undiscoverable action on this row.
+   *
+   * Used for one thing: re-entering a private space whose Settings row has been
+   * hidden. The row shows no chevron and announces itself as ordinary text, so
+   * it does not advertise the gesture — which is the entire point, and the
+   * reason this is not `onPress`.
+   *
+   * A screen reader can still perform it (double-tap and hold) even though it
+   * is not announced, so the gesture is reachable rather than merely invisible.
+   * Being unannounced is the requirement, not an oversight.
+   */
+  onLongPress?: () => void;
   /** Set false to suppress the default chevron on a tappable row that performs
    * an inline action (export, delete) rather than navigating somewhere. */
   chevron?: boolean;
@@ -35,6 +48,7 @@ export function SettingsRow({
   isFirst,
   disabled,
   onPress,
+  onLongPress,
   chevron = true,
   right,
 }: Props) {
@@ -66,9 +80,17 @@ export function SettingsRow({
     </View>
   );
 
-  if (!onPress) return content;
+  if (!onPress && !onLongPress) return content;
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} disabled={disabled}>
+    <Pressable
+      // Only a row you can actually tap calls itself a button. A row whose sole
+      // action is the hidden long-press stays announced as its own text, so the
+      // gesture is not given away by the row describing itself as tappable.
+      accessibilityRole={onPress ? 'button' : undefined}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      disabled={disabled}
+    >
       {content}
     </Pressable>
   );

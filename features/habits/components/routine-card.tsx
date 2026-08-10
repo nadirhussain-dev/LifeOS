@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import type { RoutineWithHabits } from '@/features/habits/types/habit.types';
@@ -23,7 +24,7 @@ export function RoutineCard({ routine, onEdit, onToggleHabit, onOpenHabit }: Pro
   const doneCount = routine.habits.filter((habit) => habit.todayStatus === 'done').length;
 
   return (
-    <View className="mx-4 mb-2.5 gap-3 rounded-2xl border border-border bg-card p-4 shadow-e1">
+    <View className={cardClass({ padding: 'md', elevation: 'e1' }, 'mx-4 mb-2.5 gap-3')}>
       <View className="flex-row items-center justify-between">
         <View className="flex-1 gap-0.5">
           <Text className="font-sora-semibold">{routine.name}</Text>

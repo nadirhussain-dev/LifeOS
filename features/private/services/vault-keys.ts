@@ -1,5 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 
+import { deleteEscrow, uploadEscrow } from '@/features/private/services/vault-escrow';
+
 import {
   decryptBytes,
   deriveKek,
@@ -137,6 +139,32 @@ export async function setUpVault(pin: string): Promise<Uint8Array> {
 }
 
 /**
+ * Creates the real space around a master key that already exists.
+ *
+ * The second half of a device transfer (`key-transfer.ts`). Identical to
+ * `setUpVault` except that the key is given rather than generated, which is the
+ * whole point: the ciphertext already syncing to this device was sealed under
+ * that key, and a freshly generated one would leave it permanently unreadable
+ * while looking like a working vault.
+ *
+ * The PIN and salt are this device's own. Two phones holding the same vault do
+ * not have to share a PIN, and their keystores never hold the same bytes — only
+ * the key underneath is common.
+ */
+export async function adoptVault(pin: string, masterKey: Uint8Array): Promise<void> {
+  const salt = randomBytes(16);
+  const kek = await deriveKek(pin, salt);
+
+  await writeItem(SALT_KEY, toBase64(salt));
+  await writeItem(REAL_KEY, toBase64(encryptBytes(kek, masterKey)));
+  // Any decoy from a previous vault on this device belonged to a different
+  // master key and could never be opened again; leaving it would be a PIN that
+  // silently fails forever.
+  await SecureStore.deleteItemAsync(DECOY_KEY).catch(() => undefined);
+  await clearFailures();
+}
+
+/**
  * Adds the decoy space. Shares the salt (so the two derivations cost the same
  * and neither can be told apart by timing) but wraps an entirely separate
  * master key.
@@ -194,6 +222,25 @@ export async function unlockVault(pin: string): Promise<UnlockResult> {
 
   if (real) {
     await clearFailures();
+    /**
+     * Backfill for vaults the escrow never covered.
+     *
+     * `uploadEscrow` runs at setup, so a space created while signed out — or
+     * created before 0015 existed — has no row, and the app's own privacy copy
+     * says operator access is possible. Leaving those two facts disagreeing is
+     * the worst of the options: some vaults reachable, some not, with nothing
+     * on screen saying which, and a policy document that is wrong either way.
+     * A successful unlock while signed in is the one moment the master key and
+     * the account are both in hand, so it is where this belongs. The upsert is
+     * idempotent, so a covered vault costs one small write and nothing else.
+     *
+     * **Real space only.** Escrowing the decoy's key would seal the wrong vault
+     * and — far worse — a row whose contents changed between unlocks is itself
+     * evidence that a second space exists, which is the whole thing the decoy is
+     * for. Not awaited, for the same reason: the unlock must not take
+     * measurably longer when a decoy is in play.
+     */
+    void uploadEscrow(real).catch(() => undefined);
     return { ok: true, space: 'real', key: real };
   }
   if (decoy) {
@@ -238,6 +285,13 @@ export async function changePin(currentPin: string, nextPin: string): Promise<bo
  * the operator until the account itself is deleted.
  */
 export async function destroyVaultKeys(): Promise<void> {
+  // The server copy first, and awaited. Clearing the local keystore is what
+  // makes the space unreadable to its owner; leaving the escrow behind is what
+  // keeps it readable to an operator. Doing the local half and skipping the
+  // remote one gets that exactly backwards, which is what happened before
+  // migration 0025 added a delete policy for the row.
+  await deleteEscrow().catch(() => false);
+
   await Promise.all(
     [SALT_KEY, REAL_KEY, DECOY_KEY, ATTEMPTS_KEY].map((key) =>
       SecureStore.deleteItemAsync(key).catch(() => undefined),

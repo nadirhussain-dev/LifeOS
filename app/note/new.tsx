@@ -7,6 +7,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SheetHeader } from '@/components/ui/sheet-header';
 import { colors } from '@/constants/theme';
@@ -94,7 +95,7 @@ export default function NewNoteScreen() {
           <Animated.View className="h-[3px] w-16 rounded-full bg-accent" style={underlineStyle} />
         </View>
 
-        <View className="rounded-2xl border border-border bg-card px-4">
+        <View className={cardClass({ padding: 'none' }, 'px-4')}>
           <AttributeRow icon={Tag} label={t('fields.category')} isFirst>
             <NoteCategoryPicker value={categoryId} onChange={setCategoryId} />
           </AttributeRow>
@@ -110,7 +111,7 @@ export default function NewNoteScreen() {
           accessibilityLabel={t('notes.noteBody')}
           placeholder={t('notes.writeSomething')}
           placeholderTextColor={colors[scheme].mutedForeground}
-          className="min-h-32 rounded-2xl border border-border bg-card p-4 text-base text-foreground"
+          className={cardClass({ padding: 'md' }, 'min-h-32 text-base text-foreground')}
           textAlignVertical="top"
         />
 

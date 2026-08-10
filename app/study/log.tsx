@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StarRating } from '@/components/ui/star-rating';
 import { SheetHeader } from '@/components/ui/sheet-header';
@@ -102,7 +103,7 @@ export default function StudyLogScreen() {
         </View>
 
         {/* Duration */}
-        <View className="items-center gap-3 rounded-2xl border border-border bg-card p-5 shadow-e1">
+        <View className={cardClass({ padding: 'lg', elevation: 'e1' }, 'items-center gap-3')}>
           <Text variant="micro">{t('study.howLong')}</Text>
           <View className="flex-row items-center gap-6">
             <Pressable
@@ -158,7 +159,12 @@ export default function StudyLogScreen() {
 
         {/* When */}
         <View className="flex-row gap-3">
-          <View className="flex-1 flex-row items-center justify-between rounded-2xl border border-border bg-card px-4 py-3">
+          <View
+            className={cardClass(
+              { padding: 'row' },
+              'flex-1 flex-row items-center justify-between',
+            )}
+          >
             <CalendarDays size={16} color={colors[scheme].mutedForeground} />
             {Platform.OS === 'ios' ? (
               <DateTimePicker
@@ -174,7 +180,12 @@ export default function StudyLogScreen() {
               </Pressable>
             )}
           </View>
-          <View className="flex-1 flex-row items-center justify-between rounded-2xl border border-border bg-card px-4 py-3">
+          <View
+            className={cardClass(
+              { padding: 'row' },
+              'flex-1 flex-row items-center justify-between',
+            )}
+          >
             <Clock size={16} color={colors[scheme].mutedForeground} />
             {Platform.OS === 'ios' ? (
               <DateTimePicker
@@ -217,7 +228,7 @@ export default function StudyLogScreen() {
           onChangeText={setNote}
           placeholder={t('study.notePlaceholder')}
           placeholderTextColor={colors[scheme].mutedForeground}
-          className="rounded-2xl border border-border bg-card px-4 py-3 text-foreground"
+          className={cardClass({ padding: 'row' }, 'text-foreground')}
         />
 
         <Button label={t('study.saveSession')} onPress={save} size="lg" variant="accent" />

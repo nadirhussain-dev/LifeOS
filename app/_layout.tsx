@@ -46,7 +46,9 @@ import { useAppLock } from '@/features/security/hooks/use-app-lock';
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { useAuthGate } from '@/features/auth/hooks/use-auth-gate';
 import { useUsageReporter } from '@/features/analytics/hooks/use-usage-reporter';
+import { AmbientBackground } from '@/components/ui/ambient-background';
 import { DialogHost } from '@/components/ui/dialog-host';
+import { Grain } from '@/components/ui/grain';
 import { UsageConsentCard } from '@/features/analytics/components/usage-consent-card';
 import { BlockedOverlay } from '@/features/moderation/components/blocked-overlay';
 import { useAccountStandingSync } from '@/features/moderation/hooks/use-account-standing';
@@ -243,10 +245,12 @@ export default function RootLayout() {
                 <Stack.Screen name="goals/[id]" />
                 <Stack.Screen name="goals/[id]/edit" options={{ presentation: 'modal' }} />
                 <Stack.Screen name="goals/[id]/log" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="goals/reminder-settings" />
                 <Stack.Screen name="sleep/index" />
                 <Stack.Screen name="sleep/settings" />
                 <Stack.Screen name="study/index" />
                 <Stack.Screen name="study/settings" />
+                <Stack.Screen name="study/reminder-settings" />
                 <Stack.Screen name="study/timer" options={{ gestureEnabled: false }} />
                 <Stack.Screen name="budget/index" />
                 <Stack.Screen name="budget/transactions" />
@@ -275,6 +279,9 @@ export default function RootLayout() {
                 <Stack.Screen name="settings/index" />
                 <Stack.Screen name="settings/notifications" />
                 <Stack.Screen name="settings/sync" />
+                <Stack.Screen name="settings/sync-conflicts" />
+                <Stack.Screen name="settings/media" />
+                <Stack.Screen name="settings/operator" />
                 <Stack.Screen name="settings/blocked" />
                 {/* The private space brings its own layout (screenshot block,
                     no swipe-back), so it is registered as one route here. */}
@@ -313,6 +320,17 @@ export default function RootLayout() {
               <MiniPlayerBar />
               <DevErrorBanner />
             </ErrorBoundary>
+            {/* Two ambient layers, both directly above the navigator and below
+                every overlay. They are properties of the app's surface, so they
+                sit over content but must never fall across a dialog, a toast or
+                the lock shield — those are separate planes in front of them.
+
+                Overlays rather than backdrops on purpose: every screen paints an
+                opaque `bg-background`, so anything mounted behind the navigator
+                would be invisible. The wash goes first and the grain on top, so
+                the grain dithers the wash's own gradient as well as the app's. */}
+            <AmbientBackground />
+            <Grain />
             {/* Above the navigator so a toast raised by a delete outlives the
                 router.back() that immediately follows it. */}
             <ToastHost />

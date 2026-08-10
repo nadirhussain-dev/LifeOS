@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StarRating } from '@/components/ui/star-rating';
 import { SheetHeader } from '@/components/ui/sheet-header';
@@ -185,7 +186,7 @@ export default function SleepLogScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View className="flex-row items-center justify-between rounded-2xl border border-border bg-card px-4 py-3">
+        <View className={cardClass({ padding: 'row' }, 'flex-row items-center justify-between')}>
           <View className="flex-row items-center gap-2">
             <CalendarDays size={16} color={colors[scheme].mutedForeground} />
             <Text className="font-sora-medium text-foreground">{t('sleep.nightOf')}</Text>
@@ -295,7 +296,7 @@ export default function SleepLogScreen() {
             placeholder={t('sleep.notePlaceholder')}
             placeholderTextColor={colors[scheme].mutedForeground}
             multiline
-            className="min-h-16 rounded-2xl border border-border bg-card px-4 py-3 text-foreground"
+            className={cardClass({ padding: 'row' }, 'min-h-16 text-foreground')}
           />
         </View>
 

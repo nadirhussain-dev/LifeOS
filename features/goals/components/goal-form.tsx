@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { cardClass } from '@/components/ui/card';
 import { AttributeRow } from '@/components/ui/attribute-row';
 import { Button } from '@/components/ui/button';
 import { Segmented } from '@/components/ui/segmented';
@@ -112,12 +113,12 @@ export function GoalForm({ defaultValues, submitLabel, onSubmit, showMilestones 
             placeholder={t('goals.descriptionPlaceholder')}
             placeholderTextColor={colors[scheme].mutedForeground}
             multiline
-            className="min-h-12 rounded-2xl border border-border bg-card px-4 py-3 text-foreground"
+            className={cardClass({ padding: 'row' }, 'min-h-12 text-foreground')}
           />
         )}
       />
 
-      <View className="rounded-2xl border border-border bg-card px-4">
+      <View className={cardClass({ padding: 'none' }, 'px-4')}>
         <AttributeRow icon={Tag} label={t('fields.category')} isFirst>
           <Controller
             control={control}

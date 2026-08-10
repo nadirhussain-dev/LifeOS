@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Fab } from '@/components/ui/fab';
 import { QueryError } from '@/components/ui/query-error';
@@ -181,7 +182,7 @@ function GroupCard({ summary, onPress }: { summary: GroupSummary; onPress: () =>
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={a11yLabel}
-      className="gap-3 rounded-2xl border border-border bg-card p-4 active:opacity-80"
+      className={cardClass({ padding: 'md' }, 'gap-3 active:opacity-80')}
     >
       <View className="flex-row items-center gap-3">
         <View

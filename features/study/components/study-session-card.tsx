@@ -3,6 +3,7 @@ import { BookOpen, Star } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { formatStudyDuration } from '@/features/study/services/study-stats';
 import type { StudySession, StudySubject } from '@/features/study/types/study.types';
@@ -28,7 +29,7 @@ export function StudySessionCard({ session, subject, onLongPress }: Props) {
   return (
     <Pressable
       onLongPress={() => onLongPress(session)}
-      className="flex-row items-center gap-3 rounded-2xl border border-border bg-card p-4"
+      className={cardClass({ padding: 'md' }, 'flex-row items-center gap-3')}
       accessibilityHint={t('study.longPressDelete')}
     >
       <View

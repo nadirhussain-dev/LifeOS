@@ -1,5 +1,7 @@
 import { syncDebtReminder } from '@/features/budget/services/debt-reminders';
 import { listDebts } from '@/features/budget/services/debts-repository';
+import { syncGoalReminders } from '@/features/goals/services/goal-reminders';
+import { syncStudyReminders } from '@/features/study/services/study-reminders';
 import { syncHabitReminder } from '@/features/habits/services/habit-reminders';
 import { listHabits } from '@/features/habits/services/habits-repository';
 import { scheduleJournalReminder } from '@/features/journal/services/journal-reminders';
@@ -145,6 +147,14 @@ async function runResync(): Promise<ResyncResult> {
     const id = await scheduleJournalReminder(settings);
     useJournalReminderStore.getState().setReminder(settings, id);
   });
+
+  // Goal deadlines are dated one-shots, so they are the reminders most exposed
+  // to the rebuild: a goal completed while the app was closed leaves a queued
+  // notification about a deadline that no longer matters, and only a resync
+  // clears it. Both of these store their own ids.
+  await step('goals', () => syncGoalReminders());
+
+  await step('study', () => syncStudyReminders());
 
   // Last, and the biggest consumer by far — every 30 minutes from 08:00 to
   // 21:00 is 27 notifications on its own. If anything is going to be squeezed

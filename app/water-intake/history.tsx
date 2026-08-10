@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -60,7 +61,7 @@ export default function WaterHistoryScreen() {
           contentContainerClassName="gap-6 px-5 pt-4 pb-10"
           showsVerticalScrollIndicator={false}
         >
-          <View className="gap-3 rounded-2xl border border-border bg-card p-4 shadow-e1">
+          <View className={cardClass({ padding: 'md', elevation: 'e1' }, 'gap-3')}>
             <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
               {t('water.lastNDays', { days: HISTORY_DAYS })}
             </Text>
@@ -95,7 +96,7 @@ export default function WaterHistoryScreen() {
             </View>
           </View>
 
-          <View className="gap-1 rounded-2xl border border-border bg-card px-4 shadow-e1">
+          <View className={cardClass({ padding: 'none', elevation: 'e1' }, 'gap-1 px-4')}>
             {[...history].reverse().map((day, index) => (
               <View
                 key={day.date}

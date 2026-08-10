@@ -698,6 +698,42 @@ export const galleryPhotos = sqliteTable('gallery_photos', {
  * passes (repeating reminders show their next fire time). readAt/canceledAt
  * gate the read state and cancellation.
  */
+/**
+ * Local edits that a newer version from another device overwrote.
+ *
+ * Sync is last-write-wins and always has been, which is the right default — it
+ * is predictable, it needs no user decision, and for the overwhelming majority
+ * of edits the newer one is the one you want. What it did not do was *say so*.
+ * Editing a note on a phone that was offline, editing the same note on a tablet,
+ * then reconnecting silently destroyed the phone's version, and the only symptom
+ * was a note that no longer said what somebody remembered writing.
+ *
+ * This does not change who wins. It records what lost, so the app can offer it
+ * back. `local_snapshot` is the whole row as JSON at the moment before it was
+ * overwritten, which is enough to restore it as a fresh edit.
+ *
+ * **Device-local, and deliberately not synced** — the same reasoning as
+ * `notification_log`. It is this phone's record of what this phone lost, and it
+ * is meaningless on the device that won.
+ */
+export const syncConflicts = sqliteTable('sync_conflicts', {
+  id: text('id').primaryKey(),
+  /** The local table the row belongs to. */
+  tableName: text('table_name').notNull(),
+  /** Primary key of the affected row, as text. */
+  rowKey: text('row_key').notNull(),
+  /** Owning sync module, so the list can be grouped and named. */
+  module: text('module').notNull(),
+  /** JSON of the local row immediately before it was overwritten. */
+  localSnapshot: text('local_snapshot').notNull(),
+  localUpdatedAt: integer('local_updated_at').notNull(),
+  remoteUpdatedAt: integer('remote_updated_at').notNull(),
+  /** Null while the user has not decided. */
+  resolvedAt: integer('resolved_at'),
+  resolution: text('resolution', { enum: ['restored', 'kept_remote'] }),
+  createdAt: integer('created_at').notNull(),
+});
+
 export const notificationLog = sqliteTable('notification_log', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
@@ -1316,6 +1352,19 @@ export const TABLE_BOOTSTRAP_SQL = `
     created_at INTEGER NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS sync_conflicts (
+    id TEXT PRIMARY KEY NOT NULL,
+    table_name TEXT NOT NULL,
+    row_key TEXT NOT NULL,
+    module TEXT NOT NULL,
+    local_snapshot TEXT NOT NULL,
+    local_updated_at INTEGER NOT NULL,
+    remote_updated_at INTEGER NOT NULL,
+    resolved_at INTEGER,
+    resolution TEXT,
+    created_at INTEGER NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS private_entries (
     id TEXT PRIMARY KEY NOT NULL,
     user_id TEXT NOT NULL,
@@ -1411,6 +1460,7 @@ export const INDEX_BOOTSTRAP_SQL = `
   CREATE INDEX IF NOT EXISTS idx_gallery_photos_album ON gallery_photos(user_id, album_id, taken_at);
   CREATE INDEX IF NOT EXISTS idx_gallery_photos_favorite ON gallery_photos(user_id, is_favorite);
   CREATE INDEX IF NOT EXISTS idx_notification_log_user ON notification_log(user_id, scheduled_at);
+  CREATE INDEX IF NOT EXISTS idx_sync_conflicts_open ON sync_conflicts(resolved_at, created_at);
   CREATE INDEX IF NOT EXISTS idx_private_entries_user ON private_entries(user_id, updated_at);
 
   /* ---------------------------------------------------------------------

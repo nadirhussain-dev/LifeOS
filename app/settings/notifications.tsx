@@ -6,7 +6,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, Platform, Pressable, ScrollView, Switch, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { moduleTints } from '@/constants/design-tokens';
 import { Segmented } from '@/components/ui/segmented';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -223,13 +225,17 @@ export default function NotificationSettingsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader title={t('notif.title')} eyebrow={t('notif.settingsEyebrow')} tint="#737373" />
+      <ScreenHeader
+        title={t('notif.title')}
+        eyebrow={t('notif.settingsEyebrow')}
+        tint={moduleTints.settings}
+      />
       <ScrollView
         contentContainerClassName="gap-6 px-5 py-4 pb-12"
         showsVerticalScrollIndicator={false}
       >
         {/* Master */}
-        <View className="rounded-2xl border border-border bg-card px-4">
+        <View className={cardClass({ padding: 'none' }, 'px-4')}>
           <View className="flex-row items-center gap-3 py-3.5">
             <View
               className="h-9 w-9 items-center justify-center rounded-xl"
@@ -284,7 +290,7 @@ export default function NotificationSettingsScreen() {
               : t('notif.individualDescription')}
           </Text>
           {store.deliveryMode === 'digest' && (
-            <View className="rounded-2xl border border-border bg-card px-4">
+            <View className={cardClass({ padding: 'none' }, 'px-4')}>
               <TimeRow
                 label={t('notif.digestTime')}
                 minutes={store.digestHour * 60 + store.digestMinute}
@@ -304,7 +310,7 @@ export default function NotificationSettingsScreen() {
           pointerEvents={disabled ? 'none' : 'auto'}
         >
           <SectionLabel>{t('notif.quietHours')}</SectionLabel>
-          <View className="rounded-2xl border border-border bg-card px-4">
+          <View className={cardClass({ padding: 'none' }, 'px-4')}>
             <View className="flex-row items-center justify-between py-3.5">
               <View className="flex-1 pe-3">
                 <Text className="font-sora-medium text-foreground">
@@ -354,7 +360,7 @@ export default function NotificationSettingsScreen() {
           pointerEvents={disabled ? 'none' : 'auto'}
         >
           <SectionLabel>{t('notif.whatYouHearAbout')}</SectionLabel>
-          <View className="rounded-2xl border border-border bg-card px-4">
+          <View className={cardClass({ padding: 'none' }, 'px-4')}>
             {CONFIGURABLE_CATEGORIES.map((category, index) => {
               const meta = CATEGORY_META[category];
               const Icon = meta.icon;
@@ -397,7 +403,7 @@ export default function NotificationSettingsScreen() {
             than left to guesswork. */}
         <View className="gap-2">
           <SectionLabel>{t('notif.troubleshoot')}</SectionLabel>
-          <View className="rounded-2xl border border-border bg-card px-4">
+          <View className={cardClass({ padding: 'none' }, 'px-4')}>
             <Pressable
               onPress={handleTest}
               disabled={testing || !notificationsAvailable}

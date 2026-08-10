@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Dimensions, Pressable, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
+import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { PrivateScreen } from '@/features/private/components/private-screen';
 import { privateModule } from '@/features/private/config/private-modules';
@@ -21,7 +22,7 @@ import { alpha } from '@/lib/color';
 import { confirm } from '@/lib/dialog-store';
 import { toast } from '@/lib/toast-store';
 
-const TINT = privateModule('vault')?.tint ?? '#7c6cf0';
+const TINT = privateModule('vault')?.tint ?? moduleTints.vault;
 const GAP = 8;
 
 /**
@@ -35,6 +36,7 @@ const GAP = 8;
 export default function VaultScreen() {
   const scheme = useColorScheme() ?? 'light';
   const theme = colors[scheme];
+  const tint = resolveTint(TINT, scheme);
   const { t } = useTranslation();
 
   // See cycle.tsx: explicit reload rather than a counter dependency.
@@ -83,7 +85,7 @@ export default function VaultScreen() {
     <PrivateScreen
       title={t('private.vaultTitle')}
       subtitle={t('private.itemCount', { count: items.length })}
-      tint={TINT}
+      tint={tint}
       footer={
         <View className="flex-row gap-2">
           <Pressable
@@ -91,10 +93,10 @@ export default function VaultScreen() {
             disabled={busy}
             onPress={() => void add('library')}
             className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl py-4"
-            style={{ backgroundColor: alpha(TINT, 0.16), opacity: busy ? 0.5 : 1 }}
+            style={{ backgroundColor: alpha(tint, 0.16), opacity: busy ? 0.5 : 1 }}
           >
-            <ImagePlus size={19} color={TINT} strokeWidth={1.9} />
-            <Text className="font-sora-medium" style={{ color: TINT }}>
+            <ImagePlus size={19} color={tint} strokeWidth={1.9} />
+            <Text className="font-sora-medium" style={{ color: tint }}>
               {t('private.addFromLibrary')}
             </Text>
           </Pressable>
@@ -104,9 +106,9 @@ export default function VaultScreen() {
             disabled={busy}
             onPress={() => void add('camera')}
             className="h-[52px] w-[52px] items-center justify-center rounded-2xl"
-            style={{ backgroundColor: alpha(TINT, 0.16), opacity: busy ? 0.5 : 1 }}
+            style={{ backgroundColor: alpha(tint, 0.16), opacity: busy ? 0.5 : 1 }}
           >
-            <Camera size={20} color={TINT} strokeWidth={1.9} />
+            <Camera size={20} color={tint} strokeWidth={1.9} />
           </Pressable>
         </View>
       }

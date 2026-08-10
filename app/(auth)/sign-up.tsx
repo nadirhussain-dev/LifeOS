@@ -6,8 +6,11 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'rea
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { AuthField } from '@/features/auth/components/auth-field';
+import { SocialAuthButtons } from '@/features/auth/components/social-auth-buttons';
 import { UsernameField, type UsernameStatus } from '@/features/auth/components/username-field';
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { useTheme } from '@/hooks/use-theme';
+import { isSupabaseConfigured } from '@/lib/env';
 import {
   checkPassword,
   passwordProblemKey,
@@ -18,6 +21,7 @@ import { notify } from '@/lib/dialog-store';
 export default function SignUpScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { c } = useTheme();
   const signUp = useAuthStore((s) => s.signUp);
   const claimUsername = useAuthStore((s) => s.claimUsername);
 
@@ -101,6 +105,19 @@ export default function SignUpScreen() {
           <Text variant="heading">{t('auth.createYourAccount')}</Text>
           <Text variant="muted">{t('auth.backupSubtitle')}</Text>
         </View>
+
+        {/* A provider account skips this entire form — including having to invent
+            a password and a username — so it goes above it. Nothing renders when
+            the build has no Supabase credentials. */}
+        <SocialAuthButtons onError={setError} disabled={busy} />
+
+        {isSupabaseConfigured && (
+          <View className="flex-row items-center gap-3">
+            <View className="h-px flex-1" style={{ backgroundColor: c.border }} />
+            <Text variant="caption">{t('common.or')}</Text>
+            <View className="h-px flex-1" style={{ backgroundColor: c.border }} />
+          </View>
+        )}
 
         <View className="gap-4">
           <AuthField

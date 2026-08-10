@@ -3,6 +3,7 @@ import { Moon, Star, Sun } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { ArrowForward } from '@/components/ui/directional-icon';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
@@ -26,7 +27,7 @@ export function SleepSessionCard({ session, goalMinutes, onPress }: Props) {
   return (
     <Pressable
       onPress={() => onPress(session)}
-      className="flex-row items-center gap-3 rounded-2xl border border-border bg-card p-4"
+      className={cardClass({ padding: 'md' }, 'flex-row items-center gap-3')}
       accessibilityRole="button"
       accessibilityLabel={t('sleep.sessionA11y', { date: session.logDate })}
     >
@@ -66,7 +67,7 @@ export function SleepSessionCard({ session, goalMinutes, onPress }: Props) {
       <View className="items-end gap-1">
         <Text
           className="font-sora-bold"
-          style={{ color: metGoal ? '#22c55e' : colors[scheme].foreground }}
+          style={{ color: metGoal ? colors[scheme].success : colors[scheme].foreground }}
         >
           {formatDuration(session.durationMinutes)}
         </Text>

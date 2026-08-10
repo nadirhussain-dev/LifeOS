@@ -12,7 +12,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { Segmented } from '@/components/ui/segmented';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { moduleTint } from '@/constants/design-tokens';
+import { contentTints, moduleTint, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { GOAL_CATEGORIES } from '@/features/goals/config/goal-categories';
 import { GoalCard } from '@/features/goals/components/goal-card';
@@ -169,7 +169,11 @@ function CategoryChips({
   setCategoryFilter: (c: never) => void;
 }) {
   const { t } = useTranslation();
-  const items = [{ id: 'all', labelKey: 'common.all', tint: '#737373' }, ...GOAL_CATEGORIES];
+  const scheme = useColorScheme() ?? 'light';
+  const items = [
+    { id: 'all', labelKey: 'common.all', tint: contentTints.neutral },
+    ...GOAL_CATEGORIES,
+  ];
   return (
     <ScrollView
       horizontal
@@ -183,7 +187,14 @@ function CategoryChips({
             accessibilityRole="button"
             key={item.id}
             onPress={() => setCategoryFilter(item.id as never)}
-            style={selected ? { backgroundColor: item.tint, borderColor: item.tint } : undefined}
+            style={
+              selected
+                ? {
+                    backgroundColor: resolveTint(item.tint, scheme),
+                    borderColor: resolveTint(item.tint, scheme),
+                  }
+                : undefined
+            }
             className={cn('rounded-full border px-3 py-1.5', !selected && 'border-border')}
           >
             <Text className={selected ? 'font-sora-medium text-white' : 'text-muted-foreground'}>

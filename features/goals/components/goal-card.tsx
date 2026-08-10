@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { cardClass } from '@/components/ui/card';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -24,7 +25,7 @@ type Props = {
 export function GoalCard({ goal, onPress }: Props) {
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
-  const meta = goalCategoryMeta(goal.category);
+  const meta = goalCategoryMeta(goal.category, scheme);
   const Icon = meta.icon;
   const isCompleted = goal.status === 'completed';
   const scale = useSharedValue(1);
@@ -40,7 +41,7 @@ export function GoalCard({ goal, onPress }: Props) {
       onPressIn={() => (scale.value = withTiming(0.98, { duration: 90 }))}
       onPressOut={() => (scale.value = withTiming(1, { duration: 90 }))}
       style={animatedStyle}
-      className="gap-3 rounded-2xl border border-border bg-card p-4 shadow-e1"
+      className={cardClass({ padding: 'md', elevation: 'e1' }, 'gap-3')}
       accessibilityRole="button"
       accessibilityLabel={goal.title}
     >

@@ -6,6 +6,13 @@ import {
   type CycleEntry,
 } from '@/features/private/services/cycle-math';
 
+/** The `yyyy-MM-dd` key for a date in LOCAL time — the same day boundary the
+ *  app uses everywhere. Never build one from `toISOString()`, which is UTC. */
+const localKey = (date: Date): string =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+    date.getDate(),
+  ).padStart(2, '0')}`;
+
 const entry = (date: string, flow: CycleEntry['flow']): CycleEntry => ({
   id: date,
   createdAt: 0,
@@ -108,8 +115,23 @@ describe('predictedNextStart', () => {
 
 describe('dayOfCycle', () => {
   it('counts the first day of a period as day 1', () => {
-    const today = new Date().toISOString().slice(0, 10);
-    expect(dayOfCycle(periodsFrom([entry(today, 'medium')]))).toBe(1);
+    // A fixed instant, and a key derived from it in LOCAL time.
+    //
+    // This read `new Date().toISOString().slice(0, 10)`, which is the date in
+    // UTC, and compared it against `dayOfCycle`, which counts local calendar
+    // days. Every evening west of Greenwich the two disagree, so the test
+    // logged a period starting *tomorrow* and asserted it was day 1 — it is day
+    // 0. CI runs in UTC and never saw it; it failed only on the machines of
+    // people in the Americas, only after about 5pm, which is close to the worst
+    // possible signal a test can give.
+    const start = new Date(2026, 4, 17, 9, 0);
+    expect(dayOfCycle(periodsFrom([entry(localKey(start), 'medium')]), start)).toBe(1);
+  });
+
+  it('counts a period that started three days ago as day 4', () => {
+    const start = new Date(2026, 4, 17, 9, 0);
+    const now = new Date(2026, 4, 20, 23, 30);
+    expect(dayOfCycle(periodsFrom([entry(localKey(start), 'medium')]), now)).toBe(4);
   });
 
   it('is null before anything is logged', () => {

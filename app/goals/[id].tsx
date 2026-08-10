@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { CelebrationOverlay } from '@/components/ui/celebration-overlay';
 import { GradientButton } from '@/components/ui/gradient-button';
 import { HeroCard } from '@/components/ui/hero-card';
@@ -27,11 +28,16 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { alpha } from '@/lib/color';
 import { confirm } from '@/lib/dialog-store';
 
-const PACE_META: Record<GoalPace, { labelKey: string; color: string }> = {
-  ahead: { labelKey: 'goals.paceAhead', color: '#22c55e' },
-  on_track: { labelKey: 'goals.paceOnTrack', color: '#0ea5e9' },
-  behind: { labelKey: 'goals.paceBehind', color: '#f59e0b' },
-  none: { labelKey: '', color: '#737373' },
+// Labels only. This used to carry a `color` per pace as well — a green/blue/
+// amber ladder that nothing ever read, so the pace has always rendered in plain
+// foreground. `paceTints` in the token file now holds that ladder properly
+// (from the semantic set, so "behind" reads as caution); wire it in here if the
+// pace should be coloured, rather than reviving four hardcoded hexes.
+const PACE_LABEL: Record<GoalPace, string> = {
+  ahead: 'goals.paceAhead',
+  on_track: 'goals.paceOnTrack',
+  behind: 'goals.paceBehind',
+  none: '',
 };
 
 const WHITE = '#ffffff';
@@ -50,7 +56,7 @@ export default function GoalDetailScreen() {
 
   if (!goal) return null;
 
-  const meta = goalCategoryMeta(goal.category);
+  const meta = goalCategoryMeta(goal.category, scheme);
   const Icon = meta.icon;
   const isCompleted = goal.status === 'completed';
   const isMilestones = goal.progressMode === 'milestones';
@@ -58,7 +64,7 @@ export default function GoalDetailScreen() {
   const due = goal.dueDate && !isCompleted ? formatDueDate(goal.dueDate, t) : null;
 
   const timeline = goalTimeline(goal, goal.progress);
-  const pace = PACE_META[timeline.pace];
+  const paceLabel = PACE_LABEL[timeline.pace];
   const series = buildProgressSeries(goal, goal.progress, logs, milestones);
   const rangeEnd = goal.dueDate ?? Date.now();
   const showChart =
@@ -176,8 +182,8 @@ export default function GoalDetailScreen() {
                     label: timeline.isOverdue ? '' : t('goals.daysLeftCaption'),
                   },
                   {
-                    value: pace.labelKey ? t(pace.labelKey) : '',
-                    label: pace.labelKey ? t('goals.pace') : '',
+                    value: paceLabel ? t(paceLabel) : '',
+                    label: paceLabel ? t('goals.pace') : '',
                   },
                 ].map((stat, i) => (
                   <View key={i} className="flex-1 items-center gap-0.5">
@@ -229,7 +235,7 @@ export default function GoalDetailScreen() {
 
         {/* Completed banner + reopen */}
         {isCompleted && (
-          <View className="gap-3 rounded-2xl border border-border bg-card p-4 shadow-e1">
+          <View className={cardClass({ padding: 'md', elevation: 'e1' }, 'gap-3')}>
             <View className="flex-row items-center gap-2">
               <Check size={18} color={dsColors[scheme].success} />
               <Text className="font-sora-semibold text-foreground">
@@ -262,7 +268,7 @@ export default function GoalDetailScreen() {
         {/* Progress chart — shown for active and completed goals so the history
             stays visible after finishing. */}
         {showChart && (
-          <View className="gap-3 rounded-2xl border border-border bg-card p-4 shadow-e1">
+          <View className={cardClass({ padding: 'md', elevation: 'e1' }, 'gap-3')}>
             <View className="flex-row items-center justify-between">
               <Text variant="subheading">{t('goals.progressOverTime')}</Text>
               {timeline.hasDeadline && !isCompleted && (
@@ -324,7 +330,10 @@ export default function GoalDetailScreen() {
                 <Pressable
                   key={log.id}
                   onLongPress={() => mutations.removeProgressLog.mutate(log.id)}
-                  className="flex-row items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-e1"
+                  className={cardClass(
+                    { padding: 'sm', elevation: 'e1' },
+                    'flex-row items-center gap-3',
+                  )}
                   accessibilityHint={t('goals.longPressDeleteUpdate')}
                 >
                   <View

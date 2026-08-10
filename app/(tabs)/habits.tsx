@@ -5,7 +5,6 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 
 import { EmptyState } from '@/components/ui/empty-state';
@@ -13,6 +12,7 @@ import { QueryError } from '@/components/ui/query-error';
 import { Fab } from '@/components/ui/fab';
 import { ListSectionHeader } from '@/components/ui/list-section-header';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
@@ -35,7 +35,6 @@ type ListItem =
 export default function HabitsScreen() {
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
-  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const quickLogRef = useRef<BottomSheetModal>(null);
   const fabSheetRef = useRef<BottomSheetModal>(null);
@@ -111,16 +110,19 @@ export default function HabitsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <View style={{ paddingTop: insets.top + 8 }} className="gap-5 px-5 pb-2">
-        <View className="flex-row items-center justify-between">
-          <Text variant="heading">{t('tabs.habits')}</Text>
-          {progress.total > 0 && (
+      <ScreenHeader
+        title={t('tabs.habits')}
+        showBack={false}
+        right={
+          progress.total > 0 ? (
             <Text variant="muted" className="font-sora-medium">
               {t('habits.todayCount', { done: progress.done, total: progress.total })}
             </Text>
-          )}
-        </View>
+          ) : undefined
+        }
+      />
 
+      <View className="gap-5 px-5 pb-2 pt-3">
         {progress.total > 0 && (
           <View className="h-1.5 overflow-hidden rounded-full bg-muted">
             <View

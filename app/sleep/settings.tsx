@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, Switch, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
@@ -75,7 +76,7 @@ export default function SleepSettingsScreen() {
       <ScreenHeader title={t('sleep.goalTitle')} eyebrow={t('sleep.title')} tint={sleepTint} />
 
       <View className="gap-5 px-5 pt-3">
-        <View className="items-center gap-4 rounded-2xl border border-border bg-card p-6 shadow-e1">
+        <View className={cardClass({ padding: 'none', elevation: 'e1' }, 'items-center gap-4 p-6')}>
           <Text variant="micro">{t('sleep.nightlyGoal')}</Text>
           <View className="flex-row items-center gap-6">
             <Pressable
@@ -126,7 +127,7 @@ export default function SleepSettingsScreen() {
 
         <View className="gap-2">
           <CategoryOffNotice category="sleep" />
-          <View className="flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5">
+          <View className={cardClass({ padding: 'rowLg' }, 'flex-row items-center gap-3')}>
             <View className="h-10 w-10 items-center justify-center rounded-xl bg-sleep/10">
               <BellRing size={18} color={sleepTint} />
             </View>

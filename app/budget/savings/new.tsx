@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SheetHeader } from '@/components/ui/sheet-header';
 import { Text } from '@/components/ui/text';
@@ -67,7 +68,7 @@ export default function NewSavingsGoalScreen() {
           <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
             {t('budget.targetAmount')}
           </Text>
-          <View className="flex-row items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3">
+          <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
             <Text className="font-sora-bold text-xl" style={{ color: '#22c55e' }}>
               {currency}
             </Text>
@@ -85,7 +86,7 @@ export default function NewSavingsGoalScreen() {
           </View>
         </View>
 
-        <View className="flex-row items-center justify-between rounded-2xl border border-border bg-card px-4 py-3">
+        <View className={cardClass({ padding: 'row' }, 'flex-row items-center justify-between')}>
           <View className="flex-row items-center gap-2">
             <CalendarDays size={16} color={colors[scheme].mutedForeground} />
             <Text className="font-sora-medium text-foreground">{t('budget.deadlineOptional')}</Text>

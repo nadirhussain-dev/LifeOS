@@ -13,13 +13,15 @@ import {
   useTodayWaterTotal,
   useWaterIntakeMutations,
 } from '@/features/water-intake/hooks/use-water-intake';
-import { useWaterSettingsStore } from '@/features/water-intake/store/water-settings-store';
+import {
+  GLASS_ML,
+  useWaterSettingsStore,
+} from '@/features/water-intake/store/water-settings-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { alpha } from '@/lib/color';
 import { toDateKey } from '@/lib/date';
 import type { MoodOption } from '@/features/dashboard/types/dashboard.types';
 
-const GLASS_ML = 250;
 const MAX_SEGMENTS = 8;
 
 /**
@@ -31,7 +33,7 @@ const MAX_SEGMENTS = 8;
 
 /** Shared half-width tile shell — a resting card that floats on e1. */
 function tileClass() {
-  return 'flex-1 gap-3 rounded-3xl border border-border bg-card p-4 shadow-e1';
+  return 'flex-1 gap-3 rounded-2xl border border-border bg-card p-4 shadow-e1';
 }
 
 export function WaterTile() {

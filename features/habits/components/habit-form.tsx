@@ -7,6 +7,7 @@ import { ScrollView, Switch, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { cardClass } from '@/components/ui/card';
 import { AttributeRow } from '@/components/ui/attribute-row';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -73,7 +74,7 @@ export function HabitForm({ defaultValues, submitLabel, onSubmit }: Props) {
               placeholder="🔥"
               placeholderTextColor={colors[scheme].mutedForeground}
               maxLength={2}
-              className="h-12 w-12 rounded-2xl border border-border bg-card text-center text-2xl"
+              className={cardClass({ padding: 'none' }, 'h-12 w-12 text-center text-2xl')}
             />
           )}
         />
@@ -109,7 +110,7 @@ export function HabitForm({ defaultValues, submitLabel, onSubmit }: Props) {
         </View>
       </View>
 
-      <View className="rounded-2xl border border-border bg-card px-4 shadow-e1">
+      <View className={cardClass({ padding: 'none', elevation: 'e1' }, 'px-4')}>
         <AttributeRow icon={Sparkles} label={t('habits.type')} isFirst>
           <Controller
             control={control}

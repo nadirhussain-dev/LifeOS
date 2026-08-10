@@ -174,12 +174,25 @@ export const CATEGORY_ORDER: NotificationCategory[] = [
   'split',
 ];
 
-/** Categories that actually schedule something today and therefore get a
- * user-facing switch in Notification Settings. `goals`, `study`, and `streak`
- * exist in the model for planned features but have no scheduler yet, so showing
- * their toggles would be misleading no-ops — they're excluded until built. */
+/**
+ * Categories that actually schedule something and therefore get a user-facing
+ * switch in Notification Settings. A toggle that controls nothing is worse than
+ * a missing one, so a category earns its switch by having a scheduler.
+ *
+ * `goals` and `study` were excluded for exactly that reason and are now in:
+ * `features/goals/services/goal-reminders.ts` schedules dated deadline
+ * reminders, and `features/study/services/study-reminders.ts` schedules the
+ * weekly study nudge.
+ *
+ * `streak` stays out, and not for want of effort. A streak-at-risk reminder has
+ * to know whether the habit has been done *at the moment it fires*, and a local
+ * notification carries text fixed at scheduling time — so every version of it
+ * nags people who already finished. That needs server push; until then the
+ * in-app celebration covers the ground worth covering. See the "Deferred (by
+ * design)" section of TODO.md.
+ */
 export const CONFIGURABLE_CATEGORIES: NotificationCategory[] = CATEGORY_ORDER.filter(
-  (category) => category !== 'goals' && category !== 'study' && category !== 'streak',
+  (category) => category !== 'streak',
 );
 
 /** Fallback icon for any category not found in the map (defensive). */

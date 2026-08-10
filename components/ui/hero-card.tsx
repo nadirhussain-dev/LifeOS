@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { type ReactNode } from 'react';
 import { View, type ViewStyle } from 'react-native';
 
+import { radius } from '@/constants/design-tokens';
 import { alpha, glowShadow, tintGradientTriple } from '@/lib/color';
 
 type Props = {
@@ -24,12 +25,18 @@ export function HeroCard({ tint, children, style, glow = true, padded = true }: 
   const [c1, c2, c3] = tintGradientTriple(tint);
 
   return (
-    <View style={[{ borderRadius: 28, overflow: 'hidden' }, glow && glowShadow(tint, 0.4), style]}>
+    <View
+      style={[
+        { borderRadius: radius['2xl'], overflow: 'hidden' },
+        glow && glowShadow(tint, 0.4),
+        style,
+      ]}
+    >
       <LinearGradient
         colors={[c1, c2, c3]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ borderRadius: 28 }}
+        style={{ borderRadius: radius['2xl'] }}
       >
         {/* Decorative orbs — faint lighter circles for glassy depth. */}
         <View

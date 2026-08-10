@@ -5,20 +5,25 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, TextInput, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
-import { moduleTint } from '@/constants/design-tokens';
+import { moduleTint, moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { CURRENCIES, DEFAULT_CURRENCY_CODE } from '@/features/budget/config/currencies';
 import { useBudgetMutations } from '@/features/budget/hooks/use-budget-mutations';
 import { useBudgetSettings } from '@/features/budget/hooks/use-budget';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-const BUDGET_TINT = '#22c55e';
+// Budget's signature tint is teal. This screen had it as `#22c55e` — a green,
+// and the same green the ledger used for income — so the currency picker was
+// the one budget screen wearing a different module's colour.
+const BUDGET_TINT = moduleTints.budget;
 
 export default function CurrencyPickerScreen() {
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
+  const budgetTint = resolveTint(BUDGET_TINT, scheme);
   const { t } = useTranslation();
   const { data: settings } = useBudgetSettings();
   const { saveSettings } = useBudgetMutations();
@@ -74,8 +79,8 @@ export default function CurrencyPickerScreen() {
             <Pressable
               accessibilityRole="button"
               onPress={() => pick(item.code)}
-              className="flex-row items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3"
-              style={selected ? { borderColor: BUDGET_TINT } : undefined}
+              className={cardClass({ padding: 'row' }, 'flex-row items-center gap-3')}
+              style={selected ? { borderColor: budgetTint } : undefined}
             >
               <View className="h-10 w-10 items-center justify-center rounded-xl bg-muted">
                 <Text className="font-sora-bold text-foreground">{item.symbol}</Text>
@@ -84,7 +89,7 @@ export default function CurrencyPickerScreen() {
                 <Text className="font-sora-semibold text-foreground">{item.name}</Text>
                 <Text variant="caption">{item.code}</Text>
               </View>
-              {selected && <Check size={20} color={BUDGET_TINT} />}
+              {selected && <Check size={20} color={budgetTint} />}
             </Pressable>
           );
         }}

@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { FOCUS_AREAS, focusTint } from '@/features/profile/constants';
 import { useProfileStore } from '@/features/profile/store/profile-store';
@@ -44,7 +45,10 @@ export function FocusShortcuts() {
               accessibilityRole="button"
               key={area.id}
               onPress={() => router.push(area.route as never)}
-              className="flex-row items-center gap-2.5 rounded-2xl border border-border bg-card py-2.5 pe-4 ps-2.5 shadow-e1"
+              className={cardClass(
+                { padding: 'none', elevation: 'e1' },
+                'flex-row items-center gap-2.5 py-2.5 pe-4 ps-2.5',
+              )}
             >
               <View
                 className="h-8 w-8 items-center justify-center rounded-xl"

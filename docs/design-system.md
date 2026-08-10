@@ -26,6 +26,12 @@ puts the whole system to work in one screen.
 Rule of thumb: **prefer the className.** Drop to the TS mirror only when a
 className genuinely can't reach the surface.
 
+The three layers have to agree, and `npm run check:tokens` fails the build when
+they don't — it exists because `gallery` and `music` once lived only in the TS
+file, so `text-gallery` compiled to nothing and rendered as no colour at all
+rather than as an error. The colour tables in §4 are generated from that same
+parser via `npm run docs:design`; **edit the token file, not the tables.**
+
 ---
 
 ## 1. Philosophy — a Spatial Design System
@@ -100,67 +106,80 @@ with a faint emerald bias, so chrome reads _chosen_, not clinical.
 - **Never color alone:** priority, status and completion always carry an icon,
   label, or shape as well as hue (color-blind safe).
 
-### Core (light)
+<!-- GENERATED:colors START -->
 
-| Token      | Variable             | HEX       | RGB           | HSL           |
-| ---------- | -------------------- | --------- | ------------- | ------------- |
-| Background | `--background`       | `#F8FBF9` | `248 251 249` | `140 27% 98%` |
-| Surface    | `--surface`          | `#EEF3F0` | `238 243 240` | `144 17% 94%` |
-| Card       | `--card`             | `#FFFFFF` | `255 255 255` | `0 0% 100%`   |
-| Foreground | `--foreground`       | `#161C19` | `22 28 25`    | `150 12% 10%` |
-| Muted fg   | `--muted-foreground` | `#6D7A74` | `109 122 116` | `152 6% 45%`  |
-| Accent     | `--accent`           | `#188B61` | `24 139 97`   | `158 71% 32%` |
-| Border     | `--border`           | `#E2E9E5` | `226 233 229` | `146 14% 90%` |
+<!--
+  Do not edit by hand — run `npm run docs:design`.
+  Generated from constants/design-tokens.ts by scripts/gen-design-doc.mjs.
+-->
 
-### Core (dark)
+### Core
 
-| Token      | Variable             | HEX       | RGB           | HSL           |
-| ---------- | -------------------- | --------- | ------------- | ------------- |
-| Background | `--background`       | `#0E1210` | `14 18 16`    | `150 13% 6%`  |
-| Surface    | `--surface`          | `#161C19` | `22 28 25`    | `150 12% 10%` |
-| Card       | `--card`             | `#1A201D` | `26 32 29`    | `150 10% 11%` |
-| Foreground | `--foreground`       | `#EEF3F0` | `238 243 240` | `144 17% 94%` |
-| Muted fg   | `--muted-foreground` | `#9AA8A1` | `154 168 161` | `150 7% 63%`  |
-| Accent     | `--accent`           | `#47D19F` | `71 209 159`  | `158 60% 55%` |
-| Border     | `--border`           | `#2B332E` | `43 51 46`    | `142 9% 18%`  |
-
-**Psychology of the core:** green = growth & safety → the accent reads as calm
-confidence, never alarm. Neutrals carry a subtle emerald hue bias so the
-grayscale feels warm and deliberate.
+| Token             | light     | RGB         | HSL         | dark      | RGB         | HSL         |
+| ----------------- | --------- | ----------- | ----------- | --------- | ----------- | ----------- |
+| `background`      | `#F8FBF9` | 248 251 249 | 140 27% 98% | `#0E1210` | 14 18 16    | 150 13% 6%  |
+| `surface`         | `#EEF3F0` | 238 243 240 | 144 17% 94% | `#161C19` | 22 28 25    | 150 12% 10% |
+| `card`            | `#FFFFFF` | 255 255 255 | 0 0% 100%   | `#1A201D` | 26 32 29    | 150 10% 11% |
+| `foreground`      | `#161C19` | 22 28 25    | 150 12% 10% | `#EEF3F0` | 238 243 240 | 144 17% 94% |
+| `mutedForeground` | `#6D7A74` | 109 122 116 | 152 6% 45%  | `#9AA8A1` | 154 168 161 | 150 7% 63%  |
+| `border`          | `#E2E9E5` | 226 233 229 | 146 14% 90% | `#2B332E` | 43 51 46    | 143 9% 18%  |
 
 ### Semantic — state, never brand
 
-Kept strictly distinct from the accent and module tints, so a red always means
-real stakes and a "done" green never reads as "tap me."
-
-| Token   | Variable        | HEX (light) | RGB         | HSL           | Purpose                         |
-| ------- | --------------- | ----------- | ----------- | ------------- | ------------------------------- |
-| Success | `--success`     | `#16A34A`   | `22 163 74` | `142 76% 36%` | Completion, confirmation        |
-| Warning | `--warning`     | `#D97706`   | `217 119 6` | `32 95% 44%`  | Caution, attention soon         |
-| Error   | `--destructive` | `#DC2626`   | `220 38 38` | `0 72% 51%`   | Destructive actions, validation |
-| Info    | `--info`        | `#2563EB`   | `37 99 235` | `221 83% 53%` | Neutral info, tips              |
-
-Dark variants (brightened / desaturated to sit on deep grounds): success
-`#4ADE80`, warning `#FBBF24`, error `#F87171`, info `#60A5FA`.
+| Token     | light     | dark      | Purpose                         |
+| --------- | --------- | --------- | ------------------------------- |
+| `success` | `#16A34A` | `#4ADE80` | Completion, confirmation        |
+| `warning` | `#D97706` | `#FBBF24` | Caution, attention soon         |
+| `error`   | `#DC2626` | `#F87171` | Destructive actions, validation |
+| `info`    | `#2563EB` | `#60A5FA` | Neutral info, tips              |
 
 ### Module signature tints
 
-One hue per life area, driving that module's progress ring, hero wash and chart
-series — **never** chrome. Conceptual map: **cool family** = structure & rest
-(calendar, water, sleep, journal); **warm family** = energy & aspiration
-(fitness, goals); **emerald** = growth (habits).
+Contrast is measured against that theme's card — the bar is **3:1**, because these are drawn as fills: rings, dots, chart series and icons. For a tint used as _text_ use `moduleTintText()`, which targets 4.5:1.
 
-| Module   | Variable     | HEX (light) | HEX (dark) | HSL (light)   | Meaning                 |
-| -------- | ------------ | ----------- | ---------- | ------------- | ----------------------- |
-| Habit    | `--habit`    | `#10B981`   | `#34D399`  | `160 84% 39%` | Growth, streaks         |
-| Calendar | `--calendar` | `#3B82F6`   | `#60A5FA`  | `217 91% 60%` | Structure, time         |
-| Water    | `--water`    | `#06B6D4`   | `#22D3EE`  | `189 94% 43%` | Hydration, clarity      |
-| Sleep    | `--sleep`    | `#6366F1`   | `#818CF8`  | `239 84% 67%` | Night, rest             |
-| Journal  | `--journal`  | `#8B5CF6`   | `#A78BFA`  | `258 90% 66%` | Reflection              |
-| Fitness  | `--fitness`  | `#F97316`   | `#FB923C`  | `25 95% 53%`  | Exertion, energy        |
-| Goals    | `--goals`    | `#F43F5E`   | `#FB7185`  | `350 89% 60%` | Aspiration, achievement |
-| Budget   | `--budget`   | `#0D9488`   | `#2DD4BF`  | `175 84% 32%` | Balance, ledgers        |
-| Study    | `--study`    | `#7C3AED`   | `#A78BFA`  | `262 83% 58%` | Focus                   |
+| Module   | light     | on light card | dark      | on dark card | Hue  |
+| -------- | --------- | ------------- | --------- | ------------ | ---- |
+| habit    | `#059669` | 3.77:1        | `#34D399` | 8.61:1       | 161° |
+| calendar | `#3B82F6` | 3.68:1        | `#60A5FA` | 6.51:1       | 217° |
+| water    | `#0891B2` | 3.68:1        | `#22D3EE` | 9.16:1       | 192° |
+| sleep    | `#6366F1` | 4.47:1        | `#818CF8` | 5.55:1       | 239° |
+| journal  | `#8B5CF6` | 4.23:1        | `#A78BFA` | 6.08:1       | 258° |
+| fitness  | `#EA580C` | 3.56:1        | `#FB923C` | 7.32:1       | 21°  |
+| goals    | `#F43F5E` | 3.67:1        | `#FB7185` | 6.15:1       | 350° |
+| budget   | `#0D9488` | 3.74:1        | `#2DD4BF` | 8.90:1       | 175° |
+| study    | `#6D28D9` | 7.10:1        | `#8B5CF6` | 3.91:1       | 263° |
+| gallery  | `#A21CAF` | 6.32:1        | `#E879F9` | 6.73:1       | 295° |
+| music    | `#4D7C0F` | 4.99:1        | `#A3E635` | 10.98:1      | 86°  |
+| notes    | `#A48404` | 3.57:1        | `#EAB308` | 8.63:1       | 48°  |
+| vault    | `#7C6CF0` | 3.99:1        | `#A99CF7` | 6.93:1       | 247° |
+| cycle    | `#E0518A` | 3.68:1        | `#F08CB2` | 7.17:1       | 336° |
+| recovery | `#2F9E73` | 3.36:1        | `#57C79A` | 7.92:1       | 157° |
+| intimacy | `#D4653F` | 3.66:1        | `#E89370` | 6.97:1       | 15°  |
+
+### Hue crowding
+
+The system aims to keep module hues ~30° apart. With **16** tints that is arithmetically impossible — 360° / 30° allows twelve — so the following pairs sit closer, and those modules must be told apart by icon, shape and the data they carry rather than by colour alone.
+
+| Pair               | Apart |
+| ------------------ | ----- |
+| habit ↔ recovery   | 5°    |
+| journal ↔ study    | 5°    |
+| fitness ↔ intimacy | 5°    |
+| sleep ↔ vault      | 9°    |
+| journal ↔ vault    | 11°   |
+| habit ↔ budget     | 13°   |
+| goals ↔ cycle      | 14°   |
+| study ↔ vault      | 16°   |
+| water ↔ budget     | 17°   |
+| budget ↔ recovery  | 18°   |
+| sleep ↔ journal    | 20°   |
+| calendar ↔ sleep   | 22°   |
+| sleep ↔ study      | 25°   |
+| calendar ↔ water   | 26°   |
+| goals ↔ intimacy   | 26°   |
+| fitness ↔ notes    | 27°   |
+
+<!-- GENERATED:colors END -->
 
 Derive a module's full look from its one hex with [`lib/color.ts`](../lib/color.ts):
 `tintGradient()` / `tintGradientTriple()` for washes, `glowShadow()` for the
@@ -233,7 +252,12 @@ minimum touch target **44** (never smaller).
 
 ## 7. Shape & Depth
 
-**Radius:** `sm 8 · md 12 · lg 16 · xl 20 · 2xl 28 · full 9999`. Pill radius
+**Radius:** `sm 8 · md 12 · lg 16 · xl 20 · 2xl 28 · 3xl 32 · full 9999`.
+`2xl` is **the** card radius — every resting card in the app. `3xl` exists only
+because Tailwind's own default for it is 24px, which is _smaller_ than the
+overridden `2xl`, so every `rounded-3xl` used to render tighter than the
+`rounded-2xl` beside it; it is now 32 and reserved for large squares (80pt+
+icon plinths, 160pt media tiles). Pill radius
 (`full`) is reserved for buttons, chips, and the FAB — so "fully round" always
 signals "tappable action." Cards use `lg`–`2xl`.
 

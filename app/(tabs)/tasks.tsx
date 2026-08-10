@@ -5,13 +5,13 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmptyState } from '@/components/ui/empty-state';
 import { QueryError } from '@/components/ui/query-error';
 import { Fab } from '@/components/ui/fab';
 import { ListSectionHeader } from '@/components/ui/list-section-header';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { TaskRow } from '@/features/tasks/components/task-row';
@@ -35,7 +35,6 @@ const FILTER_TABS: { value: TaskListFilter; labelKey: string }[] = [
 export default function TasksScreen() {
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
-  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
   const { filter, setFilter, searchQuery, setSearchQuery } = useTasksFilterStore();
@@ -75,9 +74,9 @@ export default function TasksScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <View style={{ paddingTop: insets.top + 8 }} className="gap-5 px-5 pb-2">
-        <Text variant="heading">{t('tabs.tasks')}</Text>
+      <ScreenHeader title={t('tabs.tasks')} showBack={false} />
 
+      <View className="gap-5 px-5 pb-2 pt-3">
         <View className="flex-row items-center gap-2 rounded-full border border-border bg-surface px-4 py-2.5">
           <Search size={16} color={colors[scheme].mutedForeground} />
           <TextInput

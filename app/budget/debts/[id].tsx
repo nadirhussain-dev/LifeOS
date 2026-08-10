@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { GradientButton } from '@/components/ui/gradient-button';
 import { ProgressRing } from '@/components/ui/progress-ring';
@@ -31,7 +32,7 @@ export default function DebtDetailScreen() {
   const debt = debts.find((d) => d.id === id);
   if (!debt) return null;
 
-  const tint = debt.isSettled ? '#22c55e' : statusTint(debt.status);
+  const tint = debt.isSettled ? colors[scheme].success : statusTint(debt.status);
   const borrowed = debt.direction === 'borrowed';
   const payCents = parseAmountToCents(payText);
 
@@ -110,7 +111,7 @@ export default function DebtDetailScreen() {
         </View>
 
         {debt.note && (
-          <View className="rounded-2xl border border-border bg-card p-4">
+          <View className={cardClass({ padding: 'md' })}>
             <Text className="text-foreground">{debt.note}</Text>
           </View>
         )}
@@ -118,7 +119,7 @@ export default function DebtDetailScreen() {
         {debt.isSettled ? (
           <View className="gap-3">
             <View className="flex-row items-center justify-center gap-2">
-              <CheckCircle2 size={18} color="#22c55e" />
+              <CheckCircle2 size={18} color={colors[scheme].success} />
               <Text className="font-sora-medium text-foreground">
                 {debt.settledAt
                   ? t('budget.settledOn', { date: format(debt.settledAt, 'MMM d, yyyy') })
@@ -143,7 +144,9 @@ export default function DebtDetailScreen() {
                 {t('budget.recordPayment')}
               </Text>
               <View className="flex-row items-center gap-2">
-                <View className="flex-1 flex-row items-center gap-2 rounded-2xl border border-border bg-card px-4 py-3">
+                <View
+                  className={cardClass({ padding: 'row' }, 'flex-1 flex-row items-center gap-2')}
+                >
                   <Text className="font-sora-bold text-lg" style={{ color: tint }}>
                     {debt.currency}
                   </Text>

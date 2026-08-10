@@ -7,7 +7,13 @@ import {
   type ModuleName,
   type ThemeName,
 } from '@/constants/design-tokens';
-import { contrastRatio, readableOn, relativeLuminance } from '@/lib/color';
+import {
+  contrastRatio,
+  readableOn,
+  relativeLuminance,
+  tintGradient,
+  tintGradientTriple,
+} from '@/lib/color';
 import { categoryColorPalette, priorityColors, habitDoneColor } from '@/constants/theme';
 
 const MODULES = Object.keys(moduleTints) as ModuleName[];
@@ -136,4 +142,132 @@ describe('user-content palettes', () => {
       ).toBeGreaterThanOrEqual(AA_TEXT);
     }
   });
+});
+
+describe('gradient surfaces carry white text', () => {
+  // Every gradient surface in the app — Hub tiles, HeroCard, GradientButton —
+  // paints its label in white. That was safe for three of the sixteen module
+  // tints and no others: white ran at 3.36–4.47:1 on the rest, because the
+  // tints are tuned to clear 3:1 as FILLS on a white card, which is a laxer bar
+  // than acting as the GROUND for white text.
+  //
+  // The fix lives in the gradient rather than the label, so the white-on-colour
+  // language survives and no hue moves. These tests are what hold that: a new
+  // module tint gets an ink-safe gradient for free and cannot ship without one.
+  const everyTint = MODULES.flatMap((name) => THEMES.map((theme) => moduleTint(name, theme)));
+
+  it('keeps white legible on every stop of the two-stop gradient', () => {
+    for (const tint of everyTint) {
+      for (const stop of tintGradient(tint)) {
+        expect(contrastRatio('#ffffff', stop)).toBeGreaterThanOrEqual(AA_TEXT);
+      }
+    }
+  });
+
+  it('keeps white legible on every stop of the three-stop hero wash', () => {
+    for (const tint of everyTint) {
+      for (const stop of tintGradientTriple(tint)) {
+        expect(contrastRatio('#ffffff', stop)).toBeGreaterThanOrEqual(AA_TEXT);
+      }
+    }
+  });
+
+  it('leaves a tint alone when it is already dark enough', () => {
+    // Self-limiting, and this is the assertion that proves it: study and
+    // gallery already carried white, so darkening them would be a gratuitous
+    // change to two modules to fix fourteen others.
+    for (const name of ['study', 'gallery'] as const) {
+      const tint = moduleTint(name, 'light');
+      expect(tintGradientTriple(tint)[1]).toBe(tint);
+    }
+  });
+
+  it('does not shift the hue while darkening', () => {
+    // Darkening is a mix toward black, which preserves hue by construction.
+    // Asserted anyway: swapping in an HSL-based "darken" that clamps lightness
+    // would quietly rotate a module's identity colour.
+    //
+    // Restricted to the chromatic tints. `settings` is a near-neutral grey
+    // (channels within ~7 of each other), and hue is numerically unstable at
+    // that saturation — 8-bit rounding alone moves its computed hue by 4°,
+    // which is an artefact of the measurement, not a colour anyone can see.
+    const channels = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+    const saturation = (hex: string) => {
+      const c = channels(hex);
+      return Math.max(...c) - Math.min(...c);
+    };
+    const hue = (hex: string) => {
+      const [r, g, b] = channels(hex);
+      const max = Math.max(r, g, b);
+      const delta = max - Math.min(r, g, b);
+      if (delta === 0) return 0;
+      const h =
+        max === r ? ((g - b) / delta) % 6 : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4;
+      return (h * 60 + 360) % 360;
+    };
+
+    const chromatic = everyTint.filter((tint) => saturation(tint) > 0.1);
+    expect(chromatic.length).toBeGreaterThan(25); // guard against the filter eating everything
+
+    for (const tint of chromatic) {
+      const base = tintGradientTriple(tint)[1];
+      const drift = Math.abs(hue(base) - hue(tint));
+      expect(`${tint}:${Math.min(drift, 360 - drift) < 1}`).toBe(`${tint}:true`);
+    }
+  });
+});
+
+describe('readableTint memoisation', () => {
+  it('returns the same value on repeat calls', () => {
+    // The cache is keyed on colour + theme + ratio; a miss on any of those
+    // would silently return a different shade for the same input.
+    for (const theme of THEMES) {
+      for (const hex of ['#eab308', '#22c55e', '#8b5cf6']) {
+        const first = readableTint(hex, theme);
+        expect(readableTint(hex, theme)).toBe(first);
+        expect(readableTint(hex, theme)).toBe(first);
+      }
+    }
+  });
+
+  it('does not confuse different ratios for the same colour', () => {
+    // 3:1 and 4.5:1 want different shades of the same hue. A cache keyed only
+    // on colour+theme would hand the graphics bar a body-text colour.
+    const graphic = readableTint('#eab308', 'light', 3);
+    const text = readableTint('#eab308', 'light', 4.5);
+    expect(contrastRatio(graphic, colors.light.card)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(text, colors.light.card)).toBeGreaterThanOrEqual(AA_TEXT);
+    expect(graphic).not.toBe(text);
+  });
+
+  it('does not confuse the two themes', () => {
+    expect(readableTint('#22c55e', 'light')).not.toBe(readableTint('#22c55e', 'dark'));
+  });
+});
+
+describe('progress ring halo geometry', () => {
+  // The ring's glow is a wider stroke on the same circle, so the radius has to
+  // reserve half of the widest halo. Get that wrong and the halo clips against
+  // the SVG bounds, which reads as the ring being sliced flat — worse than no
+  // glow. These are the sizes the app actually renders; the invariant is
+  // arithmetic, so it belongs in a test rather than in a comment.
+  const HALO_OUTER = 2.2;
+  const RINGS = [
+    { size: 80, strokeWidth: 8 }, // dashboard hero, three up
+    { size: 158, strokeWidth: 13 }, // goal detail
+    { size: 160, strokeWidth: 12 }, // ProgressRing default
+    { size: 168, strokeWidth: 14 }, // study
+    { size: 172, strokeWidth: 14 }, // sleep
+  ];
+
+  it.each(RINGS)(
+    'halo stays inside the viewport at $size/$strokeWidth',
+    ({ size, strokeWidth }) => {
+      const outer = strokeWidth * HALO_OUTER;
+      const radius = (size - outer) / 2;
+      expect(radius + outer / 2).toBeLessThanOrEqual(size / 2);
+      // And the arc must still be a ring, not a filled disc.
+      expect(radius).toBeGreaterThan(strokeWidth);
+    },
+  );
 });

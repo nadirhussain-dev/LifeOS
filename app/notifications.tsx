@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { moduleTints } from '@/constants/design-tokens';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import {
@@ -137,7 +138,11 @@ export default function NotificationsInboxScreen() {
   if (notifications.length === 0) {
     return (
       <View className="flex-1 bg-background">
-        <ScreenHeader title={t('notif.title')} eyebrow={t('notif.inboxEyebrow')} tint="#737373" />
+        <ScreenHeader
+          title={t('notif.title')}
+          eyebrow={t('notif.inboxEyebrow')}
+          tint={moduleTints.settings}
+        />
         <View className="flex-1 items-center justify-center gap-3 p-8">
           <View
             className="h-16 w-16 items-center justify-center rounded-2xl"
@@ -158,7 +163,11 @@ export default function NotificationsInboxScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader title={t('notif.title')} eyebrow={t('notif.inboxEyebrow')} tint="#737373" />
+      <ScreenHeader
+        title={t('notif.title')}
+        eyebrow={t('notif.inboxEyebrow')}
+        tint={moduleTints.settings}
+      />
       <ScrollView
         contentContainerClassName="gap-5 px-5 py-4 pb-10"
         showsVerticalScrollIndicator={false}

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, Switch, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -24,6 +25,7 @@ import {
   setUpDecoy,
 } from '@/features/private/services/vault-keys';
 import { usePrivateStore } from '@/features/private/store/private-store';
+import { resyncAllReminders } from '@/features/notifications/services/reminder-scheduler';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { confirm } from '@/lib/dialog-store';
 
@@ -47,6 +49,8 @@ export default function PrivateSettingsScreen() {
   const toggleModule = usePrivateStore((s) => s.toggleModule);
   const privatised = usePrivateStore((s) => s.privatised);
   const togglePrivatised = usePrivateStore((s) => s.togglePrivatised);
+  const hiddenFromSettings = usePrivateStore((s) => s.hiddenFromSettings);
+  const setHiddenFromSettings = usePrivateStore((s) => s.setHiddenFromSettings);
   const reset = usePrivateStore((s) => s.reset);
 
   const [mode, setMode] = useState<Mode>('menu');
@@ -76,6 +80,27 @@ export default function PrivateSettingsScreen() {
       if (!ok) return;
       deleteModuleRecords(id);
       toggleModule(id);
+    });
+  };
+
+  /**
+   * Turning this on is the one setting in the app that can make the app appear
+   * to have lost a feature, so it is gated behind a dialog that states the
+   * replacement gesture rather than a subtitle nobody reads. Turning it back off
+   * needs no confirmation — restoring a visible row cannot lock anyone out.
+   */
+  const toggleHidden = (next: boolean) => {
+    if (!next) {
+      setHiddenFromSettings(false);
+      return;
+    }
+    void confirm({
+      title: t('private.hideRowTitle'),
+      message: t('private.hideRowBody'),
+      confirmLabel: t('private.hideRowConfirm'),
+      cancelLabel: t('common.cancel'),
+    }).then((ok) => {
+      if (ok) setHiddenFromSettings(true);
     });
   };
 
@@ -191,7 +216,7 @@ export default function PrivateSettingsScreen() {
     <PrivateScreen title={t('private.spaceSettings')} tint={theme.accent}>
       <View className="gap-3">
         <Text variant="micro">{t('private.whatIsInHere')}</Text>
-        <View className="rounded-2xl border border-border bg-card px-4">
+        <View className={cardClass({ padding: 'none' }, 'px-4')}>
           {PRIVATE_MODULES.map((module, index) => (
             <View
               key={module.id}
@@ -217,7 +242,7 @@ export default function PrivateSettingsScreen() {
 
       <View className="gap-3">
         <Text variant="micro">{t('private.moveModules')}</Text>
-        <View className="rounded-2xl border border-border bg-card px-4">
+        <View className={cardClass({ padding: 'none' }, 'px-4')}>
           {MOVABLE_MODULES.map((module, index) => (
             <View
               key={module.id}
@@ -233,7 +258,17 @@ export default function PrivateSettingsScreen() {
               </View>
               <Switch
                 value={privatised.includes(module.id)}
-                onValueChange={() => togglePrivatised(module.id)}
+                onValueChange={() => {
+                  togglePrivatised(module.id);
+                  // Reminders already sitting in the OS queue carry the text
+                  // they were scheduled with, and the OS will not let us edit
+                  // it. Making a module private has to rebuild them or the
+                  // next fortnight of notifications keeps naming its contents
+                  // on the lock screen — the switch would appear to work and
+                  // quietly not. The rebuild also restores the real text when
+                  // the switch goes back the other way.
+                  void resyncAllReminders();
+                }}
                 trackColor={{ true: theme.accent, false: theme.border }}
               />
             </View>
@@ -259,10 +294,41 @@ export default function PrivateSettingsScreen() {
         <View className="gap-3">
           <Text variant="micro">{t('private.security')}</Text>
           <View className="gap-2">
+            {/*
+              Offered only from the real space, for the same reason the decoy row
+              is: inside the decoy, a switch that hides the way in would be one
+              more thing that behaves differently there.
+            */}
+            <View className={cardClass({ padding: 'rowLg' }, 'flex-row items-center gap-3')}>
+              <View className="flex-1">
+                <Text className="font-sora-medium text-foreground">{t('private.hideRow')}</Text>
+                <Text variant="caption">{t('private.hideRowHint')}</Text>
+              </View>
+              <Switch
+                value={hiddenFromSettings}
+                onValueChange={toggleHidden}
+                trackColor={{ true: theme.accent, false: theme.border }}
+              />
+            </View>
+
+            {/*
+              The other half of end-to-end sync. Private rows have always
+              travelled as ciphertext; without moving the key, a second device
+              receives them and can only ever show noise.
+            */}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/private/transfer')}
+              className={cardClass({ padding: 'rowLg' })}
+            >
+              <Text className="font-sora-medium text-foreground">{t('transfer.entry')}</Text>
+              <Text variant="caption">{t('transfer.entryHint')}</Text>
+            </Pressable>
+
             <Pressable
               accessibilityRole="button"
               onPress={() => setMode('change-current')}
-              className="rounded-2xl border border-border bg-card px-4 py-3.5"
+              className={cardClass({ padding: 'rowLg' })}
             >
               <Text className="font-sora-medium text-foreground">{t('private.changePin')}</Text>
               <Text variant="caption">{t('private.changePinHint')}</Text>
@@ -286,7 +352,7 @@ export default function PrivateSettingsScreen() {
                   setMode('decoy');
                 }
               }}
-              className="rounded-2xl border border-border bg-card px-4 py-3.5"
+              className={cardClass({ padding: 'rowLg' })}
             >
               <Text className="font-sora-medium text-foreground">
                 {decoyExists ? t('private.removeDecoy') : t('private.setDecoy')}

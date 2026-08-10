@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Dimensions, Pressable, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
+import { radius } from '@/constants/design-tokens';
 import {
   displayUri,
   formatDuration,
@@ -48,7 +49,12 @@ export function PhotoTile({
       {uri ? (
         <Image
           source={{ uri }}
-          style={{ width: size, height: size, borderRadius: 10, backgroundColor: '#00000010' }}
+          style={{
+            width: size,
+            height: size,
+            borderRadius: radius.md,
+            backgroundColor: '#00000010',
+          }}
           contentFit="cover"
           recyclingKey={photo.id}
           transition={120}
@@ -57,7 +63,7 @@ export function PhotoTile({
         // The row synced, the file did not. A tile that says so beats both a
         // broken image and a gap where the user knows something used to be.
         <View
-          className="items-center justify-center gap-1 rounded-[10px] border border-dashed border-border bg-surface p-1"
+          className="items-center justify-center gap-1 rounded-md border border-dashed border-border bg-surface p-1"
           style={{ width: size, height: size }}
         >
           <CloudOff size={16} color="#9ca3af" />

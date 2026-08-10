@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { Dimensions, Image, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 
+import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { GradientButton } from '@/components/ui/gradient-button';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -421,7 +422,7 @@ export default function CompareScreen() {
           accessibilityLabel={t('gallery.caption')}
           placeholder={t('gallery.captionLongPlaceholder')}
           placeholderTextColor={colors[scheme].mutedForeground}
-          className="rounded-2xl border border-border bg-card px-4 py-3 text-foreground"
+          className={cardClass({ padding: 'row' }, 'text-foreground')}
           maxLength={140}
         />
 

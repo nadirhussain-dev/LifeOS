@@ -5,6 +5,7 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { GOAL_CATEGORIES } from '@/features/goals/config/goal-categories';
+import { resolveTint } from '@/constants/design-tokens';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { GoalCategory } from '@/features/goals/types/goal.types';
 import { cn } from '@/lib/utils';
@@ -35,22 +36,19 @@ export function GoalCategoryPicker({ value, customLabel, onChange, onChangeLabel
         {GOAL_CATEGORIES.map((category) => {
           const selected = category.id === value;
           const Icon = category.icon;
+          const tint = resolveTint(category.tint, scheme);
           return (
             <Pressable
               accessibilityRole="button"
               key={category.id}
               onPress={() => select(category.id)}
-              style={
-                selected
-                  ? { backgroundColor: category.tint, borderColor: category.tint }
-                  : undefined
-              }
+              style={selected ? { backgroundColor: tint, borderColor: tint } : undefined}
               className={cn(
                 'flex-row items-center gap-1.5 rounded-full border px-3 py-1.5',
                 !selected && 'border-border',
               )}
             >
-              <Icon size={14} color={selected ? '#ffffff' : category.tint} strokeWidth={2.2} />
+              <Icon size={14} color={selected ? '#ffffff' : tint} strokeWidth={2.2} />
               <Text className={selected ? 'font-sora-medium text-white' : 'text-muted-foreground'}>
                 {t(category.labelKey)}
               </Text>

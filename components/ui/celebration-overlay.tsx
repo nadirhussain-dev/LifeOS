@@ -1,6 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useEffect, useRef, useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
+import { categoryColorPalette } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import Animated, {
   Easing,
@@ -10,7 +11,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-const CONFETTI_COLORS = ['#f97316', '#eab308', '#22c55e', '#0ea5e9', '#8b5cf6', '#ec4899'];
+// Was a character-for-character copy of `categoryColorPalette`. Confetti is
+// the one place a swatch means nothing at all, so it takes the content palette
+// wholesale rather than keeping a second list that could drift from it.
+const CONFETTI_COLORS = categoryColorPalette;
 const PIECE_COUNT = 28;
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { cardClass } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
@@ -96,7 +97,7 @@ export default function RoutineDetailScreen() {
           {routine.habits.length === 0 ? (
             <Text variant="muted">{t('habits.addHabitsHint')}</Text>
           ) : (
-            <View className="rounded-2xl border border-border bg-card px-4">
+            <View className={cardClass({ padding: 'none' }, 'px-4')}>
               {routine.habits.map((habit, index) => (
                 <View
                   key={habit.id}

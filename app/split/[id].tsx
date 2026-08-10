@@ -6,6 +6,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -193,7 +194,7 @@ export default function SplitGroupScreen() {
         >
           {/* Your position first — the question people open this for — with
               total spend beside it. */}
-          <View className="gap-3 rounded-2xl border border-border bg-card p-4">
+          <View className={cardClass({ padding: 'md' }, 'gap-3')}>
             <View className="flex-row">
               <View
                 className="flex-1 gap-0.5"
@@ -246,7 +247,7 @@ export default function SplitGroupScreen() {
           {/* Who owes what */}
           <View className="gap-2">
             <SectionHeader title={t('split.balances')} />
-            <View className="rounded-2xl border border-border bg-card px-4">
+            <View className={cardClass({ padding: 'none' }, 'px-4')}>
               {balances.map((b, index) => {
                 const name = memberName(b.memberId);
                 const removed = memberOf(b.memberId)?.removedAt !== null;
@@ -310,7 +311,7 @@ export default function SplitGroupScreen() {
                 />
               </View>
             ) : (
-              <View className="rounded-2xl border border-border bg-card px-4">
+              <View className={cardClass({ padding: 'none' }, 'px-4')}>
                 {data.expenses.map((expense, index) => {
                   const payer = memberName(expense.paidByMemberId);
                   const money = formatMoney(expense.amountCents, currency);

@@ -7,6 +7,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 
+import { cardClass } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
@@ -108,7 +109,12 @@ export default function HabitDetailScreen() {
         </View>
 
         <View className="flex-row gap-3">
-          <View className="flex-1 items-center gap-1 rounded-2xl border border-border bg-card py-4 shadow-e1">
+          <View
+            className={cardClass(
+              { padding: 'none', elevation: 'e1' },
+              'flex-1 items-center gap-1 py-4',
+            )}
+          >
             <Text
               style={{
                 fontSize: 28,
@@ -131,7 +137,12 @@ export default function HabitDetailScreen() {
               </Text>
             ) : null}
           </View>
-          <View className="flex-1 items-center gap-1 rounded-2xl border border-border bg-card py-4 shadow-e1">
+          <View
+            className={cardClass(
+              { padding: 'none', elevation: 'e1' },
+              'flex-1 items-center gap-1 py-4',
+            )}
+          >
             <Text
               style={{
                 fontSize: 28,
@@ -144,7 +155,12 @@ export default function HabitDetailScreen() {
             </Text>
             <Text variant="caption">{t('habits.bestStreak')}</Text>
           </View>
-          <View className="flex-1 items-center gap-1 rounded-2xl border border-border bg-card py-4 shadow-e1">
+          <View
+            className={cardClass(
+              { padding: 'none', elevation: 'e1' },
+              'flex-1 items-center gap-1 py-4',
+            )}
+          >
             <Text
               style={{
                 fontSize: 28,

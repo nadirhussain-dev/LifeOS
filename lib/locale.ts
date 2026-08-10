@@ -14,3 +14,21 @@ export function deviceLocale(): string {
   }
   return cached;
 }
+
+/**
+ * The ISO 4217 currency of the device's region, when the OS knows it.
+ *
+ * Used to preselect the budget currency during onboarding instead of asking, or
+ * worse, defaulting everybody to dollars — a currency picker with 90 entries is
+ * a poor first impression for the ~95% of people whose answer the phone already
+ * knows. Returns null rather than a guess when the OS declines to say, so the
+ * caller can fall back explicitly.
+ */
+export function deviceCurrencyCode(): string | null {
+  try {
+    const code = getLocales()[0]?.currencyCode;
+    return code && /^[A-Z]{3}$/.test(code) ? code : null;
+  } catch {
+    return null;
+  }
+}

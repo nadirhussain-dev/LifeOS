@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
+import { resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { PinPad } from '@/features/private/components/pin-pad';
 import {
@@ -80,7 +81,7 @@ export default function PrivateSetupScreen() {
         <>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="gap-6 pb-6">
             <View className="gap-3">
-              <View className="h-16 w-16 items-center justify-center rounded-3xl bg-surface">
+              <View className="h-16 w-16 items-center justify-center rounded-2xl bg-surface">
                 <ShieldCheck size={30} color={theme.accent} strokeWidth={1.8} />
               </View>
               <Text variant="heading">{t('private.setupTitle')}</Text>
@@ -91,6 +92,7 @@ export default function PrivateSetupScreen() {
               {PRIVATE_MODULES.map((module) => {
                 const selected = chosen.includes(module.id);
                 const Icon = module.icon;
+                const tint = resolveTint(module.tint, scheme);
                 return (
                   <Pressable
                     key={module.id}
@@ -99,15 +101,15 @@ export default function PrivateSetupScreen() {
                     onPress={() => toggle(module.id)}
                     className="flex-row items-center gap-3 rounded-2xl border px-4 py-3.5"
                     style={{
-                      borderColor: selected ? module.tint : theme.border,
-                      backgroundColor: selected ? alpha(module.tint, 0.1) : 'transparent',
+                      borderColor: selected ? tint : theme.border,
+                      backgroundColor: selected ? alpha(tint, 0.1) : 'transparent',
                     }}
                   >
                     <View
                       className="h-10 w-10 items-center justify-center rounded-xl"
-                      style={{ backgroundColor: alpha(module.tint, 0.16) }}
+                      style={{ backgroundColor: alpha(tint, 0.16) }}
                     >
-                      <Icon size={20} color={module.tint} strokeWidth={1.9} />
+                      <Icon size={20} color={tint} strokeWidth={1.9} />
                     </View>
                     <View className="flex-1">
                       <Text className="font-sora-medium text-foreground">{t(module.titleKey)}</Text>
@@ -153,6 +155,18 @@ export default function PrivateSetupScreen() {
             label={t('common.continue')}
             disabled={chosen.length === 0}
             onPress={() => setStep('pin')}
+          />
+          {/*
+            Offered here because this is where somebody who already has a vault
+            elsewhere will arrive, and creating a second one is the mistake that
+            cannot be undone: a fresh master key leaves every already-synced
+            private row permanently unreadable, while looking like it worked.
+          */}
+          <Button
+            variant="ghost"
+            size="lg"
+            label={t('receive.entry')}
+            onPress={() => router.push('/private/receive')}
           />
         </>
       ) : null}

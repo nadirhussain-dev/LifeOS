@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 import { Plus } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { Text } from '@/components/ui/text';
 import { formatMoney } from '@/features/budget/services/money';
@@ -20,7 +21,7 @@ export function SavingsGoalCard({ goal, currency, onPress, onAdd }: Props) {
   return (
     <Pressable
       onPress={() => onPress(goal)}
-      className="gap-3 rounded-2xl border border-border bg-card p-4 shadow-e1"
+      className={cardClass({ padding: 'md', elevation: 'e1' }, 'gap-3')}
       accessibilityRole="button"
     >
       <View className="flex-row items-center justify-between">

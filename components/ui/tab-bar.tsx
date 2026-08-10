@@ -8,13 +8,46 @@ import {
   Repeat,
   type LucideIcon,
 } from 'lucide-react-native';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
+import { fontFamily, motion, typography } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
+
+/**
+ * The icon, which is the only part of a tab that can move.
+ *
+ * The label can't: the selected state is carried by font weight as well as
+ * colour (the system's "never colour alone" rule), and switching between two
+ * static Sora instances re-lays the text out. Sora is only published here as
+ * one file per weight — @expo-google-fonts/sora ships 100 through 800 as
+ * separate TTFs with no variable axis — so there is no weight to interpolate
+ * and no way to make that swap continuous. Animating the icon instead gives
+ * the tap somewhere to land without fighting the type.
+ */
+function TabIcon({ Icon, color, focused }: { Icon: LucideIcon; color: string; focused: boolean }) {
+  const reducedMotion = useReducedMotion();
+  const scale = useSharedValue(focused ? 1 : 0.92);
+
+  useEffect(() => {
+    const target = focused ? 1 : 0.92;
+    scale.value = reducedMotion ? target : withSpring(target, motion.spring.press);
+  }, [focused, reducedMotion, scale]);
+
+  const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  return (
+    <Animated.View style={style}>
+      <Icon size={22} color={color} strokeWidth={focused ? 2.5 : 2} />
+    </Animated.View>
+  );
+}
 
 /** Per-route identity for the custom bar. Keys match the tab route file names. */
 const TABS: Record<string, { labelKey: string; icon: LucideIcon }> = {
@@ -82,12 +115,14 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
               paddingVertical: 2,
             }}
           >
-            <Icon size={22} color={color} strokeWidth={focused ? 2.5 : 2} />
+            <TabIcon Icon={Icon} color={color} focused={focused} />
             <Text
               style={{
                 color,
-                fontSize: 10.5,
-                fontFamily: focused ? 'Sora_700Bold' : 'Sora_500Medium',
+                fontSize: typography.micro.size,
+                // Weight, not just colour, carries the selected state — the
+                // system's "never colour alone" rule applies to navigation too.
+                fontFamily: focused ? fontFamily.bold : fontFamily.medium,
               }}
             >
               {t(meta.labelKey)}

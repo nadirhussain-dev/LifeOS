@@ -5,6 +5,7 @@ import { ListMusic, Play, Plus, Shuffle } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -92,7 +93,10 @@ export default function MusicScreen() {
                 <Pressable
                   accessibilityRole="button"
                   onPress={() => router.push('/music/now-playing')}
-                  className="mx-4 mt-1 flex-row items-center gap-3 overflow-hidden rounded-2xl border border-border bg-card p-3"
+                  className={cardClass(
+                    { padding: 'none' },
+                    'mx-4 mt-1 flex-row items-center gap-3 overflow-hidden p-3',
+                  )}
                   style={{ borderColor: alpha(tint, 0.4) }}
                 >
                   <ArtworkOrb seed={currentSong.id} size={46} playing={isPlaying} />

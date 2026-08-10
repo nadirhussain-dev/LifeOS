@@ -10,6 +10,8 @@ import {
 } from 'date-fns';
 import type { TFunction } from 'i18next';
 
+import type { ThemeName } from '@/constants/design-tokens';
+
 import { expenseCategoryMeta } from '@/features/budget/config/budget-config';
 import type {
   AccountBalance,
@@ -62,7 +64,10 @@ export function summarize(transactions: BudgetTransaction[]): BudgetSummary {
 
 /** Expense totals per category, largest first, with each slice's share of the
  * total — feeds both the donut and the legend/breakdown list. */
-export function expenseByCategory(transactions: BudgetTransaction[]): CategorySlice[] {
+export function expenseByCategory(
+  transactions: BudgetTransaction[],
+  theme: ThemeName,
+): CategorySlice[] {
   const totals = new Map<string, number>();
   for (const t of transactions) {
     if (t.type !== 'expense') continue;
@@ -72,7 +77,7 @@ export function expenseByCategory(transactions: BudgetTransaction[]): CategorySl
   if (grand === 0) return [];
   return [...totals.entries()]
     .map(([categoryId, amountCents]) => {
-      const meta = expenseCategoryMeta(categoryId);
+      const meta = expenseCategoryMeta(categoryId, theme);
       return {
         categoryId,
         label: meta.label,

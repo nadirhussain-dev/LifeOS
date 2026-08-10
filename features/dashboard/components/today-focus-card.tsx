@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { Text } from '@/components/ui/text';
@@ -60,7 +61,7 @@ export function TodayFocusCard() {
   return (
     <Animated.View
       entering={reducedMotion ? undefined : FadeInDown.duration(320)}
-      className="gap-4 rounded-[28px] border border-border bg-card p-5"
+      className={cardClass({ padding: 'lg' }, 'gap-4')}
       style={elevation.e2}
     >
       <View className="flex-row items-center justify-between">

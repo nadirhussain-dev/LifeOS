@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, type PressableProps } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { Text } from '@/components/ui/text';
+import { accentGlow, accentGradient } from '@/constants/design-tokens';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
@@ -55,10 +56,6 @@ const textVariants = cva('font-sora-semibold', {
 
 const SHADOW_VARIANTS = new Set(['primary', 'accent', 'destructive']);
 
-// Deeper than the flat --accent token at both ends, so the gradient reads as
-// genuine depth rather than a two-tone sticker.
-const ACCENT_GRADIENT = ['#22c58e', '#0b6b4f'] as const;
-
 type Props = PressableProps &
   VariantProps<typeof buttonVariants> & {
     label: string;
@@ -92,7 +89,7 @@ export function Button({
       style={[
         animatedStyle,
         hasShadow && {
-          shadowColor: variant === 'accent' ? '#188b61' : '#000',
+          shadowColor: variant === 'accent' ? accentGlow : '#000',
           shadowOpacity: 0.22,
           shadowRadius: 12,
           shadowOffset: { width: 0, height: 6 },
@@ -117,7 +114,7 @@ export function Button({
       >
         {variant === 'accent' && !disabled && (
           <LinearGradient
-            colors={ACCENT_GRADIENT}
+            colors={accentGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFillObject}

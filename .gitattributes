@@ -1,0 +1,31 @@
+# Normalise line endings.
+#
+# Without this, a Windows checkout (core.autocrlf=true) writes CRLF to disk
+# while git stores LF. Two things went wrong because of it:
+#
+#  1. `git status` reported ~150 files as modified that `git diff` showed as
+#     empty — the index stat was dirty but the normalised content was
+#     identical. Enough noise to hide a real change in.
+#
+#  2. lib/store-compliance.test.ts greps source for a block ending in `\n\n`.
+#     Against CRLF on disk that never matches, so the test failed on Windows
+#     checkouts and passed on every CI run. It was red for reasons that had
+#     nothing to do with the code it tests.
+#
+# `text=auto eol=lf` makes git normalise on commit and check out LF everywhere,
+# so what the tests read is what CI reads.
+* text=auto eol=lf
+
+# Binary — never touch these.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.mp3 binary
+*.mp4 binary
+*.keystore binary

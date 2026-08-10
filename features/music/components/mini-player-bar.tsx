@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
@@ -125,7 +126,7 @@ export function MiniPlayerBar() {
             elevation: 10,
           },
         ]}
-        className="overflow-hidden rounded-2xl border border-border bg-card"
+        className={cardClass({ padding: 'none' }, 'overflow-hidden')}
       >
         <View className="h-[2px] w-full bg-muted">
           <View className="h-full" style={{ width: `${progress * 100}%`, backgroundColor: tint }} />

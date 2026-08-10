@@ -2,8 +2,11 @@ import { Clock, Star, Sunrise, TrendingDown, TrendingUp } from 'lucide-react-nat
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
+import { colors } from '@/constants/theme';
 import { formatStudyDuration, timeOfDayLabelKey } from '@/features/study/services/study-stats';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { alpha } from '@/lib/color';
 import type { StudyInsights } from '@/features/study/types/study.types';
 
@@ -12,6 +15,7 @@ const STUDY_TINT = '#8b5cf6';
 /** A 2×2 grid of "how to improve" signals: when you focus best, typical
  * session length, focus quality, and momentum vs last week. */
 export function StudyInsightsCard({ insights }: { insights: StudyInsights }) {
+  const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const wow = insights.weekOverWeek;
   const wowUp = wow != null && wow >= 0;
@@ -44,14 +48,19 @@ export function StudyInsightsCard({ insights }: { insights: StudyInsights }) {
     {
       key: 'wow',
       icon: wowUp ? TrendingUp : TrendingDown,
-      tint: wow == null ? '#6b7280' : wowUp ? '#22c55e' : '#ef4444',
+      tint:
+        wow == null
+          ? colors[scheme].mutedForeground
+          : wowUp
+            ? colors[scheme].success
+            : colors[scheme].destructive,
       label: t('study.vsLastWeek'),
       value: wow == null ? t('study.new') : `${wowUp ? '+' : ''}${Math.round(wow * 100)}%`,
     },
   ];
 
   return (
-    <View className="gap-3 rounded-2xl border border-border bg-card p-4">
+    <View className={cardClass({ padding: 'md' }, 'gap-3')}>
       <Text variant="subheading">{t('study.insights')}</Text>
       <View className="flex-row flex-wrap gap-2.5">
         {tiles.map((tile) => {

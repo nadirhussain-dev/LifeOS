@@ -38,4 +38,10 @@ module.exports = {
   moduleNameMapper: {
     '^lucide-react-native$': '<rootDir>/test/lucide-stub.js',
   },
+  /**
+   * See test/async-storage-setup.js — without it, every test that touches a
+   * persisted zustand store dies on import. Registered once here so a new store
+   * test does not have to rediscover why it cannot import anything.
+   */
+  setupFiles: [...(preset.setupFiles ?? []), '<rootDir>/test/async-storage-setup.js'],
 };

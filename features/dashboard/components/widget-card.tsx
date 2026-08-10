@@ -1,9 +1,9 @@
 import { type LucideIcon } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/hooks/use-theme';
 
+import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
-import { colors } from '@/constants/theme';
 import { alpha } from '@/lib/color';
 
 type Props = {
@@ -24,11 +24,11 @@ export function WidgetCard({
   tint,
   children,
 }: Props) {
-  const scheme = useColorScheme() ?? 'light';
-  const accent = tint ?? colors[scheme].accent;
+  const { c } = useTheme();
+  const accent = tint ?? c.accent;
 
   return (
-    <View className="gap-3 rounded-3xl border border-border bg-card p-4 shadow-e1">
+    <View className={cardClass({ padding: 'md', elevation: 'e1' }, 'gap-3')}>
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center gap-2.5">
           <View

@@ -35,6 +35,22 @@ jobs:
       - name: Format check
         run: npm run format:check
 
+      # The three token layers (global.css, tailwind.config.js,
+      # constants/design-tokens.ts) have to describe the same colours. Nothing
+      # catches a mismatch at runtime — a missing Tailwind class renders as no
+      # colour at all rather than an error — so it gets checked here.
+      - name: Token drift
+        run: npm run check:tokens
+
+      # A key used in code but absent from the locales renders as its own path
+      # ("settings.goalRemindrs") in the middle of a screen, and a key English
+      # has that Arabic does not falls back to English mid-sentence. Neither is
+      # visible to tsc, eslint or the bundler. Both were live in this repo when
+      # the check was written — the gender step in onboarding had been showing
+      # raw key paths since it was built.
+      - name: i18n drift
+        run: npm run check:i18n
+
       - name: Test
         run: npm test -- --ci
 

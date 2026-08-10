@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Switch, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { cardClass } from '@/components/ui/card';
 import { AttributeRow } from '@/components/ui/attribute-row';
 import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -118,7 +119,7 @@ export default function WaterSettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <CategoryOffNotice category="water" />
-        <View className="rounded-2xl border border-border bg-card px-4 shadow-e1">
+        <View className={cardClass({ padding: 'none', elevation: 'e1' }, 'px-4')}>
           <AttributeRow icon={Target} label={t('water.dailyGoal')} isFirst>
             <View className="flex-row flex-wrap gap-2">
               {GOAL_PRESETS_ML.map((ml) => {
@@ -151,7 +152,7 @@ export default function WaterSettingsScreen() {
           </AttributeRow>
         </View>
 
-        <View className="gap-3 rounded-2xl border border-border bg-card p-4 shadow-e1">
+        <View className={cardClass({ padding: 'md', elevation: 'e1' }, 'gap-3')}>
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
               <Bell size={16} color={colors[scheme].mutedForeground} />

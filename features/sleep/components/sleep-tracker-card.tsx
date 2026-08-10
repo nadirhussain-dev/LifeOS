@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { GradientButton } from '@/components/ui/gradient-button';
 import { HeroCard } from '@/components/ui/hero-card';
 import { Text } from '@/components/ui/text';
@@ -77,7 +78,7 @@ export function SleepTrackerCard() {
   }
 
   return (
-    <View className="gap-3 rounded-3xl border border-border bg-card p-4">
+    <View className={cardClass({ padding: 'md' }, 'gap-3')}>
       <View className="flex-row items-center gap-3">
         <View
           className="h-11 w-11 items-center justify-center rounded-2xl"
