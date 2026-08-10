@@ -9,6 +9,7 @@ import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { ChipRow, PrivateScreen } from '@/features/private/components/private-screen';
+import { CycleHero } from '@/features/private/components/cycle-hero';
 import { privateModule } from '@/features/private/config/private-modules';
 import {
   addCycleEntry,
@@ -95,24 +96,7 @@ export default function CycleScreen() {
         />
       }
     >
-      {/* Summary */}
-      <View className="flex-row gap-3">
-        <View
-          className="flex-1 gap-1 rounded-2xl px-4 py-3.5"
-          style={{ backgroundColor: alpha(tint, 0.12) }}
-        >
-          <Text variant="caption">{t('private.dayOfCycle')}</Text>
-          <Text className="font-sora-extrabold text-2xl" style={{ color: tint }}>
-            {currentDay ?? '—'}
-          </Text>
-        </View>
-        <View className="flex-1 gap-1 rounded-2xl border border-border px-4 py-3.5">
-          <Text variant="caption">{t('private.averageCycle')}</Text>
-          <Text className="font-sora-extrabold text-2xl text-foreground">
-            {average ? t('private.days', { count: average }) : '—'}
-          </Text>
-        </View>
-      </View>
+      <CycleHero currentDay={currentDay} averageCycleLength={average} tint={tint} />
 
       {nextStart ? (
         <Text variant="caption" className="px-1">

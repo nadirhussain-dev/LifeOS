@@ -1,7 +1,7 @@
-import { CloudUpload, HardDrive, Wifi } from 'lucide-react-native';
+import { Check, CloudUpload, HardDrive, Sparkles, Wifi } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Switch, View } from 'react-native';
+import { Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
@@ -9,6 +9,8 @@ import { ProgressBar } from '@/components/ui/progress-bar';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { STORAGE_PLANS, type StoragePlanId } from '@/features/billing/config/plans';
+import { useBillingStore } from '@/features/billing/store/billing-store';
 import { cachedBytes, clearMediaCache } from '@/features/media-sync/services/media-cache';
 import {
   countPendingMedia,
@@ -16,7 +18,9 @@ import {
 } from '@/features/media-sync/services/media-uploader';
 import { useMediaSyncStore } from '@/features/media-sync/store/media-sync-store';
 import { useTheme } from '@/hooks/use-theme';
+import { alpha } from '@/lib/color';
 import { confirm } from '@/lib/dialog-store';
+import { toast } from '@/lib/toast-store';
 
 /**
  * Backing up the files themselves.
@@ -37,6 +41,8 @@ export default function MediaSettingsScreen() {
   const setWifiOnly = useMediaSyncStore((s) => s.setWifiOnly);
   const usage = useMediaSyncStore((s) => s.usage);
   const lastError = useMediaSyncStore((s) => s.lastError);
+  const planId = useBillingStore((s) => s.planId);
+  const subscribe = useBillingStore((s) => s.subscribe);
 
   const [pending, setPending] = useState(0);
   const [cached, setCached] = useState(0);
@@ -62,6 +68,20 @@ export default function MediaSettingsScreen() {
       clearMediaCache();
       setCached(0);
     });
+
+  const choosePlan = (id: StoragePlanId) => {
+    if (id === planId) return;
+    void confirm({
+      title: t('billing.confirmTitle'),
+      message: t('billing.confirmBody'),
+      confirmLabel: t('billing.confirmAction'),
+      cancelLabel: t('common.cancel'),
+    }).then((ok) => {
+      if (!ok) return;
+      subscribe(id);
+      toast.success(t('billing.previewNotice'));
+    });
+  };
 
   return (
     <View className="flex-1 bg-background">
@@ -128,6 +148,65 @@ export default function MediaSettingsScreen() {
             ) : null}
           </View>
         ) : null}
+
+        {/*
+          Mock, on purpose: nothing in this card charges anyone. There is no
+          payment provider behind it yet (billing-store.ts), and the
+          confirmation dialog says "preview" before it changes anything —
+          this exists so the plan comparison and the storage number above it
+          have somewhere to point once real billing lands.
+        */}
+        <View className={cardClass({ padding: 'md' }, 'gap-3')}>
+          <View className="flex-row items-center gap-2">
+            <Sparkles size={16} color={c.accent} />
+            <Text variant="micro">{t('billing.plans')}</Text>
+          </View>
+          <View className="gap-2">
+            {STORAGE_PLANS.map((plan) => {
+              const active = plan.id === planId;
+              return (
+                <Pressable
+                  key={plan.id}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: active }}
+                  onPress={() => choosePlan(plan.id)}
+                  className="flex-row items-center gap-3 rounded-2xl border px-4 py-3"
+                  style={{
+                    borderColor: active ? c.accent : c.border,
+                    backgroundColor: active ? alpha(c.accent, 0.08) : 'transparent',
+                  }}
+                >
+                  <View className="flex-1">
+                    <View className="flex-row items-center gap-2">
+                      <Text className="font-sora-medium text-foreground">
+                        {formatBytes(plan.storageBytes)}
+                      </Text>
+                      {plan.badgeKey ? (
+                        <View
+                          className="rounded-full px-2 py-0.5"
+                          style={{ backgroundColor: alpha(c.accent, 0.16) }}
+                        >
+                          <Text
+                            variant="caption"
+                            className="font-sora-semibold"
+                            style={{ color: c.accent }}
+                          >
+                            {t(plan.badgeKey)}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Text variant="caption">
+                      {plan.priceLabel} {t(plan.periodKey)}
+                    </Text>
+                  </View>
+                  {active ? <Check size={18} color={c.accent} /> : null}
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text variant="caption">{t('billing.mockNote')}</Text>
+        </View>
 
         <View className={cardClass({ padding: 'md' }, 'gap-3')}>
           <View className="flex-row items-center gap-3">

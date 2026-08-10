@@ -20,10 +20,18 @@ import type { Gender } from '@/features/profile/store/profile-store';
  *     snooping partner exactly what is being hidden, which is the thing the
  *     feature exists to prevent. Nothing here renders anywhere until the
  *     private space is unlocked.
- *  2. **`suggestFor` suggests.** It pre-ticks the setup list for somebody who
- *     answered the gender question; it never gates. Every module stays
- *     reachable from "Show everything" regardless of the answer, because the
- *     alternative is an app that tells people their own life doesn't fit.
+ *  2. **`suggestFor` suggests; `hardGateByRole` decides who sees the module by
+ *     default.** This used to be one rule ("suggest, never gate") until the
+ *     product decision behind `visibleModules()` below: Cycle and Recovery are
+ *     now hidden by default from accounts that didn't answer the matching
+ *     gender question, because a body-specific tracker sitting in a shared
+ *     module list is itself a disclosure. The one place this could go wrong —
+ *     a non-binary, "prefer not to say", or simply mis-set account being
+ *     unable to reach a module that fits their life — is why
+ *     `showAllModules` (`private-store.ts`) exists: one explicit, opt-in
+ *     switch in Private Settings that overrides the gate entirely. It is off
+ *     by default and never inferred; nobody sees it flipped on without having
+ *     chosen to.
  *  3. **Their content is stored encrypted**, as blobs (see
  *     private-repository.ts), and sync stays off unless explicitly enabled, at
  *     which point only ciphertext is uploaded. Note this is encryption at rest
@@ -47,6 +55,8 @@ import type { Gender } from '@/features/profile/store/profile-store';
  * that reason: the decoy's whole guarantee is that real-space content
  * genuinely does not exist under its key, and that stops being true the
  * moment a feature's evidence lives somewhere the local key cannot reach.
+ * `shared-albums` is also never role-gated — it's the one module built for
+ * two people together, not one body.
  */
 export type PrivateModuleId = 'vault' | 'cycle' | 'recovery' | 'intimacy' | 'shared-albums';
 
@@ -68,6 +78,13 @@ export type PrivateModule = {
    * open.
    */
   requiresRealSpace?: boolean;
+  /**
+   * Hidden by default from an account whose gender doesn't appear in
+   * `suggestFor` — see the header comment. `visibleModules()` is the only
+   * place that reads this; every other consumer (search, export, the decoy
+   * filter) intentionally stays gender-blind.
+   */
+  hardGateByRole?: boolean;
 };
 
 export const PRIVATE_MODULES: PrivateModule[] = [
@@ -89,6 +106,7 @@ export const PRIVATE_MODULES: PrivateModule[] = [
     tint: moduleTints.cycle,
     suggestFor: ['female'],
     route: '/private/cycle',
+    hardGateByRole: true,
   },
   {
     id: 'recovery',
@@ -98,6 +116,7 @@ export const PRIVATE_MODULES: PrivateModule[] = [
     tint: moduleTints.recovery,
     suggestFor: ['male'],
     route: '/private/recovery',
+    hardGateByRole: true,
   },
   {
     id: 'intimacy',
@@ -129,4 +148,37 @@ export function privateModule(id: PrivateModuleId): PrivateModule | undefined {
 export function suggestedFor(gender: Gender | null): PrivateModuleId[] {
   if (!gender) return ['vault'];
   return PRIVATE_MODULES.filter((m) => m.suggestFor.includes(gender)).map((m) => m.id);
+}
+
+/**
+ * A list of module ids, filtered by role.
+ *
+ * `hardGateByRole` modules (Cycle, Recovery) are dropped unless `gender`
+ * matches their `suggestFor` — or `showAll` is true, which is the one escape
+ * hatch and is always an explicit choice (`showAllModules` in
+ * `private-store.ts`), never inferred from the gender answer itself. Modules
+ * without the flag pass through untouched regardless of `showAll`.
+ *
+ * Takes a list of ids rather than reading `PRIVATE_MODULES` directly so both
+ * callers (the home screen's enabled modules, setup's full catalogue) can
+ * reuse the same filter.
+ */
+export function filterByRole(
+  ids: PrivateModuleId[],
+  gender: Gender | null,
+  showAll: boolean,
+): PrivateModuleId[] {
+  if (showAll) return ids;
+  return ids.filter((id) => {
+    const module = privateModule(id);
+    if (!module?.hardGateByRole) return true;
+    return gender !== null && module.suggestFor.includes(gender);
+  });
+}
+
+/** Whether `filterByRole` would hide at least one of `ids` for this gender —
+ *  the condition that decides whether the "show every module" row is worth
+ *  rendering at all. */
+export function roleGateHidesAny(ids: PrivateModuleId[], gender: Gender | null): boolean {
+  return filterByRole(ids, gender, false).length < ids.length;
 }

@@ -4048,4 +4048,226 @@ await test('0028 the bucket is private', async () => {
   expectEqual(bucket?.public, false, 'bucket is not public');
 });
 
+// ---------------------------------------------------------------------------
+console.log('\nalbum comments & chat (0029)');
+// ---------------------------------------------------------------------------
+//
+// A fresh album (alb-together) rather than reusing alb-1/alb-pest above —
+// alb-1 was soft-deleted by the 0027 suite and alb-pest's membership is
+// entangled with the 0028 storage-quota tests, and neither is a clean base
+// for "is this flag actually gating the insert". ALBUM_OWNER owns it;
+// ALBUM_THIRD and ALBUM_PARTNER are ordinary members; ALBUM_OUTSIDER is
+// never added.
+
+await asUser(db, ALBUM_OWNER, async () => {
+  await db.query(
+    `select public.create_shared_album('alb-together','cipher:together','m-together-owner',null,'act-together',$1)`,
+    [Date.now()],
+  );
+  await db.query(
+    `insert into public.shared_album_members
+       (id, album_id, user_id, email, display_name, role, created_at, updated_at)
+     values
+       ('m-together-third','alb-together',$1,'album-third@example.com','Third','member',$3,$3),
+       ('m-together-partner','alb-together',$2,'album-partner@example.com','Partner','member',$3,$3)`,
+    [ALBUM_THIRD, ALBUM_PARTNER, Date.now()],
+  );
+});
+
+await test('0029 comments and chat are off by default', async () => {
+  const row = await one(
+    `select allow_comments, allow_chat from public.shared_albums where id = 'alb-together'`,
+  );
+  expectEqual(row.allow_comments, false, 'comments default off');
+  expectEqual(row.allow_chat, false, 'chat default off');
+});
+
+await test('0029 a member cannot comment while comments are off', async () => {
+  await asUser(db, ALBUM_THIRD, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.shared_album_comments
+             (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at)
+           values ('cmt-early','alb-together',$1,'Third','cipher:hi',$2,$2)`,
+          [ALBUM_THIRD, Date.now()],
+        ),
+      'row-level security',
+    );
+  });
+});
+
+await test('0029 only the owner can turn comments on', async () => {
+  await asUser(db, ALBUM_THIRD, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `update public.shared_albums set allow_comments = true, updated_at = $1 where id = 'alb-together'`,
+          [Date.now()],
+        ),
+      'only the album owner',
+    );
+  });
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(
+      `update public.shared_albums set allow_comments = true, updated_at = $1 where id = 'alb-together'`,
+      [Date.now()],
+    );
+  });
+  const row = await one(
+    `select allow_comments from public.shared_albums where id = 'alb-together'`,
+  );
+  expectEqual(row.allow_comments, true, 'owner turned comments on');
+});
+
+await test('0029 a member can comment once comments are on', async () => {
+  await asUser(db, ALBUM_THIRD, async () => {
+    await db.query(
+      `insert into public.shared_album_comments
+         (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at)
+       values ('cmt-third','alb-together',$1,'Third','cipher:hi',$2,$2)`,
+      [ALBUM_THIRD, Date.now()],
+    );
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.shared_album_comments where id = 'cmt-third'`),
+    1,
+    'comment stored',
+  );
+});
+
+await test('0029 the two flags are independent — chat stays off even with comments on', async () => {
+  await asUser(db, ALBUM_THIRD, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.shared_album_messages
+             (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at)
+           values ('msg-early','alb-together',$1,'Third','cipher:hey',$2,$2)`,
+          [ALBUM_THIRD, Date.now()],
+        ),
+      'row-level security',
+    );
+  });
+});
+
+await test('0029 a non-member cannot read or post comments', async () => {
+  await asUser(db, ALBUM_OUTSIDER, async () => {
+    expectEqual(
+      await count(
+        `select count(*)::int n from public.shared_album_comments where album_id = 'alb-together'`,
+      ),
+      0,
+      'invisible to a non-member',
+    );
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.shared_album_comments
+             (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at)
+           values ('cmt-outsider','alb-together',$1,'Outsider','cipher:hi',$2,$2)`,
+          [ALBUM_OUTSIDER, Date.now()],
+        ),
+      'row-level security',
+    );
+  });
+});
+
+await test('0029 a fellow member — not the author, not the owner — cannot delete a comment', async () => {
+  // RLS's USING clause on UPDATE filters which rows are visible to update,
+  // rather than raising — a write that matches nothing simply affects zero
+  // rows. So the assertion is that the comment survives untouched, not that
+  // the statement throws.
+  await asUser(db, ALBUM_PARTNER, async () => {
+    await db.query(
+      `update public.shared_album_comments set deleted_at = $1, updated_at = $1 where id = 'cmt-third'`,
+      [Date.now()],
+    );
+  });
+  const row = await one(
+    `select deleted_at from public.shared_album_comments where id = 'cmt-third'`,
+  );
+  if (row.deleted_at !== null)
+    throw new Error('a fellow member should not have been able to delete this');
+});
+
+await test('0029 the author can soft-delete their own comment', async () => {
+  await asUser(db, ALBUM_THIRD, async () => {
+    await db.query(
+      `update public.shared_album_comments set deleted_at = $1, updated_at = $1 where id = 'cmt-third'`,
+      [Date.now()],
+    );
+  });
+  const row = await one(
+    `select deleted_at from public.shared_album_comments where id = 'cmt-third'`,
+  );
+  if (row.deleted_at === null) throw new Error('expected deleted_at to be set');
+});
+
+await test('0029 the owner can moderate — delete a comment they did not write', async () => {
+  await asUser(db, ALBUM_PARTNER, async () => {
+    await db.query(
+      `insert into public.shared_album_comments
+         (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at)
+       values ('cmt-partner','alb-together',$1,'Partner','cipher:hi',$2,$2)`,
+      [ALBUM_PARTNER, Date.now()],
+    );
+  });
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(
+      `update public.shared_album_comments set deleted_at = $1, updated_at = $1 where id = 'cmt-partner'`,
+      [Date.now()],
+    );
+  });
+  const row = await one(
+    `select deleted_at from public.shared_album_comments where id = 'cmt-partner'`,
+  );
+  if (row.deleted_at === null) throw new Error('owner moderation should have soft-deleted it');
+});
+
+await test('0029 chat: off by default, owner-only to enable, then open to members', async () => {
+  await asUser(db, ALBUM_THIRD, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `update public.shared_albums set allow_chat = true, updated_at = $1 where id = 'alb-together'`,
+          [Date.now()],
+        ),
+      'only the album owner',
+    );
+  });
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(
+      `update public.shared_albums set allow_chat = true, updated_at = $1 where id = 'alb-together'`,
+      [Date.now()],
+    );
+  });
+  await asUser(db, ALBUM_THIRD, async () => {
+    await db.query(
+      `insert into public.shared_album_messages
+         (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at)
+       values ('msg-third','alb-together',$1,'Third','cipher:hey',$2,$2)`,
+      [ALBUM_THIRD, Date.now()],
+    );
+  });
+  await asUser(db, ALBUM_PARTNER, async () => {
+    expectEqual(
+      await count(
+        `select count(*)::int n from public.shared_album_messages where album_id = 'alb-together'`,
+      ),
+      1,
+      'a fellow member can read the message',
+    );
+  });
+  await asUser(db, ALBUM_OUTSIDER, async () => {
+    expectEqual(
+      await count(
+        `select count(*)::int n from public.shared_album_messages where album_id = 'alb-together'`,
+      ),
+      0,
+      'a non-member cannot',
+    );
+  });
+});
+
 summary();

@@ -10,7 +10,9 @@ import { colors } from '@/constants/theme';
 import { HUB_SECTIONS } from '@/features/hub/config/modules';
 import { PinPad } from '@/features/private/components/pin-pad';
 import { PrivateScreen } from '@/features/private/components/private-screen';
+import { VaultSealTransition } from '@/features/private/components/vault-seal-transition';
 import { PRIVATE_MODULES } from '@/features/private/config/private-modules';
+import { useVaultTransition } from '@/features/private/hooks/use-vault-transition';
 import {
   deleteAllPrivateRecords,
   deleteModuleRecords,
@@ -47,6 +49,8 @@ export default function PrivateSettingsScreen() {
   const space = usePrivateStore((s) => s.space);
   const enabled = usePrivateStore((s) => s.enabledModules);
   const toggleModule = usePrivateStore((s) => s.toggleModule);
+  const showAllModules = usePrivateStore((s) => s.showAllModules);
+  const setShowAllModules = usePrivateStore((s) => s.setShowAllModules);
   const privatised = usePrivateStore((s) => s.privatised);
   const togglePrivatised = usePrivateStore((s) => s.togglePrivatised);
   const hiddenFromSettings = usePrivateStore((s) => s.hiddenFromSettings);
@@ -59,6 +63,7 @@ export default function PrivateSettingsScreen() {
   const [decoyExists, setDecoyExists] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const transition = useVaultTransition();
 
   useEffect(() => {
     void hasDecoy().then(setDecoyExists);
@@ -147,7 +152,7 @@ export default function PrivateSettingsScreen() {
         return;
       }
       if (mode === 'change-next') {
-        const ok = await changePin(currentPin, nextPin);
+        const ok = await transition.run('sealing', () => changePin(currentPin, nextPin));
         setBusy(false);
         if (!ok) {
           setError(t('private.wrongPin'));
@@ -163,7 +168,7 @@ export default function PrivateSettingsScreen() {
         return;
       }
       // Decoy setup.
-      await setUpDecoy(nextPin);
+      await transition.run('sealing', () => setUpDecoy(nextPin));
       setDecoyExists(true);
       setBusy(false);
       setNextPin('');
@@ -171,44 +176,47 @@ export default function PrivateSettingsScreen() {
     };
 
     return (
-      <PrivateScreen
-        title={isChange ? t('private.changePin') : t('private.setDecoy')}
-        tint={theme.accent}
-        footer={
-          <View className="gap-2">
-            <Button
-              variant="accent"
-              size="lg"
-              label={t('common.continue')}
-              disabled={busy || value.length < MIN_PIN_LENGTH}
-              onPress={() => void submit()}
-            />
-            <Button
-              variant="ghost"
-              size="lg"
-              label={t('common.cancel')}
-              onPress={() => {
-                setCurrentPin('');
-                setNextPin('');
-                setError(null);
-                setMode('menu');
-              }}
-            />
+      <>
+        <PrivateScreen
+          title={isChange ? t('private.changePin') : t('private.setDecoy')}
+          tint={theme.accent}
+          footer={
+            <View className="gap-2">
+              <Button
+                variant="accent"
+                size="lg"
+                label={t('common.continue')}
+                disabled={busy || value.length < MIN_PIN_LENGTH}
+                onPress={() => void submit()}
+              />
+              <Button
+                variant="ghost"
+                size="lg"
+                label={t('common.cancel')}
+                onPress={() => {
+                  setCurrentPin('');
+                  setNextPin('');
+                  setError(null);
+                  setMode('menu');
+                }}
+              />
+            </View>
+          }
+        >
+          <View className="items-center gap-6 pt-6">
+            <Text variant="muted" className="text-center">
+              {error ??
+                (mode === 'change-current'
+                  ? t('private.enterCurrentPin')
+                  : mode === 'change-next'
+                    ? t('private.enterNewPin')
+                    : t('private.decoyHint'))}
+            </Text>
+            <PinPad value={value} onChange={setValue} disabled={busy} dotCount={MIN_PIN_LENGTH} />
           </View>
-        }
-      >
-        <View className="items-center gap-6 pt-6">
-          <Text variant="muted" className="text-center">
-            {error ??
-              (mode === 'change-current'
-                ? t('private.enterCurrentPin')
-                : mode === 'change-next'
-                  ? t('private.enterNewPin')
-                  : t('private.decoyHint'))}
-          </Text>
-          <PinPad value={value} onChange={setValue} disabled={busy} dotCount={MIN_PIN_LENGTH} />
-        </View>
-      </PrivateScreen>
+        </PrivateScreen>
+        <VaultSealTransition visible={transition.visible} mode={transition.mode} />
+      </>
     );
   }
 
@@ -237,6 +245,28 @@ export default function PrivateSettingsScreen() {
               />
             </View>
           ))}
+        </View>
+      </View>
+
+      {/*
+        Cycle and Recovery are hidden by default from accounts whose gender
+        doesn't match — see private-modules.ts's header. This switch is the
+        one deliberate override, off by default, and it is the only thing
+        standing between a hard-gated module and an account it doesn't
+        recognise as female or male.
+      */}
+      <View className="gap-3">
+        <Text variant="micro">{t('private.roleAndModules')}</Text>
+        <View className={cardClass({ padding: 'rowLg' }, 'flex-row items-center gap-3')}>
+          <View className="flex-1">
+            <Text className="font-sora-medium text-foreground">{t('private.showEveryModule')}</Text>
+            <Text variant="caption">{t('private.showEveryModuleHint')}</Text>
+          </View>
+          <Switch
+            value={showAllModules}
+            onValueChange={setShowAllModules}
+            trackColor={{ true: theme.accent, false: theme.border }}
+          />
         </View>
       </View>
 
@@ -362,6 +392,18 @@ export default function PrivateSettingsScreen() {
           </View>
         </View>
       ) : null}
+
+      <View className="gap-3">
+        <Text variant="micro">{t('billing.plans')}</Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/settings/media')}
+          className={cardClass({ padding: 'rowLg' })}
+        >
+          <Text className="font-sora-medium text-foreground">{t('private.storageAndPlans')}</Text>
+          <Text variant="caption">{t('private.storageAndPlansHint')}</Text>
+        </Pressable>
+      </View>
 
       <View className="gap-3">
         <Text variant="micro">{t('private.dangerZone')}</Text>

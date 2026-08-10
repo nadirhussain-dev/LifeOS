@@ -1,9 +1,17 @@
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Flag, KeyRound, Mail, Send, Trash2, UserPlus } from 'lucide-react-native';
+import {
+  Flag,
+  KeyRound,
+  Mail,
+  MessageCircle,
+  MessagesSquare,
+  Send,
+  Trash2,
+} from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, Switch, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
@@ -51,7 +59,7 @@ export default function SharedAlbumMembersScreen() {
   const { data } = useAlbumDetail(id);
   const { data: albumKey } = useAlbumKey(id);
   const { isOwner } = useMyAlbumMembership(data);
-  const { addMember, removeMember } = useSharedAlbumMutations(id);
+  const { addMember, removeMember, setPermissions } = useSharedAlbumMutations(id);
   const myUserId = useAuthStore((s) => s.user?.id ?? null);
 
   const reportSheet = useRef<BottomSheetModal>(null);
@@ -228,6 +236,49 @@ export default function SharedAlbumMembersScreen() {
           );
         })}
       </View>
+
+      {/*
+        Owner-only, both to see and to touch — migration 0029's trigger is
+        the enforcement, this just doesn't offer a control that would fail.
+        Off by default for a reason: comments and chat are a bigger surface
+        for something unwanted to be said than "who's allowed to add a
+        photo", so this stays an explicit choice rather than a default.
+      */}
+      {isOwner ? (
+        <View className="gap-3">
+          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
+            {t('private.together')}
+          </Text>
+          <View className={cardClass({ padding: 'none' }, 'px-4')}>
+            <View className="flex-row items-center gap-3 py-3.5">
+              <MessageCircle size={17} color={theme.mutedForeground} />
+              <View className="flex-1">
+                <Text className="font-sora-medium text-foreground">
+                  {t('private.allowComments')}
+                </Text>
+                <Text variant="caption">{t('private.allowCommentsHint')}</Text>
+              </View>
+              <Switch
+                value={!!data?.album?.allowComments}
+                onValueChange={(next) => setPermissions.mutate({ allowComments: next })}
+                trackColor={{ true: tint, false: theme.border }}
+              />
+            </View>
+            <View className="flex-row items-center gap-3 border-t border-border py-3.5">
+              <MessagesSquare size={17} color={theme.mutedForeground} />
+              <View className="flex-1">
+                <Text className="font-sora-medium text-foreground">{t('private.allowChat')}</Text>
+                <Text variant="caption">{t('private.allowChatHint')}</Text>
+              </View>
+              <Switch
+                value={!!data?.album?.allowChat}
+                onValueChange={(next) => setPermissions.mutate({ allowChat: next })}
+                trackColor={{ true: tint, false: theme.border }}
+              />
+            </View>
+          </View>
+        </View>
+      ) : null}
 
       <View className="gap-3">
         <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">

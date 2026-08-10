@@ -44,6 +44,28 @@ export function tryDecryptCaption(albumKey: Uint8Array, ciphertext: string): str
   return tryDecryptString(albumKey, ciphertext);
 }
 
+// --- comments & chat (0029) --------------------------------------------------
+// Same shape as the caption pair above: encrypt is a throw (the writer always
+// holds the key it just used to unlock the screen), decrypt is null-on-failure
+// (a reader's key may not have arrived yet, or this may be a message posted
+// under a since-rotated key on some future build).
+
+export function encryptComment(albumKey: Uint8Array, body: string): string {
+  return encryptString(albumKey, body);
+}
+
+export function tryDecryptComment(albumKey: Uint8Array, ciphertext: string): string | null {
+  return tryDecryptString(albumKey, ciphertext);
+}
+
+export function encryptMessage(albumKey: Uint8Array, body: string): string {
+  return encryptString(albumKey, body);
+}
+
+export function tryDecryptMessage(albumKey: Uint8Array, ciphertext: string): string | null {
+  return tryDecryptString(albumKey, ciphertext);
+}
+
 export function encryptPhotoBytes(albumKey: Uint8Array, plaintext: Uint8Array): Uint8Array {
   return encryptBytes(albumKey, plaintext);
 }
