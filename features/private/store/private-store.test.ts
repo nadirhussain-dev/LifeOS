@@ -20,7 +20,11 @@ describe('visiblePrivateModules', () => {
   });
 
   it('returns nothing while locked', () => {
-    usePrivateStore.setState({ key: null, space: null, enabledModules: ['shared-albums', 'vault'] });
+    usePrivateStore.setState({
+      key: null,
+      space: null,
+      enabledModules: ['shared-albums', 'vault'],
+    });
     expect(visiblePrivateModules()).toEqual([]);
   });
 
@@ -41,7 +45,9 @@ describe('visiblePrivateModules', () => {
   it('never includes shared-albums in the decoy space regardless of enabledModules order', () => {
     const key = new Uint8Array(32);
     usePrivateStore.getState().unlock(key, 'decoy');
-    usePrivateStore.getState().setEnabledModules(['shared-albums', 'cycle', 'recovery', 'intimacy']);
+    usePrivateStore
+      .getState()
+      .setEnabledModules(['shared-albums', 'cycle', 'recovery', 'intimacy']);
     const visible = visiblePrivateModules();
     expect(visible).not.toContain('shared-albums');
     expect(visible).toEqual(['cycle', 'recovery', 'intimacy']);

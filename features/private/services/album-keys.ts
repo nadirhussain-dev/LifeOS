@@ -1,6 +1,11 @@
 import * as SecureStore from 'expo-secure-store';
 
-import { decryptBytes, encryptBytes, fromBase64, toBase64 } from '@/features/private/services/vault-crypto';
+import {
+  decryptBytes,
+  encryptBytes,
+  fromBase64,
+  toBase64,
+} from '@/features/private/services/vault-crypto';
 
 /**
  * Custody of shared-album keys — the extension of the vault's own key

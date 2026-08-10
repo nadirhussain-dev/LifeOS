@@ -172,7 +172,7 @@ respond to legal requests, and operate the service.
   who, when, from where, and why.
 
 **Your private space, including the Vault, Cycle, Recovery and Us modules.**
-LifeOS is built with the *capability* to support staff access here — a copy of
+LifeOS is built with the _capability_ to support staff access here — a copy of
 its encryption key sealed so that only LifeOS staff could open it, for abuse
 investigation and legal compliance. **We are not switching this on.** No key is
 generated or uploaded, on this account or any other, so nobody but you can
@@ -183,7 +183,7 @@ which modules, and why — before it takes effect, not after, and never silently
 in an app update. Were it ever switched on, opening a private space would still
 require a written reason of its own, separate from and in addition to the
 roster/device/audit controls above, and a check for whether a private space
-merely *exists* would be logged separately from opening it. Those controls
+merely _exists_ would be logged separately from opening it. Those controls
 exist in the code today; there is simply nothing for them to gate here yet.
 
 **What we cannot access:**

@@ -103,7 +103,7 @@ export default function AlbumInviteScreen() {
             style={{ fontSize: 20, letterSpacing: 2 }}
             selectable
           >
-            {generating ? '…' : bundle?.code ?? '…'}
+            {generating ? '…' : (bundle?.code ?? '…')}
           </Text>
           <Text variant="caption">{t('transfer.codeHint')}</Text>
         </View>
@@ -146,7 +146,9 @@ export default function AlbumInviteScreen() {
               <Pressable
                 accessibilityRole="button"
                 onPress={() =>
-                  void Clipboard.setStringAsync(link).then(() => toast.success(t('transfer.copied')))
+                  void Clipboard.setStringAsync(link).then(() =>
+                    toast.success(t('transfer.copied')),
+                  )
                 }
                 className="flex-1 flex-row items-center justify-center gap-2 rounded-full border py-3"
                 style={{ borderColor: c.border }}

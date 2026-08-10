@@ -246,7 +246,7 @@ been rewritten to say so.
       justify operator access in the review notes and the data-safety form.
 - [x] **DECIDED (2026-08-10): stay end-to-end encrypted, do not switch escrow
       on.** `vault_escrow` had no SELECT policy, so Postgres refused `INSERT …
-      ON CONFLICT DO UPDATE` against it regardless of whether a conflicting row
+ON CONFLICT DO UPDATE` against it regardless of whether a conflicting row
       existed. PostgREST's `.upsert()` emitted exactly that, `uploadEscrow()`
       was the only writer, and `setup.tsx` never checked its result — the table
       was empty and every private space to date was accidentally end-to-end

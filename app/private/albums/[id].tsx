@@ -151,7 +151,7 @@ export default function SharedAlbumScreen() {
       surface: 'shared_space',
       surfaceId: id ?? null,
       evidence: { albumId: id, photoCount: photos.length },
-      label: locked ? t('private.albumLockedTitle') : name ?? t('private.sharedAlbumsTitle'),
+      label: locked ? t('private.albumLockedTitle') : (name ?? t('private.sharedAlbumsTitle')),
     });
     reportSheet.current?.present();
   };
@@ -166,7 +166,7 @@ export default function SharedAlbumScreen() {
 
   return (
     <PrivateScreen
-      title={locked ? t('private.albumLockedTitle') : name ?? ''}
+      title={locked ? t('private.albumLockedTitle') : (name ?? '')}
       subtitle={t('private.itemCount', { count: photos.length })}
       tint={tint}
       footer={
@@ -325,13 +325,7 @@ function AlbumPhotoThumb({
   );
 }
 
-function AlbumFullPhoto({
-  photo,
-  albumKey,
-}: {
-  photo: AlbumPhoto;
-  albumKey: Uint8Array | null;
-}) {
+function AlbumFullPhoto({ photo, albumKey }: { photo: AlbumPhoto; albumKey: Uint8Array | null }) {
   const [uri, setUri] = useState<string | null>(null);
 
   useEffect(() => {

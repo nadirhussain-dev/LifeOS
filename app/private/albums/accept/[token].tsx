@@ -137,7 +137,11 @@ export default function AcceptAlbumInviteScreen() {
   }
 
   if (phase === 'loading') {
-    return <PrivateScreen title={t('private.acceptAlbumTitle')} tint={c.accent}>{null}</PrivateScreen>;
+    return (
+      <PrivateScreen title={t('private.acceptAlbumTitle')} tint={c.accent}>
+        {null}
+      </PrivateScreen>
+    );
   }
 
   if (phase === 'ready' || phase === 'joining') {

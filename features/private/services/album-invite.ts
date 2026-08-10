@@ -154,6 +154,8 @@ export async function redeemAlbumInvite(input: {
 /** Re-shares the key with a fresh code/QR for a member still shown as
  *  "waiting on the key" — no server change, since the Postgres membership
  *  already exists; this only re-runs the out-of-band half. */
-export async function resendAlbumKey(albumKey: Uint8Array): Promise<{ code: string; payload: string }> {
+export async function resendAlbumKey(
+  albumKey: Uint8Array,
+): Promise<{ code: string; payload: string }> {
   return createTransfer(albumKey);
 }

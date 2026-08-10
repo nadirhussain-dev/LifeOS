@@ -20,7 +20,9 @@ export function DayCard({ entry, onPress }: Props) {
   const { t } = useTranslation();
   const date = parseISO(entry.entryDate);
   const snippet = entry.body.trim().slice(0, 90);
-  const tint = entry.mood ? resolveTint(MOOD_TINT[entry.mood], scheme) : colors[scheme].mutedForeground;
+  const tint = entry.mood
+    ? resolveTint(MOOD_TINT[entry.mood], scheme)
+    : colors[scheme].mutedForeground;
 
   return (
     <View style={styles.shadowWrap}>

@@ -159,7 +159,11 @@ export function useSharedAlbumMutations(albumId?: string) {
 
   /** Starts an invite: the Postgres half (membership) and the out-of-band
    *  half (the key transfer bundle) minted together — see album-invite.ts. */
-  const invite = useMutation<AlbumInvite, unknown, { memberId: string; email: string; albumKey: Uint8Array }>({
+  const invite = useMutation<
+    AlbumInvite,
+    unknown,
+    { memberId: string; email: string; albumKey: Uint8Array }
+  >({
     mutationFn: (input) => createAlbumInvite({ albumId: albumId!, ...input }),
     onSuccess: invalidate,
   });
@@ -190,11 +194,7 @@ export function useSharedAlbumMutations(albumId?: string) {
   /** Encrypts and uploads one photo — see album-uploader.ts. Requires the
    *  album to already be unlocked on this device; the picker screen (Stage 4)
    *  should not offer "add photo" at all while `useAlbumKey` has no key. */
-  const addPhoto = useMutation<
-    AddPhotoResult,
-    unknown,
-    Omit<AddPhotoInput, 'albumId'>
-  >({
+  const addPhoto = useMutation<AddPhotoResult, unknown, Omit<AddPhotoInput, 'albumId'>>({
     mutationFn: (input) => addPhotoToAlbum({ albumId: albumId!, ...input }),
     onSuccess: invalidate,
   });

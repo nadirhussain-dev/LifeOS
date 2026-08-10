@@ -89,10 +89,9 @@ describe('album key custody', () => {
     // album's E2E promise to the vault's (which carries an operator-escrow
     // exception) — see album-keys.ts's header. A static import check is
     // cheap and durable against that regression.
-    const source = jest.requireActual('fs').readFileSync(
-      require.resolve('@/features/private/services/album-keys'),
-      'utf8',
-    );
+    const source = jest
+      .requireActual('fs')
+      .readFileSync(require.resolve('@/features/private/services/album-keys'), 'utf8');
     // Matches an actual import/require, not the header comment's prose
     // explaining why there must never be one.
     expect(source).not.toMatch(/(from|require\()\s*['"][^'"]*vault-escrow/);

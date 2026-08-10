@@ -64,5 +64,14 @@ export function useAuthGate() {
     // account from Settings without being kicked back into the app.
     if (inOnboarding) router.replace('/(tabs)');
     else if (inAuthGroup && session) router.replace('/(tabs)');
-  }, [isInitialized, authHydrated, hydrated, session, isGuest, onboardingComplete, segments, router]);
+  }, [
+    isInitialized,
+    authHydrated,
+    hydrated,
+    session,
+    isGuest,
+    onboardingComplete,
+    segments,
+    router,
+  ]);
 }

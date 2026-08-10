@@ -155,10 +155,7 @@ describe('shared albums: the same two gaps, closed the same way', () => {
   });
 
   it('offers blocking on the album members screen', () => {
-    const members = readFileSync(
-      join(ROOT, 'app/private/albums/[id]/members.tsx'),
-      'utf8',
-    );
+    const members = readFileSync(join(ROOT, 'app/private/albums/[id]/members.tsx'), 'utf8');
     expect(members).toContain('moderation.blockTitle');
   });
 

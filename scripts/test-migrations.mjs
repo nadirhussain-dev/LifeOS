@@ -3681,7 +3681,11 @@ await test('0027 peeking reveals only a status — never the ciphertext name', a
   await asUser(db, ALBUM_PARTNER, async () => {
     const r = await one(`select * from public.peek_album_invitation('tok-1',$1)`, [Date.now()]);
     expectEqual(r.status, 'ok');
-    expectEqual(JSON.stringify(Object.keys(r)), JSON.stringify(['status']), 'no other column is returned');
+    expectEqual(
+      JSON.stringify(Object.keys(r)),
+      JSON.stringify(['status']),
+      'no other column is returned',
+    );
   });
 });
 
@@ -3695,7 +3699,8 @@ await test('0027 an unknown token is invalid', async () => {
 await test('0027 accepting claims the placeholder member, but confirms no key', async () => {
   await asUser(db, ALBUM_PARTNER, async () => {
     expectEqual(
-      (await one(`select status from public.accept_album_invitation('tok-1',$1)`, [Date.now()])).status,
+      (await one(`select status from public.accept_album_invitation('tok-1',$1)`, [Date.now()]))
+        .status,
       'ok',
     );
   });
@@ -3708,7 +3713,11 @@ await test('0027 accepting claims the placeholder member, but confirms no key', 
 
 await test('0027 the partner can now read the album', async () => {
   await asUser(db, ALBUM_PARTNER, async () => {
-    expectEqual(await count(`select count(*)::int n from public.shared_albums`), 1, 'albums visible');
+    expectEqual(
+      await count(`select count(*)::int n from public.shared_albums`),
+      1,
+      'albums visible',
+    );
   });
 });
 
@@ -3725,7 +3734,11 @@ await test('0027 confirm_album_key is scoped to the caller’s own row', async (
   const partnerRow = await one(
     `select key_confirmed_at from public.shared_album_members where id = 'm-partner'`,
   );
-  expectEqual(partnerRow.key_confirmed_at !== null, true, 'confirm_album_key set the caller’s own row');
+  expectEqual(
+    partnerRow.key_confirmed_at !== null,
+    true,
+    'confirm_album_key set the caller’s own row',
+  );
 
   const ownerRow = await one(
     `select key_confirmed_at from public.shared_album_members where id = 'm-owner'`,
@@ -3736,7 +3749,8 @@ await test('0027 confirm_album_key is scoped to the caller’s own row', async (
 await test('0027 an invitation cannot be redeemed twice', async () => {
   await asUser(db, ALBUM_OUTSIDER, async () => {
     expectEqual(
-      (await one(`select status from public.accept_album_invitation('tok-1',$1)`, [Date.now()])).status,
+      (await one(`select status from public.accept_album_invitation('tok-1',$1)`, [Date.now()]))
+        .status,
       'already_accepted',
     );
   });
@@ -3758,7 +3772,8 @@ await test('0027 an expired invitation is refused', async () => {
   });
   await asUser(db, ALBUM_OUTSIDER, async () => {
     expectEqual(
-      (await one(`select status from public.accept_album_invitation('tok-old',$1)`, [Date.now()])).status,
+      (await one(`select status from public.accept_album_invitation('tok-old',$1)`, [Date.now()]))
+        .status,
       'expired',
     );
   });
@@ -3859,7 +3874,11 @@ await test('0027 a token minted before the block cannot be redeemed after it', a
   await asUser(db, ALBUM_BLOCKER, async () => {
     await db.query(`select public.block_user($1::uuid)`, [ALBUM_PEST]);
     expectEqual(
-      (await one(`select status from public.accept_album_invitation('tok-pest-2',$1)`, [Date.now()])).status,
+      (
+        await one(`select status from public.accept_album_invitation('tok-pest-2',$1)`, [
+          Date.now(),
+        ])
+      ).status,
       'blocked',
       'redeeming a blocked inviter’s token',
     );
@@ -3897,7 +3916,9 @@ await test('0027 the owner can remove a member, who immediately loses access', a
     await db.query(`select public.remove_album_member('m-third','act-rm-3',$1)`, [Date.now()]);
   });
   expectEqual(
-    await count(`select count(*)::int n from public.shared_album_members where id = 'm-third' and deleted_at is not null`),
+    await count(
+      `select count(*)::int n from public.shared_album_members where id = 'm-third' and deleted_at is not null`,
+    ),
     1,
     'tombstoned, not deleted',
   );
@@ -3921,7 +3942,9 @@ await test('0027 only the owner can delete the album', async () => {
     await db.query(`select public.delete_shared_album('alb-1','act-del-2',$1)`, [Date.now()]);
   });
   expectEqual(
-    await count(`select count(*)::int n from public.shared_albums where id = 'alb-1' and deleted_at is not null`),
+    await count(
+      `select count(*)::int n from public.shared_albums where id = 'alb-1' and deleted_at is not null`,
+    ),
     1,
     'album soft-deleted',
   );
@@ -3980,10 +4003,7 @@ await test('0028 a non-member cannot read another album’s object, even with a 
 
 await test('0028 a non-member cannot write into another album’s folder', async () => {
   await asUser(db, ALBUM_OUTSIDER, async () => {
-    await expectRejection(
-      () => putAlbumObject('alb-pest', 'forged.bin', 10),
-      'row-level security',
-    );
+    await expectRejection(() => putAlbumObject('alb-pest', 'forged.bin', 10), 'row-level security');
   });
 });
 
