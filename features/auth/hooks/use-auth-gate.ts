@@ -29,11 +29,12 @@ export function useAuthGate() {
   const isInitialized = useAuthStore((s) => s.isInitialized);
   const session = useAuthStore((s) => s.session);
   const isGuest = useAuthStore((s) => s.isGuest);
+  const authHydrated = useAuthStore((s) => s.hasHydrated);
   const onboardingComplete = useProfileStore((s) => s.onboardingComplete);
   const hydrated = useProfileStore((s) => s.hydrated);
 
   useEffect(() => {
-    if (!isInitialized || !hydrated) return;
+    if (!isInitialized || !authHydrated || !hydrated) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const inOnboarding = segments[0] === '(onboarding)';
@@ -63,5 +64,5 @@ export function useAuthGate() {
     // account from Settings without being kicked back into the app.
     if (inOnboarding) router.replace('/(tabs)');
     else if (inAuthGroup && session) router.replace('/(tabs)');
-  }, [isInitialized, hydrated, session, isGuest, onboardingComplete, segments, router]);
+  }, [isInitialized, authHydrated, hydrated, session, isGuest, onboardingComplete, segments, router]);
 }

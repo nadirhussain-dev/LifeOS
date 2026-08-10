@@ -64,6 +64,10 @@ type AuthState = {
   /** The user chose "continue without an account". Persisted so we don't force
    * the login screen on every launch. Cleared on sign-in. */
   isGuest: boolean;
+  /** True once `isGuest` has been read back from AsyncStorage. The gate also
+   * waits for this — otherwise a guest who reloads mid-session sees `isGuest`
+   * at its unhydrated default of false and gets bounced to the login screen. */
+  hasHydrated: boolean;
 
   init: () => void;
   signIn: (email: string, password: string) => Promise<AuthResult>;
@@ -105,6 +109,7 @@ export const useAuthStore = create<AuthState>()(
       profile: null,
       isInitialized: false,
       isGuest: false,
+      hasHydrated: false,
 
       init: () => {
         // isInitialized MUST flip true no matter what — otherwise the root
@@ -274,6 +279,9 @@ export const useAuthStore = create<AuthState>()(
       // Only the guest choice needs persisting — Supabase persists the session
       // itself, and everything else is derived on init.
       partialize: (state) => ({ isGuest: state.isGuest }),
+      onRehydrateStorage: () => () => {
+        useAuthStore.setState({ hasHydrated: true });
+      },
     },
   ),
 );

@@ -206,6 +206,13 @@ export const moduleTints = {
   cycle: { light: '#e0518a', dark: '#f08cb2' }, // pink — cycle tracking
   recovery: { light: '#2f9e73', dark: '#57c79a' }, // green — streaks, repair
   intimacy: { light: '#d4653f', dark: '#e89370' }, // terracotta — warmth
+  // Moss green, hue 112 — the one open gap between music (86) and
+  // habit/recovery/success (157/158/142), rather than a fifth colour dropped
+  // into an already-crowded wheel. Shared albums live inside the private
+  // space (like the four above) but are visible to the server as ordinary
+  // membership metadata, unlike them — worth a genuinely distinct hue rather
+  // than one more collision in the 15–350 range this section already has.
+  albums: { light: '#317e25', dark: '#8fd685' },
 
   // Settings is chrome, not a life area, and is the one entry that must NOT
   // read as a colored module — it takes the emerald-biased neutral so it sits

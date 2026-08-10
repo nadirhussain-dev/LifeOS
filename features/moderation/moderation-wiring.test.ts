@@ -136,6 +136,59 @@ describe('blocking is reachable', () => {
   });
 });
 
+describe('shared albums: the same two gaps, closed the same way', () => {
+  it('SecureContentView has a real caller', () => {
+    // The file's own header comment named this exact shape of gap — a fully
+    // built, fully tested component with an `onReport` prop and zero call
+    // sites, same as `submitReport` was before 0021. Shared albums are its
+    // first real use.
+    const callers = filesMentioning('SecureContentView', 'app', 'features', 'components').filter(
+      (path) => !path.endsWith('components/secure-content-view.tsx'),
+    );
+    expect(callers).not.toEqual([]);
+    expect(callers).toEqual(expect.arrayContaining([expect.stringContaining('private/albums')]));
+  });
+
+  it('offers reporting on the album screen, not only on Split', () => {
+    const screens = filesMentioning('ReportSheet', 'app');
+    expect(screens).toEqual(expect.arrayContaining([expect.stringContaining('private/albums')]));
+  });
+
+  it('offers blocking on the album members screen', () => {
+    const members = readFileSync(
+      join(ROOT, 'app/private/albums/[id]/members.tsx'),
+      'utf8',
+    );
+    expect(members).toContain('moderation.blockTitle');
+  });
+
+  it('is enforced on the server, not by the screen that offers it', () => {
+    // Mirrors the expense-group assertion above — 0027 ports the same three
+    // guard points to the album tables rather than leaving them expense-group
+    // specific.
+    const migration = readFileSync(
+      join(ROOT, 'supabase/migrations/0027_shared_albums.sql'),
+      'utf8',
+    );
+    for (const guard of [
+      'guard_album_member_not_blocked',
+      'guard_album_invitation_not_blocked',
+      'accept_album_invitation',
+    ]) {
+      expect(migration).toContain(guard);
+    }
+  });
+
+  it('encrypts photo bytes at exactly one choke point', () => {
+    // Not "does this file call encryptBytes" — a second, unaudited upload
+    // path would satisfy that just as well as the real one. The assertion is
+    // that album-uploader.ts is the ONLY caller of the shared-albums upload,
+    // so there is one place to audit for "did this actually encrypt first."
+    const uploaders = filesMentioning('storage.from(SHARED_ALBUM_BUCKET).upload', 'features');
+    expect(uploaders).toEqual(['features/private/services/album-uploader.ts']);
+  });
+});
+
 describe('translations', () => {
   const LOCALES = ['ar', 'hi', 'ur'] as const;
 

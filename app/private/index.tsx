@@ -42,7 +42,13 @@ export default function PrivateHomeScreen() {
 
   if (!key) return null;
 
-  const modules = PRIVATE_MODULES.filter((m) => enabled.includes(m.id));
+  // A `requiresRealSpace` module (shared albums) is visible to the server as
+  // ordinary membership metadata, independent of which local key unlocked
+  // this device — the decoy space must not surface it even though `key` is
+  // non-null here too. See private-modules.ts's header for the full reasoning.
+  const modules = PRIVATE_MODULES.filter(
+    (m) => enabled.includes(m.id) && (!m.requiresRealSpace || space === 'real'),
+  );
 
   return (
     <View className="flex-1 bg-background">

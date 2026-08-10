@@ -1,4 +1,11 @@
-import { Droplets, HeartHandshake, Lock, ShieldCheck, type LucideIcon } from 'lucide-react-native';
+import {
+  Droplets,
+  HeartHandshake,
+  Images,
+  Lock,
+  ShieldCheck,
+  type LucideIcon,
+} from 'lucide-react-native';
 
 import { moduleTints, type TintPair } from '@/constants/design-tokens';
 import type { Gender } from '@/features/profile/store/profile-store';
@@ -27,8 +34,21 @@ import type { Gender } from '@/features/profile/store/profile-store';
  * tracker: the same urge/trigger/streak model serves porn, alcohol, smoking,
  * gambling and vaping, which is more useful code, a far larger audience, and
  * does not put a single embarrassing word in the module list.
+ *
+ * `shared-albums` breaks rule 3's "not end-to-end" half — it carries no
+ * operator-escrow exception at all, by product decision (see
+ * album-keys.ts) — but it ALSO breaks a rule the other four have never had to
+ * follow: it is `requiresRealSpace: true`. Every module above is visible to
+ * the server as nothing but an opaque row scoped to one uid; a shared album's
+ * *membership* — who is in it, how many photos, when it was last touched — is
+ * ordinary `auth.uid()`-scoped Postgres metadata, unrelated to which local key
+ * unlocked this device. `visiblePrivateModules()` (private-store.ts) has to
+ * hide anything marked `requiresRealSpace` from the decoy space for exactly
+ * that reason: the decoy's whole guarantee is that real-space content
+ * genuinely does not exist under its key, and that stops being true the
+ * moment a feature's evidence lives somewhere the local key cannot reach.
  */
-export type PrivateModuleId = 'vault' | 'cycle' | 'recovery' | 'intimacy';
+export type PrivateModuleId = 'vault' | 'cycle' | 'recovery' | 'intimacy' | 'shared-albums';
 
 export type PrivateModule = {
   id: PrivateModuleId;
@@ -40,6 +60,14 @@ export type PrivateModule = {
   /** Whose setup list this is pre-ticked on. Never an access check. */
   suggestFor: Gender[];
   route: string;
+  /**
+   * Hidden from the decoy space even while unlocked, because this module's
+   * existence is visible to the server independent of which local key opened
+   * the app — see the header comment. Absent (falsy) for every module whose
+   * only evidence lives inside ciphertext the decoy key genuinely cannot
+   * open.
+   */
+  requiresRealSpace?: boolean;
 };
 
 export const PRIVATE_MODULES: PrivateModule[] = [
@@ -79,6 +107,16 @@ export const PRIVATE_MODULES: PrivateModule[] = [
     tint: moduleTints.intimacy,
     suggestFor: ['female', 'male', 'non_binary'],
     route: '/private/intimacy',
+  },
+  {
+    id: 'shared-albums',
+    titleKey: 'private.sharedAlbumsTitle',
+    subtitleKey: 'private.sharedAlbumsSubtitle',
+    icon: Images,
+    tint: moduleTints.albums,
+    suggestFor: ['female', 'male', 'non_binary', 'prefer_not_to_say'],
+    route: '/private/albums',
+    requiresRealSpace: true,
   },
 ];
 

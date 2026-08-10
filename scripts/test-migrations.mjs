@@ -3586,4 +3586,446 @@ await test('0023 the hoisted sets are scoped to the caller', async () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+console.log('\nshared albums (0027)');
+// ---------------------------------------------------------------------------
+//
+// Modelled on the expense-group suite above, minus anything ledger-shaped and
+// plus the two things that make an album different: the name is ciphertext
+// (peek must never return it), and membership grants no key material at all
+// — accepting an invitation must not touch key_confirmed_at.
+
+const ALBUM_OWNER = '11223344-0000-0000-0000-000000000001';
+const ALBUM_PARTNER = '11223344-0000-0000-0000-000000000002';
+const ALBUM_OUTSIDER = '11223344-0000-0000-0000-000000000003';
+const ALBUM_THIRD = '11223344-0000-0000-0000-000000000004';
+const ALBUM_BLOCKER = '11223344-0000-0000-0000-000000000005';
+const ALBUM_PEST = '11223344-0000-0000-0000-000000000006';
+
+await createUser(db, ALBUM_OWNER, 'album-owner@example.com');
+await createUser(db, ALBUM_PARTNER, 'album-partner@example.com');
+await createUser(db, ALBUM_OUTSIDER, 'album-outsider@example.com');
+await createUser(db, ALBUM_THIRD, 'album-third@example.com');
+await createUser(db, ALBUM_BLOCKER, 'album-blocker@example.com');
+await createUser(db, ALBUM_PEST, 'album-pest@example.com');
+
+await test('0027 create_shared_album creates the album and its owner member together', async () => {
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(
+      `select public.create_shared_album('alb-1','cipher:name-1','m-owner',null,'act-created',$1)`,
+      [Date.now()],
+    );
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.shared_albums where id = 'alb-1'`),
+    1,
+    'album row',
+  );
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.shared_album_members
+        where album_id = 'alb-1' and role = 'owner' and user_id = $1`,
+      [ALBUM_OWNER],
+    ),
+    1,
+    'owner member row',
+  );
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.shared_album_activity
+        where album_id = 'alb-1' and action = 'album_created'`,
+    ),
+    1,
+    'creation activity',
+  );
+});
+
+await test('0027 a non-member cannot see the album, its members, or its activity', async () => {
+  await asUser(db, ALBUM_OUTSIDER, async () => {
+    expectEqual(await count(`select count(*)::int n from public.shared_albums`), 0, 'albums');
+    expectEqual(
+      await count(`select count(*)::int n from public.shared_album_members`),
+      0,
+      'members',
+    );
+    expectEqual(
+      await count(`select count(*)::int n from public.shared_album_activity`),
+      0,
+      'activity',
+    );
+  });
+});
+
+await test('0027 an invitation can be created by a member', async () => {
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(
+      `insert into public.shared_album_members
+         (id, album_id, user_id, email, display_name, role, created_at, updated_at)
+       values ('m-partner','alb-1',null,'album-partner@example.com','Partner','member',$1,$1)`,
+      [Date.now()],
+    );
+    await db.query(
+      `select public.create_album_invitation(
+         'inv-1','alb-1','m-partner','album-partner@example.com','tok-1',$1,$2)`,
+      [Date.now() + 86400000, Date.now()],
+    );
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.shared_album_invitations`),
+    1,
+    'invitations',
+  );
+});
+
+await test('0027 peeking reveals only a status — never the ciphertext name', async () => {
+  await asUser(db, ALBUM_PARTNER, async () => {
+    const r = await one(`select * from public.peek_album_invitation('tok-1',$1)`, [Date.now()]);
+    expectEqual(r.status, 'ok');
+    expectEqual(JSON.stringify(Object.keys(r)), JSON.stringify(['status']), 'no other column is returned');
+  });
+});
+
+await test('0027 an unknown token is invalid', async () => {
+  await asUser(db, ALBUM_PARTNER, async () => {
+    const r = await one(`select * from public.peek_album_invitation('nope',$1)`, [Date.now()]);
+    expectEqual(r.status, 'invalid');
+  });
+});
+
+await test('0027 accepting claims the placeholder member, but confirms no key', async () => {
+  await asUser(db, ALBUM_PARTNER, async () => {
+    expectEqual(
+      (await one(`select status from public.accept_album_invitation('tok-1',$1)`, [Date.now()])).status,
+      'ok',
+    );
+  });
+  const row = await one(
+    `select user_id, key_confirmed_at from public.shared_album_members where id = 'm-partner'`,
+  );
+  expectEqual(row.user_id, ALBUM_PARTNER, "partner's claimed member row");
+  expectEqual(row.key_confirmed_at, null, 'membership grants no key material');
+});
+
+await test('0027 the partner can now read the album', async () => {
+  await asUser(db, ALBUM_PARTNER, async () => {
+    expectEqual(await count(`select count(*)::int n from public.shared_albums`), 1, 'albums visible');
+  });
+});
+
+await test('0027 confirm_album_key is scoped to the caller’s own row', async () => {
+  await asUser(db, ALBUM_PARTNER, async () => {
+    // Confirming your own row works.
+    await db.query(`select public.confirm_album_key('m-partner',$1)`, [Date.now()]);
+    // Trying to confirm somebody else's row silently affects nothing — same
+    // idiom as an UPDATE ... WHERE that matches zero rows, not an error, so a
+    // buggy client cannot use the response to distinguish "not your row" from
+    // "row doesn't exist".
+    await db.query(`select public.confirm_album_key('m-owner',$1)`, [Date.now()]);
+  });
+  const partnerRow = await one(
+    `select key_confirmed_at from public.shared_album_members where id = 'm-partner'`,
+  );
+  expectEqual(partnerRow.key_confirmed_at !== null, true, 'confirm_album_key set the caller’s own row');
+
+  const ownerRow = await one(
+    `select key_confirmed_at from public.shared_album_members where id = 'm-owner'`,
+  );
+  expectEqual(ownerRow.key_confirmed_at, null, "cannot confirm someone else's row");
+});
+
+await test('0027 an invitation cannot be redeemed twice', async () => {
+  await asUser(db, ALBUM_OUTSIDER, async () => {
+    expectEqual(
+      (await one(`select status from public.accept_album_invitation('tok-1',$1)`, [Date.now()])).status,
+      'already_accepted',
+    );
+  });
+});
+
+await test('0027 an expired invitation is refused', async () => {
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(
+      `insert into public.shared_album_members
+         (id, album_id, user_id, email, display_name, role, created_at, updated_at)
+       values ('m-outsider','alb-1',null,'album-outsider@example.com','Outsider','member',$1,$1)`,
+      [Date.now()],
+    );
+    await db.query(
+      `select public.create_album_invitation(
+         'inv-2','alb-1','m-outsider','album-outsider@example.com','tok-old',$1,$2)`,
+      [Date.now() - 1000, Date.now()],
+    );
+  });
+  await asUser(db, ALBUM_OUTSIDER, async () => {
+    expectEqual(
+      (await one(`select status from public.accept_album_invitation('tok-old',$1)`, [Date.now()])).status,
+      'expired',
+    );
+  });
+});
+
+await test('0027 any member may add a photo, recorded as their own', async () => {
+  await asUser(db, ALBUM_PARTNER, async () => {
+    await db.query(
+      `insert into public.shared_album_photos
+         (id, album_id, added_by, width, height, byte_length, created_at, updated_at)
+       values ('photo-1','alb-1',$1,800,600,123456,$2,$2)`,
+      [ALBUM_PARTNER, Date.now()],
+    );
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.shared_album_photos where album_id = 'alb-1'`),
+    1,
+    'photo row',
+  );
+});
+
+await test('0027 a non-member cannot add a photo to someone else’s album', async () => {
+  const LONER = '11223344-0000-0000-0000-000000000009';
+  await createUser(db, LONER, 'album-loner@example.com');
+  await asUser(db, LONER, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.shared_album_photos
+             (id, album_id, added_by, created_at, updated_at)
+           values ('photo-forged','alb-1',$1,$2,$2)`,
+          [LONER, Date.now()],
+        ),
+      'row-level security',
+    );
+  });
+});
+
+await test('0027 a blocked user cannot be added to an album', async () => {
+  await asUser(db, ALBUM_PEST, async () => {
+    await db.query(
+      `select public.create_shared_album('alb-pest','cipher:pest',$1,null,'act-pest',$2)`,
+      ['m-pest-owner', Date.now()],
+    );
+  });
+  await asUser(db, ALBUM_BLOCKER, async () => {
+    await db.query(`select public.block_user($1::uuid)`, [ALBUM_PEST]);
+  });
+  await asUser(db, ALBUM_PEST, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.shared_album_members
+             (id, album_id, user_id, email, display_name, role, created_at, updated_at)
+           values ('m-blocker-add','alb-pest',null,'album-blocker@example.com','Blocker','member',$1,$1)`,
+          [Date.now()],
+        ),
+      'cannot be added',
+    );
+  });
+});
+
+await test('0027 a blocked user cannot invite you', async () => {
+  await asUser(db, ALBUM_PEST, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.shared_album_invitations
+             (id, album_id, member_id, email, token, invited_by, expires_at, created_at)
+           values ('inv-pest','alb-pest',null,'album-blocker@example.com','tok-pest',$1,$2,$3)`,
+          [ALBUM_PEST, Date.now() + 86400000, Date.now()],
+        ),
+      'cannot be invited',
+    );
+  });
+});
+
+await test('0027 a token minted before the block cannot be redeemed after it', async () => {
+  await asUser(db, ALBUM_BLOCKER, async () => {
+    await db.query(`select public.unblock_user($1::uuid)`, [ALBUM_PEST]);
+  });
+  let inviteRow;
+  await asUser(db, ALBUM_PEST, async () => {
+    await db.query(
+      `insert into public.shared_album_members
+         (id, album_id, user_id, email, display_name, role, created_at, updated_at)
+       values ('m-blocker-2','alb-pest',null,'album-blocker@example.com','Blocker','member',$1,$1)`,
+      [Date.now()],
+    );
+    inviteRow = await db.query(
+      `select public.create_album_invitation(
+         'inv-pest-2','alb-pest','m-blocker-2','album-blocker@example.com','tok-pest-2',$1,$2)`,
+      [Date.now() + 86400000, Date.now()],
+    );
+  });
+  expectEqual(Boolean(inviteRow), true, 'invitation created while contact was still allowed');
+
+  await asUser(db, ALBUM_BLOCKER, async () => {
+    await db.query(`select public.block_user($1::uuid)`, [ALBUM_PEST]);
+    expectEqual(
+      (await one(`select status from public.accept_album_invitation('tok-pest-2',$1)`, [Date.now()])).status,
+      'blocked',
+      'redeeming a blocked inviter’s token',
+    );
+  });
+});
+
+await test('0027 remove_album_member refuses to remove the owner', async () => {
+  await asUser(db, ALBUM_OWNER, async () => {
+    await expectRejection(
+      () => db.query(`select public.remove_album_member('m-owner','act-rm-1',$1)`, [Date.now()]),
+      'owner cannot be removed',
+    );
+  });
+});
+
+await test('0027 only the owner can remove another member', async () => {
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(
+      `insert into public.shared_album_members
+         (id, album_id, user_id, display_name, role, created_at, updated_at)
+       values ('m-third','alb-1',$1,'Third','member',$2,$2)`,
+      [ALBUM_THIRD, Date.now()],
+    );
+  });
+  await asUser(db, ALBUM_PARTNER, async () => {
+    await expectRejection(
+      () => db.query(`select public.remove_album_member('m-third','act-rm-2',$1)`, [Date.now()]),
+      'only the album owner',
+    );
+  });
+});
+
+await test('0027 the owner can remove a member, who immediately loses access', async () => {
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(`select public.remove_album_member('m-third','act-rm-3',$1)`, [Date.now()]);
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.shared_album_members where id = 'm-third' and deleted_at is not null`),
+    1,
+    'tombstoned, not deleted',
+  );
+  await asUser(db, ALBUM_THIRD, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.shared_albums where id = 'alb-1'`),
+      0,
+      'removed member can no longer read the album',
+    );
+  });
+});
+
+await test('0027 only the owner can delete the album', async () => {
+  await asUser(db, ALBUM_PARTNER, async () => {
+    await expectRejection(
+      () => db.query(`select public.delete_shared_album('alb-1','act-del-1',$1)`, [Date.now()]),
+      'only the album owner',
+    );
+  });
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(`select public.delete_shared_album('alb-1','act-del-2',$1)`, [Date.now()]);
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.shared_albums where id = 'alb-1' and deleted_at is not null`),
+    1,
+    'album soft-deleted',
+  );
+});
+
+await test('0027 the hoisted album sets are scoped to the caller', async () => {
+  const SOLO = '11223344-0000-0000-0000-000000000099';
+  await createUser(db, SOLO, 'album-solo@example.com');
+  await asUser(db, SOLO, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.my_album_ids()`),
+      0,
+      'a user in no albums sees no album ids',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+console.log('\nshared album storage (0028)');
+// ---------------------------------------------------------------------------
+//
+// Same isolation model as 0026's media bucket, but the first path segment is
+// an album id, not a uid — this is the first storage policy in the codebase
+// keyed on group membership. ALBUM_OWNER/ALBUM_PARTNER are still both members
+// of 'alb-pest' at this point (alb-1 was deleted above, but deletion of the
+// *album* row does not touch the storage.objects rows or membership — using
+// alb-pest keeps this section independent of that).
+
+const putAlbumObject = (albumId, path, size, metadata = {}) =>
+  db.query(
+    `insert into storage.objects (bucket_id, name, metadata)
+     values ('shared-albums', $1, jsonb_build_object('size', $2::bigint) || $3::jsonb)`,
+    [`${albumId}/${path}`, size, JSON.stringify(metadata)],
+  );
+
+await test('0028 a member can store and read an object in their album’s folder', async () => {
+  await asUser(db, ALBUM_PEST, async () => {
+    await putAlbumObject('alb-pest', 'photo-a.bin', 1024);
+    expectEqual(
+      await count(`select count(*)::int n from storage.objects where bucket_id = 'shared-albums'`),
+      1,
+      'own album’s objects visible',
+    );
+  });
+});
+
+await test('0028 a non-member cannot read another album’s object, even with a guessed path', async () => {
+  await asUser(db, ALBUM_OUTSIDER, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from storage.objects where bucket_id = 'shared-albums'`),
+      0,
+      'another album’s objects are invisible',
+    );
+  });
+});
+
+await test('0028 a non-member cannot write into another album’s folder', async () => {
+  await asUser(db, ALBUM_OUTSIDER, async () => {
+    await expectRejection(
+      () => putAlbumObject('alb-pest', 'forged.bin', 10),
+      'row-level security',
+    );
+  });
+});
+
+await test('0028 the uploader is stamped from auth.uid(), never trusted from client metadata', async () => {
+  await asUser(db, ALBUM_PEST, async () => {
+    // Claims to be someone else's upload; the trigger must overwrite this.
+    await putAlbumObject('alb-pest', 'photo-b.bin', 2048, { uploader_id: ALBUM_BLOCKER });
+  });
+  const row = await one(
+    `select metadata->>'uploader_id' as uploader
+       from storage.objects
+      where bucket_id = 'shared-albums' and name = $1`,
+    ['alb-pest/photo-b.bin'],
+  );
+  expectEqual(row.uploader, ALBUM_PEST, 'stamped from auth.uid(), not the forged claim');
+});
+
+await test('0028 the shared-albums quota is enforced on the server, sharing the media cap', async () => {
+  const quota = Number((await one(`select public.media_quota_bytes() as q`)).q);
+  await asUser(db, ALBUM_PEST, async () => {
+    // Already used 1024 + 2048 bytes above under this same uploader.
+    await putAlbumObject('alb-pest', 'big.bin', quota - 3072 - 100);
+    await expectRejection(
+      () => putAlbumObject('alb-pest', 'over.bin', 200),
+      'shared album storage quota exceeded',
+    );
+  });
+});
+
+await test('0028 usage is reported to the uploader it belongs to', async () => {
+  await asUser(db, ALBUM_BLOCKER, async () => {
+    expectEqual(
+      Number((await one(`select public.shared_album_bytes_used() as b`)).b),
+      0,
+      'a different account starts at zero however much anyone else stores',
+    );
+  });
+});
+
+await test('0028 the bucket is private', async () => {
+  const bucket = await one(`select public from storage.buckets where id = 'shared-albums'`);
+  expectEqual(bucket?.public, false, 'bucket is not public');
+});
+
 summary();

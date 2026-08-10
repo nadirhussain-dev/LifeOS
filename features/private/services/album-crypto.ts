@@ -1,0 +1,53 @@
+import {
+  decryptBytes,
+  decryptString,
+  encryptBytes,
+  encryptString,
+  tryDecryptString,
+} from '@/features/private/services/vault-crypto';
+
+/**
+ * Ciphertext helpers for shared albums, over vault-crypto.ts's primitives.
+ *
+ * A separate, thin file rather than importing vault-crypto directly from
+ * every album screen and repository function: one place to audit for "does
+ * this actually encrypt before it leaves the device", which is the same
+ * discipline album-uploader.ts depends on for photo bytes.
+ *
+ * The key these functions take is an album's own key (see album-keys.ts),
+ * never the vault master key — an album's ciphertext and the vault's are not
+ * interchangeable, and nothing here confuses the two.
+ */
+
+export function encryptAlbumName(albumKey: Uint8Array, name: string): string {
+  return encryptString(albumKey, name);
+}
+
+export function decryptAlbumName(albumKey: Uint8Array, ciphertext: string): string {
+  return decryptString(albumKey, ciphertext);
+}
+
+/**
+ * Null when this key cannot open it, rather than a throw — a locked album (the
+ * key has not arrived yet, or has not been redeemed on this device) is a
+ * normal state to render, not an error.
+ */
+export function tryDecryptAlbumName(albumKey: Uint8Array, ciphertext: string): string | null {
+  return tryDecryptString(albumKey, ciphertext);
+}
+
+export function encryptCaption(albumKey: Uint8Array, caption: string): string {
+  return encryptString(albumKey, caption);
+}
+
+export function tryDecryptCaption(albumKey: Uint8Array, ciphertext: string): string | null {
+  return tryDecryptString(albumKey, ciphertext);
+}
+
+export function encryptPhotoBytes(albumKey: Uint8Array, plaintext: Uint8Array): Uint8Array {
+  return encryptBytes(albumKey, plaintext);
+}
+
+export function decryptPhotoBytes(albumKey: Uint8Array, ciphertext: Uint8Array): Uint8Array {
+  return decryptBytes(albumKey, ciphertext);
+}

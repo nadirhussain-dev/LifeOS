@@ -1,0 +1,283 @@
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Flag, KeyRound, Mail, Send, Trash2, UserPlus } from 'lucide-react-native';
+import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Pressable, TextInput, View } from 'react-native';
+
+import { Button } from '@/components/ui/button';
+import { cardClass } from '@/components/ui/card';
+import { InlineError } from '@/components/ui/query-error';
+import { Text } from '@/components/ui/text';
+import { moduleTints, resolveTint } from '@/constants/design-tokens';
+import { colors } from '@/constants/theme';
+import { useAuthStore } from '@/features/auth/services/auth-store';
+import { ReportSheet, type ReportTarget } from '@/features/moderation/components/report-sheet';
+import { useBlockMutations } from '@/features/moderation/hooks/use-blocks';
+import { PrivateScreen } from '@/features/private/components/private-screen';
+import { privateModule } from '@/features/private/config/private-modules';
+import {
+  useAlbumDetail,
+  useAlbumKey,
+  useMyAlbumMembership,
+  useSharedAlbumMutations,
+} from '@/features/private/hooks/use-shared-albums';
+import { MemberAvatars } from '@/features/split/components/member-avatars';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { chooseAction, confirm } from '@/lib/dialog-store';
+import { toast } from '@/lib/toast-store';
+
+const TINT = privateModule('shared-albums')?.tint ?? moduleTints.albums;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Album members.
+ *
+ * Mirrors app/split/[id]/members.tsx's shape closely — add by email, report
+ * or block a member, remove one — with one addition that Split never needed:
+ * a key-confirmation status, since joining the Postgres membership and
+ * redeeming the album's key are two independent steps (see migration 0027's
+ * header and album-invite.ts). The owner's row never shows "waiting" — they
+ * hold the key from the moment they create the album.
+ */
+export default function SharedAlbumMembersScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const scheme = useColorScheme() ?? 'light';
+  const theme = colors[scheme];
+  const tint = resolveTint(TINT, scheme);
+  const { t } = useTranslation();
+
+  const { data } = useAlbumDetail(id);
+  const { data: albumKey } = useAlbumKey(id);
+  const { isOwner } = useMyAlbumMembership(data);
+  const { addMember, removeMember } = useSharedAlbumMutations(id);
+  const myUserId = useAuthStore((s) => s.user?.id ?? null);
+
+  const reportSheet = useRef<BottomSheetModal>(null);
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
+  const { block } = useBlockMutations();
+
+  const [email, setEmail] = useState('');
+  const emailValid = EMAIL.test(email.trim());
+  const canAdd = emailValid && !addMember.isPending;
+
+  const members = data?.activeMembers ?? [];
+
+  const add = () => {
+    if (!canAdd) return;
+    const label = email.trim();
+    addMember.mutate(
+      { email: label, displayName: null },
+      {
+        onSuccess: () => {
+          toast.success(t('private.memberAdded', { name: label }));
+          setEmail('');
+        },
+      },
+    );
+  };
+
+  const openReport = (member: { id: string; userId: string | null }, label: string) => {
+    setReportTarget({
+      reportedUserId: member.userId,
+      surface: 'shared_space',
+      surfaceId: id ?? null,
+      // One item: who, in which album — not the photo list, per
+      // report-sheet.tsx's own discipline about keeping evidence to one item.
+      evidence: { memberId: member.id, memberLabel: label, albumId: id },
+      label,
+    });
+    reportSheet.current?.present();
+  };
+
+  const applyBlock = (userId: string, label: string) =>
+    block.mutate(userId, {
+      onSuccess: (result) =>
+        result.ok
+          ? toast.success(t('moderation.blocked', { name: label }))
+          : toast.error(t('errors.unknown')),
+    });
+
+  const openMemberActions = (member: { id: string; userId: string | null }, label: string) => {
+    if (member.userId === null) {
+      openReport(member, label);
+      return;
+    }
+    const userId = member.userId;
+    void chooseAction({
+      title: label,
+      actions: [
+        { id: 'report', label: t('moderation.reportMember') },
+        { id: 'block', label: t('moderation.block'), destructive: true },
+      ],
+      cancelLabel: t('common.cancel'),
+    }).then(async (choice) => {
+      if (choice === 'report') {
+        openReport(member, label);
+        return;
+      }
+      if (choice !== 'block') return;
+      const ok = await confirm({
+        title: t('moderation.blockTitle', { name: label }),
+        message: t('moderation.blockBody'),
+        confirmLabel: t('moderation.block'),
+        cancelLabel: t('common.cancel'),
+        destructive: true,
+      });
+      if (ok) applyBlock(userId, label);
+    });
+  };
+
+  /**
+   * Removal is honest about what it does and does not do: it stops the
+   * member fetching anything new immediately, and it says plainly that it
+   * cannot undo what they already saw — see migration 0027's header and
+   * TODO.md's own flag for shared spaces.
+   */
+  const confirmRemove = (memberId: string, label: string) =>
+    void confirm({
+      title: t('private.removeMemberTitle', { name: label }),
+      message: t('private.removeMemberBody'),
+      confirmLabel: t('common.remove'),
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+    }).then((ok) => {
+      if (!ok) return;
+      removeMember.mutate(memberId, {
+        onSuccess: () => toast.success(t('common.remove')),
+      });
+    });
+
+  return (
+    <PrivateScreen title={t('private.members')} tint={tint}>
+      <View className={cardClass({ padding: 'none' }, 'px-4')}>
+        {members.map((member, index) => {
+          const label = member.displayName || member.email || t('split.someone');
+          const pending = member.userId === null;
+          const waitingOnKey = !pending && member.role !== 'owner' && !member.keyConfirmedAt;
+          return (
+            <View
+              key={member.id}
+              className={
+                index === 0
+                  ? 'flex-row items-center gap-3 py-3'
+                  : 'flex-row items-center gap-3 border-t border-border py-3'
+              }
+            >
+              <MemberAvatars names={[label]} total={1} size={32} />
+              <View className="flex-1 gap-0.5">
+                <Text className="font-sora-medium text-foreground" numberOfLines={1}>
+                  {label}
+                </Text>
+                <Text variant="caption" numberOfLines={1}>
+                  {member.role === 'owner'
+                    ? t('split.owner')
+                    : pending
+                      ? t('split.pendingInvite')
+                      : waitingOnKey
+                        ? t('private.waitingOnKey')
+                        : t('private.keyConfirmedLabel')}
+                </Text>
+              </View>
+              {pending && member.email ? (
+                <Pressable
+                  onPress={() => router.push(`/private/albums/${id}/invite?memberId=${member.id}`)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t('private.generateInvite')}: ${label}`}
+                  className="h-11 w-11 items-center justify-center"
+                >
+                  <Send size={16} color={tint} />
+                </Pressable>
+              ) : null}
+              {!pending && waitingOnKey && albumKey ? (
+                <Pressable
+                  onPress={() => router.push(`/private/albums/${id}/invite?memberId=${member.id}`)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t('private.resendKey')}: ${label}`}
+                  className="h-11 w-11 items-center justify-center"
+                >
+                  <KeyRound size={16} color={tint} />
+                </Pressable>
+              ) : null}
+              {member.userId !== myUserId ? (
+                <Pressable
+                  onPress={() => openMemberActions(member, label)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t('moderation.reportMember')}: ${label}`}
+                  className="h-11 w-11 items-center justify-center"
+                >
+                  <Flag size={16} color={theme.mutedForeground} />
+                </Pressable>
+              ) : null}
+              {member.role !== 'owner' && isOwner ? (
+                <Pressable
+                  onPress={() => confirmRemove(member.id, label)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t('common.remove')}: ${label}`}
+                  className="h-11 w-11 items-center justify-center"
+                >
+                  <Trash2 size={17} color={theme.mutedForeground} />
+                </Pressable>
+              ) : null}
+            </View>
+          );
+        })}
+      </View>
+
+      <View className="gap-3">
+        <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
+          {t('private.addMemberStep')}
+        </Text>
+
+        <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
+          <Mail size={16} color={theme.mutedForeground} />
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            accessibilityLabel={t('auth.email')}
+            placeholder="friend@example.com"
+            placeholderTextColor={theme.mutedForeground}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="done"
+            onSubmitEditing={add}
+            className="flex-1 text-foreground"
+          />
+        </View>
+
+        {addMember.isError ? <InlineError error={addMember.error} /> : null}
+
+        <Button
+          label={addMember.isPending ? t('common.saving') : t('private.invite')}
+          onPress={add}
+          disabled={!canAdd}
+          variant="accent"
+          style={{ backgroundColor: tint }}
+        />
+      </View>
+
+      <ReportSheet
+        ref={reportSheet}
+        target={reportTarget}
+        onBlock={(userId) => {
+          const label = reportTarget?.label ?? t('moderation.someone');
+          void confirm({
+            title: t('moderation.blockAfterReport'),
+            message: t('moderation.blockAfterReportBody'),
+            confirmLabel: t('moderation.block'),
+            cancelLabel: t('moderation.notNow'),
+            destructive: true,
+          }).then((ok) => {
+            if (ok) applyBlock(userId, label);
+          });
+        }}
+      />
+    </PrivateScreen>
+  );
+}

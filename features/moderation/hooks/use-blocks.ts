@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { blockUser, listBlockedAccounts, unblockUser } from '@/features/moderation/services/blocks';
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { albumKeys } from '@/features/private/hooks/use-shared-albums';
 import { splitKeys } from '@/features/split/hooks/use-split';
 
 export const blockKeys = {
@@ -22,13 +23,15 @@ export function useBlockedAccounts() {
 export function useBlockMutations() {
   const client = useQueryClient();
 
-  // Both invalidate the split caches as well as the block list: a block changes
-  // what the server will let you do with groups (0021's triggers), so a screen
-  // still holding the previous answer would offer an invite that now fails.
+  // Invalidates the split AND shared-album caches as well as the block list:
+  // a block changes what the server will let you do with both (0021's guard
+  // triggers, mirrored for albums in 0027), so a screen still holding the
+  // previous answer would offer an invite that now fails.
   const invalidate = () => {
     client.invalidateQueries({ queryKey: blockKeys.list });
     client.invalidateQueries({ queryKey: splitKeys.groups });
     client.invalidateQueries({ queryKey: splitKeys.summaries });
+    client.invalidateQueries({ queryKey: albumKeys.list });
   };
 
   return {

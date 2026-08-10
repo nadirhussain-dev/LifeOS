@@ -73,6 +73,7 @@ module.exports = {
         cycle: 'hsl(var(--cycle) / <alpha-value>)',
         recovery: 'hsl(var(--recovery) / <alpha-value>)',
         intimacy: 'hsl(var(--intimacy) / <alpha-value>)',
+        albums: 'hsl(var(--albums) / <alpha-value>)',
         border: 'hsl(var(--border) / <alpha-value>)',
         input: 'hsl(var(--input) / <alpha-value>)',
         ring: 'hsl(var(--ring) / <alpha-value>)',

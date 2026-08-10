@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import type { PrivateModuleId } from '@/features/private/config/private-modules';
+import { PRIVATE_MODULES, type PrivateModuleId } from '@/features/private/config/private-modules';
 import type { VaultSpace } from '@/features/private/services/vault-keys';
 
 /**
@@ -175,10 +175,29 @@ export function privatisedModules(): string[] {
   return usePrivateStore.getState().privatised;
 }
 
-/** Modules to show, which is the intersection of "switched on" and "unlocked".
+/** Every enabled module id that is `requiresRealSpace` — computed once so
+ *  `visiblePrivateModules()` doesn't re-derive it on every call. */
+const REAL_SPACE_ONLY_MODULES = new Set(
+  PRIVATE_MODULES.filter((m) => m.requiresRealSpace).map((m) => m.id),
+);
+
+/**
+ * Modules to show, which is the intersection of "switched on" and "unlocked".
  * Locked returns nothing at all, so no caller can accidentally render a hint
- * that a module exists. */
+ * that a module exists.
+ *
+ * The decoy space also unlocks with a non-null key, and for every module up
+ * to this one that was enough: real-space content is encrypted under a key
+ * the decoy genuinely does not have, so there was nothing to hide beyond the
+ * card itself. Shared albums broke that assumption — their membership is
+ * ordinary server-side metadata, unrelated to which local key unlocked this
+ * device — so anything marked `requiresRealSpace` is filtered out here
+ * whenever `space !== 'real'`, on top of the card being hidden. This is the
+ * fix for that gap; see private-modules.ts's header for the full reasoning.
+ */
 export function visiblePrivateModules(): PrivateModuleId[] {
   const state = usePrivateStore.getState();
-  return state.key ? state.enabledModules : [];
+  if (!state.key) return [];
+  if (state.space === 'real') return state.enabledModules;
+  return state.enabledModules.filter((id) => !REAL_SPACE_ONLY_MODULES.has(id));
 }

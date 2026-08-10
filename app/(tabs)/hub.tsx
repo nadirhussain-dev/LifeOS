@@ -41,6 +41,7 @@ export default function HubScreen() {
   const scheme = useColorScheme() ?? 'light';
 
   const privateKey = usePrivateStore((s) => s.key);
+  const privateSpace = usePrivateStore((s) => s.space);
   const enabledPrivate = usePrivateStore((s) => s.enabledModules);
   const privatised = usePrivateStore((s) => s.privatised);
 
@@ -88,7 +89,15 @@ export default function HubScreen() {
   const privateSection = useMemo(() => {
     if (!privateKey) return null;
 
-    const born = PRIVATE_MODULES.filter((m) => enabledPrivate.includes(m.id)).map((m) => ({
+    const born = PRIVATE_MODULES.filter(
+      (m) =>
+        enabledPrivate.includes(m.id) &&
+        // Membership metadata for a `requiresRealSpace` module (shared albums)
+        // is visible to the server independent of which local key unlocked
+        // this device — the decoy space must not surface it, even though
+        // `privateKey` is non-null here too. See private-modules.ts's header.
+        (!m.requiresRealSpace || privateSpace === 'real'),
+    ).map((m) => ({
       id: m.id,
       titleKey: m.titleKey,
       subtitleKey: m.subtitleKey,
@@ -113,7 +122,7 @@ export default function HubScreen() {
 
     const modules = [...born, ...moved];
     return modules.length > 0 ? modules : null;
-  }, [privateKey, enabledPrivate, privatised, flags]);
+  }, [privateKey, privateSpace, enabledPrivate, privatised, flags]);
 
   const readyCount = useMemo(
     () =>

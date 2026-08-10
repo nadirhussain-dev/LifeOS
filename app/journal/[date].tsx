@@ -14,7 +14,7 @@ import { AttachmentStrip } from '@/components/ui/attachment-strip';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { VoiceNoteRecorder } from '@/components/ui/voice-note-recorder';
-import { moduleTint } from '@/constants/design-tokens';
+import { moduleTint, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { MoodCheckin } from '@/features/journal/components/mood-checkin';
 import { ReflectionPromptList } from '@/features/journal/components/reflection-prompt-list';
@@ -64,7 +64,9 @@ export default function JournalEntryScreen() {
 
   if (!entry) return null;
 
-  const wash = entry.mood ? `${MOOD_TINT[entry.mood]}33` : `${colors[scheme].accent}1a`;
+  const wash = entry.mood
+    ? `${resolveTint(MOOD_TINT[entry.mood], scheme)}33`
+    : `${colors[scheme].accent}1a`;
 
   const toggleReason = (reason: string) => {
     const current = new Set(entry.moodReasons ?? []);

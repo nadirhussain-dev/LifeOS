@@ -6,6 +6,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
+import { resolveTint } from '@/constants/design-tokens';
 import { MOOD_EMOJI, MOOD_TINT } from '@/features/journal/constants';
 import type { JournalEntry } from '@/features/journal/types/journal.types';
 
@@ -19,7 +20,7 @@ export function DayCard({ entry, onPress }: Props) {
   const { t } = useTranslation();
   const date = parseISO(entry.entryDate);
   const snippet = entry.body.trim().slice(0, 90);
-  const tint = entry.mood ? MOOD_TINT[entry.mood] : colors[scheme].mutedForeground;
+  const tint = entry.mood ? resolveTint(MOOD_TINT[entry.mood], scheme) : colors[scheme].mutedForeground;
 
   return (
     <View style={styles.shadowWrap}>

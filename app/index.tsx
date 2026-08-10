@@ -8,10 +8,11 @@ export default function Index() {
   const isInitialized = useAuthStore((s) => s.isInitialized);
   const session = useAuthStore((s) => s.session);
   const isGuest = useAuthStore((s) => s.isGuest);
+  const authHydrated = useAuthStore((s) => s.hasHydrated);
   const onboardingComplete = useProfileStore((s) => s.onboardingComplete);
   const hydrated = useProfileStore((s) => s.hydrated);
 
-  if (!isInitialized || !hydrated) {
+  if (!isInitialized || !authHydrated || !hydrated) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
         <ActivityIndicator />

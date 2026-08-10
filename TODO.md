@@ -244,19 +244,22 @@ been rewritten to say so.
 - [ ] **Store review will ask.** Cycle/intimacy data is GDPR Art. 9
       special-category and App Store 5.1.3 governs the health parts. Expect to
       justify operator access in the review notes and the data-safety form.
-- [ ] 🔴 **DECIDE: escrow has never once been written, and 0025 makes it start.**
-      `vault_escrow` has no SELECT policy by design, and Postgres refuses
-      `INSERT … ON CONFLICT DO UPDATE` against a table the caller cannot select
-      from — regardless of whether a conflicting row exists. PostgREST's
-      `.upsert()` emits exactly that, `uploadEscrow()` was the only writer, and
-      `setup.tsx` never checked its result. **The table is empty. Every private
-      space to date has been accidentally end-to-end encrypted**, while
-      PRIVACY.md, the setup copy and this file all said the opposite.
-      0025 repairs the mechanism, so operator access begins working on the next
-      deploy. If you would rather keep the accidental privacy, unset
-      `EXPO_PUBLIC_VAULT_ESCROW_PUBLIC_KEY` — escrow then no-ops by design — and
-      rewrite PRIVACY.md instead. What must not stand is the current state,
-      where the policy claims one thing and the database does another.
+- [x] **DECIDED (2026-08-10): stay end-to-end encrypted, do not switch escrow
+      on.** `vault_escrow` had no SELECT policy, so Postgres refused `INSERT …
+      ON CONFLICT DO UPDATE` against it regardless of whether a conflicting row
+      existed. PostgREST's `.upsert()` emitted exactly that, `uploadEscrow()`
+      was the only writer, and `setup.tsx` never checked its result — the table
+      was empty and every private space to date was accidentally end-to-end
+      encrypted, while PRIVACY.md claimed staff could read it. 0025 fixed the
+      write path (it now works, if configured), but the call here is to leave
+      `EXPO_PUBLIC_VAULT_ESCROW_PUBLIC_KEY` unset — Art. 9 health data (cycle,
+      recovery) server-side in decryptable form is a bigger breach target and
+      harder App Store conversation than the abuse-handling case for it — and
+      PRIVACY.md's "What LifeOS staff can access" section is rewritten to say
+      plainly that this capability exists in code but is switched off, rather
+      than asserting access that doesn't happen. Revisit only with a concrete
+      abuse/legal need, and update PRIVACY.md before flipping the switch, not
+      after.
 - [x] **Escrow is backfilled on unlock** for a vault created while signed out or
       before 0015. Real space only: sealing the decoy's key would escrow the
       wrong vault, and a row that changes between unlocks is itself evidence a
