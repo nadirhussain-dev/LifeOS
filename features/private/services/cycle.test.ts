@@ -1,6 +1,7 @@
 import {
   averageCycleLength,
   dayOfCycle,
+  distinctTags,
   periodsFrom,
   predictedNextStart,
   type CycleEntry,
@@ -13,7 +14,11 @@ const localKey = (date: Date): string =>
     date.getDate(),
   ).padStart(2, '0')}`;
 
-const entry = (date: string, flow: CycleEntry['flow']): CycleEntry => ({
+const entry = (
+  date: string,
+  flow: CycleEntry['flow'],
+  extra: Partial<CycleEntry> = {},
+): CycleEntry => ({
   id: date,
   createdAt: 0,
   updatedAt: 0,
@@ -22,6 +27,12 @@ const entry = (date: string, flow: CycleEntry['flow']): CycleEntry => ({
   symptoms: [],
   mood: null,
   note: '',
+  basalTempC: null,
+  weightKg: null,
+  medications: [],
+  customTags: [],
+  photoFileNames: [],
+  ...extra,
 });
 
 describe('periodsFrom', () => {
@@ -136,5 +147,34 @@ describe('dayOfCycle', () => {
 
   it('is null before anything is logged', () => {
     expect(dayOfCycle([])).toBeNull();
+  });
+});
+
+describe('distinctTags', () => {
+  it('returns nothing for empty history', () => {
+    expect(distinctTags([], 'customTags')).toEqual([]);
+  });
+
+  it('dedupes case-insensitively, keeping the casing first seen', () => {
+    const entries = [
+      entry('2026-01-02', null, { customTags: ['Cramps', 'stress'] }),
+      entry('2026-01-01', null, { customTags: ['cramps', 'travel'] }),
+    ];
+    // entries is newest-first by convention (listCycleEntries sorts that
+    // way) — 'Cramps' from the first entry wins over the later 'cramps'.
+    expect(distinctTags(entries, 'customTags')).toEqual(['Cramps', 'stress', 'travel']);
+  });
+
+  it('reads the requested field only, ignoring the other tag list', () => {
+    const entries = [
+      entry('2026-01-01', null, { customTags: ['stress'], medications: ['ibuprofen'] }),
+    ];
+    expect(distinctTags(entries, 'medications')).toEqual(['ibuprofen']);
+    expect(distinctTags(entries, 'customTags')).toEqual(['stress']);
+  });
+
+  it('ignores blank/whitespace-only tags', () => {
+    const entries = [entry('2026-01-01', null, { customTags: ['  ', 'ok'] })];
+    expect(distinctTags(entries, 'customTags')).toEqual(['ok']);
   });
 });
