@@ -19,6 +19,7 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -239,6 +240,12 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: c.background }}>
+      {/* Never configured before — the OS default status bar style doesn't
+          follow the app's theme, so the clock/battery/signal icons could land
+          dark-on-dark (or light-on-light) and go unreadable depending on which
+          way the device theme leaned. Tied to the same `scheme` every screen
+          already reads, so it always has 4.5:1+ against whatever's under it. */}
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <BottomSheetModalProvider>
