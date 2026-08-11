@@ -3474,6 +3474,13 @@ const put = (uid, path, size) =>
 await test('0026 you can store and read your own media', async () => {
   const M1 = 'aaaabbbb-0000-0000-0000-000000000001';
   await createUser(db, M1, 'media1@example.com');
+  // 0035 gates media backup behind a paid plan; this section is about
+  // isolation and quota mechanics, not that gate, so every user who
+  // actually uploads here is bumped off the free plan the same way
+  // ALBUM_OWNER is, above.
+  await asUser(db, M1, async () => {
+    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+  });
   await asUser(db, M1, async () => {
     await put(M1, 'gallery_photos/p1.jpg', 1024);
     expectEqual(
@@ -3501,6 +3508,11 @@ await test('0026 you cannot write into another account’s folder', async () => 
   const M3 = 'aaaabbbb-0000-0000-0000-000000000003';
   const VICTIM = 'aaaabbbb-0000-0000-0000-000000000001';
   await createUser(db, M3, 'media3@example.com');
+  // Paid, so this actually exercises the RLS rejection being tested rather
+  // than being short-circuited by 0035's plan check, which runs first.
+  await asUser(db, M3, async () => {
+    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+  });
   await asUser(db, M3, async () => {
     await expectRejection(() => put(VICTIM, 'gallery_photos/forged.jpg', 10), 'row-level security');
   });
@@ -3525,6 +3537,9 @@ await test('0026 the quota is enforced on the server', async () => {
   // modified the client. This is the one that costs money.
   const M5 = 'aaaabbbb-0000-0000-0000-000000000005';
   await createUser(db, M5, 'media5@example.com');
+  await asUser(db, M5, async () => {
+    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+  });
   const quota = Number((await one(`select public.media_quota_bytes() as q`)).q);
 
   await asUser(db, M5, async () => {
@@ -3541,6 +3556,9 @@ await test('0026 usage is reported to the account it belongs to', async () => {
   // failure, so the app has to be able to show it.
   const M6 = 'aaaabbbb-0000-0000-0000-000000000006';
   await createUser(db, M6, 'media6@example.com');
+  await asUser(db, M6, async () => {
+    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+  });
   await asUser(db, M6, async () => {
     await put(M6, 'songs/a.mp3', 500);
     await put(M6, 'songs/b.mp3', 250);
@@ -4666,6 +4684,66 @@ await test('0034 an archived plan cannot be self-assigned, even though the row s
     await expectRejection(
       () => db.query(`select public.set_my_plan('plan-x', null)`),
       'unknown plan',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+console.log('\nmedia backup requires a paid plan (0035)');
+// ---------------------------------------------------------------------------
+
+const MEDIA_PLAN_FREE = '99300000-0000-0000-0000-000000000001';
+await createUser(db, MEDIA_PLAN_FREE, 'media-plan-free@example.com');
+
+await test('0035 a free-plan account cannot back up media at all', async () => {
+  await asUser(db, MEDIA_PLAN_FREE, async () => {
+    await expectRejection(
+      () => put(MEDIA_PLAN_FREE, 'gallery_photos/p1.jpg', 1024),
+      'media backup requires a paid plan',
+    );
+  });
+});
+
+await test('0035 the same free-plan account can still add photos to a shared album', async () => {
+  // Proves the two buckets are gated independently — 0032's own album/member
+  // limits are the shared-albums lever, not this migration.
+  await asUser(db, MEDIA_PLAN_FREE, async () => {
+    await db.query(
+      `select public.create_shared_album('alb-media-free','cipher:x','m-media-free-owner',null,'act-media-free',$1)`,
+      [Date.now()],
+    );
+    await putAlbumObject('alb-media-free', 'photo-a.bin', 1024);
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from storage.objects
+        where bucket_id = 'shared-albums' and name = 'alb-media-free/photo-a.bin'`,
+    ),
+    1,
+    'shared-album upload succeeded on the free plan',
+  );
+});
+
+await test('0035 upgrading lifts the block, still bounded by the existing byte quota', async () => {
+  await asUser(db, MEDIA_PLAN_FREE, async () => {
+    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+    await put(MEDIA_PLAN_FREE, 'gallery_photos/p1.jpg', 1024);
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from storage.objects
+        where bucket_id = 'media' and name = $1`,
+      [`${MEDIA_PLAN_FREE}/gallery_photos/p1.jpg`],
+    ),
+    1,
+    'upload succeeded once on a paid plan',
+  );
+
+  const quota = Number((await one(`select public.media_quota_bytes() as q`)).q);
+  await asUser(db, MEDIA_PLAN_FREE, async () => {
+    await expectRejection(
+      () => put(MEDIA_PLAN_FREE, 'gallery_photos/over.jpg', quota),
+      'media storage quota exceeded',
     );
   });
 });

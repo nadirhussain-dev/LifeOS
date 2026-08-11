@@ -12,6 +12,7 @@ import { Text } from '@/components/ui/text';
 import { resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { AdSlot } from '@/features/ads/components/ad-slot';
 import { ModuleCard } from '@/features/hub/components/module-card';
 import { HUB_SECTIONS, type HubModule } from '@/features/hub/config/modules';
 import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
@@ -257,6 +258,8 @@ export default function HubScreen() {
             </View>
           </View>
         ) : null}
+
+        <AdSlot placement="hub-bottom" />
       </ScrollView>
     </View>
   );

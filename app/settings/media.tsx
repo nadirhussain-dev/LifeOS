@@ -1,4 +1,4 @@
-import { Check, CloudUpload, HardDrive, Sparkles, Wifi } from 'lucide-react-native';
+import { Check, CloudUpload, HardDrive, Sparkles, Smartphone, Wifi, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Switch, View } from 'react-native';
@@ -19,7 +19,7 @@ import {
 import { useMediaSyncStore } from '@/features/media-sync/store/media-sync-store';
 import { useTheme } from '@/hooks/use-theme';
 import { alpha } from '@/lib/color';
-import { confirm } from '@/lib/dialog-store';
+import { confirm, notify } from '@/lib/dialog-store';
 import { toast } from '@/lib/toast-store';
 
 /**
@@ -41,7 +41,7 @@ export default function MediaSettingsScreen() {
   const setWifiOnly = useMediaSyncStore((s) => s.setWifiOnly);
   const usage = useMediaSyncStore((s) => s.usage);
   const lastError = useMediaSyncStore((s) => s.lastError);
-  const { planId } = usePlan();
+  const { planId, isPlus } = usePlan();
   const { data: plans = [] } = usePlans();
   const subscribe = useSubscribeMutation();
 
@@ -69,6 +69,27 @@ export default function MediaSettingsScreen() {
       clearMediaCache();
       setCached(0);
     });
+
+  /**
+   * The server refuses this outright for a free account (0035's
+   * `enforce_media_quota` — "media backup requires a paid plan"), not just
+   * quota-limits it. The switch reflects that instead of letting someone
+   * turn it on and find out from a failed upload later.
+   */
+  const toggleBackup = (next: boolean) => {
+    if (next && !isPlus) {
+      // The plan cards are already on this same screen, just below — this
+      // is a one-button notice, not a confirm with somewhere else to send
+      // them.
+      void notify({
+        title: t('media.backupUpsellTitle'),
+        message: t('media.backupUpsellBody'),
+        confirmLabel: t('common.ok'),
+      });
+      return;
+    }
+    setEnabled(next);
+  };
 
   const choosePlan = (plan: StoragePlan) => {
     if (!session || plan.id === planId || subscribe.isPending) return;
@@ -108,11 +129,13 @@ export default function MediaSettingsScreen() {
             <CloudUpload size={18} color={c.accent} />
             <View className="flex-1">
               <Text className="font-sora-medium text-foreground">{t('media.backUpFiles')}</Text>
-              <Text variant="caption">{t('media.backUpFilesHint')}</Text>
+              <Text variant="caption">
+                {isPlus ? t('media.backUpFilesHint') : t('media.backUpFilesPlusOnly')}
+              </Text>
             </View>
             <Switch
               value={enabled}
-              onValueChange={setEnabled}
+              onValueChange={toggleBackup}
               disabled={!session}
               trackColor={{ true: c.accent, false: c.border }}
             />
@@ -151,6 +174,21 @@ export default function MediaSettingsScreen() {
             ) : null}
           </View>
         ) : null}
+
+        {/*
+          Stated plainly, not just implied by a switch that doesn't move:
+          everything that ISN'T a photo/video/audio file — habits, tasks,
+          journal, budget, your profile picture — keeps syncing free,
+          forever, on every plan. Media backup is the one thing that costs
+          real, unbounded money per account, and it's the one thing gated.
+        */}
+        <View className={cardClass({ padding: 'md' }, 'gap-2')}>
+          <View className="flex-row items-center gap-2">
+            <Smartphone size={16} color={c.mutedForeground} />
+            <Text variant="micro">{t('media.alwaysFreeTitle')}</Text>
+          </View>
+          <Text variant="caption">{t('media.alwaysFreeBody')}</Text>
+        </View>
 
         {/*
           Mock, on purpose: nothing in this card charges anyone. There is no
@@ -210,6 +248,19 @@ export default function MediaSettingsScreen() {
               );
             })}
           </View>
+
+          {/* What each tier actually means, in plain bullets — static copy,
+              not database-driven: this is marketing text about the two
+              tiers, not another storage/price field on billing_plans. */}
+          <View className="gap-1.5 border-t border-border pt-3">
+            <PerkRow icon={X} label={t('billing.perkFreeAds')} muted />
+            <PerkRow icon={X} label={t('billing.perkFreeLocalOnly')} muted />
+            <PerkRow icon={Check} label={t('billing.perkPlusNoAds')} />
+            <PerkRow icon={Check} label={t('billing.perkPlusBackup')} />
+            <PerkRow icon={Check} label={t('billing.perkPlusAlbums')} />
+            <PerkRow icon={Check} label={t('billing.perkPlusInsights')} />
+          </View>
+
           <Text variant="caption">{t('billing.mockNote')}</Text>
         </View>
 
@@ -239,6 +290,26 @@ export default function MediaSettingsScreen() {
         */}
         <Text variant="caption">{t('media.limitsNote')}</Text>
       </ScrollView>
+    </View>
+  );
+}
+
+function PerkRow({
+  icon: Icon,
+  label,
+  muted,
+}: {
+  icon: typeof Check;
+  label: string;
+  muted?: boolean;
+}) {
+  const { c } = useTheme();
+  return (
+    <View className="flex-row items-center gap-2">
+      <Icon size={14} color={muted ? c.mutedForeground : c.accent} />
+      <Text variant="caption" style={muted ? undefined : { color: c.foreground }}>
+        {label}
+      </Text>
     </View>
   );
 }

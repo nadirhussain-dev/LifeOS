@@ -1973,7 +1973,12 @@
     "clearCache": "Clear downloaded files",
     "clearCacheTitle": "Clear downloaded files?",
     "clearCacheBody": "This only removes files this device downloaded — anything imported here stays. They can be fetched again whenever you need them.",
-    "limitsNote": "Your private space is never backed up. Its files are encrypted with a key that only exists on this device, so uploading them would achieve nothing."
+    "limitsNote": "Your private space is never backed up. Its files are encrypted with a key that only exists on this device, so uploading them would achieve nothing.",
+    "alwaysFreeTitle": "Always free, on every plan",
+    "alwaysFreeBody": "Habits, tasks, journal, budget and everything else you write — plus your profile picture — keep syncing free, forever. Only backing up photos, video and audio is a Plus feature.",
+    "backUpFilesPlusOnly": "Requires Plus — local use stays free either way.",
+    "backupUpsellTitle": "Cloud backup is a Plus feature",
+    "backupUpsellBody": "Your photos, video and audio stay fully usable on this device for free. Backing them up to the cloud — so a new phone doesn't start empty — needs a Plus plan. See the plans below."
   },
   "billing": {
     "plans": "Storage plans",
@@ -1997,7 +2002,13 @@
     "memberLimitTitle": "Two people on the free plan",
     "memberLimitBody_one": "The free plan allows {{count}} person per shared album. Upgrade to add more.",
     "memberLimitBody_other": "The free plan allows {{count}} people per shared album. Upgrade to add more.",
-    "memberLimitToast": "That's your free-plan member limit for this album — upgrade to add more."
+    "memberLimitToast": "That's your free-plan member limit for this album — upgrade to add more.",
+    "perkFreeAds": "Ads shown in a few places",
+    "perkFreeLocalOnly": "Photos/video/audio stay on this device",
+    "perkPlusNoAds": "No ads",
+    "perkPlusBackup": "Cloud backup for photos, video and audio",
+    "perkPlusAlbums": "More shared albums, more members",
+    "perkPlusInsights": "Insights and deeper memories"
   },
   "transfer": {
     "title": "Add another device",
@@ -2110,5 +2121,11 @@
     "statusUpdated": "Standing updated.",
     "storageMbPlaceholder": "Storage (MB)",
     "useDefault": "Use default"
+  },
+  "ads": {
+    "eyebrow": "Ad",
+    "placeholderLabel": "Advertisement placeholder",
+    "placeholderBody": "This space will show an ad on the free plan. Nothing is loaded from a network yet — this is a preview of where one will sit.",
+    "removeWithPlus": "Remove ads with Plus"
   }
 }
