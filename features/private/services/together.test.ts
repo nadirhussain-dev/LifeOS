@@ -65,4 +65,22 @@ describe('onThisDay', () => {
     const match = onThisDay([photo('recent', new Date('2026-05-01').getTime())], now);
     expect(match).toBeNull();
   });
+
+  it('maxYearsLookback=1 only reaches the most recent anniversary, never a more distant one', () => {
+    const now = new Date('2026-08-10T12:00:00Z');
+    const match = onThisDay([photo('two-years', new Date('2024-08-10').getTime())], now, 1);
+    expect(match).toBeNull();
+  });
+
+  it('maxYearsLookback=1 skips the oldest-photo fallback entirely', () => {
+    const now = new Date('2026-08-10T12:00:00Z');
+    const match = onThisDay([photo('oldest', new Date('2023-01-15').getTime())], now, 1);
+    expect(match).toBeNull();
+  });
+
+  it('a wider maxYearsLookback still finds a two-year anniversary', () => {
+    const now = new Date('2026-08-10T12:00:00Z');
+    const match = onThisDay([photo('two-years', new Date('2024-08-10').getTime())], now, 15);
+    expect(match?.yearsAgo).toBe(2);
+  });
 });

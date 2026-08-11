@@ -14,6 +14,12 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { colors } from '@/constants/theme';
 import { toast } from '@/lib/toast-store';
 
+/** 0032's trigger message when a free account is already at its owned-album
+ *  limit — matched the same way album-uploader.ts matches "quota" for
+ *  photos, so a race with another device (rather than the precheck on the
+ *  album list) still gets a useful toast instead of a generic error. */
+const PLAN_LIMIT_PATTERN = /free plan allows one shared album/i;
+
 const TINT = privateModule('shared-albums')?.tint ?? moduleTints.albums;
 
 /**
@@ -38,6 +44,12 @@ export default function NewSharedAlbumScreen() {
       onSuccess: (albumId) => {
         toast.success(t('private.createAlbum'));
         router.replace(`/private/albums/${albumId}`);
+      },
+      onError: (error) => {
+        if (PLAN_LIMIT_PATTERN.test(error instanceof Error ? error.message : '')) {
+          toast.error(t('billing.albumLimitToast'));
+          router.back();
+        }
       },
     });
   };

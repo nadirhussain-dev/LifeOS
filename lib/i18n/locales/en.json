@@ -1869,7 +1869,17 @@
     "yearsAgoToday_one": "{{count}} year ago today",
     "yearsAgoToday_other": "{{count}} years ago today",
     "togetherMilestone_one": "A little milestone — {{count}} day together 💛",
-    "togetherMilestone_other": "A little milestone — {{count}} days together 💛"
+    "togetherMilestone_other": "A little milestone — {{count}} days together 💛",
+    "insightsTitle": "Insights",
+    "insightsSubtitle": "Trends from what you already log",
+    "insightsEmpty": "Log a few entries and trends will start showing up here.",
+    "cycleTrendTitle": "Cycle length, recent cycles",
+    "cycleTrendHint": "From your own logged periods — not a prediction.",
+    "recoveryTrendTitle": "Recovery, by target",
+    "moodTrendTitle": "Mood trend",
+    "moodTrendNeedMore": "Log a few more entries to see a trend.",
+    "moodTrendUp": "Trending up over your recent entries.",
+    "moodTrendDown": "Trending down over your recent entries."
   },
   "moduleFlags": {
     "unavailable": "Temporarily unavailable",
@@ -1975,7 +1985,19 @@
     "confirmBody": "Payments aren’t live yet. This switches your plan locally on this device so you can see how it will look — no card will be charged.",
     "confirmAction": "Try it",
     "previewNotice": "Plan updated — preview only, nothing was charged",
-    "mockNote": "Payments aren’t live yet. Prices shown are a preview of what’s coming."
+    "mockNote": "Payments aren’t live yet. Prices shown are a preview of what’s coming.",
+    "insightsUpsellTitle": "See your trends",
+    "insightsUpsellBody": "Cycle length, recovery streaks and mood — trends over what you already log, for Plus accounts.",
+    "seePlans": "See plans",
+    "plusBadge": "PLUS",
+    "albumLimitTitle": "One shared album on the free plan",
+    "albumLimitBody_one": "The free plan includes {{count}} shared album. Upgrade to create more.",
+    "albumLimitBody_other": "The free plan includes {{count}} shared albums. Upgrade to create more.",
+    "albumLimitToast": "That's your free-plan album limit — upgrade to create another.",
+    "memberLimitTitle": "Two people on the free plan",
+    "memberLimitBody_one": "The free plan allows {{count}} person per shared album. Upgrade to add more.",
+    "memberLimitBody_other": "The free plan allows {{count}} people per shared album. Upgrade to add more.",
+    "memberLimitToast": "That's your free-plan member limit for this album — upgrade to add more."
   },
   "transfer": {
     "title": "Add another device",

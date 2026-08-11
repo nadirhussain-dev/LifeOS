@@ -10,7 +10,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { STORAGE_PLANS, type StoragePlanId } from '@/features/billing/config/plans';
-import { useBillingStore } from '@/features/billing/store/billing-store';
+import { usePlan, useSubscribeMutation } from '@/features/billing/hooks/use-billing';
 import { cachedBytes, clearMediaCache } from '@/features/media-sync/services/media-cache';
 import {
   countPendingMedia,
@@ -41,8 +41,8 @@ export default function MediaSettingsScreen() {
   const setWifiOnly = useMediaSyncStore((s) => s.setWifiOnly);
   const usage = useMediaSyncStore((s) => s.usage);
   const lastError = useMediaSyncStore((s) => s.lastError);
-  const planId = useBillingStore((s) => s.planId);
-  const subscribe = useBillingStore((s) => s.subscribe);
+  const { planId } = usePlan();
+  const subscribe = useSubscribeMutation();
 
   const [pending, setPending] = useState(0);
   const [cached, setCached] = useState(0);
@@ -70,7 +70,7 @@ export default function MediaSettingsScreen() {
     });
 
   const choosePlan = (id: StoragePlanId) => {
-    if (id === planId) return;
+    if (!session || id === planId || subscribe.isPending) return;
     void confirm({
       title: t('billing.confirmTitle'),
       message: t('billing.confirmBody'),
@@ -78,8 +78,10 @@ export default function MediaSettingsScreen() {
       cancelLabel: t('common.cancel'),
     }).then((ok) => {
       if (!ok) return;
-      subscribe(id);
-      toast.success(t('billing.previewNotice'));
+      subscribe.mutate(id, {
+        onSuccess: () => toast.success(t('billing.previewNotice')),
+        onError: () => toast.error(t('errors.unknown')),
+      });
     });
   };
 
@@ -168,12 +170,14 @@ export default function MediaSettingsScreen() {
                 <Pressable
                   key={plan.id}
                   accessibilityRole="radio"
-                  accessibilityState={{ selected: active }}
+                  accessibilityState={{ selected: active, disabled: !session }}
+                  disabled={!session || subscribe.isPending}
                   onPress={() => choosePlan(plan.id)}
                   className="flex-row items-center gap-3 rounded-2xl border px-4 py-3"
                   style={{
                     borderColor: active ? c.accent : c.border,
                     backgroundColor: active ? alpha(c.accent, 0.08) : 'transparent',
+                    opacity: !session ? 0.5 : 1,
                   }}
                 >
                   <View className="flex-1">

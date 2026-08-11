@@ -11,6 +11,7 @@ import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { usePlan } from '@/features/billing/hooks/use-billing';
 import { decryptPhotoAsDataUri } from '@/features/private/services/album-cache';
 import { AlbumCommentSheet } from '@/features/private/components/album-comment-sheet';
 import { OnThisDayCard } from '@/features/private/components/on-this-day-card';
@@ -84,7 +85,15 @@ export default function SharedAlbumScreen() {
   // Depends on `data?.photos` (the query's own stable array) rather than the
   // `photos` fallback above, which is a fresh `[]` every render whenever
   // there's no data yet and would otherwise recompute every time.
-  const memory = useMemo(() => onThisDay(data?.photos ?? []), [data?.photos]);
+  const { isPlus } = usePlan();
+  // Free: only the most recent exact anniversary. Plus: the full lookback,
+  // including the oldest-photo fallback for an album with no anniversary
+  // yet — see together.ts's own header for why the depth, not the feature
+  // itself, is what's gated.
+  const memory = useMemo(
+    () => onThisDay(data?.photos ?? [], new Date(), isPlus ? 15 : 1),
+    [data?.photos, isPlus],
+  );
 
   const pick = async (source: 'library' | 'camera') => {
     if (!albumKey || !userId) return;

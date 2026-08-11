@@ -58,3 +58,17 @@ export const STORAGE_PLANS: StoragePlan[] = [
 export function storagePlan(id: StoragePlanId): StoragePlan {
   return STORAGE_PLANS.find((p) => p.id === id) ?? STORAGE_PLANS[0];
 }
+
+/**
+ * Mirrors of `free_album_limit()` / `free_album_member_limit()`
+ * (supabase/migrations/0032_shared_album_plan_limits.sql) — display/precheck
+ * values only. The migration's triggers are the actual enforcement; these
+ * exist purely so the UI can decline to even show a form that would fail,
+ * same relationship every other client-side check in this codebase has to
+ * its server-side trigger (see 0026's header). If these two numbers and the
+ * migration's ever disagree, the migration wins — a stale UI just shows an
+ * upsell one album or member too early or too late, it can never let
+ * through more than the server allows.
+ */
+export const FREE_ALBUM_LIMIT = 1;
+export const FREE_ALBUM_MEMBER_LIMIT = 2;

@@ -20,6 +20,8 @@ import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { FREE_ALBUM_MEMBER_LIMIT } from '@/features/billing/config/plans';
+import { usePlan } from '@/features/billing/hooks/use-billing';
 import { ReportSheet, type ReportTarget } from '@/features/moderation/components/report-sheet';
 import { useBlockMutations } from '@/features/moderation/hooks/use-blocks';
 import { PrivateScreen } from '@/features/private/components/private-screen';
@@ -37,6 +39,9 @@ import { toast } from '@/lib/toast-store';
 
 const TINT = privateModule('shared-albums')?.tint ?? moduleTints.albums;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** 0032's trigger message for a free-plan album already at its member cap —
+ *  matched the same way album-uploader.ts matches "quota" for photos. */
+const MEMBER_LIMIT_PATTERN = /free plan allows two people/i;
 
 /**
  * Album members.
@@ -61,6 +66,7 @@ export default function SharedAlbumMembersScreen() {
   const { isOwner } = useMyAlbumMembership(data);
   const { addMember, removeMember, setPermissions } = useSharedAlbumMutations(id);
   const myUserId = useAuthStore((s) => s.user?.id ?? null);
+  const { isPlus } = usePlan();
 
   const reportSheet = useRef<BottomSheetModal>(null);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
@@ -68,9 +74,15 @@ export default function SharedAlbumMembersScreen() {
 
   const [email, setEmail] = useState('');
   const emailValid = EMAIL.test(email.trim());
-  const canAdd = emailValid && !addMember.isPending;
 
   const members = data?.activeMembers ?? [];
+  // Governed by the OWNER's plan (0032) — this screen only knows that
+  // precisely when the viewer IS the owner, which is also the common case
+  // for who's doing the inviting. A non-owner member on someone else's
+  // free-plan album still gets the server's rejection via the onError
+  // pattern-match below, just without the pre-emptive upsell.
+  const atFreeMemberLimit = isOwner && !isPlus && members.length >= FREE_ALBUM_MEMBER_LIMIT;
+  const canAdd = emailValid && !addMember.isPending && !atFreeMemberLimit;
 
   const add = () => {
     if (!canAdd) return;
@@ -82,9 +94,16 @@ export default function SharedAlbumMembersScreen() {
           toast.success(t('private.memberAdded', { name: label }));
           setEmail('');
         },
+        onError: (error) => {
+          if (MEMBER_LIMIT_PATTERN.test(error instanceof Error ? error.message : '')) {
+            toast.error(t('billing.memberLimitToast'));
+          }
+        },
       },
     );
   };
+
+  const seePlans = () => router.push('/settings/media');
 
   const openReport = (member: { id: string; userId: string | null }, label: string) => {
     setReportTarget({
@@ -285,32 +304,51 @@ export default function SharedAlbumMembersScreen() {
           {t('private.addMemberStep')}
         </Text>
 
-        <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
-          <Mail size={16} color={theme.mutedForeground} />
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            accessibilityLabel={t('auth.email')}
-            placeholder="friend@example.com"
-            placeholderTextColor={theme.mutedForeground}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="done"
-            onSubmitEditing={add}
-            className="flex-1 text-foreground"
-          />
-        </View>
+        {atFreeMemberLimit ? (
+          <View className={cardClass({ padding: 'rowLg' }, 'gap-2')}>
+            <Text className="font-sora-medium text-foreground">
+              {t('billing.memberLimitTitle')}
+            </Text>
+            <Text variant="caption">
+              {t('billing.memberLimitBody', { count: FREE_ALBUM_MEMBER_LIMIT })}
+            </Text>
+            <Button
+              label={t('billing.seePlans')}
+              onPress={seePlans}
+              variant="accent"
+              style={{ backgroundColor: tint }}
+            />
+          </View>
+        ) : (
+          <>
+            <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
+              <Mail size={16} color={theme.mutedForeground} />
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                accessibilityLabel={t('auth.email')}
+                placeholder="friend@example.com"
+                placeholderTextColor={theme.mutedForeground}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="done"
+                onSubmitEditing={add}
+                className="flex-1 text-foreground"
+              />
+            </View>
 
-        {addMember.isError ? <InlineError error={addMember.error} /> : null}
+            {addMember.isError ? <InlineError error={addMember.error} /> : null}
 
-        <Button
-          label={addMember.isPending ? t('common.saving') : t('private.invite')}
-          onPress={add}
-          disabled={!canAdd}
-          variant="accent"
-          style={{ backgroundColor: tint }}
-        />
+            <Button
+              label={addMember.isPending ? t('common.saving') : t('private.invite')}
+              onPress={add}
+              disabled={!canAdd}
+              variant="accent"
+              style={{ backgroundColor: tint }}
+            />
+          </>
+        )}
       </View>
 
       <ReportSheet

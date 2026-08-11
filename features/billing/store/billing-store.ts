@@ -5,40 +5,38 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import type { StoragePlanId } from '@/features/billing/config/plans';
 
 /**
- * Mock subscription state.
+ * A cache of the account's plan, never the authority on it.
  *
- * No payment provider is wired up. `subscribe()` flips `planId` and stamps a
- * fake renewal date, entirely on-device — nothing here talks to a server,
- * charges a card, or is enforced anywhere (the real storage quota is still
- * whatever `media_quota_bytes()` returns server-side, unaffected by this).
- * It exists so the pricing screen has real local state to show and toggle
- * ahead of a real billing integration, and so that integration has exactly
- * one place to replace (`subscribe`) rather than a UI wired directly to
- * nothing. The upgrade screen says "preview" out loud — this store is why
- * that word is accurate.
+ * Migration 0031 made `profiles.plan_id` the source of truth — the same
+ * column 0032's triggers check before letting a free account create a
+ * second shared album or a third member — specifically because a purely
+ * local, per-device plan could disagree with itself across two phones on
+ * the same account, and couldn't be enforced by anything server-side
+ * anyway. This store exists so the UI has something to render instantly on
+ * a cold start, before `useBillingSync()` (use-billing.ts) has finished its
+ * first round trip — same relationship `moderation-store.ts` has to the
+ * server's standing verdict.
  */
 type BillingState = {
   planId: StoragePlanId;
-  /** Set only by `subscribe()`, for display only ("renews on ..."). */
   mockRenewsAt: number | null;
-  subscribe: (planId: StoragePlanId) => void;
-  cancel: () => void;
+  /** When the cache was last refreshed from the server — never trust a
+   *  cache that's never been checked. */
+  checkedAt: number | null;
+  setPlan: (planId: StoragePlanId, renewsAt: number | null) => void;
+  clear: () => void;
 };
-
-const DAY_MS = 86_400_000;
 
 export const useBillingStore = create<BillingState>()(
   persist(
     (set) => ({
       planId: 'free',
       mockRenewsAt: null,
-      subscribe: (planId) =>
-        set({
-          planId,
-          mockRenewsAt:
-            planId === 'free' ? null : Date.now() + (planId === 'plus_yearly' ? 365 : 30) * DAY_MS,
-        }),
-      cancel: () => set({ planId: 'free', mockRenewsAt: null }),
+      checkedAt: null,
+      setPlan: (planId, renewsAt) => set({ planId, mockRenewsAt: renewsAt, checkedAt: Date.now() }),
+      // Signing out on a shared device must not leave the next account
+      // reading a stale "Plus" cache that was never theirs.
+      clear: () => set({ planId: 'free', mockRenewsAt: null, checkedAt: null }),
     }),
     {
       name: 'billing-store',

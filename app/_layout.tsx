@@ -51,6 +51,7 @@ import { DialogHost } from '@/components/ui/dialog-host';
 import { Grain } from '@/components/ui/grain';
 import { UsageConsentCard } from '@/features/analytics/components/usage-consent-card';
 import { BlockedOverlay } from '@/features/moderation/components/blocked-overlay';
+import { useBillingSync } from '@/features/billing/hooks/use-billing';
 import { useAccountStandingSync } from '@/features/moderation/hooks/use-account-standing';
 import {
   useModuleFlagsSync,
@@ -126,6 +127,13 @@ function UsageReporter() {
  * clears itself and a blocked account can be told why. Renders nothing. */
 function AccountStandingBridge() {
   useAccountStandingSync();
+  return null;
+}
+
+/** Keeps the plan cache fresh — see use-billing.ts's useBillingSync. Renders
+ *  nothing. */
+function BillingSyncBridge() {
+  useBillingSync();
   return null;
 }
 
@@ -307,6 +315,7 @@ export default function RootLayout() {
               <SyncTrigger />
               <SyncStatusBridge />
               <AccountStandingBridge />
+              <BillingSyncBridge />
               <UsageReporter />
               <WidgetSync />
               <LanguageBridge />

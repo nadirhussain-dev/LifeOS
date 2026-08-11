@@ -6,12 +6,16 @@ import { Pressable, View } from 'react-native';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
+import { useAuthStore } from '@/features/auth/services/auth-store';
+import { FREE_ALBUM_LIMIT } from '@/features/billing/config/plans';
+import { usePlan } from '@/features/billing/hooks/use-billing';
 import { privateModule } from '@/features/private/config/private-modules';
 import { PrivateScreen } from '@/features/private/components/private-screen';
 import { useAlbumName, useAlbums } from '@/features/private/hooks/use-shared-albums';
 import { usePrivateStore } from '@/features/private/store/private-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { alpha } from '@/lib/color';
+import { confirm } from '@/lib/dialog-store';
 
 const TINT = privateModule('shared-albums')?.tint ?? moduleTints.albums;
 
@@ -30,7 +34,9 @@ export default function SharedAlbumsScreen() {
   const { t } = useTranslation();
 
   const space = usePrivateStore((s) => s.space);
+  const userId = useAuthStore((s) => s.user?.id ?? null);
   const { data: albums = [] } = useAlbums();
+  const { isPlus } = usePlan();
 
   if (space !== 'real') {
     return (
@@ -40,6 +46,27 @@ export default function SharedAlbumsScreen() {
     );
   }
 
+  // Free plan: one OWNED album — being a member of somebody else's doesn't
+  // count against it. Migration 0032's trigger is the real enforcement;
+  // this only avoids sending someone to a form that would fail.
+  const ownedCount = albums.filter((a) => a.createdBy === userId).length;
+  const atFreeLimit = !isPlus && ownedCount >= FREE_ALBUM_LIMIT;
+
+  const startNewAlbum = () => {
+    if (!atFreeLimit) {
+      router.push('/private/albums/new');
+      return;
+    }
+    void confirm({
+      title: t('billing.albumLimitTitle'),
+      message: t('billing.albumLimitBody', { count: FREE_ALBUM_LIMIT }),
+      confirmLabel: t('billing.seePlans'),
+      cancelLabel: t('common.cancel'),
+    }).then((ok) => {
+      if (ok) router.push('/settings/media');
+    });
+  };
+
   return (
     <PrivateScreen
       title={t('private.sharedAlbumsTitle')}
@@ -48,7 +75,7 @@ export default function SharedAlbumsScreen() {
       footer={
         <Pressable
           accessibilityRole="button"
-          onPress={() => router.push('/private/albums/new')}
+          onPress={startNewAlbum}
           className="flex-row items-center justify-center gap-2 rounded-2xl py-4"
           style={{ backgroundColor: alpha(tint, 0.16) }}
         >

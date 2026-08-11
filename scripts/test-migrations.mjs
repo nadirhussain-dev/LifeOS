@@ -3609,6 +3609,17 @@ await createUser(db, ALBUM_THIRD, 'album-third@example.com');
 await createUser(db, ALBUM_BLOCKER, 'album-blocker@example.com');
 await createUser(db, ALBUM_PEST, 'album-pest@example.com');
 
+// 0032's free-plan album/member limits are exercised in their own section,
+// below, with dedicated users and a clean count from zero. Every test above
+// this point is about membership/RLS/moderation behaviour, not plan limits,
+// and several of them put three-plus members on one album on purpose (alb-1
+// gets a partner, an outsider placeholder AND a third member across the
+// suite) — so ALBUM_OWNER is bumped off the free plan once, here, rather
+// than have those unrelated tests start failing the moment 0032 exists.
+await asUser(db, ALBUM_OWNER, async () => {
+  await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+});
+
 await test('0027 create_shared_album creates the album and its owner member together', async () => {
   await asUser(db, ALBUM_OWNER, async () => {
     await db.query(
@@ -4268,6 +4279,166 @@ await test('0029 chat: off by default, owner-only to enable, then open to member
       'a non-member cannot',
     );
   });
+});
+
+// ---------------------------------------------------------------------------
+console.log('\nbilling plan (0031) + shared-album plan limits (0032)');
+// ---------------------------------------------------------------------------
+
+const PLAN_FREE = '99000000-0000-0000-0000-000000000001';
+const PLAN_FRIEND = '99000000-0000-0000-0000-000000000002';
+const PLAN_THIRD = '99000000-0000-0000-0000-000000000003';
+const PLAN_PAID = '99000000-0000-0000-0000-000000000004';
+const PLAN_PAID_FRIEND = '99000000-0000-0000-0000-000000000005';
+const PLAN_PAID_THIRD = '99000000-0000-0000-0000-000000000006';
+
+await createUser(db, PLAN_FREE, 'plan-free@example.com');
+await createUser(db, PLAN_FRIEND, 'plan-friend@example.com');
+await createUser(db, PLAN_THIRD, 'plan-third@example.com');
+await createUser(db, PLAN_PAID, 'plan-paid@example.com');
+await createUser(db, PLAN_PAID_FRIEND, 'plan-paid-friend@example.com');
+await createUser(db, PLAN_PAID_THIRD, 'plan-paid-third@example.com');
+
+await test('0031 a new account defaults to the free plan', async () => {
+  await asUser(db, PLAN_FREE, async () => {
+    expectEqual((await one(`select public.my_plan_id() as p`)).p, 'free', 'defaults free');
+  });
+});
+
+await test('0031 set_my_plan updates only the caller’s own row', async () => {
+  await asUser(db, PLAN_PAID, async () => {
+    await db.query(`select public.set_my_plan('plus_yearly', $1)`, [Date.now() + 365 * 86400000]);
+  });
+  expectEqual(
+    (await one(`select plan_id from public.profiles where id = $1`, [PLAN_PAID])).plan_id,
+    'plus_yearly',
+    'the caller’s own row changed',
+  );
+  expectEqual(
+    (await one(`select plan_id from public.profiles where id = $1`, [PLAN_FREE])).plan_id,
+    'free',
+    'nobody else’s row did',
+  );
+});
+
+await test('0031 an unrecognised plan id is refused', async () => {
+  await asUser(db, PLAN_FREE, async () => {
+    await expectRejection(
+      () => db.query(`select public.set_my_plan('super_deluxe', null)`),
+      'unknown plan',
+    );
+  });
+});
+
+await test('0032 a free-plan account can create one shared album, not two', async () => {
+  await asUser(db, PLAN_FREE, async () => {
+    await db.query(
+      `select public.create_shared_album('alb-plan-free','cipher:x','m-plan-free-owner',null,'act-plan-1',$1)`,
+      [Date.now()],
+    );
+    await expectRejection(
+      () =>
+        db.query(
+          `select public.create_shared_album('alb-plan-free-2','cipher:y','m-plan-free-owner-2',null,'act-plan-2',$1)`,
+          [Date.now()],
+        ),
+      'one shared album',
+    );
+  });
+});
+
+await test('0032 a free-plan album is capped at two active members', async () => {
+  await asUser(db, PLAN_FREE, async () => {
+    await db.query(
+      `insert into public.shared_album_members
+         (id, album_id, user_id, display_name, role, created_at, updated_at)
+       values ('m-plan-friend','alb-plan-free',$1,'Friend','member',$2,$2)`,
+      [PLAN_FRIEND, Date.now()],
+    );
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.shared_album_members
+             (id, album_id, user_id, display_name, role, created_at, updated_at)
+           values ('m-plan-third','alb-plan-free',$1,'Third','member',$2,$2)`,
+          [PLAN_THIRD, Date.now()],
+        ),
+      'two people per shared album',
+    );
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.shared_album_members
+        where album_id = 'alb-plan-free' and deleted_at is null`,
+    ),
+    2,
+    'owner + one friend, the third never landed',
+  );
+});
+
+await test('0032 upgrading lifts both limits for the same account', async () => {
+  await asUser(db, PLAN_FREE, async () => {
+    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+    await db.query(
+      `select public.create_shared_album('alb-plan-free-2','cipher:y','m-plan-free-owner-2',null,'act-plan-3',$1)`,
+      [Date.now()],
+    );
+    await db.query(
+      `insert into public.shared_album_members
+         (id, album_id, user_id, display_name, role, created_at, updated_at)
+       values ('m-plan-third','alb-plan-free',$1,'Third','member',$2,$2)`,
+      [PLAN_THIRD, Date.now()],
+    );
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.shared_albums
+        where created_by = $1 and deleted_at is null`,
+      [PLAN_FREE],
+    ),
+    2,
+    'a second album, once paid',
+  );
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.shared_album_members
+        where album_id = 'alb-plan-free' and deleted_at is null`,
+    ),
+    3,
+    'a third member on the original album, once paid',
+  );
+});
+
+await test('0032 the cap follows the album OWNER’s plan, not an invited member’s own plan', async () => {
+  // PLAN_PAID is on plus_yearly (set above); PLAN_PAID_FRIEND and
+  // PLAN_PAID_THIRD are ordinary free accounts, and both still fit — the
+  // album's capacity is the owner's to grow, not each guest's own plan.
+  await asUser(db, PLAN_PAID, async () => {
+    await db.query(
+      `select public.create_shared_album('alb-plan-paid','cipher:z','m-plan-paid-owner',null,'act-plan-4',$1)`,
+      [Date.now()],
+    );
+    await db.query(
+      `insert into public.shared_album_members
+         (id, album_id, user_id, display_name, role, created_at, updated_at)
+       values ('m-plan-paid-friend','alb-plan-paid',$1,'Friend','member',$2,$2)`,
+      [PLAN_PAID_FRIEND, Date.now()],
+    );
+    await db.query(
+      `insert into public.shared_album_members
+         (id, album_id, user_id, display_name, role, created_at, updated_at)
+       values ('m-plan-paid-third','alb-plan-paid',$1,'Third','member',$2,$2)`,
+      [PLAN_PAID_THIRD, Date.now()],
+    );
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.shared_album_members
+        where album_id = 'alb-plan-paid' and deleted_at is null`,
+    ),
+    3,
+    'both free-plan guests fit — the owner is the one who is paid',
+  );
 });
 
 summary();

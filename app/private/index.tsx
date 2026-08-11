@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Eye, EyeOff, Lock, Settings2, Sparkles } from 'lucide-react-native';
+import { Eye, EyeOff, Lock, Settings2, Sparkles, TrendingUp } from 'lucide-react-native';
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -10,6 +10,7 @@ import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
+import { usePlan } from '@/features/billing/hooks/use-billing';
 import {
   PRIVATE_MODULES,
   filterByRole,
@@ -42,6 +43,7 @@ export default function PrivateHomeScreen() {
   const setShowAllModules = usePrivateStore((s) => s.setShowAllModules);
   const lock = usePrivateStore((s) => s.lock);
   const gender = useProfileStore((s) => s.gender);
+  const { isPlus } = usePlan();
 
   useEffect(() => {
     if (!key) router.replace('/private/unlock');
@@ -219,6 +221,36 @@ export default function PrivateHomeScreen() {
             </Text>
           </Pressable>
         ) : null}
+
+        {/*
+          Reachable by everyone — the content behind it is what's gated
+          (insights.tsx), not the entry point itself. Hiding the row would
+          mean a free account never learns the feature exists at all.
+        */}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/private/insights')}
+          className={cardClass({ padding: 'rowLg' }, 'flex-row items-center gap-3')}
+        >
+          <TrendingUp size={19} color={theme.mutedForeground} />
+          <Text className="flex-1 font-sora-medium text-foreground">
+            {t('private.insightsTitle')}
+          </Text>
+          {!isPlus ? (
+            <View
+              className="rounded-full px-2 py-0.5"
+              style={{ backgroundColor: alpha(theme.accent, 0.14) }}
+            >
+              <Text
+                variant="caption"
+                className="font-sora-semibold"
+                style={{ color: theme.accent }}
+              >
+                {t('billing.plusBadge')}
+              </Text>
+            </View>
+          ) : null}
+        </Pressable>
 
         <Pressable
           accessibilityRole="button"

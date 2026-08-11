@@ -29,16 +29,31 @@ export type OnThisDayMatch = { photo: AlbumPhoto; yearsAgo: number };
  * Only ever looks at photos whose bytes have finished uploading
  * (`remotePath` set) — nothing here can decrypt anyway, decryption is the
  * caller's job once it has the album key.
+ *
+ * `maxYearsLookback` is the one knob a caller has: the screen that renders
+ * this is what decides how far back "on this day" is allowed to reach (see
+ * app/private/albums/[id].tsx, which passes a plan-gated value) — this
+ * function stays free of any notion of a plan, same as every other pure
+ * service in this codebase never importing billing. At 1, only the most
+ * recent exact-anniversary match is ever returned and the oldest-photo
+ * fallback is skipped entirely, since that fallback is itself a "look back
+ * further" feature.
  */
-export function onThisDay(photos: AlbumPhoto[], now = new Date()): OnThisDayMatch | null {
+export function onThisDay(
+  photos: AlbumPhoto[],
+  now = new Date(),
+  maxYearsLookback = 15,
+): OnThisDayMatch | null {
   const live = photos.filter((p) => p.remotePath !== null);
   if (live.length === 0) return null;
 
-  for (let years = 1; years <= 15; years += 1) {
+  for (let years = 1; years <= maxYearsLookback; years += 1) {
     const target = subYears(now, years);
     const match = live.find((p) => isSameDay(new Date(p.createdAt), target));
     if (match) return { photo: match, yearsAgo: years };
   }
+
+  if (maxYearsLookback <= 1) return null;
 
   const oldest = [...live].sort((a, b) => a.createdAt - b.createdAt)[0];
   const days = differenceInCalendarDays(now, new Date(oldest.createdAt));
