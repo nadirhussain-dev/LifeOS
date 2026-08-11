@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
-import { ShieldAlert, ToggleLeft, Users } from 'lucide-react-native';
-import { useState } from 'react';
+import { useRouter } from 'expo-router';
+import { CreditCard, ShieldAlert, ToggleLeft, UsersRound, Users } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Switch, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -14,6 +15,7 @@ import { HUB_SECTIONS } from '@/features/hub/config/modules';
 import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 import {
   fetchReportQueue,
+  isOwner,
   setModuleEnabled,
   type ReportQueueEntry,
 } from '@/features/operator/services/operator-repository';
@@ -42,7 +44,13 @@ import { toast } from '@/lib/toast-store';
 export default function OperatorConsoleScreen() {
   const { t } = useTranslation();
   const { c } = useTheme();
+  const router = useRouter();
   const queryClient = useQueryClient();
+  const [owner, setOwner] = useState(false);
+
+  useEffect(() => {
+    void isOwner().then(setOwner);
+  }, []);
 
   const queue = useQuery({
     queryKey: ['operator', 'queue'],
@@ -68,9 +76,47 @@ export default function OperatorConsoleScreen() {
           </View>
         ) : (
           <>
+            <View className="gap-2">
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/settings/operator/pricing')}
+                className={cardClass({ padding: 'rowLg' }, 'flex-row items-center gap-3')}
+              >
+                <CreditCard size={18} color={c.mutedForeground} />
+                <Text className="flex-1 font-sora-medium text-foreground">
+                  {t('billing.plans')}
+                </Text>
+              </Pressable>
+              {/* Owner-only, on purpose — see roster.tsx's header. Any other
+                  operator never learns this row exists, same discipline the
+                  console itself applies to accounts with no operator access
+                  at all. */}
+              {owner ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push('/settings/operator/roster')}
+                  className={cardClass({ padding: 'rowLg' }, 'flex-row items-center gap-3')}
+                >
+                  <UsersRound size={18} color={c.mutedForeground} />
+                  <Text className="flex-1 font-sora-medium text-foreground">
+                    {t('operator.operatorsTitle')}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+
             <ReportQueue
               entries={queue.data?.ok ? queue.data.data : []}
               loading={queue.isLoading}
+              onOpen={(entry) =>
+                router.push({
+                  pathname: '/settings/operator/account',
+                  params: {
+                    userId: entry.reportedUserId,
+                    label: entry.displayName ?? entry.username ?? '',
+                  },
+                })
+              }
             />
             <ModuleSwitches
               onChanged={() => {
@@ -93,7 +139,15 @@ export default function OperatorConsoleScreen() {
  * queue is already triaged, which is the difference between a moderator working
  * a list and a moderator reading a table.
  */
-function ReportQueue({ entries, loading }: { entries: ReportQueueEntry[]; loading: boolean }) {
+function ReportQueue({
+  entries,
+  loading,
+  onOpen,
+}: {
+  entries: ReportQueueEntry[];
+  loading: boolean;
+  onOpen: (entry: ReportQueueEntry) => void;
+}) {
   const { t } = useTranslation();
   const { c } = useTheme();
 
@@ -113,7 +167,12 @@ function ReportQueue({ entries, loading }: { entries: ReportQueueEntry[]; loadin
     <View className="gap-3">
       <Text variant="micro">{t('operator.reportQueue')}</Text>
       {entries.map((entry) => (
-        <View key={entry.reportedUserId} className={cardClass({ elevation: 'e1' }, 'gap-2')}>
+        <Pressable
+          key={entry.reportedUserId}
+          accessibilityRole="button"
+          onPress={() => onOpen(entry)}
+          className={cardClass({ elevation: 'e1' }, 'gap-2')}
+        >
           <View className="flex-row items-center gap-2">
             <ShieldAlert size={16} color={c.error} />
             <Text className="flex-1 font-sora-semibold text-foreground" numberOfLines={1}>
@@ -135,14 +194,14 @@ function ReportQueue({ entries, loading }: { entries: ReportQueueEntry[]; loadin
               {formatDistanceToNow(new Date(entry.latestAt), { addSuffix: true })}
             </Text>
           ) : null}
-          {/* The uuid, selectable, because acting on an account still means
-              running an RPC with it — the console shows the queue, it does not
-              yet replace every action behind it. Better to hand over the one
-              value needed than to pretend otherwise. */}
+          {/* The uuid, selectable — tapping the row now opens the account
+              (account.tsx), this is just the value the reports RPC needs
+              underneath, kept visible for anyone still working from it
+              directly. */}
           <Text variant="caption" selectable style={{ fontSize: 10.5 }}>
             {entry.reportedUserId}
           </Text>
-        </View>
+        </Pressable>
       ))}
     </View>
   );
@@ -236,10 +295,10 @@ function ModuleSwitches({ onChanged }: { onChanged: () => void }) {
         })}
       </View>
 
-      {/* Per-account overrides (0024) are deliberately not here. They need an
-          account to point at, and the honest place for that is the account's own
-          page — which is the next screen this console wants, not a uuid field
-          bolted to a global list. */}
+      {/* Per-account overrides (0024) live on the account's own page
+          (account.tsx, reached from a report-queue row), not here — they need
+          an account to point at, and that screen is what a uuid field bolted
+          to this global list used to stand in for. */}
       <Text variant="caption" className="px-1">
         {t('operator.perUserNote')}
       </Text>

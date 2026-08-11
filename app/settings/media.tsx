@@ -9,8 +9,8 @@ import { ProgressBar } from '@/components/ui/progress-bar';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { useAuthStore } from '@/features/auth/services/auth-store';
-import { STORAGE_PLANS, type StoragePlanId } from '@/features/billing/config/plans';
-import { usePlan, useSubscribeMutation } from '@/features/billing/hooks/use-billing';
+import { formatPrice, periodI18nKey, type StoragePlan } from '@/features/billing/config/plans';
+import { usePlan, usePlans, useSubscribeMutation } from '@/features/billing/hooks/use-billing';
 import { cachedBytes, clearMediaCache } from '@/features/media-sync/services/media-cache';
 import {
   countPendingMedia,
@@ -42,6 +42,7 @@ export default function MediaSettingsScreen() {
   const usage = useMediaSyncStore((s) => s.usage);
   const lastError = useMediaSyncStore((s) => s.lastError);
   const { planId } = usePlan();
+  const { data: plans = [] } = usePlans();
   const subscribe = useSubscribeMutation();
 
   const [pending, setPending] = useState(0);
@@ -69,8 +70,8 @@ export default function MediaSettingsScreen() {
       setCached(0);
     });
 
-  const choosePlan = (id: StoragePlanId) => {
-    if (!session || id === planId || subscribe.isPending) return;
+  const choosePlan = (plan: StoragePlan) => {
+    if (!session || plan.id === planId || subscribe.isPending) return;
     void confirm({
       title: t('billing.confirmTitle'),
       message: t('billing.confirmBody'),
@@ -78,7 +79,7 @@ export default function MediaSettingsScreen() {
       cancelLabel: t('common.cancel'),
     }).then((ok) => {
       if (!ok) return;
-      subscribe.mutate(id, {
+      subscribe.mutate(plan, {
         onSuccess: () => toast.success(t('billing.previewNotice')),
         onError: () => toast.error(t('errors.unknown')),
       });
@@ -164,7 +165,7 @@ export default function MediaSettingsScreen() {
             <Text variant="micro">{t('billing.plans')}</Text>
           </View>
           <View className="gap-2">
-            {STORAGE_PLANS.map((plan) => {
+            {plans.map((plan) => {
               const active = plan.id === planId;
               return (
                 <Pressable
@@ -172,7 +173,7 @@ export default function MediaSettingsScreen() {
                   accessibilityRole="radio"
                   accessibilityState={{ selected: active, disabled: !session }}
                   disabled={!session || subscribe.isPending}
-                  onPress={() => choosePlan(plan.id)}
+                  onPress={() => choosePlan(plan)}
                   className="flex-row items-center gap-3 rounded-2xl border px-4 py-3"
                   style={{
                     borderColor: active ? c.accent : c.border,
@@ -185,7 +186,7 @@ export default function MediaSettingsScreen() {
                       <Text className="font-sora-medium text-foreground">
                         {formatBytes(plan.storageBytes)}
                       </Text>
-                      {plan.badgeKey ? (
+                      {plan.badge ? (
                         <View
                           className="rounded-full px-2 py-0.5"
                           style={{ backgroundColor: alpha(c.accent, 0.16) }}
@@ -195,13 +196,13 @@ export default function MediaSettingsScreen() {
                             className="font-sora-semibold"
                             style={{ color: c.accent }}
                           >
-                            {t(plan.badgeKey)}
+                            {plan.badge === 'best_value' ? t('billing.bestValue') : plan.badge}
                           </Text>
                         </View>
                       ) : null}
                     </View>
                     <Text variant="caption">
-                      {plan.priceLabel} {t(plan.periodKey)}
+                      {formatPrice(plan.priceCents, plan.currency)} {t(periodI18nKey(plan.period))}
                     </Text>
                   </View>
                   {active ? <Check size={18} color={c.accent} /> : null}

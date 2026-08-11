@@ -4441,4 +4441,276 @@ await test('0032 the cap follows the album OWNER’s plan, not an invited member
   );
 });
 
+// ---------------------------------------------------------------------------
+console.log('\nadmin roster (0033)');
+// ---------------------------------------------------------------------------
+//
+// ADMIN already exists (inserted near the top of this file, role 'admin',
+// no `is_owner`) and is promoted to owner directly here — claim_owner()
+// itself can only run once, on a genuinely empty `admins` table, which this
+// point in the suite is not; that path gets its own destructive section at
+// the very end of this file, after everything that still needs ADMIN's
+// ordinary admin rights (billing plans, below) has already run.
+
+const ROSTER_STAFF = '99200000-0000-0000-0000-000000000001';
+const ROSTER_ADMIN2 = '99200000-0000-0000-0000-000000000002';
+const ROSTER_OUTSIDER = '99200000-0000-0000-0000-000000000003';
+
+await createUser(db, ROSTER_STAFF, 'roster-staff@example.com');
+await createUser(db, ROSTER_ADMIN2, 'roster-admin2@example.com');
+await createUser(db, ROSTER_OUTSIDER, 'roster-outsider@example.com');
+
+await db.query(`update public.admins set is_owner = true where user_id = $1`, [ADMIN]);
+
+await test('0033 the owner can add a staff operator by email', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_add_operator($1, 'staff')`, ['roster-staff@example.com']);
+  });
+  const row = await one(`select role, is_owner from public.admins where user_id = $1`, [
+    ROSTER_STAFF,
+  ]);
+  expectEqual(row.role, 'staff', 'added at the requested role');
+  expectEqual(row.is_owner, false, 'never becomes owner through this path');
+});
+
+await test('0033 a non-owner cannot add an operator', async () => {
+  await asUser(db, ROSTER_STAFF, async () => {
+    await expectRejection(
+      () =>
+        db.query(`select public.admin_add_operator($1, 'staff')`, ['roster-outsider@example.com']),
+      'only the owner',
+    );
+  });
+});
+
+await test('0033 the owner can change an operator’s role', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_set_operator_role($1, 'admin')`, [ROSTER_STAFF]);
+  });
+  expectEqual(
+    (await one(`select role from public.admins where user_id = $1`, [ROSTER_STAFF])).role,
+    'admin',
+    'promoted',
+  );
+});
+
+await test('0033 the owner’s own row cannot be re-roled or removed through the RPCs', async () => {
+  await asUser(db, ADMIN, async () => {
+    await expectRejection(
+      () => db.query(`select public.admin_set_operator_role($1, 'staff')`, [ADMIN]),
+      'owner’s role cannot be changed',
+    );
+    await expectRejection(
+      () => db.query(`select public.admin_remove_operator($1)`, [ADMIN]),
+      'owner cannot be removed',
+    );
+  });
+});
+
+await test('0033 admin_add_operator refuses to touch the owner’s row either', async () => {
+  await asUser(db, ADMIN, async () => {
+    await expectRejection(
+      () => db.query(`select public.admin_add_operator('admin@example.com', 'staff')`),
+      'owner’s role cannot be changed',
+    );
+  });
+});
+
+await test('0033 the owner can remove an operator', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_remove_operator($1)`, [ROSTER_STAFF]);
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.admins where user_id = $1`, [ROSTER_STAFF]),
+    0,
+    'gone from the roster',
+  );
+});
+
+await test('0033 any operator can list the roster, not only the owner', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_add_operator($1, 'staff')`, ['roster-staff@example.com']);
+  });
+  await asUser(db, ROSTER_STAFF, async () => {
+    const rows = (await db.query(`select * from public.admin_list_operators()`)).rows;
+    if (rows.length < 2) throw new Error('expected at least the owner and this staff member');
+    if (!rows.some((r) => r.is_owner)) throw new Error('the owner should be listed');
+  });
+});
+
+await test('0033 an outsider cannot reach any roster RPC', async () => {
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    await expectRejection(
+      () => db.query(`select public.admin_list_operators()`),
+      'not an operator',
+    );
+    await expectRejection(
+      () =>
+        db.query(`select public.admin_add_operator($1, 'staff')`, ['roster-admin2@example.com']),
+      'only the owner',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+console.log('\nbilling plans (0034)');
+// ---------------------------------------------------------------------------
+
+await test('0034 the seeded plans are readable by anyone signed in', async () => {
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.billing_plans where active`),
+      3,
+      'the three seeded plans',
+    );
+  });
+});
+
+await test('0034 only an admin can create or edit a plan', async () => {
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    await expectRejection(
+      () => db.query(`select public.admin_upsert_plan('plan-x','Test',1,100,'usd','month',null,9)`),
+      'not an administrator',
+    );
+  });
+  await asUser(db, ADMIN, async () => {
+    await db.query(
+      `select public.admin_upsert_plan('plan-x','Test',1073741824,299,'usd','month',null,9)`,
+    );
+  });
+  expectEqual(
+    (await one(`select price_cents from public.billing_plans where id = 'plan-x'`)).price_cents,
+    299,
+    'the new plan was created',
+  );
+});
+
+await test('0034 upsert edits an existing plan in place rather than duplicating it', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(
+      `select public.admin_upsert_plan('plan-x','Test v2',1073741824,399,'usd','month',null,9)`,
+    );
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.billing_plans where id = 'plan-x'`),
+    1,
+    'still one row',
+  );
+  expectEqual(
+    (await one(`select name, price_cents from public.billing_plans where id = 'plan-x'`))
+      .price_cents,
+    399,
+    'price updated',
+  );
+});
+
+await test('0034 a plan an admin just created is actually assignable via set_my_plan', async () => {
+  // Proves profiles.plan_id is now a real reference to billing_plans rather
+  // than the three-value check constraint 0031 originally wrote — an admin
+  // adding a fourth plan has to result in something a user can subscribe to.
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    await db.query(`select public.set_my_plan('plan-x', $1)`, [Date.now() + 30 * 86400000]);
+  });
+  expectEqual(
+    (await one(`select plan_id from public.profiles where id = $1`, [ROSTER_OUTSIDER])).plan_id,
+    'plan-x',
+    'assigned to the newly-created plan',
+  );
+  // Put it back, so later sections that assume ROSTER_OUTSIDER is on 'free'
+  // (there are none after this point, but this is the honest thing to do).
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    await db.query(`select public.set_my_plan('free', null)`);
+  });
+});
+
+await test('0034 set_my_plan refuses a plan id that does not exist', async () => {
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    await expectRejection(
+      () => db.query(`select public.set_my_plan('not-a-real-plan', null)`),
+      'unknown plan',
+    );
+  });
+});
+
+await test('0034 an archived plan is invisible to an ordinary account, visible to an admin', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_set_plan_active('plan-x', false)`);
+  });
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.billing_plans where id = 'plan-x'`),
+      0,
+      'hidden from an ordinary account',
+    );
+  });
+  await asUser(db, ADMIN, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.billing_plans where id = 'plan-x'`),
+      1,
+      'still visible to an admin, to be able to restore it',
+    );
+  });
+});
+
+await test('0034 a staff-tier operator cannot edit plans — only admin', async () => {
+  await asUser(db, ROSTER_STAFF, async () => {
+    await expectRejection(
+      () => db.query(`select public.admin_set_plan_active('plan-x', true)`),
+      'not an administrator',
+    );
+  });
+});
+
+await test('0034 an archived plan cannot be self-assigned, even though the row still exists', async () => {
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    await expectRejection(
+      () => db.query(`select public.set_my_plan('plan-x', null)`),
+      'unknown plan',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+console.log('\nowner bootstrap (0033, continued — destructive, kept last)');
+// ---------------------------------------------------------------------------
+//
+// Everything above this point in the whole suite needed ADMIN's ordinary
+// admin rights or the roster as already populated. Nothing after this point
+// does — this section empties `admins` entirely to exercise claim_owner()'s
+// actual guard ("does any row exist"), so it has to be the last thing that
+// runs.
+
+await test('0033 admin_has_owner reflects the roster truthfully', async () => {
+  expectEqual((await one(`select public.admin_has_owner() as v`)).v, true, 'an owner exists');
+});
+
+await test('0033 claim_owner refuses once an owner already exists', async () => {
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    await expectRejection(() => db.query(`select public.claim_owner()`), 'already has an owner');
+  });
+});
+
+await test('0033 claim_owner succeeds exactly once, for the first caller, on an empty roster', async () => {
+  await db.query(`delete from public.admins`);
+  expectEqual((await one(`select public.admin_has_owner() as v`)).v, false, 'roster is now empty');
+
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    await db.query(`select public.claim_owner()`);
+  });
+  const row = await one(`select role, is_owner from public.admins where user_id = $1`, [
+    ROSTER_OUTSIDER,
+  ]);
+  expectEqual(row.role, 'admin', 'the claimant becomes admin');
+  expectEqual(row.is_owner, true, 'and owner');
+  expectEqual(
+    await count(`select count(*)::int n from public.admins`),
+    1,
+    'the only row on the roster',
+  );
+
+  await asUser(db, ROSTER_ADMIN2, async () => {
+    await expectRejection(() => db.query(`select public.claim_owner()`), 'already has an owner');
+  });
+});
+
 summary();

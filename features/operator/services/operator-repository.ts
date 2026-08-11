@@ -34,6 +34,28 @@ export type OperatorReport = {
   createdAt: string;
 };
 
+export type UserDetail = {
+  userId: string;
+  email: string | null;
+  username: string | null;
+  displayName: string | null;
+  status: string;
+  statusReason: string | null;
+  statusExpiresAt: string | null;
+  statusAuto: boolean;
+};
+
+export type OperatorRole = 'staff' | 'admin';
+
+export type Operator = {
+  userId: string;
+  email: string | null;
+  displayName: string | null;
+  role: OperatorRole;
+  isOwner: boolean;
+  createdAt: string;
+};
+
 export type OperatorResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
 /** Whether this account can see any of it. Anything other than a clean `true`
@@ -43,6 +65,30 @@ export type OperatorResult<T> = { ok: true; data: T } | { ok: false; error: stri
 export async function isOperator(): Promise<boolean> {
   const { data, error } = await supabase.rpc('is_staff');
   return !error && data === true;
+}
+
+/** Same "anything but a clean true is no" discipline as `isOperator` — gates
+ *  the Operators (roster) and Pricing sections, and every mutation in
+ *  operator.tsx that would otherwise surface as a raw RPC rejection. */
+export async function isOwner(): Promise<boolean> {
+  const { data, error } = await supabase.rpc('is_owner');
+  return !error && data === true;
+}
+
+/**
+ * Whether the app has ever been claimed. Failing this open (assuming an
+ * owner already exists) is the safe direction: worst case the claim row
+ * stays hidden a little longer, rather than a transient error offering a
+ * claim that `claim_owner()` would refuse anyway.
+ */
+export async function hasOwner(): Promise<boolean> {
+  const { data, error } = await supabase.rpc('admin_has_owner');
+  return error ? true : data === true;
+}
+
+export async function claimOwner(): Promise<OperatorResult<null>> {
+  const { error } = await supabase.rpc('claim_owner');
+  return error ? { ok: false, error: friendly(error.message) } : { ok: true, data: null };
 }
 
 export async function fetchReportQueue(limit = 50): Promise<OperatorResult<ReportQueueEntry[]>> {
@@ -139,23 +185,139 @@ export async function setModuleEnabled(
   return error ? { ok: false, error: friendly(error.message) } : { ok: true, data: null };
 }
 
+/** Admin-tier only (0024) — a per-account override of a module switch,
+ *  independent of the global one `setModuleEnabled` touches. */
+export async function setUserModule(
+  userId: string,
+  module: string,
+  enabled: boolean,
+  note: string | null,
+): Promise<OperatorResult<null>> {
+  const { error } = await supabase.rpc('admin_set_user_module', {
+    p_user_id: userId,
+    p_module: module,
+    p_enabled: enabled,
+    p_note: note,
+  });
+  return error ? { ok: false, error: friendly(error.message) } : { ok: true, data: null };
+}
+
+/** Drops the override, returning the account to whatever the global switch says. */
+export async function clearUserModule(
+  userId: string,
+  module: string,
+): Promise<OperatorResult<null>> {
+  const { error } = await supabase.rpc('admin_clear_user_module', {
+    p_user_id: userId,
+    p_module: module,
+  });
+  return error ? { ok: false, error: friendly(error.message) } : { ok: true, data: null };
+}
+
 /**
- * The two refusals that matter, translated.
+ * Full account detail — admin-tier only (0012), unlike `fetchUserReports`,
+ * which staff can reach while a report is live. Every call is audited
+ * server-side on view, the same as `fetchUserReports`.
+ */
+export async function fetchUserDetail(userId: string): Promise<OperatorResult<UserDetail>> {
+  const { data, error } = await supabase.rpc('admin_user_detail', { p_user_id: userId });
+  if (error) return { ok: false, error: friendly(error.message) };
+
+  const row = ((data ?? [])[0] ?? {}) as Record<string, unknown>;
+  return {
+    ok: true,
+    data: {
+      userId: String(row.user_id ?? userId),
+      email: (row.email as string | null) ?? null,
+      username: (row.username as string | null) ?? null,
+      displayName: (row.display_name as string | null) ?? null,
+      status: String(row.status ?? 'active'),
+      statusReason: (row.status_reason as string | null) ?? null,
+      statusExpiresAt: (row.status_expires_at as string | null) ?? null,
+      statusAuto: row.status_auto === true,
+    },
+  };
+}
+
+// --- roster (owner-only mutations; any operator may list) -------------------
+
+export async function listOperators(): Promise<OperatorResult<Operator[]>> {
+  const { data, error } = await supabase.rpc('admin_list_operators');
+  if (error) return { ok: false, error: friendly(error.message) };
+
+  const rows = (data ?? []) as Record<string, unknown>[];
+  return {
+    ok: true,
+    data: rows.map((row) => ({
+      userId: String(row.user_id ?? ''),
+      email: (row.email as string | null) ?? null,
+      displayName: (row.display_name as string | null) ?? null,
+      role: (row.role as OperatorRole) ?? 'staff',
+      isOwner: row.is_owner === true,
+      createdAt: String(row.created_at ?? ''),
+    })),
+  };
+}
+
+export async function addOperator(
+  email: string,
+  role: OperatorRole,
+): Promise<OperatorResult<null>> {
+  const { error } = await supabase.rpc('admin_add_operator', { p_email: email, p_role: role });
+  return error ? { ok: false, error: friendly(error.message) } : { ok: true, data: null };
+}
+
+export async function setOperatorRole(
+  userId: string,
+  role: OperatorRole,
+): Promise<OperatorResult<null>> {
+  const { error } = await supabase.rpc('admin_set_operator_role', {
+    p_user_id: userId,
+    p_role: role,
+  });
+  return error ? { ok: false, error: friendly(error.message) } : { ok: true, data: null };
+}
+
+export async function removeOperator(userId: string): Promise<OperatorResult<null>> {
+  const { error } = await supabase.rpc('admin_remove_operator', { p_user_id: userId });
+  return error ? { ok: false, error: friendly(error.message) } : { ok: true, data: null };
+}
+
+/**
+ * The refusals that matter, translated.
  *
- * Both are the database working correctly, and both read as broken software if
- * passed through raw — "not an operator" on a screen the person just opened is
- * confusing unless it says why.
+ * All are the database working correctly, and all read as broken software if
+ * passed through raw. "Not an administrator" and "not an operator" are kept
+ * distinct on purpose — a staff account hitting an admin-only RPC (resolving
+ * a report, changing account status, the full user-detail view) does have
+ * operator access, just not that tier, and "this account does not have
+ * operator access" would be flatly wrong for them.
  */
 function friendly(message: string): string {
   const m = message.toLowerCase();
-  if (m.includes('not an operator') || m.includes('not an administrator')) {
+  if (m.includes('only the owner')) {
+    return 'Only the app’s owner can manage operators.';
+  }
+  if (m.includes('not an administrator')) {
+    return 'This needs full admin access — staff can view, but not act here.';
+  }
+  if (m.includes('not an operator')) {
     return 'This account does not have operator access.';
   }
-  if (m.includes('no open report')) {
+  if (m.includes('no open report') || m.includes('no live report')) {
     return 'Staff can only open an account while a live report names it. This one has none.';
   }
   if (m.includes('reason is required')) {
     return 'A reason of at least 8 characters is required, and it is written to the audit log.';
+  }
+  if (m.includes('already has an owner')) {
+    return 'This app already has an owner.';
+  }
+  if (m.includes('no account with that email')) {
+    return 'No account exists with that email.';
+  }
+  if (m.includes('owner') && (m.includes('cannot be removed') || m.includes('cannot be changed'))) {
+    return 'The owner’s own role can’t be changed here.';
   }
   return message;
 }
