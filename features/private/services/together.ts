@@ -1,4 +1,11 @@
-import { addYears, differenceInCalendarDays, isSameDay, parseISO, setYear, subYears } from 'date-fns';
+import {
+  addYears,
+  differenceInCalendarDays,
+  isSameDay,
+  parseISO,
+  setYear,
+  subYears,
+} from 'date-fns';
 
 import type { AlbumMilestone, AlbumPhoto } from '@/features/private/types/shared-album.types';
 
@@ -87,8 +94,9 @@ export function todaysMilestone<T extends AlbumMilestone>(
   now = new Date(),
 ): T | null {
   return (
-    milestones.find((m) => (m.recurring ? recurringMatch(m, now) : isSameDay(parseISO(m.milestoneDate), now))) ??
-    null
+    milestones.find((m) =>
+      m.recurring ? recurringMatch(m, now) : isSameDay(parseISO(m.milestoneDate), now),
+    ) ?? null
   );
 }
 

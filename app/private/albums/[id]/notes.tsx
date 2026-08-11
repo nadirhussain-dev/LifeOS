@@ -76,9 +76,7 @@ export default function AlbumNotesScreen() {
       tint={tint}
       footer={
         canSend ? (
-          <View
-            className="flex-row items-center gap-2 rounded-2xl border border-border px-3 py-2"
-          >
+          <View className="flex-row items-center gap-2 rounded-2xl border border-border px-3 py-2">
             <TextInput
               value={draft}
               onChangeText={setDraft}

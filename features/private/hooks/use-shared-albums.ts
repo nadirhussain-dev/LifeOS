@@ -348,8 +348,11 @@ export function useSharedAlbumMutations(albumId?: string) {
    *  mutation just calls the update and lets a non-owner's attempt come back
    *  as an error, same as every other owner-gated action here. */
   const setPermissions = useMutation({
-    mutationFn: (permissions: { allowComments?: boolean; allowChat?: boolean; allowNotes?: boolean }) =>
-      repo.setAlbumPermissions(albumId!, permissions),
+    mutationFn: (permissions: {
+      allowComments?: boolean;
+      allowChat?: boolean;
+      allowNotes?: boolean;
+    }) => repo.setAlbumPermissions(albumId!, permissions),
     onSuccess: invalidate,
   });
 

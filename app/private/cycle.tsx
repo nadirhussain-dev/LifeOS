@@ -10,7 +10,10 @@ import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { ChipRow, PrivateScreen } from '@/features/private/components/private-screen';
-import { CycleEntrySheet, type CycleEntryTarget } from '@/features/private/components/cycle-entry-sheet';
+import {
+  CycleEntrySheet,
+  type CycleEntryTarget,
+} from '@/features/private/components/cycle-entry-sheet';
 import { CycleHero } from '@/features/private/components/cycle-hero';
 import { CycleMonthStrip } from '@/features/private/components/cycle-month-strip';
 import { privateModule } from '@/features/private/config/private-modules';

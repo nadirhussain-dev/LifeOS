@@ -21,7 +21,12 @@ import { deleteVaultFile } from '@/features/private/services/vault-files';
  *  build (or missing a field this build now expects) must degrade to a
  *  usable entry rather than crashing the screen. Shared by `listCycleEntries`
  *  and `getCycleEntry` so the two can never drift on what "usable" means. */
-function normalise(r: Record<string, unknown>, id: string, createdAt: number, updatedAt: number): CycleEntry {
+function normalise(
+  r: Record<string, unknown>,
+  id: string,
+  createdAt: number,
+  updatedAt: number,
+): CycleEntry {
   return {
     id,
     createdAt,

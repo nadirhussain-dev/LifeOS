@@ -92,9 +92,7 @@ export const CycleEntrySheet = forwardRef<BottomSheetModal, Props>(function Cycl
   // state every time the caller hands it a new target.
   useEffect(() => {
     if (!target) return;
-    setFields(
-      isExisting(target) ? { ...target } : { ...emptyFields(target.date), ...target },
-    );
+    setFields(isExisting(target) ? { ...target } : { ...emptyFields(target.date), ...target });
   }, [target]);
 
   const renderBackdrop = useCallback(
@@ -151,7 +149,12 @@ export const CycleEntrySheet = forwardRef<BottomSheetModal, Props>(function Cycl
   // never confirmed can't lose bytes a cancel should have left untouched.
 
   const save = () => {
-    if (!isExisting(target!) && !fields.flow && fields.symptoms.length === 0 && !fields.note.trim()) {
+    if (
+      !isExisting(target!) &&
+      !fields.flow &&
+      fields.symptoms.length === 0 &&
+      !fields.note.trim()
+    ) {
       return;
     }
     onSave(fields, isExisting(target!) ? target!.id : null);
@@ -321,7 +324,11 @@ export const CycleEntrySheet = forwardRef<BottomSheetModal, Props>(function Cycl
           <Text variant="micro">{t('private.photos')}</Text>
           <View className="flex-row flex-wrap gap-2">
             {fields.photoFileNames.map((fileName) => (
-              <EntryPhotoThumb key={fileName} fileName={fileName} onRemove={() => removePhoto(fileName)} />
+              <EntryPhotoThumb
+                key={fileName}
+                fileName={fileName}
+                onRemove={() => removePhoto(fileName)}
+              />
             ))}
             <Pressable
               accessibilityRole="button"

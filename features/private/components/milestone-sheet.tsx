@@ -65,7 +65,12 @@ export const MilestoneSheet = forwardRef<BottomSheetModal, Props>(function Miles
 
   const add = () => {
     if (!title.trim() || !albumKey) return;
-    mutations.addMilestone.mutate({ title: title.trim(), milestoneDate: date, recurring, albumKey });
+    mutations.addMilestone.mutate({
+      title: title.trim(),
+      milestoneDate: date,
+      recurring,
+      albumKey,
+    });
     setTitle('');
   };
 
@@ -92,9 +97,7 @@ export const MilestoneSheet = forwardRef<BottomSheetModal, Props>(function Miles
                   {m.title ?? t('private.commentLocked')}
                 </Text>
                 <View className="flex-row items-center gap-1.5">
-                  <Text variant="caption">
-                    {format(parseISO(m.milestoneDate), 'd MMM yyyy')}
-                  </Text>
+                  <Text variant="caption">{format(parseISO(m.milestoneDate), 'd MMM yyyy')}</Text>
                   {m.recurring ? <Repeat size={11} color={theme.mutedForeground} /> : null}
                 </View>
               </View>

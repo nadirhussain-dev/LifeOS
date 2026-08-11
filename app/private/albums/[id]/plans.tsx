@@ -61,7 +61,12 @@ export default function AlbumPlansScreen() {
   const openFor = (event: DecryptedEvent | null) => {
     setTarget(
       event
-        ? { id: event.id, title: event.title ?? '', notes: event.notes ?? '', eventDate: event.eventDate }
+        ? {
+            id: event.id,
+            title: event.title ?? '',
+            notes: event.notes ?? '',
+            eventDate: event.eventDate,
+          }
         : { id: null, title: '', notes: '', eventDate: format(new Date(), 'yyyy-MM-dd') },
     );
     sheetRef.current?.present();
@@ -120,7 +125,13 @@ export default function AlbumPlansScreen() {
         </>
       )}
 
-      <PlanSheet ref={sheetRef} target={target} tint={tint} albumKey={albumKey ?? null} mutations={mutations} />
+      <PlanSheet
+        ref={sheetRef}
+        target={target}
+        tint={tint}
+        albumKey={albumKey ?? null}
+        mutations={mutations}
+      />
     </PrivateScreen>
   );
 }

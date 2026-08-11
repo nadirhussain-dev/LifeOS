@@ -141,10 +141,7 @@ export function dayOfCycle(periods: Period[], now = new Date()): number | null {
  * casing was typed first. Powers the tag input's autocomplete row — there is
  * no separate persisted "tag registry", this is the whole of it.
  */
-export function distinctTags(
-  entries: CycleEntry[],
-  field: 'customTags' | 'medications',
-): string[] {
+export function distinctTags(entries: CycleEntry[], field: 'customTags' | 'medications'): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   // entries is already newest-first (listCycleEntries sorts by date desc).

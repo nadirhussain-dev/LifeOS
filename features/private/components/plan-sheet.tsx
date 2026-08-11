@@ -109,7 +109,9 @@ export const PlanSheet = forwardRef<BottomSheetModal, Props>(function PlanSheet(
     >
       <BottomSheetScrollView contentContainerClassName="gap-4 px-5 pb-10 pt-2">
         <View className="flex-row items-center justify-between">
-          <Text variant="subheading">{target?.id ? t('private.editPlan') : t('private.newPlan')}</Text>
+          <Text variant="subheading">
+            {target?.id ? t('private.editPlan') : t('private.newPlan')}
+          </Text>
           <AlbumDateField value={eventDate} onChange={setEventDate} />
         </View>
 
