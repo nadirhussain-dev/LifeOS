@@ -33,6 +33,10 @@ export const AD_PLACEMENTS = [
   'gallery-bottom',
   'tasks-bottom',
   'habits-bottom',
+  'journal-bottom',
+  'notes-bottom',
+  'goals-bottom',
+  'budget-bottom',
 ] as const;
 
 export type AdPlacement = (typeof AD_PLACEMENTS)[number];

@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { contentTints, moduleTint, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
+import { AdSlot } from '@/features/ads/components/ad-slot';
 import { GOAL_CATEGORIES } from '@/features/goals/config/goal-categories';
 import { GoalCard } from '@/features/goals/components/goal-card';
 import { GoalsStatsHeader } from '@/features/goals/components/goals-stats-header';
@@ -152,6 +153,11 @@ export default function GoalsScreen() {
           renderItem={({ item }) => (
             <GoalCard goal={item} onPress={(goal) => router.push(`/goals/${goal.id}`)} />
           )}
+          ListFooterComponent={
+            <View className="pt-4">
+              <AdSlot placement="goals-bottom" />
+            </View>
+          }
         />
       )}
 

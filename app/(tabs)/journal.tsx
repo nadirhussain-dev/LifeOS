@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { colors, streakColor } from '@/constants/theme';
+import { AdSlot } from '@/features/ads/components/ad-slot';
 import { DayCard } from '@/features/journal/components/day-card';
 import { MoodMonthStrip } from '@/features/journal/components/mood-month-strip';
 import { useJournalMonth, useJournalStreak } from '@/features/journal/hooks/use-journal';
@@ -98,6 +99,11 @@ export default function JournalScreen() {
           renderItem={({ item: entry }) => (
             <DayCard entry={entry} onPress={() => router.push(`/journal/${entry.entryDate}`)} />
           )}
+          ListFooterComponent={
+            <View className="px-5 pt-4">
+              <AdSlot placement="journal-bottom" />
+            </View>
+          }
         />
       )}
     </View>
