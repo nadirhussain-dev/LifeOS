@@ -2124,8 +2124,6 @@
   },
   "ads": {
     "eyebrow": "Ad",
-    "placeholderLabel": "Advertisement placeholder",
-    "placeholderBody": "This space will show an ad on the free plan. Nothing is loaded from a network yet — this is a preview of where one will sit.",
     "removeWithPlus": "Remove ads with Plus"
   }
 }

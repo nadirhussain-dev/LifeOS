@@ -63,6 +63,7 @@ import { useSyncTrigger } from '@/features/sync/hooks/use-sync';
 import { SyncStatusBridge } from '@/features/sync/components/sync-status-bridge';
 import { colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { initAds } from '@/lib/ads-init';
 import { configureAndroidChannels, configureNotificationHandler } from '@/lib/notifications';
 import { queryClient } from '@/lib/query-client';
 import { initSentry } from '@/lib/sentry';
@@ -71,6 +72,10 @@ SplashScreen.preventAutoHideAsync();
 
 // Route caught errors to Sentry when a DSN is configured (no-op otherwise).
 initSentry();
+
+// Google Mobile Ads SDK — see features/ads/config.ts for the placement
+// rules and lib/ads-init.ts for why this is safe to call unconditionally.
+initAds();
 
 // Without a handler, expo-notifications suppresses notifications delivered
 // while the app is foregrounded — water reminders should still show even if
