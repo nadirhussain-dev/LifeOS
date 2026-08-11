@@ -83,6 +83,7 @@ export default function VaultScreen() {
 
   return (
     <PrivateScreen
+      moduleId="vault"
       title={t('private.vaultTitle')}
       subtitle={t('private.itemCount', { count: items.length })}
       tint={tint}

@@ -177,7 +177,7 @@ export default function SharedAlbumMembersScreen() {
     });
 
   return (
-    <PrivateScreen title={t('private.members')} tint={tint}>
+    <PrivateScreen moduleId="shared-albums" title={t('private.members')} tint={tint}>
       <View className={cardClass({ padding: 'none' }, 'px-4')}>
         {members.map((member, index) => {
           const label = member.displayName || member.email || t('split.someone');

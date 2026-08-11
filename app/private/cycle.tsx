@@ -83,6 +83,7 @@ export default function CycleScreen() {
 
   return (
     <PrivateScreen
+      moduleId="cycle"
       title={t('private.cycleTitle')}
       subtitle={t('private.cycleSubtitle')}
       tint={tint}

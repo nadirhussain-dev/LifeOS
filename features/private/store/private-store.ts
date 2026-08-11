@@ -2,8 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { PRIVATE_MODULES, type PrivateModuleId } from '@/features/private/config/private-modules';
+import {
+  filterByRole,
+  PRIVATE_MODULES,
+  type PrivateModuleId,
+} from '@/features/private/config/private-modules';
 import type { VaultSpace } from '@/features/private/services/vault-keys';
+import { useProfileStore } from '@/features/profile/store/profile-store';
 
 /**
  * Two kinds of state, deliberately kept apart.
@@ -207,10 +212,18 @@ const REAL_SPACE_ONLY_MODULES = new Set(
  * device — so anything marked `requiresRealSpace` is filtered out here
  * whenever `space !== 'real'`, on top of the card being hidden. This is the
  * fix for that gap; see private-modules.ts's header for the full reasoning.
+ *
+ * Also re-applies `filterByRole()` rather than trusting `enabledModules` on
+ * its own — that list can hold a hard-gated module (e.g. Cycle) from a time
+ * `showAllModules` was briefly turned on, since toggling it back off never
+ * removes anything already enabled. Without this, a stale entry would keep
+ * resurfacing here even though the home grid stopped showing its card.
  */
 export function visiblePrivateModules(): PrivateModuleId[] {
   const state = usePrivateStore.getState();
   if (!state.key) return [];
-  if (state.space === 'real') return state.enabledModules;
-  return state.enabledModules.filter((id) => !REAL_SPACE_ONLY_MODULES.has(id));
+  const gender = useProfileStore.getState().gender;
+  const roleVisible = filterByRole(state.enabledModules, gender, state.showAllModules);
+  if (state.space === 'real') return roleVisible;
+  return roleVisible.filter((id) => !REAL_SPACE_ONLY_MODULES.has(id));
 }
