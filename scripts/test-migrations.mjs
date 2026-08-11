@@ -4310,6 +4310,221 @@ await test('0029 chat: off by default, owner-only to enable, then open to member
 });
 
 // ---------------------------------------------------------------------------
+console.log('\nshared plans (0038)');
+// ---------------------------------------------------------------------------
+//
+// Reuses alb-together (ALBUM_OWNER/ALBUM_THIRD/ALBUM_PARTNER members,
+// ALBUM_OUTSIDER not a member) from the 0029 suite above — no allow_plans
+// flag exists, so unlike comments this needs no "turn it on" step.
+
+await test('0038 any member can add a shared plan — no flag required', async () => {
+  await asUser(db, ALBUM_THIRD, async () => {
+    await db.query(
+      `insert into public.shared_album_events
+         (id, album_id, title_ciphertext, event_date, author_id, created_at, updated_at)
+       values ('evt-third','alb-together','cipher:trip','2026-09-01',$1,$2,$2)`,
+      [ALBUM_THIRD, Date.now()],
+    );
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.shared_album_events where id = 'evt-third'`),
+    1,
+    'plan stored',
+  );
+});
+
+await test('0038 a non-member cannot read or add a shared plan', async () => {
+  await asUser(db, ALBUM_OUTSIDER, async () => {
+    expectEqual(
+      await count(
+        `select count(*)::int n from public.shared_album_events where album_id = 'alb-together'`,
+      ),
+      0,
+      'invisible to a non-member',
+    );
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.shared_album_events
+             (id, album_id, title_ciphertext, event_date, author_id, created_at, updated_at)
+           values ('evt-outsider','alb-together','cipher:x','2026-09-01',$1,$2,$2)`,
+          [ALBUM_OUTSIDER, Date.now()],
+        ),
+      'row-level security',
+    );
+  });
+});
+
+await test('0038 a fellow member cannot edit someone else’s plan, but the owner can', async () => {
+  await asUser(db, ALBUM_PARTNER, async () => {
+    await db.query(
+      `update public.shared_album_events set title_ciphertext = 'cipher:hijacked', updated_at = $1
+        where id = 'evt-third'`,
+      [Date.now()],
+    );
+  });
+  expectEqual(
+    (await one(`select title_ciphertext from public.shared_album_events where id = 'evt-third'`))
+      .title_ciphertext,
+    'cipher:trip',
+    'a fellow member’s edit did not take',
+  );
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(
+      `update public.shared_album_events set deleted_at = $1, updated_at = $1 where id = 'evt-third'`,
+      [Date.now()],
+    );
+  });
+  expectEqual(
+    (await one(`select deleted_at from public.shared_album_events where id = 'evt-third'`))
+      .deleted_at === null,
+    false,
+    'owner moderation soft-deleted it',
+  );
+});
+
+// ---------------------------------------------------------------------------
+console.log('\ncustom milestones (0039)');
+// ---------------------------------------------------------------------------
+
+await test('0039 any member can add a milestone — no flag required', async () => {
+  await asUser(db, ALBUM_PARTNER, async () => {
+    await db.query(
+      `insert into public.shared_album_milestones
+         (id, album_id, title_ciphertext, milestone_date, recurring, author_id, created_at, updated_at)
+       values ('mst-partner','alb-together','cipher:anniv','2026-06-01',true,$1,$2,$2)`,
+      [ALBUM_PARTNER, Date.now()],
+    );
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.shared_album_milestones where id = 'mst-partner'`,
+    ),
+    1,
+    'milestone stored',
+  );
+});
+
+await test('0039 a non-member cannot read or add a milestone', async () => {
+  await asUser(db, ALBUM_OUTSIDER, async () => {
+    expectEqual(
+      await count(
+        `select count(*)::int n from public.shared_album_milestones where album_id = 'alb-together'`,
+      ),
+      0,
+      'invisible to a non-member',
+    );
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.shared_album_milestones
+             (id, album_id, title_ciphertext, milestone_date, author_id, created_at, updated_at)
+           values ('mst-outsider','alb-together','cipher:x','2026-06-01',$1,$2,$2)`,
+          [ALBUM_OUTSIDER, Date.now()],
+        ),
+      'row-level security',
+    );
+  });
+});
+
+await test('0039 the owner can moderate a milestone they did not create', async () => {
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(
+      `update public.shared_album_milestones set deleted_at = $1, updated_at = $1
+        where id = 'mst-partner'`,
+      [Date.now()],
+    );
+  });
+  expectEqual(
+    (await one(`select deleted_at from public.shared_album_milestones where id = 'mst-partner'`))
+      .deleted_at === null,
+    false,
+    'owner moderation soft-deleted it',
+  );
+});
+
+// ---------------------------------------------------------------------------
+console.log('\nshared notes (0040)');
+// ---------------------------------------------------------------------------
+
+await test('0040 notes are off by default, independent of comments/chat already being on', async () => {
+  const row = await one(`select allow_notes from public.shared_albums where id = 'alb-together'`);
+  expectEqual(row.allow_notes, false, 'notes default off even though comments/chat are on by now');
+  await asUser(db, ALBUM_THIRD, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.shared_album_notes
+             (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at)
+           values ('note-early','alb-together',$1,'Third','cipher:hi',$2,$2)`,
+          [ALBUM_THIRD, Date.now()],
+        ),
+      'row-level security',
+    );
+  });
+});
+
+await test('0040 only the owner can turn notes on, then a member can post', async () => {
+  await asUser(db, ALBUM_THIRD, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `update public.shared_albums set allow_notes = true, updated_at = $1 where id = 'alb-together'`,
+          [Date.now()],
+        ),
+      'only the album owner',
+    );
+  });
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(
+      `update public.shared_albums set allow_notes = true, updated_at = $1 where id = 'alb-together'`,
+      [Date.now()],
+    );
+  });
+  await asUser(db, ALBUM_THIRD, async () => {
+    await db.query(
+      `insert into public.shared_album_notes
+         (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at)
+       values ('note-third','alb-together',$1,'Third','cipher:hi',$2,$2)`,
+      [ALBUM_THIRD, Date.now()],
+    );
+  });
+  await asUser(db, ALBUM_PARTNER, async () => {
+    expectEqual(
+      await count(
+        `select count(*)::int n from public.shared_album_notes where album_id = 'alb-together'`,
+      ),
+      1,
+      'a fellow member can read it',
+    );
+  });
+  await asUser(db, ALBUM_OUTSIDER, async () => {
+    expectEqual(
+      await count(
+        `select count(*)::int n from public.shared_album_notes where album_id = 'alb-together'`,
+      ),
+      0,
+      'a non-member cannot',
+    );
+  });
+});
+
+await test('0040 the owner can moderate a note they did not write', async () => {
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(
+      `update public.shared_album_notes set deleted_at = $1, updated_at = $1 where id = 'note-third'`,
+      [Date.now()],
+    );
+  });
+  expectEqual(
+    (await one(`select deleted_at from public.shared_album_notes where id = 'note-third'`))
+      .deleted_at === null,
+    false,
+    'owner moderation soft-deleted it',
+  );
+});
+
+// ---------------------------------------------------------------------------
 console.log('\nbilling plan (0031) + shared-album plan limits (0032)');
 // ---------------------------------------------------------------------------
 

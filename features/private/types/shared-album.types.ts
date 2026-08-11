@@ -12,6 +12,11 @@ export type SharedAlbum = {
    *  hides an existing thread. */
   allowComments: boolean;
   allowChat: boolean;
+  /** Same shape as allowComments/allowChat, added by migration 0040 for
+   *  Shared Notes — a separate flag rather than reusing allow_comments,
+   *  since photo commentary and relationship notes are different enough in
+   *  intent that a couple may want them toggled independently. */
+  allowNotes: boolean;
 };
 
 export type AlbumRole = 'owner' | 'member';
@@ -93,6 +98,49 @@ export type AlbumMessage = {
   authorId: string | null;
   authorName: string | null;
   bodyCiphertext: string;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt: number | null;
+};
+
+/** A shared plan: something the two of you mean to do, on a date. Migration
+ *  0038. `eventDate` is plaintext (yyyy-MM-dd) — see that migration's header
+ *  for why the date half of this content isn't sealed like the title. */
+export type AlbumEvent = {
+  id: string;
+  albumId: string;
+  titleCiphertext: string;
+  notesCiphertext: string | null;
+  eventDate: string;
+  authorId: string | null;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt: number | null;
+};
+
+/** A custom, dated anniversary — alongside the day-count milestones
+ *  TOGETHER_MILESTONES already computes from the album's own age. Migration
+ *  0039. */
+export type AlbumMilestone = {
+  id: string;
+  albumId: string;
+  titleCiphertext: string;
+  milestoneDate: string;
+  recurring: boolean;
+  authorId: string | null;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt: number | null;
+};
+
+/** A freeform shared note — same ciphertext shape as AlbumComment, minus a
+ *  photo to hang off of. Migration 0040. */
+export type AlbumNote = {
+  id: string;
+  albumId: string;
+  bodyCiphertext: string;
+  authorId: string | null;
+  authorName: string | null;
   createdAt: number;
   updatedAt: number;
   deletedAt: number | null;
