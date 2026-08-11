@@ -39,8 +39,33 @@ export const SEGMENT_TO_MODULE: Record<string, string> = {
 };
 
 /** The module a path belongs to, or null for routes that belong to none
- * (auth, onboarding, the private space's own screens). */
+ * (auth, onboarding, the private space's own screens — see
+ * `privateModuleForPath` below for those). */
 export function moduleForPath(pathname: string): string | null {
   const segment = pathname.split('?')[0].split('/').filter(Boolean)[0] ?? '';
   return SEGMENT_TO_MODULE[segment] ?? null;
+}
+
+/**
+ * The private module (private-modules.ts's `PrivateModuleId`) a `/private/*`
+ * path belongs to, or null for the private space's own non-module screens
+ * (home, settings, unlock, insights, transfer/receive).
+ *
+ * A second, private-specific map rather than folding these into
+ * `SEGMENT_TO_MODULE`: that map keys on the route's first segment alone, and
+ * every private route's first segment is `"private"` — a second segment is
+ * needed to tell `cycle` from `vault` from `recovery` apart.
+ */
+const PRIVATE_SEGMENT_TO_MODULE: Record<string, string> = {
+  cycle: 'cycle',
+  recovery: 'recovery',
+  intimacy: 'intimacy',
+  vault: 'vault',
+  albums: 'shared-albums',
+};
+
+export function privateModuleForPath(pathname: string): string | null {
+  const segments = pathname.split('?')[0].split('/').filter(Boolean);
+  if (segments[0] !== 'private') return null;
+  return PRIVATE_SEGMENT_TO_MODULE[segments[1] ?? ''] ?? null;
 }
