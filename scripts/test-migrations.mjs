@@ -3537,10 +3537,15 @@ await test('0026 the quota is enforced on the server', async () => {
   // modified the client. This is the one that costs money.
   const M5 = 'aaaabbbb-0000-0000-0000-000000000005';
   await createUser(db, M5, 'media5@example.com');
+  let quota;
   await asUser(db, M5, async () => {
     await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+    // Queried as M5, not the harness's own connection: since 0037,
+    // media_quota_bytes() reads the CALLER's plan, so evaluating it outside
+    // asUser() would silently see no signed-in account and fall back to the
+    // free-plan number instead of M5's real (much larger) plus quota.
+    quota = Number((await one(`select public.media_quota_bytes() as q`)).q);
   });
-  const quota = Number((await one(`select public.media_quota_bytes() as q`)).q);
 
   await asUser(db, M5, async () => {
     await put(M5, 'gallery_photos/big.jpg', quota - 100);
@@ -4051,7 +4056,12 @@ await test('0028 the uploader is stamped from auth.uid(), never trusted from cli
 });
 
 await test('0028 the shared-albums quota is enforced on the server, sharing the media cap', async () => {
-  const quota = Number((await one(`select public.media_quota_bytes() as q`)).q);
+  let quota;
+  await asUser(db, ALBUM_PEST, async () => {
+    // Queried as ALBUM_PEST — see the matching comment on the 0026 quota test:
+    // since 0037, media_quota_bytes() reads the CALLER's plan.
+    quota = Number((await one(`select public.media_quota_bytes() as q`)).q);
+  });
   await asUser(db, ALBUM_PEST, async () => {
     // Already used 1024 + 2048 bytes above under this same uploader.
     await putAlbumObject('alb-pest', 'big.bin', quota - 3072 - 100);
@@ -4739,13 +4749,75 @@ await test('0035 upgrading lifts the block, still bounded by the existing byte q
     'upload succeeded once on a paid plan',
   );
 
-  const quota = Number((await one(`select public.media_quota_bytes() as q`)).q);
+  let quota;
+  await asUser(db, MEDIA_PLAN_FREE, async () => {
+    // Queried as MEDIA_PLAN_FREE (now on plus_monthly), not the harness's own
+    // connection — see the matching comment on the 0026 quota test above.
+    quota = Number((await one(`select public.media_quota_bytes() as q`)).q);
+  });
   await asUser(db, MEDIA_PLAN_FREE, async () => {
     await expectRejection(
       () => put(MEDIA_PLAN_FREE, 'gallery_photos/over.jpg', quota),
       'media storage quota exceeded',
     );
   });
+});
+
+// ---------------------------------------------------------------------------
+console.log('\nmedia quota follows the plan (0037)');
+// ---------------------------------------------------------------------------
+
+await test('0037 a free account’s quota matches the seeded free plan row', async () => {
+  const QUOTA_FREE = '99400000-0000-0000-0000-000000000001';
+  await createUser(db, QUOTA_FREE, 'quota-free@example.com');
+  await asUser(db, QUOTA_FREE, async () => {
+    const quota = Number((await one(`select public.media_quota_bytes() as q`)).q);
+    const seeded = Number(
+      (await one(`select storage_bytes as b from public.billing_plans where id = 'free'`)).b,
+    );
+    expectEqual(quota, seeded, 'a free account’s quota is billing_plans’ free row, live');
+    expectEqual(quota, 52428800, '50 MB');
+  });
+});
+
+await test('0037 a paid account’s quota is the plan’s, not the old flat constant', async () => {
+  const QUOTA_PLUS = '99400000-0000-0000-0000-000000000002';
+  await createUser(db, QUOTA_PLUS, 'quota-plus@example.com');
+  await asUser(db, QUOTA_PLUS, async () => {
+    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+    const quota = Number((await one(`select public.media_quota_bytes() as q`)).q);
+    // Before 0037 this was hardcoded to 150 MiB (0030) for every account —
+    // paying for Plus bought nothing. It has to actually be the 50 GB the
+    // pricing table promises now.
+    expectEqual(quota, 53687091200, '50 GB, not the free tier’s number');
+  });
+});
+
+await test('0037 raising the free plan’s price live raises what a free account sees', async () => {
+  // Proves the lookup is live against billing_plans, not cached at CREATE
+  // time — the whole point of replacing a hardcoded constant.
+  const QUOTA_LIVE = '99400000-0000-0000-0000-000000000003';
+  await createUser(db, QUOTA_LIVE, 'quota-live@example.com');
+  await asUser(db, ADMIN, async () => {
+    await db.query(
+      `select public.admin_upsert_plan('free', 'Free', $1, 0, 'usd', 'free', null, 0)`,
+      [104857600], // 100 MB, temporarily
+    );
+  });
+  try {
+    await asUser(db, QUOTA_LIVE, async () => {
+      const quota = Number((await one(`select public.media_quota_bytes() as q`)).q);
+      expectEqual(quota, 104857600, 'reflects the just-edited plan, not a stale 50 MB');
+    });
+  } finally {
+    // Restore, so no later test in the suite inherits this edit.
+    await asUser(db, ADMIN, async () => {
+      await db.query(
+        `select public.admin_upsert_plan('free', 'Free', $1, 0, 'usd', 'free', null, 0)`,
+        [52428800],
+      );
+    });
+  }
 });
 
 // ---------------------------------------------------------------------------

@@ -43,7 +43,10 @@ export const STORAGE_PLANS: StoragePlan[] = [
   {
     id: 'free',
     name: 'Free',
-    storageBytes: 150 * MB,
+    // Mirrors billing_plans's seeded 'free' row — see 0037_media_quota_from_
+    // plan.sql for why 50MB and where it's actually enforced (shared albums;
+    // cloud media backup itself requires a paid plan outright, per 0035).
+    storageBytes: 50 * MB,
     priceCents: 0,
     currency: 'usd',
     period: 'free',
