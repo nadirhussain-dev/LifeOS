@@ -66,9 +66,7 @@ export default function OperatorUsersScreen() {
       </View>
 
       <View className="px-5 pb-3">
-        <View
-          className={cardClass({ padding: 'none' }, 'flex-row items-center gap-2 px-4 py-3')}
-        >
+        <View className={cardClass({ padding: 'none' }, 'flex-row items-center gap-2 px-4 py-3')}>
           <Search size={16} color={c.mutedForeground} />
           <TextInput
             value={query}

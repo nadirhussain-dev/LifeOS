@@ -208,7 +208,8 @@ export default function SharedAlbumScreen() {
   }
 
   return (
-    <PrivateScreen moduleId="shared-albums"
+    <PrivateScreen
+      moduleId="shared-albums"
       title={locked ? t('private.albumLockedTitle') : (name ?? '')}
       subtitle={t('private.itemCount', { count: photos.length })}
       tint={tint}

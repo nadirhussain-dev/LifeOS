@@ -146,7 +146,8 @@ export default function AcceptAlbumInviteScreen() {
 
   if (phase === 'ready' || phase === 'joining') {
     return (
-      <PrivateScreen moduleId="shared-albums"
+      <PrivateScreen
+        moduleId="shared-albums"
         title={t('private.acceptAlbumTitle')}
         tint={c.accent}
         footer={
@@ -165,7 +166,8 @@ export default function AcceptAlbumInviteScreen() {
   }
 
   return (
-    <PrivateScreen moduleId="shared-albums"
+    <PrivateScreen
+      moduleId="shared-albums"
       title={t('private.acceptAlbumTitle')}
       tint={c.accent}
       footer={
