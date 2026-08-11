@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
-import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
+import type * as GoogleMobileAdsModule from 'react-native-google-mobile-ads';
 
 import { Text } from '@/components/ui/text';
 import { useAuthStore } from '@/features/auth/services/auth-store';
@@ -12,6 +12,33 @@ import type { AdPlacement } from '@/features/ads/config';
 import { useTheme } from '@/hooks/use-theme';
 
 type Props = { placement: AdPlacement };
+
+// Loaded lazily via `require()`, guarded by try/catch, rather than a static
+// ES `import` at the top of this file — a static import is evaluated (and
+// can throw) the instant anything imports this file, which would crash the
+// whole app rather than just this ad slot. That's not hypothetical: a still
+// -open upstream bug (the JS spec calls `TurboModuleRegistry.getEnforcing`,
+// but the Android native module is a legacy bridge module, not a real
+// TurboModule) throws on New Architecture today —
+// https://github.com/invertase/react-native-google-mobile-ads/issues/676
+// Resolved once, cached, so every AdSlot instance shares one outcome.
+let adsModule: typeof GoogleMobileAdsModule | null | undefined;
+function loadAdsModule(): typeof GoogleMobileAdsModule | null {
+  if (adsModule === undefined) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      adsModule = require('react-native-google-mobile-ads');
+    } catch {
+      adsModule = null;
+    }
+  }
+  // TS can't carry the narrowing on a module-scope `let` across the
+  // try/catch above out to here, even though both branches always leave it
+  // `typeof GoogleMobileAdsModule | null` — never `undefined` — by the time
+  // execution reaches this line. `?? null` says so explicitly instead of
+  // widening the return type to admit a value this function never returns.
+  return adsModule ?? null;
+}
 
 /**
  * One ad slot — see config.ts for the placement list, the "never in
@@ -44,8 +71,12 @@ export function AdSlot({ placement }: Props) {
   const checkedAt = useBillingStore((s) => s.checkedAt);
   const [failed, setFailed] = useState(false);
 
-  if (isPlus || failed) return null;
+  const mod = loadAdsModule();
+
+  if (isPlus || failed || !mod) return null;
   if (session && checkedAt === null) return null;
+
+  const { BannerAd, BannerAdSize, TestIds } = mod;
 
   return (
     <View className="items-center gap-2" testID={`ad-slot-${placement}`}>
