@@ -22,12 +22,17 @@
  * Never placed inside `/private/*`. That surface holds cycle, recovery,
  * intimacy and vault data; an ad SDK — even this mock, which is explicitly
  * a preview of where a real one would eventually sit — has no business
- * anywhere near it, full stop. Enforced by convention (only two call sites
- * exist, both outside the private space) rather than a runtime route check,
- * because the honest fix for "don't put ads in the private space" is to
- * never write the call site, not to add a guard a future edit could route
- * around.
+ * anywhere near it, full stop. Enforced by convention (every call site below
+ * lives on an ordinary tab screen — Hub, Gallery, Tasks, Habits — none of
+ * them under `/private/*`) rather than a runtime route check, because the
+ * honest fix for "don't put ads in the private space" is to never write the
+ * call site, not to add a guard a future edit could route around.
  */
-export const AD_PLACEMENTS = ['hub-bottom', 'gallery-bottom'] as const;
+export const AD_PLACEMENTS = [
+  'hub-bottom',
+  'gallery-bottom',
+  'tasks-bottom',
+  'habits-bottom',
+] as const;
 
 export type AdPlacement = (typeof AD_PLACEMENTS)[number];
