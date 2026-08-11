@@ -122,7 +122,7 @@ export default function AcceptAlbumInviteScreen() {
 
   if (space !== 'real') {
     return (
-      <PrivateScreen title={t('private.acceptAlbumTitle')} tint={c.accent}>
+      <PrivateScreen moduleId="shared-albums" title={t('private.acceptAlbumTitle')} tint={c.accent}>
         <Text variant="muted">{t('private.albumsRealSpaceOnly')}</Text>
       </PrivateScreen>
     );
@@ -130,7 +130,7 @@ export default function AcceptAlbumInviteScreen() {
 
   if (phase === 'failed') {
     return (
-      <PrivateScreen title={t('private.acceptAlbumTitle')} tint={c.accent}>
+      <PrivateScreen moduleId="shared-albums" title={t('private.acceptAlbumTitle')} tint={c.accent}>
         <Text variant="muted">{t(failureKey)}</Text>
       </PrivateScreen>
     );
@@ -138,7 +138,7 @@ export default function AcceptAlbumInviteScreen() {
 
   if (phase === 'loading') {
     return (
-      <PrivateScreen title={t('private.acceptAlbumTitle')} tint={c.accent}>
+      <PrivateScreen moduleId="shared-albums" title={t('private.acceptAlbumTitle')} tint={c.accent}>
         {null}
       </PrivateScreen>
     );
@@ -147,6 +147,7 @@ export default function AcceptAlbumInviteScreen() {
   if (phase === 'ready' || phase === 'joining') {
     return (
       <PrivateScreen
+        moduleId="shared-albums"
         title={t('private.acceptAlbumTitle')}
         tint={c.accent}
         footer={
@@ -166,6 +167,7 @@ export default function AcceptAlbumInviteScreen() {
 
   return (
     <PrivateScreen
+      moduleId="shared-albums"
       title={t('private.acceptAlbumTitle')}
       tint={c.accent}
       footer={

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
+import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 import { PinPad } from '@/features/private/components/pin-pad';
 import { VaultSealTransition } from '@/features/private/components/vault-seal-transition';
 import {
@@ -53,9 +54,12 @@ export default function PrivateSetupScreen() {
   const [step, setStep] = useState<Step>('modules');
   const [chosen, setChosen] = useState<PrivateModuleId[]>(() => suggestedFor(gender));
 
+  const moduleFlags = useModuleFlagsStore((s) => s.flags);
   const allIds = PRIVATE_MODULES.map((m) => m.id);
   const visibleIds = filterByRole(allIds, gender, showAllModules);
-  const visibleModules = PRIVATE_MODULES.filter((m) => visibleIds.includes(m.id));
+  const visibleModules = PRIVATE_MODULES.filter(
+    (m) => visibleIds.includes(m.id) && moduleFlags[m.id]?.enabled !== false,
+  );
   const gateActive = roleGateHidesAny(allIds, gender);
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');

@@ -65,6 +65,7 @@ export default function IntimacyScreen() {
 
   return (
     <PrivateScreen
+      moduleId="intimacy"
       title={t('private.intimacyTitle')}
       subtitle={t('private.intimacySubtitle')}
       tint={tint}

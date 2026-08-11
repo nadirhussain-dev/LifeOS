@@ -239,6 +239,58 @@ export async function fetchUserDetail(userId: string): Promise<OperatorResult<Us
   };
 }
 
+export type UserDirectoryRow = {
+  userId: string;
+  email: string | null;
+  username: string | null;
+  displayName: string | null;
+  createdAt: string;
+  lastActive: string | null;
+  status: string;
+  modulesUsed: number;
+  groupsJoined: number;
+  devices: number;
+};
+
+/**
+ * The full account directory — admin-tier only (0012's `admin_list_users`).
+ *
+ * `fetchUserDetail`/`fetchUserReports` above only ever open an account the
+ * report queue already pointed at; this is the other way in, for the account
+ * nobody has reported. Same audit trail either way — 0012's own comment says
+ * every call here is logged server-side on view, the same as a report-driven
+ * open.
+ */
+export async function listUsers(
+  search: string,
+  limit = 50,
+  offset = 0,
+): Promise<OperatorResult<UserDirectoryRow[]>> {
+  const { data, error } = await supabase.rpc('admin_list_users', {
+    p_search: search.trim() || null,
+    p_limit: limit,
+    p_offset: offset,
+  });
+  if (error) return { ok: false, error: friendly(error.message) };
+
+  const rows = (data ?? []) as Record<string, unknown>[];
+  return {
+    ok: true,
+    data: rows.map((row) => ({
+      userId: String(row.user_id ?? ''),
+      email: (row.email as string | null) ?? null,
+      username: (row.username as string | null) ?? null,
+      displayName: (row.display_name as string | null) ?? null,
+      createdAt: String(row.created_at ?? ''),
+      lastActive: (row.last_active as string | null) ?? null,
+      status: String(row.status ?? 'active'),
+      modulesUsed: Number(row.modules_used ?? 0),
+      groupsJoined: Number(row.groups_joined ?? 0),
+      devices: Number(row.devices ?? 0),
+    })),
+  };
+}
+
 // --- roster (owner-only mutations; any operator may list) -------------------
 
 export async function listOperators(): Promise<OperatorResult<Operator[]>> {

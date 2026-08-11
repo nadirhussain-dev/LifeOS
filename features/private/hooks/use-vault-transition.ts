@@ -5,12 +5,13 @@ export type VaultTransitionMode = 'sealing' | 'opening';
 /**
  * How long the seal/open animation stays on screen at minimum.
  *
- * The wait it is covering is real: PBKDF2 at 210k iterations
- * (vault-crypto.ts), a deliberate anti-brute-force cost this hook does not
- * touch. What it fixes is purely presentational — on a fast device the KDF
- * can resolve in well under a second, and an animation that flashes for
- * 80ms reads as a glitch, not a moment. This floor makes sure it's always
- * seen; it is never used to pad the wait *longer* than the real work.
+ * The wait it is covering is real: PBKDF2 at 120k iterations
+ * (vault-crypto.ts's PBKDF2_ITERATIONS), a deliberate anti-brute-force cost
+ * this hook does not touch. What it fixes is purely presentational — on a
+ * fast device the KDF can resolve in well under a second, and an animation
+ * that flashes for 80ms reads as a glitch, not a moment. This floor makes
+ * sure it's always seen; it is never used to pad the wait *longer* than the
+ * real work.
  */
 const MIN_VISIBLE_MS = 900;
 

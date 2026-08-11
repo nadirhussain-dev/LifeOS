@@ -18,11 +18,19 @@ import {
   type OperatorReport,
   type UserDetail,
 } from '@/features/operator/services/operator-repository';
+import { PRIVATE_MODULES } from '@/features/private/config/private-modules';
 import { useTheme } from '@/hooks/use-theme';
 import { confirm } from '@/lib/dialog-store';
 import { toast } from '@/lib/toast-store';
 
-const MODULES = HUB_SECTIONS.flatMap((section) => section.modules);
+// Hub modules plus private-space modules (Cycle, Vault, …) — module_flags
+// (0011_module_flags.sql) was always designed to key on either id, but until
+// now this list only ever offered the Hub half, so an operator had no way to
+// target `cycle`/`recovery`/`vault`/`intimacy`/`shared-albums` at all.
+const MODULES: { id: string; titleKey: string }[] = [
+  ...HUB_SECTIONS.flatMap((section) => section.modules),
+  ...PRIVATE_MODULES,
+];
 
 /**
  * One account, as far as the operator console goes: what a report says,

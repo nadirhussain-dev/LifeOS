@@ -43,6 +43,13 @@ type ProfileState = {
     appLockEnabled: boolean;
   }) => void;
   reset: () => void;
+  /** Clears the onboarding *answers* but leaves `onboardingComplete` as-is.
+   * For an account switch on an already-onboarded device: the device doesn't
+   * need to relearn what onboarding is, it just shouldn't keep showing the
+   * previous account's name/gender/focus areas. Use `reset()` instead when
+   * onboarding itself should run again (e.g. destroying the device's data
+   * entirely). */
+  resetAnswers: () => void;
 };
 
 export const useProfileStore = create<ProfileState>()(
@@ -67,6 +74,13 @@ export const useProfileStore = create<ProfileState>()(
           gender: null,
           focusAreas: [],
           onboardingComplete: false,
+          appLockEnabled: false,
+        }),
+      resetAnswers: () =>
+        set({
+          name: '',
+          gender: null,
+          focusAreas: [],
           appLockEnabled: false,
         }),
     }),

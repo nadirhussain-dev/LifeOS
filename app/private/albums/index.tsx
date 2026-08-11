@@ -40,7 +40,7 @@ export default function SharedAlbumsScreen() {
 
   if (space !== 'real') {
     return (
-      <PrivateScreen title={t('private.sharedAlbumsTitle')} tint={tint}>
+      <PrivateScreen moduleId="shared-albums" title={t('private.sharedAlbumsTitle')} tint={tint}>
         <Text variant="muted">{t('private.albumsRealSpaceOnly')}</Text>
       </PrivateScreen>
     );
@@ -69,6 +69,7 @@ export default function SharedAlbumsScreen() {
 
   return (
     <PrivateScreen
+      moduleId="shared-albums"
       title={t('private.sharedAlbumsTitle')}
       subtitle={t('private.itemCount', { count: albums.length })}
       tint={tint}

@@ -6,6 +6,7 @@ import {
   Megaphone,
   ShieldAlert,
   ToggleLeft,
+  UserSearch,
   UsersRound,
   Users,
 } from 'lucide-react-native';
@@ -28,6 +29,7 @@ import {
   type ReportQueueEntry,
 } from '@/features/operator/services/operator-repository';
 import { refreshModuleFlags } from '@/features/module-flags/services/module-flags';
+import { PRIVATE_MODULES } from '@/features/private/config/private-modules';
 import { useTheme } from '@/hooks/use-theme';
 import { confirm } from '@/lib/dialog-store';
 import { toast } from '@/lib/toast-store';
@@ -85,6 +87,20 @@ export default function OperatorConsoleScreen() {
         ) : (
           <>
             <View className="gap-2">
+              {/* The other way into an account: the report queue below only
+                  ever points at somebody already reported. This reaches
+                  anyone, admin-tier only (0012) — see users.tsx's own header
+                  for why it isn't gated client-side either. */}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/settings/operator/users')}
+                className={cardClass({ padding: 'rowLg' }, 'flex-row items-center gap-3')}
+              >
+                <UserSearch size={18} color={c.mutedForeground} />
+                <Text className="flex-1 font-sora-medium text-foreground">
+                  {t('operator.accountsTitle')}
+                </Text>
+              </Pressable>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => router.push('/settings/operator/pricing')}
@@ -237,7 +253,14 @@ function ModuleSwitches({ onChanged }: { onChanged: () => void }) {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
 
-  const modules = HUB_SECTIONS.flatMap((section) => section.modules);
+  // Private modules included alongside Hub ones: module_flags (0011) was
+  // always designed to key on either, and "hide any module, including
+  // private-space ones" needs the global switch to reach them too, not just
+  // the per-user override list on operator/account.tsx.
+  const modules: { id: string; titleKey: string }[] = [
+    ...HUB_SECTIONS.flatMap((section) => section.modules),
+    ...PRIVATE_MODULES,
+  ];
 
   const toggle = async (moduleId: string, next: boolean) => {
     if (!next) {

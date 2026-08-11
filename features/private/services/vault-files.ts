@@ -8,6 +8,7 @@ import {
   toBase64,
 } from '@/features/private/services/vault-crypto';
 import { vaultKey } from '@/features/private/store/private-store';
+import { hasMediaAccess } from '@/lib/media-permissions';
 
 /**
  * Encrypted-at-rest file storage for the vault.
@@ -143,8 +144,12 @@ export function deleteAllVaultFiles(): void {
  */
 export async function pickIntoVault(
   source: 'library' | 'camera',
-): Promise<{ items: PickedVaultMedia[]; rejectedOversize: number }> {
-  if (!vaultKey()) return { items: [], rejectedOversize: 0 };
+): Promise<{ items: PickedVaultMedia[]; rejectedOversize: number; permissionDenied: boolean }> {
+  if (!vaultKey()) return { items: [], rejectedOversize: 0, permissionDenied: false };
+
+  if (!(await hasMediaAccess(source === 'camera' ? 'camera' : 'library'))) {
+    return { items: [], rejectedOversize: 0, permissionDenied: true };
+  }
 
   const options: ImagePicker.ImagePickerOptions = {
     mediaTypes: ['images'],
@@ -158,7 +163,7 @@ export async function pickIntoVault(
       ? await ImagePicker.launchCameraAsync(options)
       : await ImagePicker.launchImageLibraryAsync(options);
 
-  if (result.canceled) return { items: [], rejectedOversize: 0 };
+  if (result.canceled) return { items: [], rejectedOversize: 0, permissionDenied: false };
 
   const items: PickedVaultMedia[] = [];
   let rejectedOversize = 0;
@@ -190,5 +195,5 @@ export async function pickIntoVault(
     });
   }
 
-  return { items, rejectedOversize };
+  return { items, rejectedOversize, permissionDenied: false };
 }

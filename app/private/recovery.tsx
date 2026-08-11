@@ -88,6 +88,7 @@ export default function RecoveryScreen() {
 
   return (
     <PrivateScreen
+      moduleId="recovery"
       title={t('private.recoveryTitle')}
       subtitle={t('private.recoverySubtitle')}
       tint={tint}

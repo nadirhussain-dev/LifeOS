@@ -21,9 +21,14 @@ const buttonVariants = cva(
         accent: '',
       },
       size: {
-        sm: 'h-9 px-3',
-        md: 'h-11 px-4',
-        lg: 'h-14 px-6',
+        // min-h rather than h: a long label (a longer locale's translation,
+        // or the OS font-scale accessibility setting) can grow the button
+        // instead of being clipped/overlapped inside a box that can't expand
+        // — this used to be the fixed-height Delete Everything button was
+        // misreported as "not lining up" under those conditions.
+        sm: 'min-h-9 px-3',
+        md: 'min-h-11 px-4',
+        lg: 'min-h-14 px-6',
       },
     },
     defaultVariants: {

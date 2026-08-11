@@ -2,7 +2,7 @@ import { usePathname, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 
-import { moduleForPath } from '@/features/hub/config/route-modules';
+import { moduleForPath, privateModuleForPath } from '@/features/hub/config/route-modules';
 import { refreshModuleFlags } from '@/features/module-flags/services/module-flags';
 import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 import { usePrivateStore } from '@/features/private/store/private-store';
@@ -59,6 +59,14 @@ export function useModuleAccess(moduleId: string): ModuleAccess {
  * pad — the person is almost certainly its owner arriving from a stale back
  * stack, and asking for the PIN is the useful answer. A disabled module goes to
  * the Hub, where the card carries the operator's explanation.
+ *
+ * Private-space modules (Cycle, Recovery, …) are a separate branch: they're
+ * not in `SEGMENT_TO_MODULE` at all (every `/private/*` route shares the same
+ * first segment), and a disabled one sends the person to `/private` — the
+ * space's own home — rather than out to the Hub, since they're already inside
+ * the vault. `PrivateScreen` (private-screen.tsx) already enforces this for
+ * every screen that renders through it; this is the backstop for the private
+ * routes that don't (e.g. the shared-album chat screen).
  */
 export function useModuleRouteGuard(): void {
   const router = useRouter();
@@ -75,14 +83,20 @@ export function useModuleRouteGuard(): void {
     if (!hydrated) return;
 
     const moduleId = moduleForPath(pathname);
-    if (!moduleId) return;
-
-    if (flags[moduleId]?.enabled === false) {
-      router.replace('/(tabs)/hub');
+    if (moduleId) {
+      if (flags[moduleId]?.enabled === false) {
+        router.replace('/(tabs)/hub');
+        return;
+      }
+      if (privatised.includes(moduleId) && key === null) {
+        router.replace('/private/unlock');
+      }
       return;
     }
-    if (privatised.includes(moduleId) && key === null) {
-      router.replace('/private/unlock');
+
+    const privateModuleId = privateModuleForPath(pathname);
+    if (privateModuleId && flags[privateModuleId]?.enabled === false) {
+      router.replace(key ? '/private' : '/private/unlock');
     }
   }, [pathname, flags, privatised, key, hydrated, router]);
 }

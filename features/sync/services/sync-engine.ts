@@ -477,8 +477,16 @@ async function runSync(force: boolean): Promise<void> {
     for (const mod of SYNC_MODULES) {
       if (!(store.modules[mod.key] ?? false)) continue;
       // Bail out if the session ended mid-run: the remaining requests would
-      // fail anyway, and a wipe may already be underway.
-      if (useAuthStore.getState().user?.id !== uid) return;
+      // fail anyway, and a wipe may already be underway. This is not a
+      // failure — commit whatever this run did complete and drop status back
+      // to idle, the same way the success path does. A bare `return` here
+      // used to leave `status` stuck at 'syncing' forever, since neither the
+      // success nor the catch block below ever runs on this path.
+      if (useAuthStore.getState().user?.id !== uid) {
+        useSyncStore.getState().commitCursors(cursors);
+        useSyncStore.getState().setStatus('idle');
+        return;
+      }
 
       // "Writes" is measured from what actually reached the server rather than
       // from instrumenting every mutation in every module: one place to be

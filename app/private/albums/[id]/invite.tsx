@@ -80,7 +80,7 @@ export default function AlbumInviteScreen() {
 
   if (!albumKey) {
     return (
-      <PrivateScreen title={t('private.invite')} tint={c.accent}>
+      <PrivateScreen moduleId="shared-albums" title={t('private.invite')} tint={c.accent}>
         <Text variant="muted">{t('private.albumLockedBody')}</Text>
       </PrivateScreen>
     );
@@ -89,7 +89,7 @@ export default function AlbumInviteScreen() {
   const link = bundle?.token ? Linking.createURL(`/private/albums/accept/${bundle.token}`) : null;
 
   return (
-    <PrivateScreen title={t('private.invite')} tint={c.accent}>
+    <PrivateScreen moduleId="shared-albums" title={t('private.invite')} tint={c.accent}>
       <ScrollView contentContainerClassName="gap-6 pb-10" showsVerticalScrollIndicator={false}>
         <Text variant="muted">{t('private.inviteIntro')}</Text>
 

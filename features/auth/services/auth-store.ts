@@ -7,6 +7,7 @@ import {
   reconcileAccountOnSignIn,
   wipeLocalData,
 } from '@/features/sync/services/account-reconcile';
+import { GUEST_SENTINEL, useSyncStore } from '@/features/sync/store/sync-store';
 import { ensureProfileRow } from '@/features/auth/services/ensure-profile';
 import { isSupabaseConfigured } from '@/lib/env';
 import { passwordResetRedirectUrl, supabase } from '@/lib/supabase';
@@ -199,7 +200,22 @@ export const useAuthStore = create<AuthState>()(
         return { ok: true };
       },
 
-      continueAsGuest: () => set({ isGuest: true }),
+      continueAsGuest: () => {
+        set({ isGuest: true });
+        // Stamp a sentinel so a subsequent first-ever real sign-in on this
+        // device can tell "unidentified guest scratch data" apart from
+        // "nobody has ever used this device" — without it, that sign-in sees
+        // lastUserId === null and (correctly, per its own fail-safe rule)
+        // assumes there's nothing to wipe, so the new account silently
+        // inherits whatever the guest created. Only stamp when nothing is
+        // known yet: a returning real user who taps "continue as guest" must
+        // keep their own captured uid, not lose it to this sentinel, and we
+        // only trust the flag once the store has actually rehydrated.
+        const sync = useSyncStore.getState();
+        if (sync.hydrated && sync.lastUserId === null) {
+          sync.setLastUserId(GUEST_SENTINEL);
+        }
+      },
 
       loadProfile: async () => {
         const user = get().user;

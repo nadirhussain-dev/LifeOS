@@ -55,7 +55,7 @@ export default function NewSharedAlbumScreen() {
   };
 
   return (
-    <PrivateScreen title={t('private.newAlbum')} tint={tint}>
+    <PrivateScreen moduleId="shared-albums" title={t('private.newAlbum')} tint={tint}>
       <View className="gap-4">
         <TextInput
           value={name}

@@ -11,6 +11,7 @@ import { Text } from '@/components/ui/text';
 import { resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { usePlan } from '@/features/billing/hooks/use-billing';
+import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 import {
   PRIVATE_MODULES,
   filterByRole,
@@ -43,6 +44,7 @@ export default function PrivateHomeScreen() {
   const setShowAllModules = usePrivateStore((s) => s.setShowAllModules);
   const lock = usePrivateStore((s) => s.lock);
   const gender = useProfileStore((s) => s.gender);
+  const moduleFlags = useModuleFlagsStore((s) => s.flags);
   const { isPlus } = usePlan();
 
   useEffect(() => {
@@ -58,7 +60,10 @@ export default function PrivateHomeScreen() {
   // this device — the decoy space must not surface it even though `key` is
   // non-null here too. See private-modules.ts's header for the full reasoning.
   const spaceEligible = PRIVATE_MODULES.filter(
-    (m) => enabled.includes(m.id) && (!m.requiresRealSpace || space === 'real'),
+    (m) =>
+      enabled.includes(m.id) &&
+      (!m.requiresRealSpace || space === 'real') &&
+      moduleFlags[m.id]?.enabled !== false,
   );
   const roleFilteredIds = filterByRole(
     spaceEligible.map((m) => m.id),
