@@ -6,6 +6,11 @@ import { defaultModuleFlags, type SyncModule } from '@/features/sync/config/sync
 
 export type SyncStatus = 'idle' | 'syncing' | 'error';
 
+/** Stamped into `lastUserId` by `continueAsGuest()` when no prior real account
+ * is known on this device. Lets account-reconcile.ts tell "unidentified guest
+ * data" apart from "genuinely nobody's data yet" — see its header comment. */
+export const GUEST_SENTINEL = '__guest__';
+
 /**
  * A position in one table's `(updated_at, key)` order — see the header comment
  * in ../services/sync-engine.ts for why a bare timestamp is not enough.
