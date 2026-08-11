@@ -1,8 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { useAuthStore } from '@/features/auth/services/auth-store';
-import { tryDecryptAlbumName, encryptAlbumName } from '@/features/private/services/album-crypto';
+import {
+  encryptAlbumName,
+  encryptComment,
+  encryptMessage,
+  tryDecryptAlbumName,
+  tryDecryptComment,
+  tryDecryptMessage,
+} from '@/features/private/services/album-crypto';
 import {
   createAlbumInvite,
   redeemAlbumInvite,
@@ -17,7 +24,9 @@ import {
   type AddPhotoResult,
 } from '@/features/private/services/album-uploader';
 import { usePrivateStore } from '@/features/private/store/private-store';
+import type { AlbumComment, AlbumMessage } from '@/features/private/types/shared-album.types';
 import { generateMasterKey } from '@/features/private/services/vault-crypto';
+import { supabase } from '@/lib/supabase';
 
 /**
  * React Query wiring for shared albums — same shape as use-split.ts, plus
@@ -37,6 +46,8 @@ export const albumKeys = {
   list: ['private', 'albums'] as const,
   album: (id: string) => ['private', 'albums', id] as const,
   key: (id: string, space: string | null) => ['private', 'album-key', id, space] as const,
+  comments: (photoId: string) => ['private', 'albums', 'comments', photoId] as const,
+  messages: (albumId: string) => ['private', 'albums', 'messages', albumId] as const,
 };
 
 /** Unwraps `albumId`'s key with whichever vault key is currently unlocked.
@@ -107,11 +118,101 @@ export function useMyAlbumMembership(data: ReturnType<typeof useAlbumDetail>['da
   }, [data, userId]);
 }
 
+/** A comment/message with its ciphertext decrypted (or null if this device's
+ *  key can't open it — same "locked, not an error" stance as useAlbumName). */
+export type DecryptedComment = AlbumComment & { body: string | null };
+export type DecryptedMessage = AlbumMessage & { body: string | null };
+
+/** One photo's comment thread, decrypted. Disabled without an album key —
+ *  there is nothing to decrypt yet, and no point asking the server. */
+export function useAlbumComments(photoId: string | undefined, albumKey: Uint8Array | null) {
+  return useQuery({
+    queryKey: albumKeys.comments(photoId ?? ''),
+    enabled: !!photoId && !!albumKey,
+    queryFn: async () => {
+      const rows = await repo.listComments(photoId!);
+      return rows.map((c) => ({
+        ...c,
+        body: albumKey ? tryDecryptComment(albumKey, c.bodyCiphertext) : null,
+      })) satisfies DecryptedComment[];
+    },
+  });
+}
+
+/** The album's chat, decrypted — same shape as useAlbumComments. */
+export function useAlbumMessages(albumId: string | undefined, albumKey: Uint8Array | null) {
+  return useQuery({
+    queryKey: albumKeys.messages(albumId ?? ''),
+    enabled: !!albumId && !!albumKey,
+    queryFn: async () => {
+      const rows = await repo.listMessages(albumId!);
+      return rows.map((m) => ({
+        ...m,
+        body: albumKey ? tryDecryptMessage(albumKey, m.bodyCiphertext) : null,
+      })) satisfies DecryptedMessage[];
+    },
+  });
+}
+
+/**
+ * Live updates for one album's comments and chat, over Supabase Realtime —
+ * the first use of it in this codebase. Realtime is not a second access-
+ * control layer: it only tells this device *that* a row changed, and the
+ * refetch it triggers goes through the exact same RLS policies (0029) as
+ * every other read here. Subscribed only in the real space with the album
+ * key already unwrapped — the same gate `useAlbumKey` applies — so a decoy
+ * session or a locked album never opens a channel for something it cannot
+ * decrypt anyway.
+ */
+export function useAlbumRealtime(albumId: string | undefined): void {
+  const queryClient = useQueryClient();
+  const space = usePrivateStore((s) => s.space);
+  const vaultKeyValue = usePrivateStore((s) => s.key);
+
+  useEffect(() => {
+    if (!albumId || !vaultKeyValue || space !== 'real') return;
+
+    const channel = supabase
+      .channel(`shared-album:${albumId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'shared_album_comments',
+          filter: `album_id=eq.${albumId}`,
+        },
+        (payload) => {
+          const row = (payload.new ?? payload.old) as { photo_id?: string | null };
+          if (row.photo_id) {
+            void queryClient.invalidateQueries({ queryKey: albumKeys.comments(row.photo_id) });
+          }
+        },
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'shared_album_messages',
+          filter: `album_id=eq.${albumId}`,
+        },
+        () => void queryClient.invalidateQueries({ queryKey: albumKeys.messages(albumId) }),
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [albumId, vaultKeyValue, space, queryClient]);
+}
+
 // --- mutations ---------------------------------------------------------------
 
 export function useSharedAlbumMutations(albumId?: string) {
   const queryClient = useQueryClient();
   const profile = useAuthStore((s) => s.profile);
+  const userId = useAuthStore((s) => s.user?.id ?? null);
   const vaultKeyValue = usePrivateStore((s) => s.key);
 
   /** Album data is shared, so a local write is not the whole truth — refetch
@@ -210,6 +311,53 @@ export function useSharedAlbumMutations(albumId?: string) {
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: albumKeys.list }),
   });
 
+  /** Owner-only — migration 0029's trigger is the real enforcement; this
+   *  mutation just calls the update and lets a non-owner's attempt come back
+   *  as an error, same as every other owner-gated action here. */
+  const setPermissions = useMutation({
+    mutationFn: (permissions: { allowComments?: boolean; allowChat?: boolean }) =>
+      repo.setAlbumPermissions(albumId!, permissions),
+    onSuccess: invalidate,
+  });
+
+  const addComment = useMutation({
+    mutationFn: (input: { photoId: string; body: string; albumKey: Uint8Array }) =>
+      repo.addComment({
+        albumId: albumId!,
+        photoId: input.photoId,
+        authorId: userId ?? '',
+        authorName: profile?.displayName || profile?.username || null,
+        bodyCiphertext: encryptComment(input.albumKey, input.body),
+      }),
+    onSuccess: (_data, variables) =>
+      void queryClient.invalidateQueries({ queryKey: albumKeys.comments(variables.photoId) }),
+  });
+
+  const removeComment = useMutation({
+    mutationFn: (input: { commentId: string; photoId: string }) =>
+      repo.removeComment(input.commentId),
+    onSuccess: (_data, variables) =>
+      void queryClient.invalidateQueries({ queryKey: albumKeys.comments(variables.photoId) }),
+  });
+
+  const sendMessage = useMutation({
+    mutationFn: (input: { body: string; albumKey: Uint8Array }) =>
+      repo.sendMessage({
+        albumId: albumId!,
+        authorId: userId ?? '',
+        authorName: profile?.displayName || profile?.username || null,
+        bodyCiphertext: encryptMessage(input.albumKey, input.body),
+      }),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: albumKeys.messages(albumId ?? '') }),
+  });
+
+  const removeMessage = useMutation({
+    mutationFn: (messageId: string) => repo.removeMessage(messageId),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: albumKeys.messages(albumId ?? '') }),
+  });
+
   return {
     createAlbum,
     renameAlbum,
@@ -220,5 +368,10 @@ export function useSharedAlbumMutations(albumId?: string) {
     removeMember,
     removePhoto,
     deleteAlbum,
+    setPermissions,
+    addComment,
+    removeComment,
+    sendMessage,
+    removeMessage,
   };
 }

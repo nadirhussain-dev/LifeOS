@@ -16,6 +16,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
+import { AdSlot } from '@/features/ads/components/ad-slot';
 import { HabitRow } from '@/features/habits/components/habit-row';
 import { HabitsFabSheet } from '@/features/habits/components/habits-fab-sheet';
 import { QuickLogSheet } from '@/features/habits/components/quick-log-sheet';
@@ -213,6 +214,11 @@ export default function HabitsScreen() {
               />
             );
           }}
+          ListFooterComponent={
+            <View className="px-5 pt-4">
+              <AdSlot placement="habits-bottom" />
+            </View>
+          }
         />
       )}
 

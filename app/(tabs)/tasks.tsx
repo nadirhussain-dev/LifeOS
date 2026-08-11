@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
+import { AdSlot } from '@/features/ads/components/ad-slot';
 import { TaskRow } from '@/features/tasks/components/task-row';
 import { useTaskMutations } from '@/features/tasks/hooks/use-task-mutations';
 import { useTasks } from '@/features/tasks/hooks/use-tasks';
@@ -195,6 +196,11 @@ export default function TasksScreen() {
                 }}
               />
             )
+          }
+          ListFooterComponent={
+            <View className="px-5 pt-4">
+              <AdSlot placement="tasks-bottom" />
+            </View>
           }
         />
       )}

@@ -12,6 +12,7 @@ import { Text } from '@/components/ui/text';
 import { resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { AdSlot } from '@/features/ads/components/ad-slot';
 import { ModuleCard } from '@/features/hub/components/module-card';
 import { HUB_SECTIONS, type HubModule } from '@/features/hub/config/modules';
 import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
@@ -124,12 +125,6 @@ export default function HubScreen() {
     return modules.length > 0 ? modules : null;
   }, [privateKey, privateSpace, enabledPrivate, privatised, flags]);
 
-  const readyCount = useMemo(
-    () =>
-      sections.reduce((sum, s) => sum + s.modules.filter((m) => m.status === 'ready').length, 0),
-    [sections],
-  );
-
   const handleOpen = (module: HubModule) => router.push(module.getRoute() as never);
 
   return (
@@ -142,7 +137,6 @@ export default function HubScreen() {
         <View className="flex-row items-end justify-between gap-3">
           <View className="flex-1 gap-1">
             <Text variant="heading">{t('hub.title')}</Text>
-            <Text variant="muted">{t('hub.modulesReady', { count: readyCount })}</Text>
           </View>
           {/* The screen listing every module is exactly where "I know I wrote
               it down somewhere" happens. */}
@@ -181,6 +175,15 @@ export default function HubScreen() {
                       : FadeInDown.delay(80 * sectionIndex + 40 * rowIndex).duration(320)
                   }
                   className="flex-row gap-3"
+                  // Explicit floor, matching ModuleCard's own `minHeight: 130`
+                  // (features/hub/components/module-card.tsx). Without it, this
+                  // row's cross-axis height depends entirely on its `flex: 1`
+                  // children stretching to fill it — a circular resolution
+                  // (row height comes from children, children's height comes
+                  // from the row) that Yoga/Fabric was resolving to ~0 on this
+                  // build, so every row rendered on top of the next instead of
+                  // stacking. Giving the row its own floor breaks the cycle.
+                  style={{ minHeight: 130 }}
                 >
                   {row.map((module, cellIndex) =>
                     module ? (
@@ -257,6 +260,8 @@ export default function HubScreen() {
             </View>
           </View>
         ) : null}
+
+        <AdSlot placement="hub-bottom" />
       </ScrollView>
     </View>
   );

@@ -9,6 +9,7 @@ import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { ChipRow, PrivateScreen } from '@/features/private/components/private-screen';
+import { RecoveryHero } from '@/features/private/components/recovery-hero';
 import { privateModule } from '@/features/private/config/private-modules';
 import {
   addRecoveryEntry,
@@ -141,25 +142,11 @@ export default function RecoveryScreen() {
         </View>
       </ScrollView>
 
-      <View className="flex-row gap-3">
-        <View
-          className="flex-1 gap-1 rounded-2xl px-4 py-3.5"
-          style={{ backgroundColor: alpha(tint, 0.12) }}
-        >
-          <Text variant="caption">{t('private.currentStreak')}</Text>
-          <Text className="font-sora-extrabold text-2xl" style={{ color: tint }}>
-            {stats.currentStreak === null
-              ? t('private.noRelapses')
-              : t('private.days', { count: stats.currentStreak })}
-          </Text>
-        </View>
-        <View className="flex-1 gap-1 rounded-2xl border border-border px-4 py-3.5">
-          <Text variant="caption">{t('private.longestStreak')}</Text>
-          <Text className="font-sora-extrabold text-2xl text-foreground">
-            {t('private.days', { count: stats.longestStreak })}
-          </Text>
-        </View>
-      </View>
+      <RecoveryHero
+        currentStreak={stats.currentStreak}
+        longestStreak={stats.longestStreak}
+        tint={tint}
+      />
 
       <View className="flex-row gap-3">
         <View className="flex-1 gap-1 rounded-2xl border border-border px-4 py-3">

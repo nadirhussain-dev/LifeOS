@@ -13,6 +13,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
+import { AdSlot } from '@/features/ads/components/ad-slot';
 import { NoteCard } from '@/features/notes/components/note-card';
 import { useNoteMutations } from '@/features/notes/hooks/use-note-mutations';
 import { toast } from '@/lib/toast-store';
@@ -152,6 +153,11 @@ export default function NotesScreen() {
                 }
               />
             )
+          }
+          ListFooterComponent={
+            <View className="px-5 pt-4">
+              <AdSlot placement="notes-bottom" />
+            </View>
           }
         />
       )}

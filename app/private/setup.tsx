@@ -10,11 +10,15 @@ import { Text } from '@/components/ui/text';
 import { resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { PinPad } from '@/features/private/components/pin-pad';
+import { VaultSealTransition } from '@/features/private/components/vault-seal-transition';
 import {
   PRIVATE_MODULES,
+  filterByRole,
+  roleGateHidesAny,
   suggestedFor,
   type PrivateModuleId,
 } from '@/features/private/config/private-modules';
+import { useVaultTransition } from '@/features/private/hooks/use-vault-transition';
 import { isEscrowConfigured, uploadEscrow } from '@/features/private/services/vault-escrow';
 import { MIN_PIN_LENGTH, setUpVault } from '@/features/private/services/vault-keys';
 import { usePrivateStore } from '@/features/private/store/private-store';
@@ -43,13 +47,21 @@ export default function PrivateSetupScreen() {
   const unlock = usePrivateStore((s) => s.unlock);
   const setEnabledModules = usePrivateStore((s) => s.setEnabledModules);
   const setSetUpComplete = usePrivateStore((s) => s.setSetUpComplete);
+  const showAllModules = usePrivateStore((s) => s.showAllModules);
+  const setShowAllModules = usePrivateStore((s) => s.setShowAllModules);
 
   const [step, setStep] = useState<Step>('modules');
   const [chosen, setChosen] = useState<PrivateModuleId[]>(() => suggestedFor(gender));
+
+  const allIds = PRIVATE_MODULES.map((m) => m.id);
+  const visibleIds = filterByRole(allIds, gender, showAllModules);
+  const visibleModules = PRIVATE_MODULES.filter((m) => visibleIds.includes(m.id));
+  const gateActive = roleGateHidesAny(allIds, gender);
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const transition = useVaultTransition();
 
   const toggle = (id: PrivateModuleId) =>
     setChosen((prev) => (prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]));
@@ -61,7 +73,7 @@ export default function PrivateSetupScreen() {
       return;
     }
     setBusy(true);
-    const key = await setUpVault(pin);
+    const key = await transition.run('sealing', () => setUpVault(pin));
     // Seals a copy of the master key to the operator. No-ops when the build
     // has no escrow key configured, in which case the vault stays E2E.
     await uploadEscrow(key);
@@ -89,7 +101,7 @@ export default function PrivateSetupScreen() {
             </View>
 
             <View className="gap-2.5">
-              {PRIVATE_MODULES.map((module) => {
+              {visibleModules.map((module) => {
                 const selected = chosen.includes(module.id);
                 const Icon = module.icon;
                 const tint = resolveTint(module.tint, scheme);
@@ -120,10 +132,27 @@ export default function PrivateSetupScreen() {
               })}
             </View>
 
-            {/* Says out loud that the list is not decided by the gender answer. */}
-            <Text variant="caption" className="px-1">
-              {t('private.suggestionNote')}
-            </Text>
+            {/*
+              This list is now decided by the gender answer for the two
+              body-specific modules (Cycle, Recovery) — the row below is the
+              honest replacement for the old "never gated" note, plus the one
+              way past it for an account this doesn't fit.
+            */}
+            {gateActive ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setShowAllModules(!showAllModules)}
+                className="flex-row items-center gap-3 rounded-2xl border border-dashed border-border px-4 py-3"
+              >
+                <Text variant="caption" className="flex-1">
+                  {showAllModules ? t('private.showingEveryModule') : t('private.showEveryModule')}
+                </Text>
+              </Pressable>
+            ) : (
+              <Text variant="caption" className="px-1">
+                {t('private.suggestionNote')}
+              </Text>
+            )}
 
             {/*
               Disclosed here, before a single item is added and before a PIN is
@@ -243,6 +272,8 @@ export default function PrivateSetupScreen() {
           </View>
         </>
       ) : null}
+
+      <VaultSealTransition visible={transition.visible} mode={transition.mode} />
     </View>
   );
 }

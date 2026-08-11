@@ -3474,6 +3474,13 @@ const put = (uid, path, size) =>
 await test('0026 you can store and read your own media', async () => {
   const M1 = 'aaaabbbb-0000-0000-0000-000000000001';
   await createUser(db, M1, 'media1@example.com');
+  // 0035 gates media backup behind a paid plan; this section is about
+  // isolation and quota mechanics, not that gate, so every user who
+  // actually uploads here is bumped off the free plan the same way
+  // ALBUM_OWNER is, above.
+  await asUser(db, M1, async () => {
+    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+  });
   await asUser(db, M1, async () => {
     await put(M1, 'gallery_photos/p1.jpg', 1024);
     expectEqual(
@@ -3501,6 +3508,11 @@ await test('0026 you cannot write into another account’s folder', async () => 
   const M3 = 'aaaabbbb-0000-0000-0000-000000000003';
   const VICTIM = 'aaaabbbb-0000-0000-0000-000000000001';
   await createUser(db, M3, 'media3@example.com');
+  // Paid, so this actually exercises the RLS rejection being tested rather
+  // than being short-circuited by 0035's plan check, which runs first.
+  await asUser(db, M3, async () => {
+    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+  });
   await asUser(db, M3, async () => {
     await expectRejection(() => put(VICTIM, 'gallery_photos/forged.jpg', 10), 'row-level security');
   });
@@ -3525,6 +3537,9 @@ await test('0026 the quota is enforced on the server', async () => {
   // modified the client. This is the one that costs money.
   const M5 = 'aaaabbbb-0000-0000-0000-000000000005';
   await createUser(db, M5, 'media5@example.com');
+  await asUser(db, M5, async () => {
+    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+  });
   const quota = Number((await one(`select public.media_quota_bytes() as q`)).q);
 
   await asUser(db, M5, async () => {
@@ -3541,6 +3556,9 @@ await test('0026 usage is reported to the account it belongs to', async () => {
   // failure, so the app has to be able to show it.
   const M6 = 'aaaabbbb-0000-0000-0000-000000000006';
   await createUser(db, M6, 'media6@example.com');
+  await asUser(db, M6, async () => {
+    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+  });
   await asUser(db, M6, async () => {
     await put(M6, 'songs/a.mp3', 500);
     await put(M6, 'songs/b.mp3', 250);
@@ -3608,6 +3626,17 @@ await createUser(db, ALBUM_OUTSIDER, 'album-outsider@example.com');
 await createUser(db, ALBUM_THIRD, 'album-third@example.com');
 await createUser(db, ALBUM_BLOCKER, 'album-blocker@example.com');
 await createUser(db, ALBUM_PEST, 'album-pest@example.com');
+
+// 0032's free-plan album/member limits are exercised in their own section,
+// below, with dedicated users and a clean count from zero. Every test above
+// this point is about membership/RLS/moderation behaviour, not plan limits,
+// and several of them put three-plus members on one album on purpose (alb-1
+// gets a partner, an outsider placeholder AND a third member across the
+// suite) — so ALBUM_OWNER is bumped off the free plan once, here, rather
+// than have those unrelated tests start failing the moment 0032 exists.
+await asUser(db, ALBUM_OWNER, async () => {
+  await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+});
 
 await test('0027 create_shared_album creates the album and its owner member together', async () => {
   await asUser(db, ALBUM_OWNER, async () => {
@@ -4046,6 +4075,720 @@ await test('0028 usage is reported to the uploader it belongs to', async () => {
 await test('0028 the bucket is private', async () => {
   const bucket = await one(`select public from storage.buckets where id = 'shared-albums'`);
   expectEqual(bucket?.public, false, 'bucket is not public');
+});
+
+// ---------------------------------------------------------------------------
+console.log('\nalbum comments & chat (0029)');
+// ---------------------------------------------------------------------------
+//
+// A fresh album (alb-together) rather than reusing alb-1/alb-pest above —
+// alb-1 was soft-deleted by the 0027 suite and alb-pest's membership is
+// entangled with the 0028 storage-quota tests, and neither is a clean base
+// for "is this flag actually gating the insert". ALBUM_OWNER owns it;
+// ALBUM_THIRD and ALBUM_PARTNER are ordinary members; ALBUM_OUTSIDER is
+// never added.
+
+await asUser(db, ALBUM_OWNER, async () => {
+  await db.query(
+    `select public.create_shared_album('alb-together','cipher:together','m-together-owner',null,'act-together',$1)`,
+    [Date.now()],
+  );
+  await db.query(
+    `insert into public.shared_album_members
+       (id, album_id, user_id, email, display_name, role, created_at, updated_at)
+     values
+       ('m-together-third','alb-together',$1,'album-third@example.com','Third','member',$3,$3),
+       ('m-together-partner','alb-together',$2,'album-partner@example.com','Partner','member',$3,$3)`,
+    [ALBUM_THIRD, ALBUM_PARTNER, Date.now()],
+  );
+});
+
+await test('0029 comments and chat are off by default', async () => {
+  const row = await one(
+    `select allow_comments, allow_chat from public.shared_albums where id = 'alb-together'`,
+  );
+  expectEqual(row.allow_comments, false, 'comments default off');
+  expectEqual(row.allow_chat, false, 'chat default off');
+});
+
+await test('0029 a member cannot comment while comments are off', async () => {
+  await asUser(db, ALBUM_THIRD, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.shared_album_comments
+             (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at)
+           values ('cmt-early','alb-together',$1,'Third','cipher:hi',$2,$2)`,
+          [ALBUM_THIRD, Date.now()],
+        ),
+      'row-level security',
+    );
+  });
+});
+
+await test('0029 only the owner can turn comments on', async () => {
+  await asUser(db, ALBUM_THIRD, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `update public.shared_albums set allow_comments = true, updated_at = $1 where id = 'alb-together'`,
+          [Date.now()],
+        ),
+      'only the album owner',
+    );
+  });
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(
+      `update public.shared_albums set allow_comments = true, updated_at = $1 where id = 'alb-together'`,
+      [Date.now()],
+    );
+  });
+  const row = await one(
+    `select allow_comments from public.shared_albums where id = 'alb-together'`,
+  );
+  expectEqual(row.allow_comments, true, 'owner turned comments on');
+});
+
+await test('0029 a member can comment once comments are on', async () => {
+  await asUser(db, ALBUM_THIRD, async () => {
+    await db.query(
+      `insert into public.shared_album_comments
+         (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at)
+       values ('cmt-third','alb-together',$1,'Third','cipher:hi',$2,$2)`,
+      [ALBUM_THIRD, Date.now()],
+    );
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.shared_album_comments where id = 'cmt-third'`),
+    1,
+    'comment stored',
+  );
+});
+
+await test('0029 the two flags are independent — chat stays off even with comments on', async () => {
+  await asUser(db, ALBUM_THIRD, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.shared_album_messages
+             (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at)
+           values ('msg-early','alb-together',$1,'Third','cipher:hey',$2,$2)`,
+          [ALBUM_THIRD, Date.now()],
+        ),
+      'row-level security',
+    );
+  });
+});
+
+await test('0029 a non-member cannot read or post comments', async () => {
+  await asUser(db, ALBUM_OUTSIDER, async () => {
+    expectEqual(
+      await count(
+        `select count(*)::int n from public.shared_album_comments where album_id = 'alb-together'`,
+      ),
+      0,
+      'invisible to a non-member',
+    );
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.shared_album_comments
+             (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at)
+           values ('cmt-outsider','alb-together',$1,'Outsider','cipher:hi',$2,$2)`,
+          [ALBUM_OUTSIDER, Date.now()],
+        ),
+      'row-level security',
+    );
+  });
+});
+
+await test('0029 a fellow member — not the author, not the owner — cannot delete a comment', async () => {
+  // RLS's USING clause on UPDATE filters which rows are visible to update,
+  // rather than raising — a write that matches nothing simply affects zero
+  // rows. So the assertion is that the comment survives untouched, not that
+  // the statement throws.
+  await asUser(db, ALBUM_PARTNER, async () => {
+    await db.query(
+      `update public.shared_album_comments set deleted_at = $1, updated_at = $1 where id = 'cmt-third'`,
+      [Date.now()],
+    );
+  });
+  const row = await one(
+    `select deleted_at from public.shared_album_comments where id = 'cmt-third'`,
+  );
+  if (row.deleted_at !== null)
+    throw new Error('a fellow member should not have been able to delete this');
+});
+
+await test('0029 the author can soft-delete their own comment', async () => {
+  await asUser(db, ALBUM_THIRD, async () => {
+    await db.query(
+      `update public.shared_album_comments set deleted_at = $1, updated_at = $1 where id = 'cmt-third'`,
+      [Date.now()],
+    );
+  });
+  const row = await one(
+    `select deleted_at from public.shared_album_comments where id = 'cmt-third'`,
+  );
+  if (row.deleted_at === null) throw new Error('expected deleted_at to be set');
+});
+
+await test('0029 the owner can moderate — delete a comment they did not write', async () => {
+  await asUser(db, ALBUM_PARTNER, async () => {
+    await db.query(
+      `insert into public.shared_album_comments
+         (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at)
+       values ('cmt-partner','alb-together',$1,'Partner','cipher:hi',$2,$2)`,
+      [ALBUM_PARTNER, Date.now()],
+    );
+  });
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(
+      `update public.shared_album_comments set deleted_at = $1, updated_at = $1 where id = 'cmt-partner'`,
+      [Date.now()],
+    );
+  });
+  const row = await one(
+    `select deleted_at from public.shared_album_comments where id = 'cmt-partner'`,
+  );
+  if (row.deleted_at === null) throw new Error('owner moderation should have soft-deleted it');
+});
+
+await test('0029 chat: off by default, owner-only to enable, then open to members', async () => {
+  await asUser(db, ALBUM_THIRD, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `update public.shared_albums set allow_chat = true, updated_at = $1 where id = 'alb-together'`,
+          [Date.now()],
+        ),
+      'only the album owner',
+    );
+  });
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(
+      `update public.shared_albums set allow_chat = true, updated_at = $1 where id = 'alb-together'`,
+      [Date.now()],
+    );
+  });
+  await asUser(db, ALBUM_THIRD, async () => {
+    await db.query(
+      `insert into public.shared_album_messages
+         (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at)
+       values ('msg-third','alb-together',$1,'Third','cipher:hey',$2,$2)`,
+      [ALBUM_THIRD, Date.now()],
+    );
+  });
+  await asUser(db, ALBUM_PARTNER, async () => {
+    expectEqual(
+      await count(
+        `select count(*)::int n from public.shared_album_messages where album_id = 'alb-together'`,
+      ),
+      1,
+      'a fellow member can read the message',
+    );
+  });
+  await asUser(db, ALBUM_OUTSIDER, async () => {
+    expectEqual(
+      await count(
+        `select count(*)::int n from public.shared_album_messages where album_id = 'alb-together'`,
+      ),
+      0,
+      'a non-member cannot',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+console.log('\nbilling plan (0031) + shared-album plan limits (0032)');
+// ---------------------------------------------------------------------------
+
+const PLAN_FREE = '99000000-0000-0000-0000-000000000001';
+const PLAN_FRIEND = '99000000-0000-0000-0000-000000000002';
+const PLAN_THIRD = '99000000-0000-0000-0000-000000000003';
+const PLAN_PAID = '99000000-0000-0000-0000-000000000004';
+const PLAN_PAID_FRIEND = '99000000-0000-0000-0000-000000000005';
+const PLAN_PAID_THIRD = '99000000-0000-0000-0000-000000000006';
+
+await createUser(db, PLAN_FREE, 'plan-free@example.com');
+await createUser(db, PLAN_FRIEND, 'plan-friend@example.com');
+await createUser(db, PLAN_THIRD, 'plan-third@example.com');
+await createUser(db, PLAN_PAID, 'plan-paid@example.com');
+await createUser(db, PLAN_PAID_FRIEND, 'plan-paid-friend@example.com');
+await createUser(db, PLAN_PAID_THIRD, 'plan-paid-third@example.com');
+
+await test('0031 a new account defaults to the free plan', async () => {
+  await asUser(db, PLAN_FREE, async () => {
+    expectEqual((await one(`select public.my_plan_id() as p`)).p, 'free', 'defaults free');
+  });
+});
+
+await test('0031 set_my_plan updates only the caller’s own row', async () => {
+  await asUser(db, PLAN_PAID, async () => {
+    await db.query(`select public.set_my_plan('plus_yearly', $1)`, [Date.now() + 365 * 86400000]);
+  });
+  expectEqual(
+    (await one(`select plan_id from public.profiles where id = $1`, [PLAN_PAID])).plan_id,
+    'plus_yearly',
+    'the caller’s own row changed',
+  );
+  expectEqual(
+    (await one(`select plan_id from public.profiles where id = $1`, [PLAN_FREE])).plan_id,
+    'free',
+    'nobody else’s row did',
+  );
+});
+
+await test('0031 an unrecognised plan id is refused', async () => {
+  await asUser(db, PLAN_FREE, async () => {
+    await expectRejection(
+      () => db.query(`select public.set_my_plan('super_deluxe', null)`),
+      'unknown plan',
+    );
+  });
+});
+
+await test('0032 a free-plan account can create one shared album, not two', async () => {
+  await asUser(db, PLAN_FREE, async () => {
+    await db.query(
+      `select public.create_shared_album('alb-plan-free','cipher:x','m-plan-free-owner',null,'act-plan-1',$1)`,
+      [Date.now()],
+    );
+    await expectRejection(
+      () =>
+        db.query(
+          `select public.create_shared_album('alb-plan-free-2','cipher:y','m-plan-free-owner-2',null,'act-plan-2',$1)`,
+          [Date.now()],
+        ),
+      'one shared album',
+    );
+  });
+});
+
+await test('0032 a free-plan album is capped at two active members', async () => {
+  await asUser(db, PLAN_FREE, async () => {
+    await db.query(
+      `insert into public.shared_album_members
+         (id, album_id, user_id, display_name, role, created_at, updated_at)
+       values ('m-plan-friend','alb-plan-free',$1,'Friend','member',$2,$2)`,
+      [PLAN_FRIEND, Date.now()],
+    );
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.shared_album_members
+             (id, album_id, user_id, display_name, role, created_at, updated_at)
+           values ('m-plan-third','alb-plan-free',$1,'Third','member',$2,$2)`,
+          [PLAN_THIRD, Date.now()],
+        ),
+      'two people per shared album',
+    );
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.shared_album_members
+        where album_id = 'alb-plan-free' and deleted_at is null`,
+    ),
+    2,
+    'owner + one friend, the third never landed',
+  );
+});
+
+await test('0032 upgrading lifts both limits for the same account', async () => {
+  await asUser(db, PLAN_FREE, async () => {
+    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+    await db.query(
+      `select public.create_shared_album('alb-plan-free-2','cipher:y','m-plan-free-owner-2',null,'act-plan-3',$1)`,
+      [Date.now()],
+    );
+    await db.query(
+      `insert into public.shared_album_members
+         (id, album_id, user_id, display_name, role, created_at, updated_at)
+       values ('m-plan-third','alb-plan-free',$1,'Third','member',$2,$2)`,
+      [PLAN_THIRD, Date.now()],
+    );
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.shared_albums
+        where created_by = $1 and deleted_at is null`,
+      [PLAN_FREE],
+    ),
+    2,
+    'a second album, once paid',
+  );
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.shared_album_members
+        where album_id = 'alb-plan-free' and deleted_at is null`,
+    ),
+    3,
+    'a third member on the original album, once paid',
+  );
+});
+
+await test('0032 the cap follows the album OWNER’s plan, not an invited member’s own plan', async () => {
+  // PLAN_PAID is on plus_yearly (set above); PLAN_PAID_FRIEND and
+  // PLAN_PAID_THIRD are ordinary free accounts, and both still fit — the
+  // album's capacity is the owner's to grow, not each guest's own plan.
+  await asUser(db, PLAN_PAID, async () => {
+    await db.query(
+      `select public.create_shared_album('alb-plan-paid','cipher:z','m-plan-paid-owner',null,'act-plan-4',$1)`,
+      [Date.now()],
+    );
+    await db.query(
+      `insert into public.shared_album_members
+         (id, album_id, user_id, display_name, role, created_at, updated_at)
+       values ('m-plan-paid-friend','alb-plan-paid',$1,'Friend','member',$2,$2)`,
+      [PLAN_PAID_FRIEND, Date.now()],
+    );
+    await db.query(
+      `insert into public.shared_album_members
+         (id, album_id, user_id, display_name, role, created_at, updated_at)
+       values ('m-plan-paid-third','alb-plan-paid',$1,'Third','member',$2,$2)`,
+      [PLAN_PAID_THIRD, Date.now()],
+    );
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.shared_album_members
+        where album_id = 'alb-plan-paid' and deleted_at is null`,
+    ),
+    3,
+    'both free-plan guests fit — the owner is the one who is paid',
+  );
+});
+
+// ---------------------------------------------------------------------------
+console.log('\nadmin roster (0033)');
+// ---------------------------------------------------------------------------
+//
+// ADMIN already exists (inserted near the top of this file, role 'admin',
+// no `is_owner`) and is promoted to owner directly here — claim_owner()
+// itself can only run once, on a genuinely empty `admins` table, which this
+// point in the suite is not; that path gets its own destructive section at
+// the very end of this file, after everything that still needs ADMIN's
+// ordinary admin rights (billing plans, below) has already run.
+
+const ROSTER_STAFF = '99200000-0000-0000-0000-000000000001';
+const ROSTER_ADMIN2 = '99200000-0000-0000-0000-000000000002';
+const ROSTER_OUTSIDER = '99200000-0000-0000-0000-000000000003';
+
+await createUser(db, ROSTER_STAFF, 'roster-staff@example.com');
+await createUser(db, ROSTER_ADMIN2, 'roster-admin2@example.com');
+await createUser(db, ROSTER_OUTSIDER, 'roster-outsider@example.com');
+
+await db.query(`update public.admins set is_owner = true where user_id = $1`, [ADMIN]);
+
+await test('0033 the owner can add a staff operator by email', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_add_operator($1, 'staff')`, ['roster-staff@example.com']);
+  });
+  const row = await one(`select role, is_owner from public.admins where user_id = $1`, [
+    ROSTER_STAFF,
+  ]);
+  expectEqual(row.role, 'staff', 'added at the requested role');
+  expectEqual(row.is_owner, false, 'never becomes owner through this path');
+});
+
+await test('0033 a non-owner cannot add an operator', async () => {
+  await asUser(db, ROSTER_STAFF, async () => {
+    await expectRejection(
+      () =>
+        db.query(`select public.admin_add_operator($1, 'staff')`, ['roster-outsider@example.com']),
+      'only the owner',
+    );
+  });
+});
+
+await test('0033 the owner can change an operator’s role', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_set_operator_role($1, 'admin')`, [ROSTER_STAFF]);
+  });
+  expectEqual(
+    (await one(`select role from public.admins where user_id = $1`, [ROSTER_STAFF])).role,
+    'admin',
+    'promoted',
+  );
+});
+
+await test('0033 the owner’s own row cannot be re-roled or removed through the RPCs', async () => {
+  await asUser(db, ADMIN, async () => {
+    await expectRejection(
+      () => db.query(`select public.admin_set_operator_role($1, 'staff')`, [ADMIN]),
+      'owner’s role cannot be changed',
+    );
+    await expectRejection(
+      () => db.query(`select public.admin_remove_operator($1)`, [ADMIN]),
+      'owner cannot be removed',
+    );
+  });
+});
+
+await test('0033 admin_add_operator refuses to touch the owner’s row either', async () => {
+  await asUser(db, ADMIN, async () => {
+    await expectRejection(
+      () => db.query(`select public.admin_add_operator('admin@example.com', 'staff')`),
+      'owner’s role cannot be changed',
+    );
+  });
+});
+
+await test('0033 the owner can remove an operator', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_remove_operator($1)`, [ROSTER_STAFF]);
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.admins where user_id = $1`, [ROSTER_STAFF]),
+    0,
+    'gone from the roster',
+  );
+});
+
+await test('0033 any operator can list the roster, not only the owner', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_add_operator($1, 'staff')`, ['roster-staff@example.com']);
+  });
+  await asUser(db, ROSTER_STAFF, async () => {
+    const rows = (await db.query(`select * from public.admin_list_operators()`)).rows;
+    if (rows.length < 2) throw new Error('expected at least the owner and this staff member');
+    if (!rows.some((r) => r.is_owner)) throw new Error('the owner should be listed');
+  });
+});
+
+await test('0033 an outsider cannot reach any roster RPC', async () => {
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    await expectRejection(
+      () => db.query(`select public.admin_list_operators()`),
+      'not an operator',
+    );
+    await expectRejection(
+      () =>
+        db.query(`select public.admin_add_operator($1, 'staff')`, ['roster-admin2@example.com']),
+      'only the owner',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+console.log('\nbilling plans (0034)');
+// ---------------------------------------------------------------------------
+
+await test('0034 the seeded plans are readable by anyone signed in', async () => {
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.billing_plans where active`),
+      3,
+      'the three seeded plans',
+    );
+  });
+});
+
+await test('0034 only an admin can create or edit a plan', async () => {
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    await expectRejection(
+      () => db.query(`select public.admin_upsert_plan('plan-x','Test',1,100,'usd','month',null,9)`),
+      'not an administrator',
+    );
+  });
+  await asUser(db, ADMIN, async () => {
+    await db.query(
+      `select public.admin_upsert_plan('plan-x','Test',1073741824,299,'usd','month',null,9)`,
+    );
+  });
+  expectEqual(
+    (await one(`select price_cents from public.billing_plans where id = 'plan-x'`)).price_cents,
+    299,
+    'the new plan was created',
+  );
+});
+
+await test('0034 upsert edits an existing plan in place rather than duplicating it', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(
+      `select public.admin_upsert_plan('plan-x','Test v2',1073741824,399,'usd','month',null,9)`,
+    );
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.billing_plans where id = 'plan-x'`),
+    1,
+    'still one row',
+  );
+  expectEqual(
+    (await one(`select name, price_cents from public.billing_plans where id = 'plan-x'`))
+      .price_cents,
+    399,
+    'price updated',
+  );
+});
+
+await test('0034 a plan an admin just created is actually assignable via set_my_plan', async () => {
+  // Proves profiles.plan_id is now a real reference to billing_plans rather
+  // than the three-value check constraint 0031 originally wrote — an admin
+  // adding a fourth plan has to result in something a user can subscribe to.
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    await db.query(`select public.set_my_plan('plan-x', $1)`, [Date.now() + 30 * 86400000]);
+  });
+  expectEqual(
+    (await one(`select plan_id from public.profiles where id = $1`, [ROSTER_OUTSIDER])).plan_id,
+    'plan-x',
+    'assigned to the newly-created plan',
+  );
+  // Put it back, so later sections that assume ROSTER_OUTSIDER is on 'free'
+  // (there are none after this point, but this is the honest thing to do).
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    await db.query(`select public.set_my_plan('free', null)`);
+  });
+});
+
+await test('0034 set_my_plan refuses a plan id that does not exist', async () => {
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    await expectRejection(
+      () => db.query(`select public.set_my_plan('not-a-real-plan', null)`),
+      'unknown plan',
+    );
+  });
+});
+
+await test('0034 an archived plan is invisible to an ordinary account, visible to an admin', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_set_plan_active('plan-x', false)`);
+  });
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.billing_plans where id = 'plan-x'`),
+      0,
+      'hidden from an ordinary account',
+    );
+  });
+  await asUser(db, ADMIN, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.billing_plans where id = 'plan-x'`),
+      1,
+      'still visible to an admin, to be able to restore it',
+    );
+  });
+});
+
+await test('0034 a staff-tier operator cannot edit plans — only admin', async () => {
+  await asUser(db, ROSTER_STAFF, async () => {
+    await expectRejection(
+      () => db.query(`select public.admin_set_plan_active('plan-x', true)`),
+      'not an administrator',
+    );
+  });
+});
+
+await test('0034 an archived plan cannot be self-assigned, even though the row still exists', async () => {
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    await expectRejection(
+      () => db.query(`select public.set_my_plan('plan-x', null)`),
+      'unknown plan',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+console.log('\nmedia backup requires a paid plan (0035)');
+// ---------------------------------------------------------------------------
+
+const MEDIA_PLAN_FREE = '99300000-0000-0000-0000-000000000001';
+await createUser(db, MEDIA_PLAN_FREE, 'media-plan-free@example.com');
+
+await test('0035 a free-plan account cannot back up media at all', async () => {
+  await asUser(db, MEDIA_PLAN_FREE, async () => {
+    await expectRejection(
+      () => put(MEDIA_PLAN_FREE, 'gallery_photos/p1.jpg', 1024),
+      'media backup requires a paid plan',
+    );
+  });
+});
+
+await test('0035 the same free-plan account can still add photos to a shared album', async () => {
+  // Proves the two buckets are gated independently — 0032's own album/member
+  // limits are the shared-albums lever, not this migration.
+  await asUser(db, MEDIA_PLAN_FREE, async () => {
+    await db.query(
+      `select public.create_shared_album('alb-media-free','cipher:x','m-media-free-owner',null,'act-media-free',$1)`,
+      [Date.now()],
+    );
+    await putAlbumObject('alb-media-free', 'photo-a.bin', 1024);
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from storage.objects
+        where bucket_id = 'shared-albums' and name = 'alb-media-free/photo-a.bin'`,
+    ),
+    1,
+    'shared-album upload succeeded on the free plan',
+  );
+});
+
+await test('0035 upgrading lifts the block, still bounded by the existing byte quota', async () => {
+  await asUser(db, MEDIA_PLAN_FREE, async () => {
+    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+    await put(MEDIA_PLAN_FREE, 'gallery_photos/p1.jpg', 1024);
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from storage.objects
+        where bucket_id = 'media' and name = $1`,
+      [`${MEDIA_PLAN_FREE}/gallery_photos/p1.jpg`],
+    ),
+    1,
+    'upload succeeded once on a paid plan',
+  );
+
+  const quota = Number((await one(`select public.media_quota_bytes() as q`)).q);
+  await asUser(db, MEDIA_PLAN_FREE, async () => {
+    await expectRejection(
+      () => put(MEDIA_PLAN_FREE, 'gallery_photos/over.jpg', quota),
+      'media storage quota exceeded',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+console.log('\nowner bootstrap (0033, continued — destructive, kept last)');
+// ---------------------------------------------------------------------------
+//
+// Everything above this point in the whole suite needed ADMIN's ordinary
+// admin rights or the roster as already populated. Nothing after this point
+// does — this section empties `admins` entirely to exercise claim_owner()'s
+// actual guard ("does any row exist"), so it has to be the last thing that
+// runs.
+
+await test('0033 admin_has_owner reflects the roster truthfully', async () => {
+  expectEqual((await one(`select public.admin_has_owner() as v`)).v, true, 'an owner exists');
+});
+
+await test('0033 claim_owner refuses once an owner already exists', async () => {
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    await expectRejection(() => db.query(`select public.claim_owner()`), 'already has an owner');
+  });
+});
+
+await test('0033 claim_owner succeeds exactly once, for the first caller, on an empty roster', async () => {
+  await db.query(`delete from public.admins`);
+  expectEqual((await one(`select public.admin_has_owner() as v`)).v, false, 'roster is now empty');
+
+  await asUser(db, ROSTER_OUTSIDER, async () => {
+    await db.query(`select public.claim_owner()`);
+  });
+  const row = await one(`select role, is_owner from public.admins where user_id = $1`, [
+    ROSTER_OUTSIDER,
+  ]);
+  expectEqual(row.role, 'admin', 'the claimant becomes admin');
+  expectEqual(row.is_owner, true, 'and owner');
+  expectEqual(
+    await count(`select count(*)::int n from public.admins`),
+    1,
+    'the only row on the roster',
+  );
+
+  await asUser(db, ROSTER_ADMIN2, async () => {
+    await expectRejection(() => db.query(`select public.claim_owner()`), 'already has an owner');
+  });
 });
 
 summary();

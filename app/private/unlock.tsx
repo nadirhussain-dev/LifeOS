@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { PinPad } from '@/features/private/components/pin-pad';
+import { VaultSealTransition } from '@/features/private/components/vault-seal-transition';
+import { useVaultTransition } from '@/features/private/hooks/use-vault-transition';
 import { MIN_PIN_LENGTH, isVaultSetUp, unlockVault } from '@/features/private/services/vault-keys';
 import { usePrivateStore } from '@/features/private/store/private-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -33,6 +35,7 @@ export default function PrivateUnlockScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryInMs, setRetryInMs] = useState(0);
+  const transition = useVaultTransition();
 
   useEffect(() => {
     void isVaultSetUp().then((ready) => {
@@ -45,7 +48,7 @@ export default function PrivateUnlockScreen() {
     setBusy(true);
     setError(null);
 
-    const result = await unlockVault(pin);
+    const result = await transition.run('opening', () => unlockVault(pin));
     setBusy(false);
     setPin('');
 
@@ -65,7 +68,7 @@ export default function PrivateUnlockScreen() {
       return;
     }
     setError(t('private.wrongPin'));
-  }, [pin, busy, unlock, router, t]);
+  }, [pin, busy, unlock, router, t, transition]);
 
   // Counts the throttle down so the button re-enables on its own rather than
   // leaving somebody tapping a dead screen.
@@ -121,6 +124,8 @@ export default function PrivateUnlockScreen() {
           onPress={() => router.back()}
         />
       </View>
+
+      <VaultSealTransition visible={transition.visible} mode={transition.mode} />
     </View>
   );
 }

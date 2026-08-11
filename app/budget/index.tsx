@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
+import { AdSlot } from '@/features/ads/components/ad-slot';
 import { ACCOUNTS } from '@/features/budget/config/budget-config';
 import { ExpenseDonut } from '@/features/budget/components/expense-donut';
 import { SavingsGoalCard } from '@/features/budget/components/savings-goal-card';
@@ -329,6 +330,8 @@ export default function BudgetScreen() {
               </View>
             )}
           </View>
+
+          <AdSlot placement="budget-bottom" />
         </ScrollView>
       )}
 

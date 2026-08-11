@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import {
   Bell,
   BookOpen,
+  Crown,
   Database,
   Download,
   Droplet,
@@ -42,7 +43,11 @@ import { clearAllData } from '@/lib/data-management';
 import { queryClient } from '@/lib/query-client';
 import { confirm, notify } from '@/lib/dialog-store';
 import { toast } from '@/lib/toast-store';
-import { isOperator as checkOperator } from '@/features/operator/services/operator-repository';
+import {
+  claimOwner,
+  hasOwner,
+  isOperator as checkOperator,
+} from '@/features/operator/services/operator-repository';
 import { isVaultSetUp } from '@/features/private/services/vault-keys';
 import { usePrivateStore } from '@/features/private/store/private-store';
 import { useProfileStore } from '@/features/profile/store/profile-store';
@@ -104,6 +109,17 @@ export default function SettingsScreen() {
   const [isOperator, setIsOperator] = useState(false);
 
   /**
+   * Whether this app has ever been claimed by an owner — see `claim_owner()`
+   * (migration 0033). Defaults to `false` (hidden) for the same reason
+   * `isOperator` does: `hasOwner()` fails toward "an owner exists" on any
+   * error, so a row that shouldn't be there stays hidden rather than
+   * flickering into view on a bad connection. The moment anyone claims it —
+   * which can only ever happen once — this disappears for every account,
+   * permanently.
+   */
+  const [needsOwner, setNeedsOwner] = useState(false);
+
+  /**
    * The way into the private space.
    *
    * Called by the visible row and — always, hidden or not — by a long-press on
@@ -126,7 +142,27 @@ export default function SettingsScreen() {
     getBiometricLabel().then(setBioLabel);
     void isVaultSetUp().then(setPrivateSetUp);
     void checkOperator().then(setIsOperator);
+    void hasOwner().then((has) => setNeedsOwner(!has));
   }, []);
+
+  const claimOwnership = () =>
+    void confirm({
+      title: t('operator.claimOwnerTitle'),
+      message: t('operator.claimOwnerBody'),
+      confirmLabel: t('operator.claimOwnerConfirm'),
+      cancelLabel: t('common.cancel'),
+    }).then(async (ok) => {
+      if (!ok) return;
+      const result = await claimOwner();
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      setNeedsOwner(false);
+      setIsOperator(true);
+      toast.success(t('operator.claimOwnerDone'));
+      router.push('/settings/operator');
+    });
 
   const toggleAppLock = async (next: boolean) => {
     if (next) {
@@ -457,6 +493,17 @@ export default function SettingsScreen() {
                 label={t('operator.title')}
                 subtitle={t('operator.rowHint')}
                 onPress={() => router.push('/settings/operator')}
+              />
+            ) : null}
+            {/* Only while nobody has claimed this app yet — see
+                claim_owner() (0033). Disappears, for every account, the
+                moment anyone taps it. */}
+            {needsOwner ? (
+              <SettingsRow
+                icon={Crown}
+                label={t('operator.claimOwnerRow')}
+                subtitle={t('operator.claimOwnerRowHint')}
+                onPress={claimOwnership}
               />
             ) : null}
             <SettingsRow

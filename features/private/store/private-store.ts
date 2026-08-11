@@ -65,6 +65,14 @@ type PrivateState = {
   hiddenFromSettings: boolean;
   /** Set once the user finishes the private-space setup flow. */
   setUpComplete: boolean;
+  /**
+   * The override for `filterByRole()` (private-modules.ts). Off by default —
+   * flipping it on is always a deliberate act in Private Settings, never a
+   * side effect of the gender answer or anything else, because it is the one
+   * thing standing between a hard-gated module and an account it doesn't
+   * recognise as female or male.
+   */
+  showAllModules: boolean;
   hydrated: boolean;
 
   unlock: (key: Uint8Array, space: VaultSpace) => void;
@@ -77,6 +85,7 @@ type PrivateState = {
   togglePrivatised: (id: string) => void;
   setHiddenFromSettings: (hidden: boolean) => void;
   setSetUpComplete: (complete: boolean) => void;
+  setShowAllModules: (show: boolean) => void;
   /** Forgets the preferences too — used when the space is destroyed. */
   reset: () => void;
 };
@@ -91,6 +100,7 @@ export const usePrivateStore = create<PrivateState>()(
       privatised: [],
       hiddenFromSettings: false,
       setUpComplete: false,
+      showAllModules: false,
       hydrated: false,
 
       unlock: (key, space) => set({ key, space, backgroundedAt: null }),
@@ -114,6 +124,7 @@ export const usePrivateStore = create<PrivateState>()(
         })),
       setHiddenFromSettings: (hiddenFromSettings) => set({ hiddenFromSettings }),
       setSetUpComplete: (setUpComplete) => set({ setUpComplete }),
+      setShowAllModules: (showAllModules) => set({ showAllModules }),
 
       reset: () =>
         set({
@@ -127,6 +138,7 @@ export const usePrivateStore = create<PrivateState>()(
           // longer has a vault to get back into.
           hiddenFromSettings: false,
           setUpComplete: false,
+          showAllModules: false,
         }),
     }),
     {
@@ -140,6 +152,7 @@ export const usePrivateStore = create<PrivateState>()(
         privatised: s.privatised,
         hiddenFromSettings: s.hiddenFromSettings,
         setUpComplete: s.setUpComplete,
+        showAllModules: s.showAllModules,
       }),
       onRehydrateStorage: () => () => {
         usePrivateStore.setState({ hydrated: true });

@@ -6,6 +6,12 @@ export type SharedAlbum = {
   createdAt: number;
   updatedAt: number;
   deletedAt: number | null;
+  /** Owner-controlled, off by default — see migration 0029. Comments on
+   *  photos and the album's own chat only accept writes while the matching
+   *  flag is true; both stay readable regardless, so turning one off never
+   *  hides an existing thread. */
+  allowComments: boolean;
+  allowChat: boolean;
 };
 
 export type AlbumRole = 'owner' | 'member';
@@ -64,4 +70,30 @@ export type AlbumActivity = {
   photoId: string | null;
   meta: Record<string, unknown> | null;
   createdAt: number;
+};
+
+/** A comment on one photo. `bodyCiphertext` is opaque — see album-crypto.ts. */
+export type AlbumComment = {
+  id: string;
+  albumId: string;
+  photoId: string | null;
+  authorId: string | null;
+  authorName: string | null;
+  bodyCiphertext: string;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt: number | null;
+};
+
+/** One message in the album's chat. Same ciphertext discipline as
+ *  AlbumComment. */
+export type AlbumMessage = {
+  id: string;
+  albumId: string;
+  authorId: string | null;
+  authorName: string | null;
+  bodyCiphertext: string;
+  createdAt: number;
+  updatedAt: number;
+  deletedAt: number | null;
 };

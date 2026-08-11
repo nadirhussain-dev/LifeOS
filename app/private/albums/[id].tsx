@@ -2,7 +2,7 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Camera, ImagePlus, Trash2, UserPlus, Users } from 'lucide-react-native';
+import { Camera, ImagePlus, MessageCircle, Trash2, UserPlus, Users } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dimensions, Pressable, View } from 'react-native';
@@ -11,7 +11,11 @@ import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { usePlan } from '@/features/billing/hooks/use-billing';
 import { decryptPhotoAsDataUri } from '@/features/private/services/album-cache';
+import { AlbumCommentSheet } from '@/features/private/components/album-comment-sheet';
+import { OnThisDayCard } from '@/features/private/components/on-this-day-card';
+import { TogetherStrip } from '@/features/private/components/together-strip';
 import { PrivateScreen } from '@/features/private/components/private-screen';
 import { privateModule } from '@/features/private/config/private-modules';
 import { SecureContentView, SecureImage } from '@/features/private/components/secure-content-view';
@@ -19,9 +23,11 @@ import {
   useAlbumDetail,
   useAlbumKey,
   useAlbumName,
+  useAlbumRealtime,
   useMyAlbumMembership,
   useSharedAlbumMutations,
 } from '@/features/private/hooks/use-shared-albums';
+import { onThisDay } from '@/features/private/services/together';
 import type { AlbumPhoto } from '@/features/private/types/shared-album.types';
 import { usePrivateStore } from '@/features/private/store/private-store';
 import { ReportSheet, type ReportTarget } from '@/features/moderation/components/report-sheet';
@@ -63,16 +69,31 @@ export default function SharedAlbumScreen() {
   const { data: albumKey } = useAlbumKey(id);
   const { name, locked } = useAlbumName(id, data?.album?.nameCiphertext);
   const { isOwner } = useMyAlbumMembership(data);
-  const { addPhoto, removePhoto, deleteAlbum } = useSharedAlbumMutations(id);
+  const { addPhoto, removePhoto, deleteAlbum, addComment, removeComment } =
+    useSharedAlbumMutations(id);
+  useAlbumRealtime(id);
 
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<AlbumPhoto | null>(null);
   const reportSheet = useRef<BottomSheetModal>(null);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
+  const commentSheet = useRef<BottomSheetModal>(null);
 
   const photos = data?.photos ?? [];
   const columns = 3;
   const size = (Dimensions.get('window').width - 40 - GAP * (columns - 1)) / columns;
+  // Depends on `data?.photos` (the query's own stable array) rather than the
+  // `photos` fallback above, which is a fresh `[]` every render whenever
+  // there's no data yet and would otherwise recompute every time.
+  const { isPlus } = usePlan();
+  // Free: only the most recent exact anniversary. Plus: the full lookback,
+  // including the oldest-photo fallback for an album with no anniversary
+  // yet — see together.ts's own header for why the depth, not the feature
+  // itself, is what's gated.
+  const memory = useMemo(
+    () => onThisDay(data?.photos ?? [], new Date(), isPlus ? 15 : 1),
+    [data?.photos, isPlus],
+  );
 
   const pick = async (source: 'library' | 'camera') => {
     if (!albumKey || !userId) return;
@@ -225,6 +246,28 @@ export default function SharedAlbumScreen() {
         ) : null}
       </View>
 
+      {!locked && data ? (
+        <TogetherStrip
+          memberNames={data.activeMembers.map((m) => m.displayName || m.email || '?')}
+          totalMembers={data.activeMembers.length}
+          photoCount={photos.length}
+          createdAt={data.album?.createdAt ?? Date.now()}
+          tint={tint}
+          showChatEntry={isOwner || !!data.album?.allowChat}
+          onOpenChat={() => router.push(`/private/albums/${id}/chat`)}
+        />
+      ) : null}
+
+      {memory && albumKey ? (
+        <OnThisDayCard
+          photo={memory.photo}
+          yearsAgo={memory.yearsAgo}
+          albumKey={albumKey}
+          tint={tint}
+          onPress={() => setSelected(memory.photo)}
+        />
+      ) : null}
+
       {locked ? <Text variant="muted">{t('private.albumLockedBody')}</Text> : null}
 
       {photos.length === 0 ? (
@@ -258,21 +301,49 @@ export default function SharedAlbumScreen() {
           >
             <AlbumFullPhoto photo={selected} albumKey={albumKey ?? null} />
           </SecureContentView>
-          {isOwner || selected.addedBy === userId ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => confirmDeletePhoto(selected)}
-              className="mt-5 flex-row items-center gap-2 rounded-full border px-4 py-2.5"
-              style={{ borderColor: alpha(theme.destructive, 0.5) }}
-            >
-              <Trash2 size={17} color={theme.destructive} />
-              <Text style={{ color: theme.destructive }}>{t('common.delete')}</Text>
-            </Pressable>
-          ) : null}
+          <View className="mt-5 flex-row items-center gap-2.5">
+            {data?.album && albumKey ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => commentSheet.current?.present()}
+                className="flex-row items-center gap-2 rounded-full border border-border px-4 py-2.5"
+              >
+                <MessageCircle size={16} color={theme.foreground} />
+                <Text className="text-foreground">{t('private.comments')}</Text>
+              </Pressable>
+            ) : null}
+            {isOwner || selected.addedBy === userId ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => confirmDeletePhoto(selected)}
+                className="flex-row items-center gap-2 rounded-full border px-4 py-2.5"
+                style={{ borderColor: alpha(theme.destructive, 0.5) }}
+              >
+                <Trash2 size={17} color={theme.destructive} />
+                <Text style={{ color: theme.destructive }}>{t('common.delete')}</Text>
+              </Pressable>
+            ) : null}
+          </View>
         </Pressable>
       ) : null}
 
       <ReportSheet ref={reportSheet} target={reportTarget} />
+
+      <AlbumCommentSheet
+        ref={commentSheet}
+        tint={tint}
+        mutations={{ addComment, removeComment }}
+        target={
+          selected && albumKey
+            ? {
+                photoId: selected.id,
+                albumKey,
+                canCompose: isOwner || !!data?.album?.allowComments,
+                isOwner,
+              }
+            : null
+        }
+      />
     </PrivateScreen>
   );
 }

@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
+import { AdSlot } from '@/features/ads/components/ad-slot';
 import { AddMediaSheet } from '@/features/gallery/components/add-media-sheet';
 import { GAP, PhotoTile } from '@/features/gallery/components/photo-grid';
 import { SubjectCard } from '@/features/gallery/components/subject-card';
@@ -133,6 +134,8 @@ export default function GalleryScreen() {
               </View>
             </View>
           )}
+
+          <AdSlot placement="gallery-bottom" />
         </ScrollView>
       )}
 

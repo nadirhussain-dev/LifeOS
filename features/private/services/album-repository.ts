@@ -1,6 +1,8 @@
 import type {
   AlbumActivity,
+  AlbumComment,
   AlbumMember,
+  AlbumMessage,
   AlbumPhoto,
   SharedAlbum,
 } from '@/features/private/types/shared-album.types';
@@ -30,6 +32,8 @@ type Row = Record<string, unknown>;
 const num = (v: unknown, fallback = 0) => (typeof v === 'number' ? v : fallback);
 const str = (v: unknown) => (typeof v === 'string' ? v : null);
 
+const bool = (v: unknown) => v === true;
+
 const toAlbum = (r: Row): SharedAlbum => ({
   id: String(r.id),
   nameCiphertext: String(r.name_ciphertext),
@@ -37,6 +41,8 @@ const toAlbum = (r: Row): SharedAlbum => ({
   createdAt: num(r.created_at),
   updatedAt: num(r.updated_at),
   deletedAt: typeof r.deleted_at === 'number' ? r.deleted_at : null,
+  allowComments: bool(r.allow_comments),
+  allowChat: bool(r.allow_chat),
 });
 
 const toMember = (r: Row): AlbumMember => ({
@@ -75,6 +81,29 @@ const toActivity = (r: Row): AlbumActivity => ({
   photoId: str(r.photo_id),
   meta: (r.meta as Record<string, unknown> | null) ?? null,
   createdAt: num(r.created_at),
+});
+
+const toComment = (r: Row): AlbumComment => ({
+  id: String(r.id),
+  albumId: String(r.album_id),
+  photoId: str(r.photo_id),
+  authorId: str(r.author_id),
+  authorName: str(r.author_name),
+  bodyCiphertext: String(r.body_ciphertext),
+  createdAt: num(r.created_at),
+  updatedAt: num(r.updated_at),
+  deletedAt: typeof r.deleted_at === 'number' ? r.deleted_at : null,
+});
+
+const toMessage = (r: Row): AlbumMessage => ({
+  id: String(r.id),
+  albumId: String(r.album_id),
+  authorId: str(r.author_id),
+  authorName: str(r.author_name),
+  bodyCiphertext: String(r.body_ciphertext),
+  createdAt: num(r.created_at),
+  updatedAt: num(r.updated_at),
+  deletedAt: typeof r.deleted_at === 'number' ? r.deleted_at : null,
 });
 
 /** Supabase returns `{ data, error }`; make the error a throw so react-query
@@ -270,5 +299,110 @@ export async function removePhoto(photoId: string): Promise<void> {
     .from('shared_album_photos')
     .update({ deleted_at: Date.now(), updated_at: Date.now() })
     .eq('id', photoId);
+  assertOk(error);
+}
+
+// --- comments & chat (0029) --------------------------------------------------
+
+/** Owner-only in practice — migration 0029's trigger rejects anyone else's
+ *  attempt to change either flag, so this is a plain update and the
+ *  enforcement lives entirely server-side, same as the deleted_at column on
+ *  this same table (0027). */
+export async function setAlbumPermissions(
+  albumId: string,
+  permissions: { allowComments?: boolean; allowChat?: boolean },
+): Promise<void> {
+  const patch: Row = { updated_at: Date.now() };
+  if (permissions.allowComments !== undefined) patch.allow_comments = permissions.allowComments;
+  if (permissions.allowChat !== undefined) patch.allow_chat = permissions.allowChat;
+  const { error } = await supabase.from('shared_albums').update(patch).eq('id', albumId);
+  assertOk(error);
+}
+
+export async function listComments(photoId: string): Promise<AlbumComment[]> {
+  const res = await supabase
+    .from('shared_album_comments')
+    .select('*')
+    .eq('photo_id', photoId)
+    .is('deleted_at', null)
+    .order('created_at');
+  return unwrap<Row[]>(res).map(toComment);
+}
+
+/** Insert is refused server-side unless `allow_comments` is on for this album
+ *  — see `album_allows_comments()` (0029). The caller is expected to hide the
+ *  compose UI when it's off; this is the enforcement, not the UX. */
+export async function addComment(input: {
+  albumId: string;
+  photoId: string;
+  authorId: string;
+  authorName: string | null;
+  bodyCiphertext: string;
+}): Promise<string> {
+  const id = generateId();
+  const now = Date.now();
+  const { error } = await supabase.from('shared_album_comments').insert({
+    id,
+    album_id: input.albumId,
+    photo_id: input.photoId,
+    author_id: input.authorId,
+    author_name: input.authorName,
+    body_ciphertext: input.bodyCiphertext,
+    created_at: now,
+    updated_at: now,
+  });
+  assertOk(error);
+  return id;
+}
+
+/** Soft-delete. RLS scopes this to the comment's own author or the album
+ *  owner (0029) — a mis-scoped call just matches zero rows rather than
+ *  throwing, same as removeMember's tombstone pattern. */
+export async function removeComment(commentId: string): Promise<void> {
+  const { error } = await supabase
+    .from('shared_album_comments')
+    .update({ deleted_at: Date.now(), updated_at: Date.now() })
+    .eq('id', commentId);
+  assertOk(error);
+}
+
+export async function listMessages(albumId: string): Promise<AlbumMessage[]> {
+  const res = await supabase
+    .from('shared_album_messages')
+    .select('*')
+    .eq('album_id', albumId)
+    .is('deleted_at', null)
+    .order('created_at');
+  return unwrap<Row[]>(res).map(toMessage);
+}
+
+/** Insert is refused server-side unless `allow_chat` is on — see
+ *  `album_allows_chat()` (0029). */
+export async function sendMessage(input: {
+  albumId: string;
+  authorId: string;
+  authorName: string | null;
+  bodyCiphertext: string;
+}): Promise<string> {
+  const id = generateId();
+  const now = Date.now();
+  const { error } = await supabase.from('shared_album_messages').insert({
+    id,
+    album_id: input.albumId,
+    author_id: input.authorId,
+    author_name: input.authorName,
+    body_ciphertext: input.bodyCiphertext,
+    created_at: now,
+    updated_at: now,
+  });
+  assertOk(error);
+  return id;
+}
+
+export async function removeMessage(messageId: string): Promise<void> {
+  const { error } = await supabase
+    .from('shared_album_messages')
+    .update({ deleted_at: Date.now(), updated_at: Date.now() })
+    .eq('id', messageId);
   assertOk(error);
 }
