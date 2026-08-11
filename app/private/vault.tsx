@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { Camera, ImagePlus, Trash2 } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dimensions, Pressable, View } from 'react-native';
+import { Dimensions, Linking, Pressable, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
@@ -52,7 +52,25 @@ export default function VaultScreen() {
     async (source: 'library' | 'camera') => {
       setBusy(true);
       try {
-        const { items: picked, rejectedOversize } = await pickIntoVault(source);
+        const { items: picked, rejectedOversize, permissionDenied } = await pickIntoVault(source);
+        if (permissionDenied) {
+          void confirm({
+            title: t(
+              source === 'camera'
+                ? 'permissions.cameraDeniedTitle'
+                : 'permissions.mediaLibraryDeniedTitle',
+            ),
+            message: t(
+              source === 'camera'
+                ? 'permissions.cameraDeniedBody'
+                : 'permissions.mediaLibraryDeniedBody',
+            ),
+            confirmLabel: t('permissions.openSettings'),
+            cancelLabel: t('common.cancel'),
+          }).then((ok) => {
+            if (ok) void Linking.openSettings();
+          });
+        }
         if (picked.length > 0) {
           addVaultItems(picked);
           reload();

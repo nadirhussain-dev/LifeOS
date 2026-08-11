@@ -3,7 +3,9 @@ import * as ImagePicker from 'expo-image-picker';
 
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { isSupabaseConfigured } from '@/lib/env';
+import { hasMediaAccess } from '@/lib/media-permissions';
 import { supabase } from '@/lib/supabase';
+import { errorKind, type SupabaseErrorKind } from '@/lib/supabase-error';
 
 /**
  * Profile pictures, in Supabase Storage.
@@ -26,7 +28,12 @@ function avatarPath(uid: string): string {
 
 export type AvatarResult =
   | { ok: true; path: string }
-  | { ok: false; error: 'cancelled' | 'not-signed-in' | 'upload-failed' };
+  | { ok: false; error: 'cancelled' | 'not-signed-in' | 'permission-denied' }
+  // `kind` distinguishes *why* the upload failed (offline, RLS, a missing
+  // bucket, ...) instead of the one flat message every failure used to
+  // collapse into — see lib/supabase-error.ts's header for the problem this
+  // solves. `errors.${kind}` in the locale files is the string to show.
+  | { ok: false; error: 'upload-failed'; kind: SupabaseErrorKind };
 
 /**
  * Picks an image and uploads it.
@@ -40,6 +47,8 @@ export async function pickAndUploadAvatar(): Promise<AvatarResult> {
   const uid = useAuthStore.getState().user?.id;
   if (!uid || !isSupabaseConfigured) return { ok: false, error: 'not-signed-in' };
 
+  if (!(await hasMediaAccess('library'))) return { ok: false, error: 'permission-denied' };
+
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
     allowsEditing: true,
@@ -51,7 +60,7 @@ export async function pickAndUploadAvatar(): Promise<AvatarResult> {
 
   const asset = result.assets[0];
   const file = new File(asset.uri);
-  if (!file.exists) return { ok: false, error: 'upload-failed' };
+  if (!file.exists) return { ok: false, error: 'upload-failed', kind: 'unknown' };
 
   try {
     const path = avatarPath(uid);
@@ -60,7 +69,7 @@ export async function pickAndUploadAvatar(): Promise<AvatarResult> {
       // One object per user, replaced in place.
       upsert: true,
     });
-    if (error) return { ok: false, error: 'upload-failed' };
+    if (error) return { ok: false, error: 'upload-failed', kind: errorKind(error) };
 
     // `avatar_updated_at` is a cache-buster: the storage URL never changes, so
     // without it every device keeps showing the previous picture indefinitely.
@@ -68,11 +77,11 @@ export async function pickAndUploadAvatar(): Promise<AvatarResult> {
       .from('profiles')
       .update({ avatar_path: path, avatar_updated_at: Date.now() })
       .eq('id', uid);
-    if (profileError) return { ok: false, error: 'upload-failed' };
+    if (profileError) return { ok: false, error: 'upload-failed', kind: errorKind(profileError) };
 
     return { ok: true, path };
-  } catch {
-    return { ok: false, error: 'upload-failed' };
+  } catch (e) {
+    return { ok: false, error: 'upload-failed', kind: errorKind(e) };
   }
 }
 
