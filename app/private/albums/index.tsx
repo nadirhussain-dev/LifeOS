@@ -68,7 +68,8 @@ export default function SharedAlbumsScreen() {
   };
 
   return (
-    <PrivateScreen moduleId="shared-albums"
+    <PrivateScreen
+      moduleId="shared-albums"
       title={t('private.sharedAlbumsTitle')}
       subtitle={t('private.itemCount', { count: albums.length })}
       tint={tint}
