@@ -1,7 +1,14 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { CreditCard, ShieldAlert, ToggleLeft, UsersRound, Users } from 'lucide-react-native';
+import {
+  CreditCard,
+  Megaphone,
+  ShieldAlert,
+  ToggleLeft,
+  UsersRound,
+  Users,
+} from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
@@ -11,6 +18,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
+import { ADS_MODULE_ID } from '@/features/ads/config';
 import { HUB_SECTIONS } from '@/features/hub/config/modules';
 import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 import {
@@ -119,6 +127,12 @@ export default function OperatorConsoleScreen() {
               }
             />
             <ModuleSwitches
+              onChanged={() => {
+                void refreshModuleFlags();
+                void queryClient.invalidateQueries({ queryKey: ['operator'] });
+              }}
+            />
+            <AdsSwitch
               onChanged={() => {
                 void refreshModuleFlags();
                 void queryClient.invalidateQueries({ queryKey: ['operator'] });
@@ -302,6 +316,58 @@ function ModuleSwitches({ onChanged }: { onChanged: () => void }) {
       <Text variant="caption" className="px-1">
         {t('operator.perUserNote')}
       </Text>
+    </View>
+  );
+}
+
+/**
+ * The global ads switch — same remote flag table `ModuleSwitches` reads
+ * (`module_flags.module` is untyped text on purpose; see 0011's own
+ * comment), under the fixed id `ADS_MODULE_ID`. Not a real Hub module —
+ * nobody navigates to an "Ads" screen — so it gets its own small section
+ * instead of a row in that list, and skips the confirm-and-explain flow
+ * `ModuleSwitches` uses: turning a module off hides a feature someone
+ * relies on and needs a message explaining the gap, but turning ads off
+ * removes nothing from anyone.
+ */
+function AdsSwitch({ onChanged }: { onChanged: () => void }) {
+  const { t } = useTranslation();
+  const { c } = useTheme();
+  const enabled = useModuleFlagsStore((s) => s.flags[ADS_MODULE_ID]?.enabled !== false);
+  const [busy, setBusy] = useState(false);
+
+  const toggle = async (next: boolean) => {
+    setBusy(true);
+    const result = await setModuleEnabled(ADS_MODULE_ID, next, null);
+    setBusy(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    onChanged();
+  };
+
+  return (
+    <View className="gap-3">
+      <View className="flex-row items-center gap-2">
+        <Megaphone size={16} color={c.mutedForeground} />
+        <Text variant="micro">{t('operator.adsSwitch')}</Text>
+      </View>
+
+      <View className={cardClass({ padding: 'none' }, 'px-4')}>
+        <View className="flex-row items-center gap-3 py-3.5">
+          <View className="flex-1">
+            <Text className="font-sora-medium text-foreground">{t('operator.adsEnabled')}</Text>
+            <Text variant="caption">{t('operator.adsEnabledSubtitle')}</Text>
+          </View>
+          <Switch
+            value={enabled}
+            disabled={busy}
+            onValueChange={(next) => void toggle(next)}
+            trackColor={{ true: c.accent, false: c.border }}
+          />
+        </View>
+      </View>
     </View>
   );
 }

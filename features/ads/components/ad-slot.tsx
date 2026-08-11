@@ -8,7 +8,8 @@ import { Text } from '@/components/ui/text';
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { usePlan } from '@/features/billing/hooks/use-billing';
 import { useBillingStore } from '@/features/billing/store/billing-store';
-import type { AdPlacement } from '@/features/ads/config';
+import { ADS_MODULE_ID, type AdPlacement } from '@/features/ads/config';
+import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 import { useTheme } from '@/hooks/use-theme';
 
 type Props = { placement: AdPlacement };
@@ -70,10 +71,15 @@ export function AdSlot({ placement }: Props) {
   const { isPlus } = usePlan();
   const checkedAt = useBillingStore((s) => s.checkedAt);
   const [failed, setFailed] = useState(false);
+  // The operator's global kill switch (app/settings/operator.tsx's Ads
+  // toggle) — same remote flag system as every Hub module, absence-means-on
+  // so a network blip never strips ads *back in* for someone who turned
+  // their limited data on to avoid them.
+  const adsEnabled = useModuleFlagsStore((s) => s.flags[ADS_MODULE_ID]?.enabled !== false);
 
   const mod = loadAdsModule();
 
-  if (isPlus || failed || !mod) return null;
+  if (isPlus || failed || !mod || !adsEnabled) return null;
   if (session && checkedAt === null) return null;
 
   const { BannerAd, BannerAdSize, TestIds } = mod;

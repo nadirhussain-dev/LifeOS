@@ -40,3 +40,16 @@ export const AD_PLACEMENTS = [
 ] as const;
 
 export type AdPlacement = (typeof AD_PLACEMENTS)[number];
+
+/**
+ * The id `AdSlot` is gated under in the remote module-flags system
+ * (supabase/migrations/0011_module_flags.sql) — lets the operator turn ads
+ * off for every free account without an app-store round trip, the same
+ * lever every Hub module already has. Not a real Hub module (nobody
+ * navigates to an "Ads" screen), but `module_flags.module` is untyped text
+ * on purpose specifically so a new switch never needs a migration — see that
+ * file's own comment. The operator console's Ads toggle
+ * (app/settings/operator.tsx) and this file are the only two call sites;
+ * kept as a constant so they can't drift into two different strings.
+ */
+export const ADS_MODULE_ID = 'ads';
