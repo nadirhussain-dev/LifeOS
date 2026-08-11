@@ -2,7 +2,16 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Camera, ImagePlus, MessageCircle, Trash2, UserPlus, Users } from 'lucide-react-native';
+import {
+  Camera,
+  CalendarDays,
+  ImagePlus,
+  MessageCircle,
+  NotebookPen,
+  Trash2,
+  UserPlus,
+  Users,
+} from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dimensions, Pressable, View } from 'react-native';
@@ -14,11 +23,16 @@ import { useAuthStore } from '@/features/auth/services/auth-store';
 import { usePlan } from '@/features/billing/hooks/use-billing';
 import { decryptPhotoAsDataUri } from '@/features/private/services/album-cache';
 import { AlbumCommentSheet } from '@/features/private/components/album-comment-sheet';
+import { MilestoneSheet } from '@/features/private/components/milestone-sheet';
 import { OnThisDayCard } from '@/features/private/components/on-this-day-card';
 import { TogetherStrip } from '@/features/private/components/together-strip';
 import { PrivateScreen } from '@/features/private/components/private-screen';
 import { privateModule } from '@/features/private/config/private-modules';
 import { SecureContentView, SecureImage } from '@/features/private/components/secure-content-view';
+import {
+  useAlbumMilestoneMutations,
+  useAlbumMilestones,
+} from '@/features/private/hooks/use-album-milestones';
 import {
   useAlbumDetail,
   useAlbumKey,
@@ -27,7 +41,7 @@ import {
   useMyAlbumMembership,
   useSharedAlbumMutations,
 } from '@/features/private/hooks/use-shared-albums';
-import { onThisDay } from '@/features/private/services/together';
+import { onThisDay, todaysMilestone } from '@/features/private/services/together';
 import type { AlbumPhoto } from '@/features/private/types/shared-album.types';
 import { usePrivateStore } from '@/features/private/store/private-store';
 import { ReportSheet, type ReportTarget } from '@/features/moderation/components/report-sheet';
@@ -73,11 +87,19 @@ export default function SharedAlbumScreen() {
     useSharedAlbumMutations(id);
   useAlbumRealtime(id);
 
+  const { data: milestones = [] } = useAlbumMilestones(id, albumKey ?? null);
+  const milestoneMutations = useAlbumMilestoneMutations(id);
+  const todaysMilestoneTitle = useMemo(
+    () => todaysMilestone(milestones, new Date())?.title ?? null,
+    [milestones],
+  );
+
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<AlbumPhoto | null>(null);
   const reportSheet = useRef<BottomSheetModal>(null);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   const commentSheet = useRef<BottomSheetModal>(null);
+  const milestoneSheet = useRef<BottomSheetModal>(null);
 
   const photos = data?.photos ?? [];
   const columns = 3;
@@ -219,32 +241,52 @@ export default function SharedAlbumScreen() {
         ) : null
       }
     >
-      <View className="flex-row gap-2">
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push(`/private/albums/${id}/members`)}
-          className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-border py-2.5"
-        >
-          <Users size={15} color={theme.mutedForeground} />
-          <Text variant="caption">{t('private.members')}</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push(`/private/albums/${id}/invite`)}
-          className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-border py-2.5"
-        >
-          <UserPlus size={15} color={theme.mutedForeground} />
-          <Text variant="caption">{t('private.invite')}</Text>
-        </Pressable>
-        {isOwner ? (
+      <View className="gap-2">
+        <View className="flex-row gap-2">
           <Pressable
             accessibilityRole="button"
-            onPress={confirmDeleteAlbum}
-            className="h-10 w-10 items-center justify-center rounded-xl border border-border"
+            onPress={() => router.push(`/private/albums/${id}/plans`)}
+            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-border py-2.5"
           >
-            <Trash2 size={15} color={theme.destructive} />
+            <CalendarDays size={15} color={theme.mutedForeground} />
+            <Text variant="caption">{t('private.plansTitle')}</Text>
           </Pressable>
-        ) : null}
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push(`/private/albums/${id}/notes`)}
+            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-border py-2.5"
+          >
+            <NotebookPen size={15} color={theme.mutedForeground} />
+            <Text variant="caption">{t('private.notesTitle')}</Text>
+          </Pressable>
+        </View>
+        <View className="flex-row gap-2">
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push(`/private/albums/${id}/members`)}
+            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-border py-2.5"
+          >
+            <Users size={15} color={theme.mutedForeground} />
+            <Text variant="caption">{t('private.members')}</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push(`/private/albums/${id}/invite`)}
+            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-border py-2.5"
+          >
+            <UserPlus size={15} color={theme.mutedForeground} />
+            <Text variant="caption">{t('private.invite')}</Text>
+          </Pressable>
+          {isOwner ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={confirmDeleteAlbum}
+              className="h-10 w-10 items-center justify-center rounded-xl border border-border"
+            >
+              <Trash2 size={15} color={theme.destructive} />
+            </Pressable>
+          ) : null}
+        </View>
       </View>
 
       {!locked && data ? (
@@ -256,6 +298,8 @@ export default function SharedAlbumScreen() {
           tint={tint}
           showChatEntry={isOwner || !!data.album?.allowChat}
           onOpenChat={() => router.push(`/private/albums/${id}/chat`)}
+          onManageMilestones={() => milestoneSheet.current?.present()}
+          todaysMilestoneTitle={todaysMilestoneTitle}
         />
       ) : null}
 
@@ -329,6 +373,14 @@ export default function SharedAlbumScreen() {
       ) : null}
 
       <ReportSheet ref={reportSheet} target={reportTarget} />
+
+      <MilestoneSheet
+        ref={milestoneSheet}
+        milestones={milestones}
+        tint={tint}
+        albumKey={albumKey ?? null}
+        mutations={milestoneMutations}
+      />
 
       <AlbumCommentSheet
         ref={commentSheet}

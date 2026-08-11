@@ -1,6 +1,13 @@
-import { differenceInCalendarDays, isSameDay, subYears } from 'date-fns';
+import {
+  addYears,
+  differenceInCalendarDays,
+  isSameDay,
+  parseISO,
+  setYear,
+  subYears,
+} from 'date-fns';
 
-import type { AlbumPhoto } from '@/features/private/types/shared-album.types';
+import type { AlbumMilestone, AlbumPhoto } from '@/features/private/types/shared-album.types';
 
 /**
  * The couple-facing half of shared albums: not new data, purely rules over
@@ -60,4 +67,63 @@ export function onThisDay(
   if (days >= 365) return { photo: oldest, yearsAgo: Math.floor(days / 365) };
 
   return null;
+}
+
+/**
+ * Custom milestones (migration 0039) — user-named, dated anniversaries
+ * alongside TOGETHER_MILESTONES' day-count ones above. `milestoneDate` is
+ * `yyyy-MM-dd`; for a `recurring` one only the month/day repeat, the stored
+ * year is just whenever it was first entered.
+ */
+
+function recurringMatch(milestone: AlbumMilestone, now: Date): boolean {
+  const stored = parseISO(milestone.milestoneDate);
+  return stored.getMonth() === now.getMonth() && stored.getDate() === now.getDate();
+}
+
+/** Is today the day for any of these milestones? First match wins — ties are
+ *  rare enough (one couple, one day) that "which one" rarely matters, and the
+ *  caller can still render every entry from a full list if it does.
+ *
+ *  Generic over `T` (rather than fixed to `AlbumMilestone`) so a caller
+ *  passing `DecryptedMilestone[]` (use-album-milestones.ts) gets a
+ *  `DecryptedMilestone | null` back, with its extra decrypted `title` field
+ *  intact — not just the base ciphertext shape. */
+export function todaysMilestone<T extends AlbumMilestone>(
+  milestones: T[],
+  now = new Date(),
+): T | null {
+  return (
+    milestones.find((m) =>
+      m.recurring ? recurringMatch(m, now) : isSameDay(parseISO(m.milestoneDate), now),
+    ) ?? null
+  );
+}
+
+/**
+ * The nearest milestone from today onward (today itself counts as 0 days
+ * away, same as todaysMilestone would report it). A recurring milestone
+ * whose month/day already passed this year rolls forward to next year; a
+ * non-recurring one that's already in the past is skipped entirely — it
+ * happened, it doesn't come back.
+ */
+export function nextMilestone<T extends AlbumMilestone>(
+  milestones: T[],
+  now = new Date(),
+): { milestone: T; daysAway: number } | null {
+  let best: { milestone: T; daysAway: number } | null = null;
+
+  for (const milestone of milestones) {
+    const stored = parseISO(milestone.milestoneDate);
+    let next = milestone.recurring ? setYear(stored, now.getFullYear()) : stored;
+    let daysAway = differenceInCalendarDays(next, now);
+    if (milestone.recurring && daysAway < 0) {
+      next = addYears(next, 1);
+      daysAway = differenceInCalendarDays(next, now);
+    }
+    if (daysAway < 0) continue;
+    if (!best || daysAway < best.daysAway) best = { milestone, daysAway };
+  }
+
+  return best;
 }

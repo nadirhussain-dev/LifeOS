@@ -37,6 +37,22 @@ export type CycleFields = {
   /** 1–5, or null when not recorded. */
   mood: number | null;
   note: string;
+  /** Celsius. No unit toggle — this app has no metric/imperial preference
+   *  anywhere to hook into (checked water-intake, sleep, settings), so one
+   *  canonical unit, same call the rest of the app already makes. */
+  basalTempC: number | null;
+  weightKg: number | null;
+  /** Free-text, user-typed — no persisted "medication list" entity, just
+   *  what was actually typed on this entry. */
+  medications: string[];
+  /** Same free-text shape as `medications`, for anything not already covered
+   *  by the fixed `SYMPTOMS` list below. */
+  customTags: string[];
+  /** `vault-files.ts` filenames — the vault's encrypted file store is
+   *  module-agnostic (addressed by opaque name, keyed only by the shared
+   *  vault key), so a Cycle entry can reference files there directly without
+   *  going through vault-items.ts, which is Vault-module-specific metadata. */
+  photoFileNames: string[];
 };
 
 export type CycleEntry = CycleFields & { id: string; createdAt: number; updatedAt: number };
@@ -117,4 +133,25 @@ export function predictedNextStart(periods: Period[], averageLength: number | nu
 export function dayOfCycle(periods: Period[], now = new Date()): number | null {
   if (periods.length === 0) return null;
   return differenceInCalendarDays(now, toDate(periods[0].start)) + 1;
+}
+
+/**
+ * Every distinct tag/medication string already used across `entries`,
+ * newest-entry-first, deduped case-insensitively but returned in whichever
+ * casing was typed first. Powers the tag input's autocomplete row — there is
+ * no separate persisted "tag registry", this is the whole of it.
+ */
+export function distinctTags(entries: CycleEntry[], field: 'customTags' | 'medications'): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  // entries is already newest-first (listCycleEntries sorts by date desc).
+  for (const entry of entries) {
+    for (const tag of entry[field]) {
+      const key = tag.trim().toLowerCase();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      out.push(tag.trim());
+    }
+  }
+  return out;
 }

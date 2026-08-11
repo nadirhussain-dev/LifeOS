@@ -6,6 +6,7 @@ import {
   Mail,
   MessageCircle,
   MessagesSquare,
+  NotebookPen,
   Send,
   Trash2,
 } from 'lucide-react-native';
@@ -292,6 +293,18 @@ export default function SharedAlbumMembersScreen() {
               <Switch
                 value={!!data?.album?.allowChat}
                 onValueChange={(next) => setPermissions.mutate({ allowChat: next })}
+                trackColor={{ true: tint, false: theme.border }}
+              />
+            </View>
+            <View className="flex-row items-center gap-3 border-t border-border py-3.5">
+              <NotebookPen size={17} color={theme.mutedForeground} />
+              <View className="flex-1">
+                <Text className="font-sora-medium text-foreground">{t('private.allowNotes')}</Text>
+                <Text variant="caption">{t('private.allowNotesHint')}</Text>
+              </View>
+              <Switch
+                value={!!data?.album?.allowNotes}
+                onValueChange={(next) => setPermissions.mutate({ allowNotes: next })}
                 trackColor={{ true: tint, false: theme.border }}
               />
             </View>

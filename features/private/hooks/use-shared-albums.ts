@@ -48,6 +48,9 @@ export const albumKeys = {
   key: (id: string, space: string | null) => ['private', 'album-key', id, space] as const,
   comments: (photoId: string) => ['private', 'albums', 'comments', photoId] as const,
   messages: (albumId: string) => ['private', 'albums', 'messages', albumId] as const,
+  events: (albumId: string) => ['private', 'albums', 'events', albumId] as const,
+  milestones: (albumId: string) => ['private', 'albums', 'milestones', albumId] as const,
+  notes: (albumId: string) => ['private', 'albums', 'notes', albumId] as const,
 };
 
 /** Unwraps `albumId`'s key with whichever vault key is currently unlocked.
@@ -199,6 +202,36 @@ export function useAlbumRealtime(albumId: string | undefined): void {
         },
         () => void queryClient.invalidateQueries({ queryKey: albumKeys.messages(albumId) }),
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'shared_album_events',
+          filter: `album_id=eq.${albumId}`,
+        },
+        () => void queryClient.invalidateQueries({ queryKey: albumKeys.events(albumId) }),
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'shared_album_milestones',
+          filter: `album_id=eq.${albumId}`,
+        },
+        () => void queryClient.invalidateQueries({ queryKey: albumKeys.milestones(albumId) }),
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'shared_album_notes',
+          filter: `album_id=eq.${albumId}`,
+        },
+        () => void queryClient.invalidateQueries({ queryKey: albumKeys.notes(albumId) }),
+      )
       .subscribe();
 
     return () => {
@@ -315,8 +348,11 @@ export function useSharedAlbumMutations(albumId?: string) {
    *  mutation just calls the update and lets a non-owner's attempt come back
    *  as an error, same as every other owner-gated action here. */
   const setPermissions = useMutation({
-    mutationFn: (permissions: { allowComments?: boolean; allowChat?: boolean }) =>
-      repo.setAlbumPermissions(albumId!, permissions),
+    mutationFn: (permissions: {
+      allowComments?: boolean;
+      allowChat?: boolean;
+      allowNotes?: boolean;
+    }) => repo.setAlbumPermissions(albumId!, permissions),
     onSuccess: invalidate,
   });
 

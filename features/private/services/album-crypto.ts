@@ -73,3 +73,41 @@ export function encryptPhotoBytes(albumKey: Uint8Array, plaintext: Uint8Array): 
 export function decryptPhotoBytes(albumKey: Uint8Array, ciphertext: Uint8Array): Uint8Array {
   return decryptBytes(albumKey, ciphertext);
 }
+
+// --- shared plans, milestones & notes (0038-0040) ----------------------------
+// Same shape as comments/messages above: encrypt is a throw, decrypt is
+// null-on-failure. Only `title`/`notes`/`body` are ever sealed — the dates
+// on events and milestones are plaintext columns (see those migrations'
+// headers), so there is nothing here to encrypt/decrypt for them.
+
+export function encryptEventTitle(albumKey: Uint8Array, text: string): string {
+  return encryptString(albumKey, text);
+}
+
+export function tryDecryptEventTitle(albumKey: Uint8Array, ciphertext: string): string | null {
+  return tryDecryptString(albumKey, ciphertext);
+}
+
+export function encryptEventNotes(albumKey: Uint8Array, text: string): string {
+  return encryptString(albumKey, text);
+}
+
+export function tryDecryptEventNotes(albumKey: Uint8Array, ciphertext: string): string | null {
+  return tryDecryptString(albumKey, ciphertext);
+}
+
+export function encryptMilestoneTitle(albumKey: Uint8Array, text: string): string {
+  return encryptString(albumKey, text);
+}
+
+export function tryDecryptMilestoneTitle(albumKey: Uint8Array, ciphertext: string): string | null {
+  return tryDecryptString(albumKey, ciphertext);
+}
+
+export function encryptNoteBody(albumKey: Uint8Array, text: string): string {
+  return encryptString(albumKey, text);
+}
+
+export function tryDecryptNoteBody(albumKey: Uint8Array, ciphertext: string): string | null {
+  return tryDecryptString(albumKey, ciphertext);
+}

@@ -1,8 +1,11 @@
 import type {
   AlbumActivity,
   AlbumComment,
+  AlbumEvent,
   AlbumMember,
   AlbumMessage,
+  AlbumMilestone,
+  AlbumNote,
   AlbumPhoto,
   SharedAlbum,
 } from '@/features/private/types/shared-album.types';
@@ -43,6 +46,7 @@ const toAlbum = (r: Row): SharedAlbum => ({
   deletedAt: typeof r.deleted_at === 'number' ? r.deleted_at : null,
   allowComments: bool(r.allow_comments),
   allowChat: bool(r.allow_chat),
+  allowNotes: bool(r.allow_notes),
 });
 
 const toMember = (r: Row): AlbumMember => ({
@@ -101,6 +105,41 @@ const toMessage = (r: Row): AlbumMessage => ({
   authorId: str(r.author_id),
   authorName: str(r.author_name),
   bodyCiphertext: String(r.body_ciphertext),
+  createdAt: num(r.created_at),
+  updatedAt: num(r.updated_at),
+  deletedAt: typeof r.deleted_at === 'number' ? r.deleted_at : null,
+});
+
+const toEvent = (r: Row): AlbumEvent => ({
+  id: String(r.id),
+  albumId: String(r.album_id),
+  titleCiphertext: String(r.title_ciphertext),
+  notesCiphertext: str(r.notes_ciphertext),
+  eventDate: String(r.event_date),
+  authorId: str(r.author_id),
+  createdAt: num(r.created_at),
+  updatedAt: num(r.updated_at),
+  deletedAt: typeof r.deleted_at === 'number' ? r.deleted_at : null,
+});
+
+const toMilestone = (r: Row): AlbumMilestone => ({
+  id: String(r.id),
+  albumId: String(r.album_id),
+  titleCiphertext: String(r.title_ciphertext),
+  milestoneDate: String(r.milestone_date),
+  recurring: bool(r.recurring),
+  authorId: str(r.author_id),
+  createdAt: num(r.created_at),
+  updatedAt: num(r.updated_at),
+  deletedAt: typeof r.deleted_at === 'number' ? r.deleted_at : null,
+});
+
+const toNote = (r: Row): AlbumNote => ({
+  id: String(r.id),
+  albumId: String(r.album_id),
+  bodyCiphertext: String(r.body_ciphertext),
+  authorId: str(r.author_id),
+  authorName: str(r.author_name),
   createdAt: num(r.created_at),
   updatedAt: num(r.updated_at),
   deletedAt: typeof r.deleted_at === 'number' ? r.deleted_at : null,
@@ -310,11 +349,12 @@ export async function removePhoto(photoId: string): Promise<void> {
  *  this same table (0027). */
 export async function setAlbumPermissions(
   albumId: string,
-  permissions: { allowComments?: boolean; allowChat?: boolean },
+  permissions: { allowComments?: boolean; allowChat?: boolean; allowNotes?: boolean },
 ): Promise<void> {
   const patch: Row = { updated_at: Date.now() };
   if (permissions.allowComments !== undefined) patch.allow_comments = permissions.allowComments;
   if (permissions.allowChat !== undefined) patch.allow_chat = permissions.allowChat;
+  if (permissions.allowNotes !== undefined) patch.allow_notes = permissions.allowNotes;
   const { error } = await supabase.from('shared_albums').update(patch).eq('id', albumId);
   assertOk(error);
 }
@@ -404,5 +444,164 @@ export async function removeMessage(messageId: string): Promise<void> {
     .from('shared_album_messages')
     .update({ deleted_at: Date.now(), updated_at: Date.now() })
     .eq('id', messageId);
+  assertOk(error);
+}
+
+// --- shared plans (0038) ------------------------------------------------------
+
+export async function listEvents(albumId: string): Promise<AlbumEvent[]> {
+  const res = await supabase
+    .from('shared_album_events')
+    .select('*')
+    .eq('album_id', albumId)
+    .is('deleted_at', null)
+    .order('event_date');
+  return unwrap<Row[]>(res).map(toEvent);
+}
+
+export async function addEvent(input: {
+  albumId: string;
+  authorId: string;
+  titleCiphertext: string;
+  notesCiphertext: string | null;
+  eventDate: string;
+}): Promise<string> {
+  const id = generateId();
+  const now = Date.now();
+  const { error } = await supabase.from('shared_album_events').insert({
+    id,
+    album_id: input.albumId,
+    title_ciphertext: input.titleCiphertext,
+    notes_ciphertext: input.notesCiphertext,
+    event_date: input.eventDate,
+    author_id: input.authorId,
+    created_at: now,
+    updated_at: now,
+  });
+  assertOk(error);
+  return id;
+}
+
+/** RLS scopes this to the event's own author or the album owner (0038) —
+ *  a mis-scoped call just matches zero rows, same as removeComment. */
+export async function updateEvent(
+  eventId: string,
+  patch: { titleCiphertext?: string; notesCiphertext?: string | null; eventDate?: string },
+): Promise<void> {
+  const row: Row = { updated_at: Date.now() };
+  if (patch.titleCiphertext !== undefined) row.title_ciphertext = patch.titleCiphertext;
+  if (patch.notesCiphertext !== undefined) row.notes_ciphertext = patch.notesCiphertext;
+  if (patch.eventDate !== undefined) row.event_date = patch.eventDate;
+  const { error } = await supabase.from('shared_album_events').update(row).eq('id', eventId);
+  assertOk(error);
+}
+
+export async function removeEvent(eventId: string): Promise<void> {
+  const { error } = await supabase
+    .from('shared_album_events')
+    .update({ deleted_at: Date.now(), updated_at: Date.now() })
+    .eq('id', eventId);
+  assertOk(error);
+}
+
+// --- custom milestones (0039) -------------------------------------------------
+
+export async function listMilestones(albumId: string): Promise<AlbumMilestone[]> {
+  const res = await supabase
+    .from('shared_album_milestones')
+    .select('*')
+    .eq('album_id', albumId)
+    .is('deleted_at', null)
+    .order('milestone_date');
+  return unwrap<Row[]>(res).map(toMilestone);
+}
+
+export async function addMilestone(input: {
+  albumId: string;
+  authorId: string;
+  titleCiphertext: string;
+  milestoneDate: string;
+  recurring: boolean;
+}): Promise<string> {
+  const id = generateId();
+  const now = Date.now();
+  const { error } = await supabase.from('shared_album_milestones').insert({
+    id,
+    album_id: input.albumId,
+    title_ciphertext: input.titleCiphertext,
+    milestone_date: input.milestoneDate,
+    recurring: input.recurring,
+    author_id: input.authorId,
+    created_at: now,
+    updated_at: now,
+  });
+  assertOk(error);
+  return id;
+}
+
+export async function updateMilestone(
+  milestoneId: string,
+  patch: { titleCiphertext?: string; milestoneDate?: string; recurring?: boolean },
+): Promise<void> {
+  const row: Row = { updated_at: Date.now() };
+  if (patch.titleCiphertext !== undefined) row.title_ciphertext = patch.titleCiphertext;
+  if (patch.milestoneDate !== undefined) row.milestone_date = patch.milestoneDate;
+  if (patch.recurring !== undefined) row.recurring = patch.recurring;
+  const { error } = await supabase
+    .from('shared_album_milestones')
+    .update(row)
+    .eq('id', milestoneId);
+  assertOk(error);
+}
+
+export async function removeMilestone(milestoneId: string): Promise<void> {
+  const { error } = await supabase
+    .from('shared_album_milestones')
+    .update({ deleted_at: Date.now(), updated_at: Date.now() })
+    .eq('id', milestoneId);
+  assertOk(error);
+}
+
+// --- shared notes (0040) ------------------------------------------------------
+
+export async function listNotes(albumId: string): Promise<AlbumNote[]> {
+  const res = await supabase
+    .from('shared_album_notes')
+    .select('*')
+    .eq('album_id', albumId)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false });
+  return unwrap<Row[]>(res).map(toNote);
+}
+
+/** Insert is refused server-side unless `allow_notes` is on for this album —
+ *  see `album_allows_notes()` (0040). Same "caller hides the compose UI,
+ *  this is the enforcement" split as addComment/sendMessage. */
+export async function addNote(input: {
+  albumId: string;
+  authorId: string;
+  authorName: string | null;
+  bodyCiphertext: string;
+}): Promise<string> {
+  const id = generateId();
+  const now = Date.now();
+  const { error } = await supabase.from('shared_album_notes').insert({
+    id,
+    album_id: input.albumId,
+    author_id: input.authorId,
+    author_name: input.authorName,
+    body_ciphertext: input.bodyCiphertext,
+    created_at: now,
+    updated_at: now,
+  });
+  assertOk(error);
+  return id;
+}
+
+export async function removeNote(noteId: string): Promise<void> {
+  const { error } = await supabase
+    .from('shared_album_notes')
+    .update({ deleted_at: Date.now(), updated_at: Date.now() })
+    .eq('id', noteId);
   assertOk(error);
 }

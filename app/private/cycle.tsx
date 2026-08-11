@@ -1,5 +1,6 @@
-import { format, parseISO } from 'date-fns';
-import { useCallback, useMemo, useState } from 'react';
+import { type BottomSheetModal } from '@gorhom/bottom-sheet';
+import { addMonths, format, parseISO, subMonths } from 'date-fns';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, TextInput, View } from 'react-native';
 
@@ -9,10 +10,16 @@ import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { ChipRow, PrivateScreen } from '@/features/private/components/private-screen';
+import {
+  CycleEntrySheet,
+  type CycleEntryTarget,
+} from '@/features/private/components/cycle-entry-sheet';
 import { CycleHero } from '@/features/private/components/cycle-hero';
+import { CycleMonthStrip } from '@/features/private/components/cycle-month-strip';
 import { privateModule } from '@/features/private/config/private-modules';
 import {
   addCycleEntry,
+  editCycleEntry,
   listCycleEntries,
   removeCycleEntry,
 } from '@/features/private/services/cycle';
@@ -20,8 +27,11 @@ import {
   SYMPTOMS,
   averageCycleLength,
   dayOfCycle,
+  distinctTags,
   periodsFrom,
   predictedNextStart,
+  type CycleEntry,
+  type CycleFields,
   type Flow,
   type Symptom,
 } from '@/features/private/services/cycle-math';
@@ -47,11 +57,27 @@ export default function CycleScreen() {
   const [flow, setFlow] = useState<Flow | null>(null);
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
   const [note, setNote] = useState('');
+  const [monthAnchor, setMonthAnchor] = useState(() => new Date());
+
+  const sheetRef = useRef<BottomSheetModal>(null);
+  const [sheetTarget, setSheetTarget] = useState<CycleEntryTarget | null>(null);
 
   const periods = useMemo(() => periodsFrom(entries), [entries]);
   const average = useMemo(() => averageCycleLength(periods), [periods]);
   const nextStart = useMemo(() => predictedNextStart(periods, average), [periods, average]);
   const currentDay = useMemo(() => dayOfCycle(periods), [periods]);
+  const suggestions = useMemo(
+    () => ({
+      customTags: distinctTags(entries, 'customTags'),
+      medications: distinctTags(entries, 'medications'),
+    }),
+    [entries],
+  );
+
+  const openSheet = (target: CycleEntryTarget) => {
+    setSheetTarget(target);
+    sheetRef.current?.present();
+  };
 
   const save = useCallback(() => {
     if (!flow && symptoms.length === 0 && !note.trim()) return;
@@ -61,6 +87,11 @@ export default function CycleScreen() {
       symptoms,
       mood: null,
       note: note.trim(),
+      basalTempC: null,
+      weightKg: null,
+      medications: [],
+      customTags: [],
+      photoFileNames: [],
     });
     setFlow(null);
     setSymptoms([]);
@@ -68,7 +99,11 @@ export default function CycleScreen() {
     reload();
   }, [flow, symptoms, note, reload]);
 
-  const confirmDelete = (id: string) =>
+  const openMoreDetails = () => {
+    openSheet({ date: format(new Date(), 'yyyy-MM-dd'), flow, symptoms, note });
+  };
+
+  const confirmDelete = (entry: CycleEntry) =>
     void confirm({
       title: t('private.deleteEntry'),
       message: t('private.deleteEntryBody'),
@@ -77,9 +112,23 @@ export default function CycleScreen() {
       destructive: true,
     }).then(async (ok) => {
       if (!ok) return;
-      removeCycleEntry(id);
+      removeCycleEntry(entry);
       reload();
     });
+
+  const handleSheetSave = (fields: CycleFields, id: string | null) => {
+    if (id) editCycleEntry(id, fields);
+    else addCycleEntry(fields);
+    reload();
+  };
+
+  const handleSheetDelete = (entry: CycleEntry) => {
+    removeCycleEntry(entry);
+    reload();
+  };
+
+  const entryForDate = (dateKey: string): CycleEntryTarget =>
+    entries.find((e) => e.date === dateKey) ?? { date: dateKey };
 
   return (
     <PrivateScreen
@@ -110,6 +159,15 @@ export default function CycleScreen() {
           {t('private.needMoreCycles')}
         </Text>
       )}
+
+      <CycleMonthStrip
+        monthAnchor={monthAnchor}
+        entries={entries}
+        tint={tint}
+        onSelectDate={(dateKey) => openSheet(entryForDate(dateKey))}
+        onPrevMonth={() => setMonthAnchor((d) => subMonths(d, 1))}
+        onNextMonth={() => setMonthAnchor((d) => addMonths(d, 1))}
+      />
 
       {/* Today's log */}
       <View className="gap-3">
@@ -164,6 +222,12 @@ export default function CycleScreen() {
         style={{ fontFamily: 'Sora_400Regular', textAlignVertical: 'top' }}
       />
 
+      <Pressable accessibilityRole="button" onPress={openMoreDetails} className="self-start px-1">
+        <Text className="font-sora-medium text-sm" style={{ color: tint }}>
+          {t('private.moreDetails')}
+        </Text>
+      </Pressable>
+
       {/* History */}
       {periods.length > 0 ? (
         <View className="gap-3">
@@ -188,7 +252,8 @@ export default function CycleScreen() {
           {entries.slice(0, 20).map((entry) => (
             <Pressable
               key={entry.id}
-              onLongPress={() => confirmDelete(entry.id)}
+              onPress={() => openSheet(entry)}
+              onLongPress={() => confirmDelete(entry)}
               accessibilityRole="button"
               accessibilityHint={t('private.longPressDelete')}
               className={cardClass({ padding: 'row' }, 'gap-1')}
@@ -209,10 +274,24 @@ export default function CycleScreen() {
                 </Text>
               ) : null}
               {entry.note ? <Text variant="caption">{entry.note}</Text> : null}
+              {entry.photoFileNames.length > 0 ? (
+                <Text variant="caption">
+                  {t('private.photoCount', { count: entry.photoFileNames.length })}
+                </Text>
+              ) : null}
             </Pressable>
           ))}
         </View>
       ) : null}
+
+      <CycleEntrySheet
+        ref={sheetRef}
+        target={sheetTarget}
+        tint={tint}
+        suggestions={suggestions}
+        onSave={handleSheetSave}
+        onDelete={handleSheetDelete}
+      />
     </PrivateScreen>
   );
 }

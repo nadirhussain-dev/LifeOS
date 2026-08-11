@@ -1,5 +1,5 @@
 import { differenceInCalendarDays } from 'date-fns';
-import { MessagesSquare } from 'lucide-react-native';
+import { CalendarHeart, MessagesSquare } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -23,6 +23,15 @@ type Props = {
   /** allow_chat (0029) or this account is the owner. */
   showChatEntry: boolean;
   onOpenChat: () => void;
+  /** Opens the add/manage sheet for custom milestones (0039) — always
+   *  offered, unlike chat, since adding one is core to the feature rather
+   *  than something an owner might switch off. */
+  onManageMilestones: () => void;
+  /** together.ts's todaysMilestone(), already decrypted — when set, takes
+   *  visual priority over the day-count pulse below: a named anniversary
+   *  landing on the same day as, say, day 730 is the more meaningful thing
+   *  to say out loud. */
+  todaysMilestoneTitle?: string | null;
 };
 
 /**
@@ -39,6 +48,8 @@ export function TogetherStrip({
   tint,
   showChatEntry,
   onOpenChat,
+  onManageMilestones,
+  todaysMilestoneTitle,
 }: Props) {
   const scheme = useColorScheme() ?? 'light';
   const theme = colors[scheme];
@@ -87,6 +98,17 @@ export function TogetherStrip({
           </View>
         </View>
 
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('private.manageMilestones')}
+          onPress={onManageMilestones}
+          hitSlop={8}
+          className="h-10 w-10 items-center justify-center rounded-full"
+          style={{ backgroundColor: alpha(tint, 0.2) }}
+        >
+          <CalendarHeart size={18} color={tint} strokeWidth={1.9} />
+        </Pressable>
+
         {showChatEntry ? (
           <Pressable
             accessibilityRole="button"
@@ -101,7 +123,11 @@ export function TogetherStrip({
         ) : null}
       </View>
 
-      {hit ? (
+      {todaysMilestoneTitle ? (
+        <Text variant="caption" className="px-1 text-center" style={{ color: tint }}>
+          {t('private.todaysMilestone', { title: todaysMilestoneTitle })}
+        </Text>
+      ) : hit ? (
         <Text variant="caption" className="px-1 text-center" style={{ color: tint }}>
           {t('private.togetherMilestone', { count: days })}
         </Text>
