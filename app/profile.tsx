@@ -1,9 +1,9 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Camera, LogOut, ShieldCheck, Trash2, UserCircle } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Linking, Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,15 +52,40 @@ export default function ProfileScreen() {
   const [name, setName] = useState(profile?.displayName ?? '');
   const [busy, setBusy] = useState(false);
 
+  // `profile` loads asynchronously (loadProfile() after sign-in) and is
+  // frequently still null on this screen's first render, so the useState
+  // initializer above often captures ''. Re-sync once the real name arrives,
+  // or whenever it changes after an external update (e.g. another device).
+  // Only fires on an actual value change, so it never fights a save the user
+  // is actively mid-edit on.
+  useEffect(() => {
+    if (profile?.displayName) setName(profile.displayName);
+  }, [profile?.displayName]);
+
   const url = avatarUrl(profile?.avatarPath ?? null, profile?.avatarUpdatedAt ?? null);
   const initials = initialsFor(profile?.displayName ?? null, profile?.email ?? null);
 
   const changeAvatar = async () => {
     setBusy(true);
     const result = await pickAndUploadAvatar();
-    if (result.ok) await refreshProfile();
-    else if (result.error === 'upload-failed') {
-      toast.error(t('profile.avatarFailedBody'));
+    if (result.ok) {
+      await refreshProfile();
+    } else if (result.error === 'permission-denied') {
+      // A notice rather than a toast: the fix is in system settings, and a
+      // message that disappears takes the instruction with it.
+      void confirm({
+        title: t('permissions.mediaLibraryDeniedTitle'),
+        message: t('permissions.mediaLibraryDeniedBody'),
+        confirmLabel: t('permissions.openSettings'),
+        cancelLabel: t('common.cancel'),
+      }).then((ok) => {
+        if (ok) void Linking.openSettings();
+      });
+    } else if (result.error === 'upload-failed') {
+      // Classified by lib/supabase-error.ts instead of one flat "check your
+      // connection" — that sentence was wrong far more often than right (see
+      // its header comment).
+      toast.error(t(`errors.${result.kind}`));
     }
     setBusy(false);
   };
