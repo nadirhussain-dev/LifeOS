@@ -300,6 +300,7 @@ export default function SharedAlbumScreen() {
           onOpenChat={() => router.push(`/private/albums/${id}/chat`)}
           onManageMilestones={() => milestoneSheet.current?.present()}
           todaysMilestoneTitle={todaysMilestoneTitle}
+          onOpenTogether={() => router.push('/private/together')}
         />
       ) : null}
 

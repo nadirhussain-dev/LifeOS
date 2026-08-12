@@ -4,7 +4,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Send } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
@@ -56,7 +64,12 @@ export default function AlbumChatScreen() {
   const { data } = useAlbumDetail(id);
   const { data: albumKey } = useAlbumKey(id);
   const { isOwner } = useMyAlbumMembership(data);
-  const { data: messages = [] } = useAlbumMessages(id, albumKey ?? null);
+  const {
+    data: messages = [],
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useAlbumMessages(id, albumKey ?? null);
   const { sendMessage } = useSharedAlbumMutations(id);
 
   const [draft, setDraft] = useState('');
@@ -161,6 +174,19 @@ export default function AlbumChatScreen() {
           <View className="items-center py-16">
             <Text variant="muted">{t('private.noMessagesYet')}</Text>
           </View>
+        }
+        // The list is inverted, so "end" is visually the top — exactly where
+        // older history should load as the user scrolls up toward it.
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+        }}
+        onEndReachedThreshold={0.4}
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <View className="items-center py-3">
+              <ActivityIndicator color={theme.mutedForeground} />
+            </View>
+          ) : null
         }
       />
 

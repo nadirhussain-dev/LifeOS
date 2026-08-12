@@ -16,6 +16,8 @@ import {
 } from '@/features/private/hooks/use-shared-albums';
 import { PrivateScreen } from '@/features/private/components/private-screen';
 import { resendAlbumKey } from '@/features/private/services/album-invite';
+import { notifyAlbumInvite } from '@/features/private/services/album-notify';
+import { useAuthStore } from '@/features/auth/services/auth-store';
 import { useTheme } from '@/hooks/use-theme';
 import { toast } from '@/lib/toast-store';
 
@@ -41,6 +43,7 @@ export default function AlbumInviteScreen() {
   const { data } = useAlbumDetail(id);
   const { data: albumKey } = useAlbumKey(id);
   const { invite } = useSharedAlbumMutations(id);
+  const inviterName = useAuthStore((s) => s.profile?.displayName ?? s.profile?.email ?? null);
 
   const member = data?.members.find((m) => m.id === memberId) ?? null;
   const isResend = !!member?.userId;
@@ -64,6 +67,17 @@ export default function AlbumInviteScreen() {
           albumKey,
         });
         setBundle(b);
+        // Best-effort awareness nudge — no-op if the invitee has no LifeOS
+        // account yet or no device registered; the actual invite still
+        // travels via the link/share sheet below either way.
+        if (member.email) {
+          void notifyAlbumInvite({
+            albumId: id,
+            inviteeEmail: member.email,
+            title: t('private.pushInviteTitle'),
+            body: t('private.pushInviteBody', { name: inviterName ?? t('private.someone') }),
+          });
+        }
       }
     } finally {
       setGenerating(false);
@@ -86,12 +100,64 @@ export default function AlbumInviteScreen() {
     );
   }
 
+  // The token, code and payload are minted together (createAlbumInvite calls
+  // createTransfer and the invitation RPC in one function) but MUST travel on
+  // two separate tracks: this link only grants Postgres/RLS membership — see
+  // album-invite.ts's header — while the code+payload below are the actual
+  // decryption secret and have to be relayed through a different channel
+  // (spoken code, a second message, in person). Folding all three into one
+  // link would let a single interception of that link (clipboard sync, a
+  // messaging platform that unfurls/logs links, a malicious app on the same
+  // custom scheme) hand over full decryption capability, not just
+  // membership — see transfer.tsx's near-identical warning for why the two
+  // halves of vault-transfer are kept apart the same way.
   const link = bundle?.token ? Linking.createURL(`/private/albums/accept/${bundle.token}`) : null;
 
   return (
     <PrivateScreen moduleId="shared-albums" title={t('private.invite')} tint={c.accent}>
       <ScrollView contentContainerClassName="gap-6 pb-10" showsVerticalScrollIndicator={false}>
         <Text variant="muted">{t('private.inviteIntro')}</Text>
+
+        {link ? (
+          <View className={cardClass({ padding: 'md' }, 'gap-3')}>
+            <View className="flex-row items-center gap-2">
+              <LinkIcon size={16} color={c.accent} />
+              <Text variant="micro">{t('private.inviteStepLink')}</Text>
+            </View>
+            <Text variant="caption">{t('private.inviteLinkHint')}</Text>
+
+            <View className="flex-row gap-2">
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  void Clipboard.setStringAsync(link).then(() =>
+                    toast.success(t('transfer.copied')),
+                  )
+                }
+                className="flex-1 flex-row items-center justify-center gap-2 rounded-full border py-3"
+                style={{ borderColor: c.border }}
+              >
+                <Copy size={15} color={c.foreground} />
+                <Text className="font-sora-medium" style={{ color: c.foreground }}>
+                  {t('private.copyLink')}
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => void Share.share({ message: link })}
+                className="flex-1 flex-row items-center justify-center gap-2 rounded-full border py-3"
+                style={{ borderColor: c.border }}
+              >
+                <Share2 size={15} color={c.foreground} />
+                <Text className="font-sora-medium" style={{ color: c.foreground }}>
+                  {t('private.shareInvite')}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
+
+        <Text variant="micro">{t('private.inviteManualSection')}</Text>
 
         <View className={cardClass({ padding: 'md' }, 'gap-2')}>
           <View className="flex-row items-center gap-2">
@@ -133,45 +199,6 @@ export default function AlbumInviteScreen() {
             </Text>
           </Pressable>
         </View>
-
-        {link ? (
-          <View className={cardClass({ padding: 'md' }, 'gap-3')}>
-            <View className="flex-row items-center gap-2">
-              <LinkIcon size={16} color={c.accent} />
-              <Text variant="micro">{t('private.inviteStepLink')}</Text>
-            </View>
-            <Text variant="caption">{t('private.inviteLinkHint')}</Text>
-
-            <View className="flex-row gap-2">
-              <Pressable
-                accessibilityRole="button"
-                onPress={() =>
-                  void Clipboard.setStringAsync(link).then(() =>
-                    toast.success(t('transfer.copied')),
-                  )
-                }
-                className="flex-1 flex-row items-center justify-center gap-2 rounded-full border py-3"
-                style={{ borderColor: c.border }}
-              >
-                <Copy size={15} color={c.foreground} />
-                <Text className="font-sora-medium" style={{ color: c.foreground }}>
-                  {t('private.copyLink')}
-                </Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => void Share.share({ message: link })}
-                className="flex-1 flex-row items-center justify-center gap-2 rounded-full border py-3"
-                style={{ borderColor: c.border }}
-              >
-                <Share2 size={15} color={c.foreground} />
-                <Text className="font-sora-medium" style={{ color: c.foreground }}>
-                  {t('private.shareInvite')}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : null}
 
         <View
           className="rounded-2xl border p-4"

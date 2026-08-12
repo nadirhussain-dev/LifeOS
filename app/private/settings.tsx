@@ -212,7 +212,16 @@ export default function PrivateSettingsScreen() {
                     ? t('private.enterNewPin')
                     : t('private.decoyHint'))}
             </Text>
-            <PinPad value={value} onChange={setValue} disabled={busy} dotCount={MIN_PIN_LENGTH} />
+            <PinPad
+              value={value}
+              onChange={setValue}
+              disabled={busy}
+              dotCount={MIN_PIN_LENGTH}
+              // 'change-current' is re-entering the PIN already set on this
+              // device, which may predate this cap — only the NEW pin
+              // (change-next/decoy) gets held to exactly MIN_PIN_LENGTH.
+              maxLength={mode === 'change-current' ? undefined : MIN_PIN_LENGTH}
+            />
           </View>
         </PrivateScreen>
         <VaultSealTransition visible={transition.visible} mode={transition.mode} />

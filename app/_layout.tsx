@@ -59,6 +59,13 @@ import {
   useModuleRouteGuard,
 } from '@/features/module-flags/hooks/use-module-access';
 import { usePrivateAutoLock } from '@/features/private/hooks/use-private-lock';
+import { syncCycleReminders } from '@/features/private/services/cycle-reminders';
+// Side-effect only: registers Together's and Cycle's reminders into
+// resyncAllReminders() without that file ever importing features/private
+// directly — see register-reminders.ts and reminder-scheduler.ts's own
+// comment on why.
+import '@/features/private/services/register-reminders';
+import { usePrivateStore } from '@/features/private/store/private-store';
 import { useSplashStore } from '@/hooks/use-splash-store';
 import { useSyncTrigger } from '@/features/sync/hooks/use-sync';
 import { SyncStatusBridge } from '@/features/sync/components/sync-status-bridge';
@@ -175,6 +182,18 @@ function AppLockController() {
  * from the app lock on purpose: unlocking the app must not unlock the vault. */
 function PrivateAutoLock() {
   usePrivateAutoLock();
+  return null;
+}
+
+/** Rebuilds the Cycle "period expected soon" reminder the moment the vault
+ * unlocks — resyncAllReminders() alone never sees cycle data at cold launch,
+ * since that runs before a PIN has been entered. See cycle-reminders.ts's
+ * header. Renders nothing. */
+function CycleReminderBridge() {
+  const key = usePrivateStore((s) => s.key);
+  useEffect(() => {
+    if (key) void syncCycleReminders();
+  }, [key]);
   return null;
 }
 
@@ -334,6 +353,7 @@ export default function RootLayout() {
               <PushRegistrationBridge />
               <AppLockController />
               <PrivateAutoLock />
+              <CycleReminderBridge />
               <ModuleFlagsBridge />
               <ModuleRouteGuard />
               <NotificationNavigationBridge />

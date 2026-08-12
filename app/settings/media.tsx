@@ -5,7 +5,7 @@ import { Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
-import { ProgressBar } from '@/components/ui/progress-bar';
+import { ProgressRing } from '@/components/ui/progress-ring';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { useAuthStore } from '@/features/auth/services/auth-store';
@@ -157,11 +157,34 @@ export default function MediaSettingsScreen() {
           ) : null}
         </View>
 
-        {enabled && usage ? (
-          <View className={cardClass({ padding: 'md' }, 'gap-2')}>
-            <Text variant="micro">{t('media.storageUsed')}</Text>
-            <ProgressBar progress={fraction} color={fraction > 0.9 ? c.error : c.accent} />
-            <Text variant="caption">
+        {/*
+          Shown for any signed-in account with a reading, not only once
+          personal file backup is switched on — `media_bytes_used()` bills
+          shared-album photos against this same quota (0037's own header),
+          which every plan can use regardless of this screen's toggle. Gating
+          the ring on `enabled` used to mean a free account actively filling
+          up their shared-album allowance had no way to see it happening.
+        */}
+        {session && usage ? (
+          <View className={cardClass({ padding: 'md' }, 'items-center gap-3')}>
+            <Text variant="micro" className="self-start">
+              {t('media.storageUsed')}
+            </Text>
+            <ProgressRing
+              progress={fraction}
+              size={140}
+              strokeWidth={12}
+              color={fraction > 0.9 ? c.error : c.accent}
+              gradient
+            >
+              <View className="items-center">
+                <Text className="font-sora-extrabold text-3xl" style={{ color: c.foreground }}>
+                  {Math.round(fraction * 100)}%
+                </Text>
+                <Text variant="caption">{t('media.storageUsedLabel')}</Text>
+              </View>
+            </ProgressRing>
+            <Text className="font-sora-medium text-foreground">
               {t('media.usageOf', { used: formatBytes(used), quota: formatBytes(quota) })}
             </Text>
             {pending > 0 ? (

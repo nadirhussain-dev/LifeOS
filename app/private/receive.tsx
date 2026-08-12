@@ -182,7 +182,16 @@ export default function VaultReceiveScreen() {
                 {t('receive.pinHint')}
               </Text>
             </View>
-            <PinPad value={pin} onChange={setPin} disabled={busy} dotCount={MIN_PIN_LENGTH} />
+            <PinPad
+              value={pin}
+              onChange={setPin}
+              disabled={busy}
+              dotCount={MIN_PIN_LENGTH}
+              // A fresh PIN for this device, not a re-entry of one already
+              // set — cap it rather than silently accepting more than the
+              // dots/hint say.
+              maxLength={MIN_PIN_LENGTH}
+            />
           </View>
         ) : null}
       </ScrollView>

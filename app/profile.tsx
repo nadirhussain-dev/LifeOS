@@ -13,6 +13,7 @@ import { SettingsRow } from '@/components/ui/settings-row';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { UsernameField, type UsernameStatus } from '@/features/auth/components/username-field';
 import { useAccountStanding } from '@/features/moderation/hooks/use-account-standing';
 import {
   avatarUrl,
@@ -45,12 +46,22 @@ export default function ProfileScreen() {
   const session = useAuthStore((s) => s.session);
   const profile = useAuthStore((s) => s.profile);
   const updateDisplayName = useAuthStore((s) => s.updateDisplayName);
+  const claimUsername = useAuthStore((s) => s.claimUsername);
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
   const signOut = useAuthStore((s) => s.signOut);
   const { status } = useAccountStanding();
 
   const [name, setName] = useState(profile?.displayName ?? '');
   const [busy, setBusy] = useState(false);
+
+  // Username editing was previously signup-only — `claimUsername` itself has
+  // always supported changing an already-set name (it's a plain UPDATE, and
+  // `is_username_available` excludes the caller's own row from "taken"), the
+  // gap was purely this screen never offering the form.
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [usernameDraft, setUsernameDraft] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('empty');
+  const [savingUsername, setSavingUsername] = useState(false);
 
   // `profile` loads asynchronously (loadProfile() after sign-in) and is
   // frequently still null on this screen's first render, so the useState
@@ -109,8 +120,34 @@ export default function ProfileScreen() {
   const saveName = async () => {
     if (!name.trim() || name.trim() === profile?.displayName) return;
     setBusy(true);
-    await updateDisplayName(name);
+    const result = await updateDisplayName(name);
+    if (!result.ok) toast.error(result.error);
     setBusy(false);
+  };
+
+  const startEditingUsername = () => {
+    setUsernameDraft(profile?.username ?? '');
+    setEditingUsername(true);
+  };
+
+  const saveUsername = async () => {
+    const trimmed = usernameDraft.trim();
+    if (!trimmed || trimmed === profile?.username) {
+      setEditingUsername(false);
+      return;
+    }
+    // 'unavailable' (the probe failed to run) is not the user's problem —
+    // claim_username's own unique index is the real arbiter regardless, same
+    // reasoning sign-up.tsx already applies to this exact status.
+    if (usernameStatus !== 'available' && usernameStatus !== 'unavailable') return;
+    setSavingUsername(true);
+    const result = await claimUsername(trimmed);
+    setSavingUsername(false);
+    if (result === 'ok') {
+      setEditingUsername(false);
+      return;
+    }
+    toast.error(result === 'taken' ? t('auth.usernameJustTaken') : t('auth.usernameClaimFailed'));
   };
 
   if (!session) {
@@ -217,20 +254,53 @@ export default function ProfileScreen() {
           />
         </View>
 
+        {editingUsername ? (
+          <View className="gap-2">
+            <Text variant="micro">{t('profile.username')}</Text>
+            <UsernameField
+              value={usernameDraft}
+              onChangeText={setUsernameDraft}
+              onStatusChange={setUsernameStatus}
+            />
+            <View className="flex-row gap-2">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                label={t('common.cancel')}
+                onPress={() => setEditingUsername(false)}
+                disabled={savingUsername}
+              />
+              <Button
+                variant="accent"
+                className="flex-1"
+                label={savingUsername ? t('common.saving') : t('common.save')}
+                onPress={() => void saveUsername()}
+                disabled={
+                  savingUsername ||
+                  (usernameStatus !== 'available' && usernameStatus !== 'unavailable')
+                }
+              />
+            </View>
+          </View>
+        ) : null}
+
         <View className="gap-2">
           <Text variant="micro">{t('profile.account')}</Text>
           <View className={cardClass({ padding: 'none' }, 'px-4')}>
-            <SettingsRow
-              icon={UserCircle}
-              label={t('profile.username')}
-              value={profile?.username ? `@${profile.username}` : t('profile.noUsername')}
-              isFirst
-              chevron={false}
-            />
+            {!editingUsername ? (
+              <SettingsRow
+                icon={UserCircle}
+                label={t('profile.username')}
+                value={profile?.username ? `@${profile.username}` : t('profile.noUsername')}
+                isFirst
+                onPress={startEditingUsername}
+              />
+            ) : null}
             <SettingsRow
               icon={UserCircle}
               label={t('profile.email')}
               value={profile?.email ?? '—'}
+              isFirst={editingUsername}
               chevron={false}
             />
             <SettingsRow

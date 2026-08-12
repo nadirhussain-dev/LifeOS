@@ -20,17 +20,18 @@ import { toast } from '@/lib/toast-store';
 
 /**
  * The target of `lifeos://private/albums/accept/<token>` — the Postgres
- * half of an album invite, followed by the out-of-band half.
+ * half of an album invite. The link is membership-only, deliberately: the
+ * out-of-band code+payload that actually decrypt the album must travel
+ * through a separate channel (spoken code, a second message, in person),
+ * same discipline as transfer.tsx's vault-transfer screen. Folding both
+ * halves into one link would mean a single intercepted link hands over full
+ * decryption capability, not just membership — see invite.tsx's header.
  *
  * `PrivateScreen` already redirects to unlock/setup when the vault is
  * locked or never set up (see unlock.tsx), so by the time this screen
  * renders content the vault is guaranteed unlocked. If that detour was
  * needed, the token stays valid (it isn't consumed by a failed attempt) —
  * following the same link again after finishing setup picks up right here.
- *
- * Two phases, matching the two channels: `peek`/`accept` grant Postgres
- * membership only; `payload`/`code` (mirroring receive.tsx's own step shape)
- * redeem the album key, which never travelled through this link at all.
  */
 type Phase = 'loading' | 'failed' | 'ready' | 'joining' | 'redeem' | 'redeeming' | 'done';
 
@@ -81,6 +82,38 @@ export default function AcceptAlbumInviteScreen() {
     };
   }, [token]);
 
+  const attemptRedeem = async (
+    payloadValue: string,
+    codeValue: string,
+    albumIdValue: string,
+    memberIdValue: string,
+  ) => {
+    if (!vaultKey) return false;
+    setPhase('redeeming');
+    setError(null);
+    const result = await redeemAlbumInvite({
+      payload: payloadValue,
+      code: codeValue,
+      albumId: albumIdValue,
+      memberId: memberIdValue,
+      vaultKey,
+    });
+    if (!result.ok) {
+      setError(
+        result.reason === 'unsupported-version'
+          ? t('receive.errorVersion')
+          : result.reason === 'malformed'
+            ? t('receive.errorPayload')
+            : t('receive.errorCode'),
+      );
+      setPhase('redeem');
+      return false;
+    }
+    toast.success(t('private.acceptAlbumDone'));
+    router.replace(`/private/albums/${albumIdValue}`);
+    return true;
+  };
+
   const join = async () => {
     if (!token) return;
     setPhase('joining');
@@ -101,23 +134,8 @@ export default function AcceptAlbumInviteScreen() {
   };
 
   const redeem = async () => {
-    if (!albumId || !memberId || !vaultKey) return;
-    setPhase('redeeming');
-    setError(null);
-    const result = await redeemAlbumInvite({ payload, code, albumId, memberId, vaultKey });
-    if (!result.ok) {
-      setError(
-        result.reason === 'unsupported-version'
-          ? t('receive.errorVersion')
-          : result.reason === 'malformed'
-            ? t('receive.errorPayload')
-            : t('receive.errorCode'),
-      );
-      setPhase('redeem');
-      return;
-    }
-    toast.success(t('private.acceptAlbumDone'));
-    router.replace(`/private/albums/${albumId}`);
+    if (!albumId || !memberId) return;
+    await attemptRedeem(payload, code, albumId, memberId);
   };
 
   if (space !== 'real') {
@@ -160,7 +178,7 @@ export default function AcceptAlbumInviteScreen() {
           />
         }
       >
-        <Text variant="muted">{t('private.acceptAlbumIntro')}</Text>
+        <Text variant="muted">{t('private.acceptAlbumManualIntro')}</Text>
       </PrivateScreen>
     );
   }
@@ -181,7 +199,7 @@ export default function AcceptAlbumInviteScreen() {
       }
     >
       <ScrollView contentContainerClassName="gap-6 pb-6" showsVerticalScrollIndicator={false}>
-        <Text variant="muted">{t('private.acceptAlbumIntro')}</Text>
+        <Text variant="muted">{t('private.acceptAlbumManualIntro')}</Text>
 
         {error ? (
           <Text variant="caption" className="text-destructive">

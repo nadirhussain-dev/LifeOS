@@ -34,6 +34,8 @@ export const MODULE_FOR_CATEGORY: Record<NotificationCategory, string | null> = 
   split: 'split',
   streak: 'habits',
   digest: null,
+  together: 'together',
+  cycle: 'cycle',
 };
 
 export type CategoryVisibility =

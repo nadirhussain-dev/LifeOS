@@ -23,13 +23,13 @@ const FALLBACK_LENGTH = 28;
  * The Cycle module's hero: a single glance at where today sits.
  *
  * Deliberately shows one thing — day-of-cycle against the person's own
- * average — and nothing cycle-math.ts's header rules out. No phase names, no
- * fertile window, no ovulation marker: that file is explicit about why
- * ("no fertility window... a medical claim, wrong often enough to matter"),
- * and a ring is exactly the kind of component that invites adding one. The
- * text this renders (day count, "needs more cycles") is the same information
- * the screen already showed in two side-by-side boxes — this is that data,
- * not new claims about it.
+ * average. No phase names, no fertile window, no ovulation marker: a ring is
+ * exactly the kind of component that invites adding one, and cycle-math.ts's
+ * `fertileWindow` — a disclosed exception, not a free-for-all, see that
+ * file's header — has its own block with its own disclaimer in cycle.tsx
+ * instead of living here unlabeled. The text this renders (day count, "needs
+ * more cycles") is the same information the screen already showed in two
+ * side-by-side boxes — this is that data, not new claims about it.
  */
 export function CycleHero({ currentDay, averageCycleLength, tint }: Props) {
   const { t } = useTranslation();

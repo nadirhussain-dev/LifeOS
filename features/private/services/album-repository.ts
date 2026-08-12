@@ -47,6 +47,13 @@ const toAlbum = (r: Row): SharedAlbum => ({
   allowComments: bool(r.allow_comments),
   allowChat: bool(r.allow_chat),
   allowNotes: bool(r.allow_notes),
+  relationshipStartDate:
+    typeof r.relationship_start_date === 'number' ? r.relationship_start_date : null,
+  isTogetherHub: bool(r.is_together_hub),
+  cycleShareCiphertext: str(r.cycle_share_ciphertext),
+  cycleShareUpdatedAt:
+    typeof r.cycle_share_updated_at === 'number' ? r.cycle_share_updated_at : null,
+  cycleShareAuthorId: str(r.cycle_share_author_id),
 });
 
 const toMember = (r: Row): AlbumMember => ({
@@ -359,6 +366,55 @@ export async function setAlbumPermissions(
   assertOk(error);
 }
 
+// --- together module (0041) --------------------------------------------------
+
+/**
+ * Designates (or un-designates) `albumId` as the caller's Together hub.
+ *
+ * Only one album is meant to be "the" hub, but that is an application
+ * convention, not a database constraint — enforced by the caller clearing
+ * the previous hub first (see use-shared-albums.ts's `setTogetherHub`),
+ * same trust level the client already has over its own `allow_*` toggles.
+ */
+export async function setTogetherHub(albumId: string, isHub: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('shared_albums')
+    .update({ is_together_hub: isHub, updated_at: Date.now() })
+    .eq('id', albumId);
+  assertOk(error);
+}
+
+export async function setRelationshipStartDate(
+  albumId: string,
+  date: number | null,
+): Promise<void> {
+  const { error } = await supabase
+    .from('shared_albums')
+    .update({ relationship_start_date: date, updated_at: Date.now() })
+    .eq('id', albumId);
+  assertOk(error);
+}
+
+/** The opt-in cycle-status share — see shared-album.types.ts's header on
+ *  `cycleShareCiphertext`. `authorId: null` (alongside `ciphertext: null`)
+ *  turns sharing off. */
+export async function setCycleShare(
+  albumId: string,
+  ciphertext: string | null,
+  authorId: string | null,
+): Promise<void> {
+  const { error } = await supabase
+    .from('shared_albums')
+    .update({
+      cycle_share_ciphertext: ciphertext,
+      cycle_share_updated_at: Date.now(),
+      cycle_share_author_id: authorId,
+      updated_at: Date.now(),
+    })
+    .eq('id', albumId);
+  assertOk(error);
+}
+
 export async function listComments(photoId: string): Promise<AlbumComment[]> {
   const res = await supabase
     .from('shared_album_comments')
@@ -406,14 +462,31 @@ export async function removeComment(commentId: string): Promise<void> {
   assertOk(error);
 }
 
-export async function listMessages(albumId: string): Promise<AlbumMessage[]> {
-  const res = await supabase
+/** Messages per page — small enough that opening a long-running chat doesn't
+ *  decrypt and render years of history just to show the last screenful. */
+export const MESSAGES_PAGE_SIZE = 50;
+
+/**
+ * One page, newest-first internally (so `.limit()` keeps the *most recent*
+ * N rows when there are more than one page's worth), then reversed back to
+ * the caller's oldest-first contract — same order `listMessages` always
+ * returned, just one page of it. `before` is the oldest `created_at` already
+ * loaded, for fetching the page immediately older than that.
+ */
+export async function listMessages(
+  albumId: string,
+  options?: { before?: number; limit?: number },
+): Promise<AlbumMessage[]> {
+  let query = supabase
     .from('shared_album_messages')
     .select('*')
     .eq('album_id', albumId)
     .is('deleted_at', null)
-    .order('created_at');
-  return unwrap<Row[]>(res).map(toMessage);
+    .order('created_at', { ascending: false })
+    .limit(options?.limit ?? MESSAGES_PAGE_SIZE);
+  if (options?.before !== undefined) query = query.lt('created_at', options.before);
+  const res = await query;
+  return unwrap<Row[]>(res).map(toMessage).reverse();
 }
 
 /** Insert is refused server-side unless `allow_chat` is on — see

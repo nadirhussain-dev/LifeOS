@@ -58,6 +58,40 @@ function credentialsHelp(missing) {
   ].join('\n');
 }
 
+/**
+ * AdMob App IDs — deliberately NOT `EXPO_PUBLIC_`-prefixed. Unlike the ad unit
+ * id (features/ads/components/ad-slot.tsx, read from JS at runtime, so it has
+ * to survive Metro's inlining), these two are only ever consumed here, inside
+ * the `react-native-google-mobile-ads` config plugin, at prebuild/EAS-build
+ * time — plain `process.env` in a build-server Node process, same as
+ * SENTRY_ORG/SENTRY_PROJECT below.
+ */
+const ADMOB_ANDROID_APP_ID = (process.env.ADMOB_ANDROID_APP_ID ?? '').trim();
+const ADMOB_IOS_APP_ID = (process.env.ADMOB_IOS_APP_ID ?? '').trim();
+
+/** Overrides the test App IDs baked into app.json's plugin entry with real
+ * ones when present. Absent means "keep shipping Google's universal TEST App
+ * IDs" — a deliberately soft default: unlike missing Supabase creds, this
+ * can't break the app, it can only mean a credentialed build still serves
+ * self-labeled test ads instead of real inventory (see ad-slot.tsx/config.ts
+ * for the full swap-in story). */
+function withAdmobAppIds(config) {
+  if (!ADMOB_ANDROID_APP_ID && !ADMOB_IOS_APP_ID) return config;
+  config.plugins = (config.plugins ?? []).map((plugin) => {
+    if (!Array.isArray(plugin) || plugin[0] !== 'react-native-google-mobile-ads') return plugin;
+    const [name, pluginConfig] = plugin;
+    return [
+      name,
+      {
+        ...pluginConfig,
+        androidAppId: ADMOB_ANDROID_APP_ID || pluginConfig.androidAppId,
+        iosAppId: ADMOB_IOS_APP_ID || pluginConfig.iosAppId,
+      },
+    ];
+  });
+  return config;
+}
+
 module.exports = ({ config }) => {
   const missing = REQUIRED_VARS.filter((name) => !(process.env[name] ?? '').trim());
 
@@ -75,5 +109,18 @@ module.exports = ({ config }) => {
     );
   }
 
-  return config;
+  if (
+    process.env.EAS_BUILD_PROFILE === 'production' &&
+    !ADMOB_ANDROID_APP_ID &&
+    !ADMOB_IOS_APP_ID
+  ) {
+    console.warn(
+      '[lifeos] ADMOB_ANDROID_APP_ID/ADMOB_IOS_APP_ID not set for the "production" build — ' +
+        "shipping Google's universal TEST AdMob App IDs. Fine for internal testing, but Google " +
+        'policy prohibits serving test ads to real users once this reaches the store. ' +
+        'See .env.example.',
+    );
+  }
+
+  return withAdmobAppIds(config);
 };

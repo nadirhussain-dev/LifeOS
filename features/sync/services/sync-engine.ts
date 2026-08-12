@@ -16,6 +16,8 @@ import {
   useSyncStore,
   type SyncCursor,
 } from '@/features/sync/store/sync-store';
+import { reportError } from '@/lib/error-reporting';
+import i18n from '@/lib/i18n';
 import { LOCAL_USER_ID } from '@/lib/local-user';
 import { supabase } from '@/lib/supabase';
 
@@ -218,14 +220,21 @@ async function pullTable(
   let cursor = cursors.get(cursorKey('pull', table.name)) ?? { at: 0, key: '' };
 
   for (;;) {
-    const { data, error } = await supabase
-      .from(table.name)
-      .select('*')
-      .eq('user_id', uid)
-      // The lexicographic tuple comparison, in PostgREST's filter language.
-      .or(
-        `updated_at.gt.${cursor.at},and(updated_at.eq.${cursor.at},${keyColumn}.gt.${JSON.stringify(cursor.key)})`,
-      )
+    const base = supabase.from(table.name).select('*').eq('user_id', uid);
+    // A `user_id`-keyed table is a singleton: the `.eq` above already narrows
+    // the row set to (at most) this user's one row, so a tiebreak against that
+    // same column can never disambiguate anything — and it is actively unsafe,
+    // because `user_id` is a uuid column and a fresh cursor's `key` starts as
+    // `''`, which Postgres refuses to parse as one ("invalid input syntax for
+    // type uuid"). Plain tables keep the lexicographic tuple comparison, in
+    // PostgREST's filter language, since many rows can share one `updated_at`.
+    const { data, error } = await (
+      keyColumn === 'user_id'
+        ? base.gt('updated_at', cursor.at)
+        : base.or(
+            `updated_at.gt.${cursor.at},and(updated_at.eq.${cursor.at},${keyColumn}.gt.${JSON.stringify(cursor.key)})`,
+          )
+    )
       .order('updated_at', { ascending: true })
       .order(keyColumn, { ascending: true })
       .limit(PULL_PAGE);
@@ -473,53 +482,95 @@ async function runSync(force: boolean): Promise<void> {
     cursors.set(key, parseCursor(value));
   }
 
-  try {
-    for (const mod of SYNC_MODULES) {
-      if (!(store.modules[mod.key] ?? false)) continue;
-      // Bail out if the session ended mid-run: the remaining requests would
-      // fail anyway, and a wipe may already be underway. This is not a
-      // failure — commit whatever this run did complete and drop status back
-      // to idle, the same way the success path does. A bare `return` here
-      // used to leave `status` stuck at 'syncing' forever, since neither the
-      // success nor the catch block below ever runs on this path.
-      if (useAuthStore.getState().user?.id !== uid) {
-        useSyncStore.getState().commitCursors(cursors);
-        useSyncStore.getState().setStatus('idle');
-        return;
-      }
+  /**
+   * Isolated per module, not one try/catch around the whole run.
+   *
+   * A single broken table used to be able to throw out of this entire loop —
+   * a schema mismatch, an RLS refusal, a mid-request network blip — and take
+   * down sync for every module ordered *after* it too, silently, for as long
+   * as that one table stayed broken. (The uuid-cursor bug this app shipped
+   * with was exactly that shape: `sleep_settings` failing meant `study` and
+   * `budget` never got a chance to run either.) A failure here is scoped to
+   * its own module: the table loop within one module still aborts on its
+   * first error, since a module's tables are ordered parents-before-children
+   * and pushing/pulling a child against a parent that never arrived is worse
+   * than skipping both — but every OTHER module keeps its own cursor
+   * progressing regardless of this one's outcome.
+   */
+  let attempted = 0;
+  const failedModules: string[] = [];
 
-      // "Writes" is measured from what actually reached the server rather than
-      // from instrumenting every mutation in every module: one place to be
-      // right, and it counts real content rather than button presses.
+  for (const mod of SYNC_MODULES) {
+    if (!(store.modules[mod.key] ?? false)) continue;
+    // Bail out if the session ended mid-run: the remaining requests would
+    // fail anyway, and a wipe may already be underway. This is not a
+    // failure — commit whatever this run did complete and drop status back
+    // to idle, the same way the success path does. A bare `return` here
+    // used to leave `status` stuck at 'syncing' forever, since nothing after
+    // it ever ran on this path.
+    if (useAuthStore.getState().user?.id !== uid) {
+      useSyncStore.getState().commitCursors(cursors);
+      useSyncStore.getState().setStatus('idle');
+      return;
+    }
+
+    attempted += 1;
+    try {
+      // "Writes" is measured from what actually reached the server rather
+      // than from instrumenting every mutation in every module: one place
+      // to be right, and it counts real content rather than button presses.
       let pushed = 0;
       for (const table of mod.tables) {
-        // Per table, and discarded after: the set only means anything for the
-        // pull that immediately follows its own push.
+        // Per table, and discarded after: the set only means anything for
+        // the pull that immediately follows its own push.
         const pushedKeys = new Set<string>();
         pushed += await pushTable(uid, table, cursors, pushedKeys);
         await pullTable(uid, table, cursors, pushedKeys, mod.key);
       }
       if (pushed > 0) trackModuleWrites(mod.key, pushed);
+    } catch (e) {
+      failedModules.push(mod.key);
+      reportError(e, { scope: 'sync-engine', module: mod.key });
     }
-    useSyncStore.getState().commitCursors(cursors);
+  }
+
+  useSyncStore.getState().commitCursors(cursors);
+
+  /**
+   * Bytes last, and unconditional — not only on every module having
+   * succeeded. Media is the least urgent thing here and the most likely to
+   * fail on its own (a big file, a slow connection, a quota); gating it on
+   * the row-sync modules' success was the same all-or-nothing fragility
+   * this function just removed everywhere else, one level up. It no-ops
+   * unless the user opted in, and is already self-isolating via its own
+   * `.catch()`.
+   */
+  void uploadPendingMedia().catch(() => undefined);
+
+  if (failedModules.length === 0) {
     useSyncStore.getState().setStatus('idle');
     useSyncStore.getState().setLastSyncedAt(Date.now());
     useSyncStore.getState().setNextAttemptAt(null);
-
-    /**
-     * Bytes last, and outside the try that owns sync's status.
-     *
-     * Media is the least urgent thing here and the most likely to fail — a big
-     * file, a slow connection, a quota. Running it after the cursors are
-     * committed and the status is `idle` means an upload problem cannot make a
-     * successful row sync look failed, and cannot roll back cursors that
-     * legitimately advanced. It no-ops unless the user opted in.
-     */
-    void uploadPendingMedia().catch(() => undefined);
-  } catch (e) {
-    const failures = useSyncStore.getState().consecutiveFailures + 1;
-    useSyncStore.getState().commitCursors(cursors);
-    useSyncStore.getState().setStatus('error', e instanceof Error ? e.message : 'Sync failed');
-    useSyncStore.getState().setNextAttemptAt(Date.now() + backoffFor(failures));
+    return;
   }
+
+  const failures = useSyncStore.getState().consecutiveFailures + 1;
+  // `null` when every attempted module failed: app/settings/sync.tsx already
+  // falls back to the translated `sync.syncFailed` string for a null
+  // `lastError`, so there is nothing to build here. A partial failure does
+  // need its own message — naming *which* modules, translated, rather than
+  // their internal keys (`cycle`, `budget`) appearing verbatim in an
+  // otherwise fully localized screen.
+  const message =
+    failedModules.length === attempted
+      ? null
+      : i18n.t('sync.partialFailed', {
+          modules: failedModules
+            .map((key) => SYNC_MODULES.find((m) => m.key === key)?.labelKey)
+            .filter((labelKey): labelKey is string => !!labelKey)
+            .map((labelKey) => i18n.t(labelKey))
+            .join(', '),
+        });
+  useSyncStore.getState().setStatus('error', message);
+  useSyncStore.getState().setNextAttemptAt(Date.now() + backoffFor(failures));
 }

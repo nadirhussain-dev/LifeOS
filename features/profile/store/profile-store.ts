@@ -42,6 +42,12 @@ type ProfileState = {
     focusAreas: FocusArea[];
     appLockEnabled: boolean;
   }) => void;
+  /** Marks onboarding done WITHOUT the answers `completeOnboarding` bundles
+   *  — for `useAuthGate` recognising an account that finished onboarding on
+   *  a different device (migration 0042's `onboarding_completed_at`). This
+   *  device never asked the questions, so it has no name/gender/focus areas
+   *  to stamp; onboarding simply never runs here at all. */
+  setOnboardingComplete: (complete: boolean) => void;
   reset: () => void;
   /** Clears the onboarding *answers* but leaves `onboardingComplete` as-is.
    * For an account switch on an already-onboarded device: the device doesn't
@@ -68,6 +74,7 @@ export const useProfileStore = create<ProfileState>()(
       setAppLockEnabled: (appLockEnabled) => set({ appLockEnabled }),
       completeOnboarding: ({ name, gender, focusAreas, appLockEnabled }) =>
         set({ name: name.trim(), gender, focusAreas, appLockEnabled, onboardingComplete: true }),
+      setOnboardingComplete: (onboardingComplete) => set({ onboardingComplete }),
       reset: () =>
         set({
           name: '',

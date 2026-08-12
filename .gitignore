@@ -44,6 +44,9 @@ google-play-service-account.json
 /ios
 /android
 
+# Supabase CLI local state (per-machine project link, not for source control)
+supabase/.temp/
+
 # Claude Code personal overrides (permission mode, local allowlists). The
 # shared settings.json is checked in; this one must not be — it is per-machine,
 # and a committed "bypassPermissions" would auto-approve tool calls for anyone

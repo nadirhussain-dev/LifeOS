@@ -22,6 +22,16 @@ import { useProfileStore } from '@/features/profile/store/profile-store';
  * ("use email instead", "already have an account"). That is why the redirect out
  * of `(auth)` is conditional on being onboarded: bouncing them straight back
  * would make those two links dead.
+ *
+ * `onboardingComplete` is otherwise a per-device flag, which used to mean a
+ * returning user signing in on a device that has never seen their account
+ * before (a fresh install, a reset phone) landed back in the welcome flow
+ * instead of their dashboard — indistinguishable, from here, from a genuinely
+ * new account. Migration 0042's `profile.onboardingCompletedAt` (set once,
+ * on whichever device finishes onboarding first) is what lets this gate tell
+ * the two apart: `accountOnboarded` below is that server signal, and the
+ * moment it's seen this device adopts it as its own local flag too, so it is
+ * never checked again after the first sign-in.
  */
 export function useAuthGate() {
   const segments = useSegments();
@@ -30,7 +40,9 @@ export function useAuthGate() {
   const session = useAuthStore((s) => s.session);
   const isGuest = useAuthStore((s) => s.isGuest);
   const authHydrated = useAuthStore((s) => s.hasHydrated);
+  const profile = useAuthStore((s) => s.profile);
   const onboardingComplete = useProfileStore((s) => s.onboardingComplete);
+  const setOnboardingComplete = useProfileStore((s) => s.setOnboardingComplete);
   const hydrated = useProfileStore((s) => s.hydrated);
 
   useEffect(() => {
@@ -45,10 +57,30 @@ export function useAuthGate() {
 
     if (onResetScreen) return;
 
-    if (!onboardingComplete) {
+    // `profile` loads asynchronously after sign-in (loadProfile()), so this
+    // is null for a moment even for an account that finished onboarding long
+    // ago — this effect re-runs once it arrives (it's a dependency below),
+    // correcting a possible one-frame trip through onboarding rather than
+    // blocking navigation until the network round-trip finishes.
+    const accountOnboarded = !!session && profile?.onboardingCompletedAt != null;
+    if (accountOnboarded && !onboardingComplete) setOnboardingComplete(true);
+    const effectivelyOnboarded = onboardingComplete || accountOnboarded;
+
+    if (!effectivelyOnboarded) {
       // First run. Onboarding owns this phase and reaches into `(auth)` itself
       // for the email path, so being in either group is fine — anywhere else
       // means a deep link jumped the queue.
+      //
+      // Except once `(auth)` has actually done its job: a sign-up or sign-in
+      // completed from onboarding's "use email instead" detour lands here with
+      // a real session but onboarding still unfinished. Without this, that
+      // login/sign-up screen has nothing left to do and nothing sends the user
+      // anywhere — the "successful auth, then nothing happens" bug. Send them
+      // back to pick up onboarding where they left off.
+      if (inAuthGroup && authed) {
+        router.replace('/(onboarding)');
+        return;
+      }
       if (!inOnboarding && !inAuthGroup) router.replace('/(onboarding)');
       return;
     }
@@ -70,7 +102,9 @@ export function useAuthGate() {
     hydrated,
     session,
     isGuest,
+    profile,
     onboardingComplete,
+    setOnboardingComplete,
     segments,
     router,
   ]);

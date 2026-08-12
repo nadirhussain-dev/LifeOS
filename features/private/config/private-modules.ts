@@ -1,5 +1,6 @@
 import {
   Droplets,
+  Heart,
   HeartHandshake,
   Images,
   Lock,
@@ -58,7 +59,8 @@ import type { Gender } from '@/features/profile/store/profile-store';
  * `shared-albums` is also never role-gated — it's the one module built for
  * two people together, not one body.
  */
-export type PrivateModuleId = 'vault' | 'cycle' | 'recovery' | 'intimacy' | 'shared-albums';
+export type PrivateModuleId =
+  'vault' | 'cycle' | 'recovery' | 'intimacy' | 'shared-albums' | 'together';
 
 export type PrivateModule = {
   id: PrivateModuleId;
@@ -135,6 +137,23 @@ export const PRIVATE_MODULES: PrivateModule[] = [
     tint: moduleTints.albums,
     suggestFor: ['female', 'male', 'non_binary', 'prefer_not_to_say'],
     route: '/private/albums',
+    requiresRealSpace: true,
+  },
+  {
+    id: 'together',
+    titleKey: 'private.togetherModuleTitle',
+    subtitleKey: 'private.togetherModuleSubtitle',
+    icon: Heart,
+    // Shares shared-albums' tint deliberately: Together is built directly on
+    // top of one designated shared album (see use-shared-albums.ts's
+    // `useTogetherHub`), not a separate data model — the shared colour says
+    // so. The wheel is otherwise full (see the header note above 'albums').
+    tint: moduleTints.albums,
+    suggestFor: ['female', 'male', 'non_binary', 'prefer_not_to_say'],
+    route: '/private/together',
+    // Same reasoning as shared-albums: its membership is ordinary
+    // auth.uid()-scoped Postgres metadata, unrelated to which local key
+    // unlocked this device, so it must stay out of the decoy space.
     requiresRealSpace: true,
   },
 ];
