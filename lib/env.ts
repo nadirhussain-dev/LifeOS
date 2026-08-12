@@ -63,6 +63,23 @@ export const env = {
   /** Where support and data-access requests go. Both stores require a working
    *  contact address; a block screen's mailto was the only one the app had. */
   EXPO_PUBLIC_SUPPORT_EMAIL: read(process.env.EXPO_PUBLIC_SUPPORT_EMAIL) || 'nh262464@gmail.com',
+
+  /**
+   * Real AdMob banner ad unit ids, one per platform (AdMob issues a separate
+   * unit id per platform even for "the same" placement). See features/ads/
+   * components/ad-slot.tsx: unset on either platform falls back to Google's
+   * own `TestIds.BANNER` for that platform, the same "unset = safe default"
+   * pattern as the vault escrow key above — a build with these blank still
+   * ships, it just keeps showing Google's self-labeled test creative instead
+   * of real inventory. The App IDs these units belong to are a separate,
+   * build-time-only pair (`ADMOB_ANDROID_APP_ID`/`ADMOB_IOS_APP_ID`, no
+   * EXPO_PUBLIC_ prefix — see app.config.js) because they're consumed by the
+   * native config plugin, never read from JS.
+   */
+  EXPO_PUBLIC_ADMOB_BANNER_UNIT_ID_ANDROID: read(
+    process.env.EXPO_PUBLIC_ADMOB_BANNER_UNIT_ID_ANDROID,
+  ),
+  EXPO_PUBLIC_ADMOB_BANNER_UNIT_ID_IOS: read(process.env.EXPO_PUBLIC_ADMOB_BANNER_UNIT_ID_IOS),
 };
 
 /** True only when both a real-looking URL and a plausible anon key are present.

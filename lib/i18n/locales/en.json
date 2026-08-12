@@ -1852,7 +1852,6 @@
     "removeMemberTitle": "Remove {{name}}?",
     "removeMemberBody": "They lose access to anything added from now on. It can't undo what they've already seen — if that matters, ask everyone else to re-share the album with a new key.",
     "acceptAlbumTitle": "Join shared album",
-    "acceptAlbumIntro": "Someone has shared an album with you. Finishing joins you and unlocks it in one step.",
     "acceptAlbumManualIntro": "This invite doesn't carry the album's key. Ask whoever shared it for the code and sealed text, sent separately from this link.",
     "acceptAlbumFinish": "Join album",
     "acceptAlbumDone": "You've joined the album",

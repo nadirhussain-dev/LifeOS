@@ -217,7 +217,7 @@
       [
         "react-native-google-mobile-ads",
         {
-          "//": "Google's official UNIVERSAL TEST IDs — always serve a self-labeled 'Test Ad', never real inventory, safe to ship in a dev build. Swap for real AdMob App IDs (features/ads/config.ts documents the rest of the swap) before any store submission — see https://developers.google.com/admob/android/test-ads for the current list if these ever change.",
+          "//": "Google's official UNIVERSAL TEST IDs — always serve a self-labeled 'Test Ad', never real inventory, safe to ship in a dev build. Overridden at build time by ADMOB_ANDROID_APP_ID/ADMOB_IOS_APP_ID when set (see app.config.js) — the literal values below are only the fallback for a build with neither set. features/ads/config.ts documents the rest of the swap. See https://developers.google.com/admob/android/test-ads for the current test-id list if these ever change.",
           "androidAppId": "ca-app-pub-3940256099942544~3347511713",
           "iosAppId": "ca-app-pub-3940256099942544~1458002511",
           "userTrackingUsageDescription": "LifeOS uses this to show fewer, more relevant ads on the free plan. Denying it still shows ads — Plus removes them either way."

@@ -20,21 +20,18 @@ import { toast } from '@/lib/toast-store';
 
 /**
  * The target of `lifeos://private/albums/accept/<token>` — the Postgres
- * half of an album invite, followed by the out-of-band half.
+ * half of an album invite. The link is membership-only, deliberately: the
+ * out-of-band code+payload that actually decrypt the album must travel
+ * through a separate channel (spoken code, a second message, in person),
+ * same discipline as transfer.tsx's vault-transfer screen. Folding both
+ * halves into one link would mean a single intercepted link hands over full
+ * decryption capability, not just membership — see invite.tsx's header.
  *
  * `PrivateScreen` already redirects to unlock/setup when the vault is
  * locked or never set up (see unlock.tsx), so by the time this screen
  * renders content the vault is guaranteed unlocked. If that detour was
  * needed, the token stays valid (it isn't consumed by a failed attempt) —
  * following the same link again after finishing setup picks up right here.
- *
- * A current invite link carries `c` (code) and `p` (payload) as query
- * params alongside the token — see invite.tsx — so `join()` can run both
- * halves back to back and land the user straight in the album with one tap.
- * The manual code/payload entry below only shows up as a fallback: an older
- * link minted before this change, or a redeem that fails against the
- * embedded key (expired/edited in transit) and needs a fresh code relayed
- * some other way.
  */
 type Phase = 'loading' | 'failed' | 'ready' | 'joining' | 'redeem' | 'redeeming' | 'done';
 
@@ -47,34 +44,19 @@ const FAILURE_KEYS: Record<string, string> = {
 };
 
 export default function AcceptAlbumInviteScreen() {
-  const {
-    token,
-    c: linkCode,
-    p: linkPayload,
-  } = useLocalSearchParams<{
-    token: string;
-    c?: string;
-    p?: string;
-  }>();
+  const { token } = useLocalSearchParams<{ token: string }>();
   const router = useRouter();
   const { t } = useTranslation();
   const { c } = useTheme();
   const space = usePrivateStore((s) => s.space);
   const vaultKey = usePrivateStore((s) => s.key);
 
-  // Both present means this link carries the whole invite, not just the
-  // membership half — see the header comment.
-  const hasEmbeddedKey = !!(linkCode && linkPayload);
-
   const [phase, setPhase] = useState<Phase>('loading');
   const [failureKey, setFailureKey] = useState<string>('private.inviteError');
   const [albumId, setAlbumId] = useState<string | null>(null);
   const [memberId, setMemberId] = useState<string | null>(null);
-  // Pre-filled from the link when present, so a fallback to manual entry
-  // (redeem failed, or an older link with no embedded key at all) still
-  // starts from whatever half the link did carry rather than a blank form.
-  const [payload, setPayload] = useState(linkPayload ?? '');
-  const [code, setCode] = useState(linkCode ?? '');
+  const [payload, setPayload] = useState('');
+  const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -100,9 +82,6 @@ export default function AcceptAlbumInviteScreen() {
     };
   }, [token]);
 
-  /** Shared by the automatic (embedded-key) and manual redeem paths so
-   *  neither has to wait for `albumId`/`memberId` state to re-render before
-   *  using values `join()` just received. */
   const attemptRedeem = async (
     payloadValue: string,
     codeValue: string,
@@ -147,14 +126,6 @@ export default function AcceptAlbumInviteScreen() {
       }
       setAlbumId(result.albumId);
       setMemberId(result.memberId);
-      // The link carried the key too — finish in one step. A failure here
-      // (e.g. the code was altered in transit) falls through to the manual
-      // form, already pre-filled with the same values, rather than a dead
-      // end: `attemptRedeem` itself sets `phase` back to 'redeem' on failure.
-      if (hasEmbeddedKey && result.albumId && result.memberId) {
-        await attemptRedeem(linkPayload ?? '', linkCode ?? '', result.albumId, result.memberId);
-        return;
-      }
       setPhase('redeem');
     } catch {
       setFailureKey('private.inviteError');
@@ -207,9 +178,7 @@ export default function AcceptAlbumInviteScreen() {
           />
         }
       >
-        <Text variant="muted">
-          {t(hasEmbeddedKey ? 'private.acceptAlbumIntro' : 'private.acceptAlbumManualIntro')}
-        </Text>
+        <Text variant="muted">{t('private.acceptAlbumManualIntro')}</Text>
       </PrivateScreen>
     );
   }

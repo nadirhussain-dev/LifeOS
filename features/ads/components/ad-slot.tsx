@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 import type * as GoogleMobileAdsModule from 'react-native-google-mobile-ads';
 
 import { Text } from '@/components/ui/text';
@@ -11,6 +11,7 @@ import { useBillingStore } from '@/features/billing/store/billing-store';
 import { ADS_MODULE_ID, type AdPlacement } from '@/features/ads/config';
 import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 import { useTheme } from '@/hooks/use-theme';
+import { env } from '@/lib/env';
 
 type Props = { placement: AdPlacement };
 
@@ -58,6 +59,11 @@ function loadAdsModule(): typeof GoogleMobileAdsModule | null {
  * nothing if the ad itself fails to load (a dev environment without the
  * native module, or no network) — never an empty grey box.
  *
+ * The unit id is env-driven per platform (EXPO_PUBLIC_ADMOB_BANNER_UNIT_ID_
+ * ANDROID/IOS, see lib/env.ts) and falls back to `TestIds.BANNER` — Google's
+ * official, platform-aware test unit — when unset, so a build with no AdMob
+ * config still runs and still shows a real (test) ad rather than nothing.
+ *
  * The "remove ads" link is deliberately its OWN pressable, below the banner
  * with real spacing, never wrapping or overlapping the ad creative itself —
  * stacking app UI on top of an ad (or making app UI behave like part of the
@@ -83,12 +89,16 @@ export function AdSlot({ placement }: Props) {
   if (session && checkedAt === null) return null;
 
   const { BannerAd, BannerAdSize, TestIds } = mod;
+  const realUnitId =
+    Platform.OS === 'ios'
+      ? env.EXPO_PUBLIC_ADMOB_BANNER_UNIT_ID_IOS
+      : env.EXPO_PUBLIC_ADMOB_BANNER_UNIT_ID_ANDROID;
 
   return (
     <View className="items-center gap-2" testID={`ad-slot-${placement}`}>
       <Text variant="micro">{t('ads.eyebrow')}</Text>
       <BannerAd
-        unitId={TestIds.BANNER}
+        unitId={realUnitId || TestIds.BANNER}
         size={BannerAdSize.BANNER}
         onAdFailedToLoad={() => setFailed(true)}
       />

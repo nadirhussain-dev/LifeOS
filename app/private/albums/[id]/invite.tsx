@@ -101,19 +101,17 @@ export default function AlbumInviteScreen() {
   }
 
   // The token, code and payload are minted together (createAlbumInvite calls
-  // createTransfer and the invitation RPC in one function) but used to be
-  // handed over on two separate tracks — a link that only granted membership,
-  // plus a code+payload relayed some other way. Folding all three into this
-  // one link's query string is safe (see album-invite.ts's header: the
-  // invariant is that the key must never reach *Supabase*, not that it can't
-  // travel with the token peer-to-peer) and turns "join, then get stuck
-  // waiting on the key" into one tap.
-  const link =
-    bundle?.token && bundle.code && bundle.payload
-      ? Linking.createURL(`/private/albums/accept/${bundle.token}`, {
-          queryParams: { c: bundle.code, p: bundle.payload },
-        })
-      : null;
+  // createTransfer and the invitation RPC in one function) but MUST travel on
+  // two separate tracks: this link only grants Postgres/RLS membership — see
+  // album-invite.ts's header — while the code+payload below are the actual
+  // decryption secret and have to be relayed through a different channel
+  // (spoken code, a second message, in person). Folding all three into one
+  // link would let a single interception of that link (clipboard sync, a
+  // messaging platform that unfurls/logs links, a malicious app on the same
+  // custom scheme) hand over full decryption capability, not just
+  // membership — see transfer.tsx's near-identical warning for why the two
+  // halves of vault-transfer are kept apart the same way.
+  const link = bundle?.token ? Linking.createURL(`/private/albums/accept/${bundle.token}`) : null;
 
   return (
     <PrivateScreen moduleId="shared-albums" title={t('private.invite')} tint={c.accent}>

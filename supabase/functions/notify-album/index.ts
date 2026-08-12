@@ -12,12 +12,15 @@
 //     it has no key to read. It only ever relays what the client already
 //     decided to say generically (e.g. "New message" + a sender name the
 //     client already knows locally).
-//   - `invite`: a fresh invite was created for `inviteeEmail`. If that email
-//     matches an existing account, that ONE person gets a generic "you have
-//     a pending invite" push. Deliberately carries no token/code/payload —
-//     the actual invite link is still delivered by the existing share
-//     sheet/clipboard flow; this is an awareness nudge only, not a second
-//     channel for the secret itself.
+//   - `invite`: a fresh invite was created for `inviteeEmail`. Requires a
+//     real, still-open row in shared_album_invitations for that album+email
+//     (checked through the caller's own token, so RLS scopes it to albums
+//     they're actually in) — otherwise any member could target an arbitrary
+//     email they never invited. If that email matches an existing account,
+//     that ONE person gets a generic "you have a pending invite" push.
+//     Deliberately carries no token/code/payload — the actual invite link is
+//     still delivered by the existing share sheet/clipboard flow; this is an
+//     awareness nudge only, not a second channel for the secret itself.
 //
 // Notification delivery is NOT the source of truth for either case — errors
 // here are non-fatal from the client's perspective, same as notify-group.
@@ -136,6 +139,21 @@ Deno.serve(async (req: Request) => {
   const route = payload.route ?? `/private/albums/${payload.albumId}`;
 
   if (payload.kind === 'invite') {
+    // The membership check above only proves the caller belongs to SOME
+    // album — not that they actually invited `inviteeEmail` to it. Require a
+    // real, still-open invitation row (asked through the caller's own token
+    // so RLS scopes it to albums they're in, same discipline as the
+    // membership check) before this function will contact anyone by email.
+    const { data: pendingInvite } = await asCaller
+      .from('shared_album_invitations')
+      .select('id')
+      .eq('album_id', payload.albumId)
+      .eq('email', payload.inviteeEmail.toLowerCase())
+      .is('accepted_at', null)
+      .gt('expires_at', Date.now())
+      .maybeSingle();
+    if (!pendingInvite) return json({ error: 'forbidden' }, 403);
+
     const { data: profile } = await admin
       .from('profiles')
       .select('id')
