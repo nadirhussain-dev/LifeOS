@@ -187,7 +187,16 @@ export default function OnboardingScreen() {
       resetDraft();
       router.replace('/(tabs)');
     },
-    [completeOnboarding, name, gender, focusAreas, resetDraft, router, session, markOnboardingComplete],
+    [
+      completeOnboarding,
+      name,
+      gender,
+      focusAreas,
+      resetDraft,
+      router,
+      session,
+      markOnboardingComplete,
+    ],
   );
 
   const [lockChoice, setLockChoice] = useState(false);

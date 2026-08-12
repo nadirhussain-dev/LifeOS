@@ -47,7 +47,11 @@ const FAILURE_KEYS: Record<string, string> = {
 };
 
 export default function AcceptAlbumInviteScreen() {
-  const { token, c: linkCode, p: linkPayload } = useLocalSearchParams<{
+  const {
+    token,
+    c: linkCode,
+    p: linkPayload,
+  } = useLocalSearchParams<{
     token: string;
     c?: string;
     p?: string;

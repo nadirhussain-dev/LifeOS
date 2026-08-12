@@ -182,10 +182,7 @@ export function useAlbumMessages(albumId: string | undefined, albumKey: Uint8Arr
   // older page appended after it via fetchNextPage) — reversing page order
   // restores oldest-to-newest across everything loaded so far, without
   // touching each page's own already-correct internal order.
-  const messages = useMemo(
-    () => [...(query.data?.pages ?? [])].reverse().flat(),
-    [query.data],
-  );
+  const messages = useMemo(() => [...(query.data?.pages ?? [])].reverse().flat(), [query.data]);
 
   return { ...query, data: messages };
 }

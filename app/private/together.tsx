@@ -1,6 +1,12 @@
 import { format, parseISO } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { CalendarHeart, Droplets, ImagePlus, MessagesSquare, NotebookPen } from 'lucide-react-native';
+import {
+  CalendarHeart,
+  Droplets,
+  ImagePlus,
+  MessagesSquare,
+  NotebookPen,
+} from 'lucide-react-native';
 import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
@@ -31,7 +37,12 @@ import {
 } from '@/features/private/hooks/use-shared-albums';
 import { encryptCycleShare, tryDecryptCycleShare } from '@/features/private/services/album-crypto';
 import { listCycleEntries } from '@/features/private/services/cycle';
-import { averageCycleLength, dayOfCycle, periodsFrom, predictedNextStart } from '@/features/private/services/cycle-math';
+import {
+  averageCycleLength,
+  dayOfCycle,
+  periodsFrom,
+  predictedNextStart,
+} from '@/features/private/services/cycle-math';
 import { nextMilestone, onThisDay, todaysMilestone } from '@/features/private/services/together';
 import { usePrivateStore } from '@/features/private/store/private-store';
 import type { SharedAlbum } from '@/features/private/types/shared-album.types';
@@ -223,10 +234,7 @@ function TogetherHubView({ hub, tint }: { hub: SharedAlbum; tint: string }) {
   const startDate = hub.relationshipStartDate ?? hub.createdAt;
   const today = useMemo(() => todaysMilestone(milestones, new Date()), [milestones]);
   const next = useMemo(() => nextMilestone(milestones, new Date()), [milestones]);
-  const memory = useMemo(
-    () => onThisDay(detail?.photos ?? [], new Date(), 15),
-    [detail?.photos],
-  );
+  const memory = useMemo(() => onThisDay(detail?.photos ?? [], new Date(), 15), [detail?.photos]);
 
   const confirmRemoveHub = () =>
     void confirm({
@@ -250,24 +258,16 @@ function TogetherHubView({ hub, tint }: { hub: SharedAlbum; tint: string }) {
       ) : (
         <>
           <View className={cardClass({ padding: 'md' }, 'gap-3')}>
-            <Text
-              className="font-sora-extrabold text-2xl"
-              style={{ color: tint }}
-            >
+            <Text className="font-sora-extrabold text-2xl" style={{ color: tint }}>
               {t('private.togetherFor', {
-                count: Math.max(
-                  0,
-                  Math.floor((Date.now() - startDate) / (24 * 60 * 60 * 1000)),
-                ),
+                count: Math.max(0, Math.floor((Date.now() - startDate) / (24 * 60 * 60 * 1000))),
               })}
             </Text>
             <View className="flex-row items-center justify-between">
               <Text variant="caption">{t('private.togetherStartDate')}</Text>
               <AlbumDateField
                 value={format(new Date(startDate), 'yyyy-MM-dd')}
-                onChange={(value) =>
-                  setRelationshipStartDate.mutate(parseISO(value).getTime())
-                }
+                onChange={(value) => setRelationshipStartDate.mutate(parseISO(value).getTime())}
               />
             </View>
           </View>
@@ -361,7 +361,11 @@ function TogetherHubView({ hub, tint }: { hub: SharedAlbum; tint: string }) {
             <Text variant="caption">{t('private.manageMilestones')}</Text>
           </Pressable>
 
-          <Pressable accessibilityRole="button" onPress={confirmRemoveHub} className="items-center py-2">
+          <Pressable
+            accessibilityRole="button"
+            onPress={confirmRemoveHub}
+            className="items-center py-2"
+          >
             <Text variant="caption" className="text-destructive">
               {t('private.togetherRemoveHub')}
             </Text>

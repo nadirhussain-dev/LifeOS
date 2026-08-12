@@ -147,9 +147,7 @@ export default function ProfileScreen() {
       setEditingUsername(false);
       return;
     }
-    toast.error(
-      result === 'taken' ? t('auth.usernameJustTaken') : t('auth.usernameClaimFailed'),
-    );
+    toast.error(result === 'taken' ? t('auth.usernameJustTaken') : t('auth.usernameClaimFailed'));
   };
 
   if (!session) {

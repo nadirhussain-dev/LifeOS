@@ -1,7 +1,11 @@
 import { addDays, parseISO, set } from 'date-fns';
 
 import { listCycleEntries } from '@/features/private/services/cycle';
-import { averageCycleLength, periodsFrom, predictedNextStart } from '@/features/private/services/cycle-math';
+import {
+  averageCycleLength,
+  periodsFrom,
+  predictedNextStart,
+} from '@/features/private/services/cycle-math';
 import { useCycleSettingsStore } from '@/features/private/store/cycle-settings-store';
 import i18n from '@/lib/i18n';
 import { cancelNotification, scheduleOneTimeNotification } from '@/lib/notifications';

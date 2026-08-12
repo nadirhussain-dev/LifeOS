@@ -47,12 +47,12 @@ const toAlbum = (r: Row): SharedAlbum => ({
   allowComments: bool(r.allow_comments),
   allowChat: bool(r.allow_chat),
   allowNotes: bool(r.allow_notes),
-  relationshipStartDate: typeof r.relationship_start_date === 'number'
-    ? r.relationship_start_date
-    : null,
+  relationshipStartDate:
+    typeof r.relationship_start_date === 'number' ? r.relationship_start_date : null,
   isTogetherHub: bool(r.is_together_hub),
   cycleShareCiphertext: str(r.cycle_share_ciphertext),
-  cycleShareUpdatedAt: typeof r.cycle_share_updated_at === 'number' ? r.cycle_share_updated_at : null,
+  cycleShareUpdatedAt:
+    typeof r.cycle_share_updated_at === 'number' ? r.cycle_share_updated_at : null,
   cycleShareAuthorId: str(r.cycle_share_author_id),
 });
 

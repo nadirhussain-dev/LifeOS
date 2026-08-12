@@ -60,12 +60,7 @@ import type { Gender } from '@/features/profile/store/profile-store';
  * two people together, not one body.
  */
 export type PrivateModuleId =
-  | 'vault'
-  | 'cycle'
-  | 'recovery'
-  | 'intimacy'
-  | 'shared-albums'
-  | 'together';
+  'vault' | 'cycle' | 'recovery' | 'intimacy' | 'shared-albums' | 'together';
 
 export type PrivateModule = {
   id: PrivateModuleId;

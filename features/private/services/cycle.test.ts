@@ -139,10 +139,8 @@ describe('fertileWindow', () => {
     });
   });
 
-  it('shares predictedNextStart\'s floor: nothing below three periods', () => {
-    const periods = periodsFrom(
-      ['2026-01-01', '2026-01-29'].map((d) => entry(d, 'medium')),
-    );
+  it("shares predictedNextStart's floor: nothing below three periods", () => {
+    const periods = periodsFrom(['2026-01-01', '2026-01-29'].map((d) => entry(d, 'medium')));
     expect(fertileWindow(periods, null)).toBeNull();
   });
 

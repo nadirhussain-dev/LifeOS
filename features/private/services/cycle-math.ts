@@ -163,9 +163,7 @@ export function fertileWindow(
   const nextStart = predictedNextStart(periods, averageLength);
   if (!nextStart) return null;
 
-  const ovulationEstimate = toKey(
-    addDays(toDate(nextStart), -OVULATION_DAYS_BEFORE_NEXT_START),
-  );
+  const ovulationEstimate = toKey(addDays(toDate(nextStart), -OVULATION_DAYS_BEFORE_NEXT_START));
   return {
     start: toKey(addDays(toDate(ovulationEstimate), -FERTILE_WINDOW_BEFORE_DAYS)),
     end: toKey(addDays(toDate(ovulationEstimate), FERTILE_WINDOW_AFTER_DAYS)),
