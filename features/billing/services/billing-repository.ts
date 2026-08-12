@@ -102,11 +102,7 @@ export async function adminSetPlanActive(id: string, active: boolean): Promise<v
 // `my_subscription()` (0044) is the one-row read of where that landed.
 
 export type SubscriptionStatus =
-  | 'pending'
-  | 'active'
-  | 'past_due'
-  | 'pending_renewal_confirmation'
-  | 'cancelled';
+  'pending' | 'active' | 'past_due' | 'pending_renewal_confirmation' | 'cancelled';
 
 export type MySubscription = {
   safepaySubscriptionId: string;
