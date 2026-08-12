@@ -4,11 +4,17 @@ import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
  * Cycle derivations, kept free of the encrypted store so they can be tested
  * directly — the same split as split-math.ts and habit-streaks.ts.
  *
- * Scope is deliberately narrow: describe what was logged and project the next
- * period from the person's own history. There is no fertility window and
- * nothing a reader could take as contraceptive guidance. That is a medical
- * claim, it is wrong often enough to matter, and being wrong about it changes
- * lives.
+ * Scope was originally narrow on purpose: describe what was logged and
+ * project the next period from the person's own history, nothing a reader
+ * could take as contraceptive guidance. `fertileWindow` below is a deliberate,
+ * disclosed exception to that rule — not a regression of it. It exists
+ * because the product decision was made to offer the same calendar-based
+ * estimate most period trackers do, on the explicit condition that it never
+ * appears without the "estimate only, not contraception" notice living beside
+ * it (see app/private/cycle.tsx) — every call site must carry that warning,
+ * not just the first one a person happens to see. The standard's own
+ * unreliability is why it is gated on the same three-period floor as
+ * `averageCycleLength`, never offered from a single cycle's data.
  */
 
 export type Flow = 'spotting' | 'light' | 'medium' | 'heavy';
@@ -127,6 +133,44 @@ export function averageCycleLength(periods: Period[]): number | null {
 export function predictedNextStart(periods: Period[], averageLength: number | null): string | null {
   if (!averageLength || periods.length === 0) return null;
   return toKey(addDays(toDate(periods[0].start), averageLength));
+}
+
+export type FertileWindow = { start: string; end: string; ovulationEstimate: string };
+
+/** Days before predicted ovulation the fertile window is estimated to open,
+ *  and after it that it's estimated to close — the standard calendar-method
+ *  figures (sperm survival ~5 days, egg viability ~1 day), not anything
+ *  derived from this person's own data. */
+const FERTILE_WINDOW_BEFORE_DAYS = 5;
+const FERTILE_WINDOW_AFTER_DAYS = 1;
+/** Ovulation is estimated this many days before the *next predicted* period
+ *  start — the luteal phase is the more stable half of a cycle, so counting
+ *  backward from the predicted end is standard practice; counting forward
+ *  from the last period start would compound the average's own error twice. */
+const OVULATION_DAYS_BEFORE_NEXT_START = 14;
+
+/**
+ * A calendar-method estimate only — see this file's header. Requires the same
+ * three-period floor as `averageCycleLength` (the `null` it returns below
+ * that floor is the whole gate; there is no shorter path to a window). Every
+ * renderer of this value must show it beside the fixed disclaimer text, not
+ * as a standalone number.
+ */
+export function fertileWindow(
+  periods: Period[],
+  averageLength: number | null,
+): FertileWindow | null {
+  const nextStart = predictedNextStart(periods, averageLength);
+  if (!nextStart) return null;
+
+  const ovulationEstimate = toKey(
+    addDays(toDate(nextStart), -OVULATION_DAYS_BEFORE_NEXT_START),
+  );
+  return {
+    start: toKey(addDays(toDate(ovulationEstimate), -FERTILE_WINDOW_BEFORE_DAYS)),
+    end: toKey(addDays(toDate(ovulationEstimate), FERTILE_WINDOW_AFTER_DAYS)),
+    ovulationEstimate,
+  };
 }
 
 /** Days since the most recent period started, counting its first day as 1. */

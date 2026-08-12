@@ -72,6 +72,7 @@ export default function OnboardingScreen() {
 
   const completeOnboarding = useProfileStore((s) => s.completeOnboarding);
   const session = useAuthStore((s) => s.session);
+  const markOnboardingComplete = useAuthStore((s) => s.markOnboardingComplete);
   const isGuest = useAuthStore((s) => s.isGuest);
   const continueAsGuest = useAuthStore((s) => s.continueAsGuest);
   const authProfile = useAuthStore((s) => s.profile);
@@ -175,12 +176,18 @@ export default function OnboardingScreen() {
   const finish = useCallback(
     (appLockEnabled: boolean) => {
       completeOnboarding({ name, gender, focusAreas, appLockEnabled });
+      // Marks the ACCOUNT, not just this device — see auth-store.ts's
+      // markOnboardingComplete. Fired without awaiting: this device already
+      // knows it's onboarded via the local flag above, so a slow or failed
+      // network write must not delay landing on the dashboard. It only
+      // matters to some OTHER device this account signs into later.
+      if (session) void markOnboardingComplete();
       // The draft has served its purpose; a stale one is a bug waiting for the
       // next person who resets the app.
       resetDraft();
       router.replace('/(tabs)');
     },
-    [completeOnboarding, name, gender, focusAreas, resetDraft, router],
+    [completeOnboarding, name, gender, focusAreas, resetDraft, router, session, markOnboardingComplete],
   );
 
   const [lockChoice, setLockChoice] = useState(false);

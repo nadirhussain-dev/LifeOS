@@ -75,8 +75,12 @@ const PERMISSION = new Set(['42501', 'PGRST116']);
 const SIGNED_OUT = new Set(['PGRST301', '28000']);
 const CONFLICT = new Set(['23505', '23503', '23514']);
 
-/** Network failures surface as a TypeError from fetch with no code at all. */
-function looksOffline(message: string): boolean {
+/** Network failures surface as a TypeError from fetch with no code at all.
+ *  Exported so callers with an error shape this file's own `classify()`
+ *  doesn't cover (Supabase Auth's errors, not PostgREST's) can still ask
+ *  "does this look like it never reached the server" without duplicating
+ *  the string list — see auth-store.ts's `isRetryableAuthError`. */
+export function looksOffline(message: string): boolean {
   const m = message.toLowerCase();
   return (
     m.includes('network request failed') ||

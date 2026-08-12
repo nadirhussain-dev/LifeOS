@@ -2,6 +2,7 @@ import {
   averageCycleLength,
   dayOfCycle,
   distinctTags,
+  fertileWindow,
   periodsFrom,
   predictedNextStart,
   type CycleEntry,
@@ -121,6 +122,32 @@ describe('predictedNextStart', () => {
   it('says nothing without an average', () => {
     const periods = periodsFrom([entry('2026-01-01', 'medium')]);
     expect(predictedNextStart(periods, null)).toBeNull();
+  });
+});
+
+describe('fertileWindow', () => {
+  it('estimates ovulation 14 days before the predicted next start, and the window around it', () => {
+    const periods = periodsFrom(
+      ['2026-01-01', '2026-01-29', '2026-02-26'].map((d) => entry(d, 'medium')),
+    );
+    // predictedNextStart is 2026-03-26; ovulation is 14 days earlier: 03-12.
+    const window = fertileWindow(periods, 28);
+    expect(window).toEqual({
+      ovulationEstimate: '2026-03-12',
+      start: '2026-03-07',
+      end: '2026-03-13',
+    });
+  });
+
+  it('shares predictedNextStart\'s floor: nothing below three periods', () => {
+    const periods = periodsFrom(
+      ['2026-01-01', '2026-01-29'].map((d) => entry(d, 'medium')),
+    );
+    expect(fertileWindow(periods, null)).toBeNull();
+  });
+
+  it('returns nothing with no periods logged at all', () => {
+    expect(fertileWindow([], null)).toBeNull();
   });
 });
 

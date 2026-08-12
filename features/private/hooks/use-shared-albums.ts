@@ -1,5 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import {
@@ -17,6 +18,7 @@ import {
   type RedeemAlbumKeyResult,
 } from '@/features/private/services/album-invite';
 import { storeAlbumKey, unwrapAlbumKey } from '@/features/private/services/album-keys';
+import { notifyAlbumMessage } from '@/features/private/services/album-notify';
 import * as repo from '@/features/private/services/album-repository';
 import {
   addPhotoToAlbum,
@@ -24,6 +26,7 @@ import {
   type AddPhotoResult,
 } from '@/features/private/services/album-uploader';
 import { usePrivateStore } from '@/features/private/store/private-store';
+import { syncTogetherReminders } from '@/features/private/services/together-reminders';
 import type { AlbumComment, AlbumMessage } from '@/features/private/types/shared-album.types';
 import { generateMasterKey } from '@/features/private/services/vault-crypto';
 import { supabase } from '@/lib/supabase';
@@ -69,6 +72,15 @@ export function useAlbumKey(albumId: string | undefined) {
 
 export function useAlbums() {
   return useQuery({ queryKey: albumKeys.list, queryFn: repo.listAlbums });
+}
+
+/** Which one of the caller's shared albums (if any) is designated as the
+ *  Together hub — see features/private/config/private-modules.ts's
+ *  `together` module and album-repository.ts's `setTogetherHub`. */
+export function useTogetherHub() {
+  const { data: albums = [], ...rest } = useAlbums();
+  const hub = useMemo(() => albums.find((a) => a.isTogetherHub) ?? null, [albums]);
+  return { albums, hub, ...rest };
 }
 
 /** Everything one album needs, in a single cache entry — same reasoning as
@@ -142,19 +154,40 @@ export function useAlbumComments(photoId: string | undefined, albumKey: Uint8Arr
   });
 }
 
-/** The album's chat, decrypted — same shape as useAlbumComments. */
+/**
+ * The album's chat, decrypted, paged newest-first from the server and
+ * exposed oldest-first overall — same flat-array contract this hook always
+ * had, plus `fetchNextPage`/`hasNextPage` for loading older history on
+ * demand instead of decrypting an entire chat's lifetime up front.
+ */
 export function useAlbumMessages(albumId: string | undefined, albumKey: Uint8Array | null) {
-  return useQuery({
+  const query = useInfiniteQuery({
     queryKey: albumKeys.messages(albumId ?? ''),
     enabled: !!albumId && !!albumKey,
-    queryFn: async () => {
-      const rows = await repo.listMessages(albumId!);
+    initialPageParam: undefined as number | undefined,
+    queryFn: async ({ pageParam }) => {
+      const rows = await repo.listMessages(albumId!, { before: pageParam });
       return rows.map((m) => ({
         ...m,
         body: albumKey ? tryDecryptMessage(albumKey, m.bodyCiphertext) : null,
       })) satisfies DecryptedMessage[];
     },
+    // Each page is oldest-first internally (repo.listMessages' contract); a
+    // short page means there is nothing older left to fetch.
+    getNextPageParam: (lastPage) =>
+      lastPage.length < repo.MESSAGES_PAGE_SIZE ? undefined : lastPage[0]?.createdAt,
   });
+
+  // `pages` accumulates newest-page-first (the initial fetch, then each
+  // older page appended after it via fetchNextPage) — reversing page order
+  // restores oldest-to-newest across everything loaded so far, without
+  // touching each page's own already-correct internal order.
+  const messages = useMemo(
+    () => [...(query.data?.pages ?? [])].reverse().flat(),
+    [query.data],
+  );
+
+  return { ...query, data: messages };
 }
 
 /**
@@ -174,6 +207,28 @@ export function useAlbumRealtime(albumId: string | undefined): void {
 
   useEffect(() => {
     if (!albumId || !vaultKeyValue || space !== 'real') return;
+
+    // Messages, specifically, are debounced before invalidating — that
+    // query is an `useInfiniteQuery` (pagination for chat history), and
+    // TanStack Query v5 has no per-call "only refetch the newest page"
+    // option (v4's `refetchPage` predicate was removed): invalidating it
+    // re-fetches every page currently loaded, in sequence. A single message
+    // already costs that; a burst of several arriving close together (a
+    // quick back-and-forth) used to cost it once per message. Collapsing a
+    // burst into one refetch is the safe mitigation available without
+    // hand-rolling a cache patch — a `maxPages` cap was the other option and
+    // was deliberately rejected: this app's pages are ordered newest-first
+    // (`use-shared-albums.ts`'s `useAlbumMessages` header), the opposite of
+    // what TanStack's own trim-from-the-front eviction assumes, so capping
+    // it would silently evict the newest messages first instead of the
+    // oldest once a chat's history grew past the cap.
+    let messagesDebounce: ReturnType<typeof setTimeout> | null = null;
+    const invalidateMessagesDebounced = () => {
+      if (messagesDebounce) clearTimeout(messagesDebounce);
+      messagesDebounce = setTimeout(() => {
+        void queryClient.invalidateQueries({ queryKey: albumKeys.messages(albumId) });
+      }, 400);
+    };
 
     const channel = supabase
       .channel(`shared-album:${albumId}`)
@@ -200,7 +255,7 @@ export function useAlbumRealtime(albumId: string | undefined): void {
           table: 'shared_album_messages',
           filter: `album_id=eq.${albumId}`,
         },
-        () => void queryClient.invalidateQueries({ queryKey: albumKeys.messages(albumId) }),
+        invalidateMessagesDebounced,
       )
       .on(
         'postgres_changes',
@@ -235,6 +290,7 @@ export function useAlbumRealtime(albumId: string | undefined): void {
       .subscribe();
 
     return () => {
+      if (messagesDebounce) clearTimeout(messagesDebounce);
       void supabase.removeChannel(channel);
     };
   }, [albumId, vaultKeyValue, space, queryClient]);
@@ -244,6 +300,7 @@ export function useAlbumRealtime(albumId: string | undefined): void {
 
 export function useSharedAlbumMutations(albumId?: string) {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const profile = useAuthStore((s) => s.profile);
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const vaultKeyValue = usePrivateStore((s) => s.key);
@@ -384,14 +441,68 @@ export function useSharedAlbumMutations(albumId?: string) {
         authorName: profile?.displayName || profile?.username || null,
         bodyCiphertext: encryptMessage(input.albumKey, input.body),
       }),
-    onSuccess: () =>
-      void queryClient.invalidateQueries({ queryKey: albumKeys.messages(albumId ?? '') }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: albumKeys.messages(albumId ?? '') });
+      // Best-effort push to the other members. Never the message text itself
+      // — this device is the only place that has decrypted it.
+      const name = profile?.displayName || profile?.username || t('private.someone');
+      void notifyAlbumMessage({
+        albumId: albumId ?? '',
+        title: t('private.pushNewMessage'),
+        body: t('private.pushNewMessageBody', { name }),
+        route: `/private/albums/${albumId}/chat`,
+      });
+    },
   });
 
   const removeMessage = useMutation({
     mutationFn: (messageId: string) => repo.removeMessage(messageId),
     onSuccess: () =>
       void queryClient.invalidateQueries({ queryKey: albumKeys.messages(albumId ?? '') }),
+  });
+
+  /** Designating a NEW hub also un-designates whichever album was previously
+   *  one — see album-repository.ts's `setTogetherHub` header for why that
+   *  "only one hub" rule lives here rather than in the database. Also
+   *  resyncs the Together reminder: whichever album is the hub now is the
+   *  one syncTogetherReminders() should be reading dates/milestones from. */
+  const setTogetherHub = useMutation({
+    mutationFn: async (input: { targetAlbumId: string; previousHubId: string | null }) => {
+      if (input.previousHubId && input.previousHubId !== input.targetAlbumId) {
+        await repo.setTogetherHub(input.previousHubId, false);
+      }
+      await repo.setTogetherHub(input.targetAlbumId, true);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: albumKeys.list });
+      void syncTogetherReminders();
+    },
+  });
+
+  const clearTogetherHub = useMutation({
+    mutationFn: (targetAlbumId: string) => repo.setTogetherHub(targetAlbumId, false),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: albumKeys.list });
+      void syncTogetherReminders();
+    },
+  });
+
+  /** Changes which day the day-count milestones (7, 30, 100…) count from, so
+   *  the "something's coming up" reminder is rebuilt immediately rather than
+   *  waiting for the next unrelated resync — same reasoning as cycle.tsx's
+   *  `reloadAndResync` for the exactly parallel case. */
+  const setRelationshipStartDate = useMutation({
+    mutationFn: (date: number | null) => repo.setRelationshipStartDate(albumId!, date),
+    onSuccess: () => {
+      invalidate();
+      void syncTogetherReminders();
+    },
+  });
+
+  const setCycleShare = useMutation({
+    mutationFn: (ciphertext: string | null) =>
+      repo.setCycleShare(albumId!, ciphertext, ciphertext ? (userId ?? '') : null),
+    onSuccess: invalidate,
   });
 
   return {
@@ -409,5 +520,9 @@ export function useSharedAlbumMutations(albumId?: string) {
     removeComment,
     sendMessage,
     removeMessage,
+    setTogetherHub,
+    clearTogetherHub,
+    setRelationshipStartDate,
+    setCycleShare,
   };
 }

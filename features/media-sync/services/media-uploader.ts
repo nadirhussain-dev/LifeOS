@@ -1,6 +1,8 @@
 import { File } from 'expo-file-system';
+import * as Network from 'expo-network';
 
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { useBillingStore } from '@/features/billing/store/billing-store';
 import {
   MEDIA_BUCKET,
   MEDIA_TABLES,
@@ -60,12 +62,84 @@ export type MediaUploadResult = {
 
 type PendingRow = { id: string; uri: string };
 
+/**
+ * Whether the device is currently on a connection this app is willing to
+ * spend someone's cellular data allowance on, when they've asked to stay off
+ * it. Treated conservatively: only a definite Wi-Fi or Ethernet connection
+ * counts as "yes" — an undetermined type or a failed check default to "no",
+ * because guessing wrong in the direction of "used their data anyway" is the
+ * one that actually costs them money.
+ */
+async function onWifi(): Promise<boolean> {
+  try {
+    const state = await Network.getNetworkStateAsync();
+    return (
+      state.type === Network.NetworkStateType.WIFI ||
+      state.type === Network.NetworkStateType.ETHERNET
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** How stale `usage` is allowed to be before this run re-checks it rather
+ *  than trusting the last figure — long enough that a normal run of several
+ *  small files in a row doesn't re-fetch it every time, short enough that a
+ *  quota reached from another device is noticed within a few runs. */
+const USAGE_MAX_AGE_MS = 5 * 60_000;
+
 export async function uploadPendingMedia(): Promise<MediaUploadResult> {
   const result: MediaUploadResult = { uploaded: 0, skipped: 0, failed: 0, quotaReached: false };
 
   const uid = useAuthStore.getState().user?.id;
-  const { enabled } = useMediaSyncStore.getState();
+  const { enabled, wifiOnly } = useMediaSyncStore.getState();
   if (!uid || !enabled) return result;
+
+  // Checked first, and cheaply — a local device query, no round trip —
+  // before spending a network request on anything else this function does.
+  // Not a failure: the pending count is untouched, and the next run (the
+  // next scheduled sync, or the app coming back to the foreground) tries
+  // again, by which point the phone may well be back on Wi-Fi.
+  if (wifiOnly && !(await onWifi())) return result;
+
+  // Ask permission before spending a single request.
+  //
+  // Two separate server-side rules gate this bucket (0035, 0037): a free
+  // plan is refused outright, on top of — not instead of — the plan-derived
+  // byte ceiling every plan (including free, for what it uses elsewhere) is
+  // held to. Checking both here, before the batch starts, means a free
+  // account or a full one finds out from one cheap cache read instead of
+  // discovering it eight uploads at a time by pattern-matching each one's
+  // error message. Both triggers stay the real enforcement regardless; this
+  // is purely about not wasting requests on a permission that already
+  // hasn't been granted.
+  // `checkedAt === null` means this cache has never actually been confirmed
+  // by the server — its `planId` is still sitting at the store's own
+  // default of 'free' (billing-store.ts), which a genuine Plus subscriber
+  // can briefly see right after a fresh install or relaunch, before
+  // useBillingSync()'s first round trip lands. Blocking on an unconfirmed
+  // cache would tell a paying customer they're blocked when nobody has
+  // actually checked yet; skipping the pre-check here just means this run
+  // falls through to the real, authoritative check — the upload attempt
+  // itself, enforced server-side by 0035's trigger — instead of a false
+  // negative enforced by a value nothing has verified.
+  const billing = useBillingStore.getState();
+  if (billing.checkedAt !== null && billing.planId === 'free') {
+    useMediaSyncStore.getState().setLastError('quota');
+    result.quotaReached = true;
+    return result;
+  }
+
+  const usage = useMediaSyncStore.getState().usage;
+  if (!usage || Date.now() - usage.checkedAt > USAGE_MAX_AGE_MS) {
+    await refreshMediaUsage();
+  }
+  const freshUsage = useMediaSyncStore.getState().usage;
+  if (freshUsage && freshUsage.usedBytes >= freshUsage.quotaBytes) {
+    useMediaSyncStore.getState().setLastError('quota');
+    result.quotaReached = true;
+    return result;
+  }
 
   const moduleFlags = useSyncStore.getState().modules;
   let budget = BATCH;

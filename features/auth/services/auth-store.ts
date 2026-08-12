@@ -10,7 +10,10 @@ import {
 import { GUEST_SENTINEL, useSyncStore } from '@/features/sync/store/sync-store';
 import { ensureProfileRow } from '@/features/auth/services/ensure-profile';
 import { isSupabaseConfigured } from '@/lib/env';
+import { looksOffline } from '@/lib/supabase-error';
 import { passwordResetRedirectUrl, supabase } from '@/lib/supabase';
+import { toast } from '@/lib/toast-store';
+import i18n from '@/lib/i18n';
 
 /** Returned by auth actions when Supabase creds aren't present in the build —
  * avoids firing a doomed request at the placeholder host (which surfaces as a
@@ -37,6 +40,12 @@ export type AuthProfile = {
   /** Cache-buster: the storage URL is stable, so without this every device
    *  keeps rendering the previous picture forever. */
   avatarUpdatedAt: number | null;
+  /** Set once onboarding finishes on ANY device — see migration 0042. Lets a
+   *  device that has never seen this account before (a fresh install, or
+   *  after a wipe) skip straight to the dashboard on sign-in instead of
+   *  re-running onboarding, which `useAuthGate` otherwise has no way to tell
+   *  apart from a genuinely new account. */
+  onboardingCompletedAt: number | null;
 };
 
 /** Outcome of claiming a name. 'taken' is a normal result, not an error: two
@@ -82,6 +91,12 @@ type AuthState = {
   updateDisplayName: (displayName: string) => Promise<AuthResult>;
   /** Re-reads the profile row after an avatar change. */
   refreshProfile: () => Promise<void>;
+  /** Records that onboarding finished, on the account rather than just this
+   *  device — see `AuthProfile.onboardingCompletedAt`. Best-effort: a guest
+   *  has no row to write to, and a failure here must never block finishing
+   *  onboarding locally, which is why onboarding's own `finish()` fires this
+   *  without awaiting it. */
+  markOnboardingComplete: () => Promise<void>;
   /** Whether `candidate` is well-formed and unclaimed by anyone else — or
    * whether the question could not be answered at all. */
   isUsernameAvailable: (candidate: string) => Promise<UsernameAvailability>;
@@ -101,6 +116,55 @@ function friendly(message: string): string {
   if (m.includes('network')) return 'Network error — check your connection and try again.';
   return message;
 }
+
+/**
+ * Retries an auth call ONLY when the failure looks like it never reached a
+ * decision — offline, or the server itself erroring — never a genuine
+ * rejection (wrong password, invalid email, already registered), where
+ * retrying would just repeat the same "no" three times slower.
+ *
+ * Deliberately NOT `lib/supabase-error.ts`'s `isRetryable`/`errorKind`: that
+ * classifier is shaped for PostgREST's error codes (`PGRST5xx`, Postgres
+ * SQLSTATEs), which a Supabase Auth error never carries. Every genuine
+ * rejection auth returns is a definite 4xx with no code that classifier
+ * recognises, so it fell through to 'unknown' — which `isRetryable` treats
+ * as transient. That meant a wrong password got silently retried twice
+ * before the "incorrect password" message ever reached the screen. Auth
+ * errors DO carry an HTTP-shaped `status`, which is the reliable signal:
+ * present and < 500 means the server made an actual decision.
+ */
+function isRetryableAuthError(error: { status?: number; message: string } | null): boolean {
+  if (!error) return false;
+  if (typeof error.status === 'number') return error.status >= 500;
+  return looksOffline(error.message);
+}
+
+/** Short, fixed backoff — this runs inline in front of someone waiting to
+ *  sign in, not unattended in the background like sync-engine.ts's
+ *  minutes-long scheme. */
+async function withRetry<T extends { error: { status?: number; message: string } | null }>(
+  attempt: () => Promise<T>,
+  maxRetries = 2,
+): Promise<T> {
+  let result = await attempt();
+  for (
+    let tries = 0;
+    result.error && isRetryableAuthError(result.error) && tries < maxRetries;
+    tries += 1
+  ) {
+    await new Promise((resolve) => setTimeout(resolve, 400 * 2 ** tries));
+    result = await attempt();
+  }
+  return result;
+}
+
+/**
+ * Set for the duration of an explicit `signOut()`/`deleteAccount()` call, so
+ * the `onAuthStateChange` listener can tell "the user chose to sign out"
+ * apart from "the refresh token died silently" — both fire the same way,
+ * and only the second one is news the user hasn't already acted on.
+ */
+let explicitSignOut = false;
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -136,6 +200,15 @@ export const useAuthStore = create<AuthState>()(
         }, 4000);
 
         supabase.auth.onAuthStateChange((_event, session) => {
+          // A session that existed a moment ago and now doesn't, without this
+          // device having asked for that (signOut()/deleteAccount() flip
+          // `explicitSignOut` first) — the refresh token died: revoked,
+          // expired past its grace window, or the account removed elsewhere.
+          // Told here rather than left to surface as a pile of silent 401s on
+          // whatever the user tries to do next.
+          if (get().session && !session && !explicitSignOut) {
+            toast.error(i18n.t('auth.sessionExpired'));
+          }
           // Wipe-before-sync if a different account signed in on this device.
           if (session) reconcileAccountOnSignIn(session.user.id);
           set({ session, user: session?.user ?? null, isInitialized: true });
@@ -148,7 +221,9 @@ export const useAuthStore = create<AuthState>()(
 
       signIn: async (email, password) => {
         if (!isSupabaseConfigured) return NOT_CONFIGURED;
-        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        const { error } = await withRetry(() =>
+          supabase.auth.signInWithPassword({ email: email.trim(), password }),
+        );
         if (error) return { ok: false, error: friendly(error.message) };
         set({ isGuest: false });
         return { ok: true };
@@ -156,26 +231,35 @@ export const useAuthStore = create<AuthState>()(
 
       signUp: async (email, password, displayName) => {
         if (!isSupabaseConfigured) return NOT_CONFIGURED;
-        const { error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: displayName ? { data: { display_name: displayName.trim() } } : undefined,
-        });
+        const { error } = await withRetry(() =>
+          supabase.auth.signUp({
+            email: email.trim(),
+            password,
+            options: displayName ? { data: { display_name: displayName.trim() } } : undefined,
+          }),
+        );
         if (error) return { ok: false, error: friendly(error.message) };
         set({ isGuest: false });
         return { ok: true };
       },
 
       signOut: async () => {
-        await supabase.auth.signOut();
+        explicitSignOut = true;
+        try {
+          await supabase.auth.signOut();
+        } finally {
+          explicitSignOut = false;
+        }
         set({ session: null, user: null, profile: null, isGuest: false });
       },
 
       resetPassword: async (email) => {
         if (!isSupabaseConfigured) return NOT_CONFIGURED;
-        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-          redirectTo: passwordResetRedirectUrl(),
-        });
+        const { error } = await withRetry(() =>
+          supabase.auth.resetPasswordForEmail(email.trim(), {
+            redirectTo: passwordResetRedirectUrl(),
+          }),
+        );
         if (error) return { ok: false, error: friendly(error.message) };
         return { ok: true };
       },
@@ -195,7 +279,12 @@ export const useAuthStore = create<AuthState>()(
         const { error } = await supabase.functions.invoke('delete-account');
         if (error) return { ok: false, error: friendly(error.message) };
         wipeLocalData();
-        await supabase.auth.signOut();
+        explicitSignOut = true;
+        try {
+          await supabase.auth.signOut();
+        } finally {
+          explicitSignOut = false;
+        }
         set({ session: null, user: null, profile: null, isGuest: false });
         return { ok: true };
       },
@@ -225,7 +314,9 @@ export const useAuthStore = create<AuthState>()(
         await ensureProfileRow();
         const { data } = await supabase
           .from('profiles')
-          .select('id, email, display_name, username, avatar_path, avatar_updated_at')
+          .select(
+            'id, email, display_name, username, avatar_path, avatar_updated_at, onboarding_completed_at',
+          )
           .eq('id', user.id)
           .maybeSingle();
         set({
@@ -239,6 +330,7 @@ export const useAuthStore = create<AuthState>()(
             username: data?.username ?? null,
             avatarPath: data?.avatar_path ?? null,
             avatarUpdatedAt: data?.avatar_updated_at ?? null,
+            onboardingCompletedAt: data?.onboarding_completed_at ?? null,
           },
         });
       },
@@ -247,6 +339,24 @@ export const useAuthStore = create<AuthState>()(
        *  this is an alias that says what the caller means at the call site. */
       refreshProfile: async () => {
         await get().loadProfile();
+      },
+
+      markOnboardingComplete: async () => {
+        const user = get().user;
+        if (!user) return; // guest: nothing server-side to mark
+        try {
+          const now = Date.now();
+          const { error } = await supabase
+            .from('profiles')
+            .update({ onboarding_completed_at: now })
+            .eq('id', user.id);
+          if (error) return;
+          set((s) => ({
+            profile: s.profile ? { ...s.profile, onboardingCompletedAt: now } : s.profile,
+          }));
+        } catch {
+          // Best-effort — see this action's own doc comment.
+        }
       },
 
       updateDisplayName: async (displayName) => {

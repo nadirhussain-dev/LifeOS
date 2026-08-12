@@ -111,3 +111,16 @@ export function encryptNoteBody(albumKey: Uint8Array, text: string): string {
 export function tryDecryptNoteBody(albumKey: Uint8Array, ciphertext: string): string | null {
   return tryDecryptString(albumKey, ciphertext);
 }
+
+/** The Together module's opt-in cycle-status share (0041) — a JSON string of
+ *  just `{dayOfCycle, predictedNextStart}`, sealed the same as every other
+ *  album field. Named distinctly from encryptString's other callers even
+ *  though the body is identical, so a future reader searching for "cycle"
+ *  finds this without knowing it is, mechanically, the same cipher. */
+export function encryptCycleShare(albumKey: Uint8Array, json: string): string {
+  return encryptString(albumKey, json);
+}
+
+export function tryDecryptCycleShare(albumKey: Uint8Array, ciphertext: string): string | null {
+  return tryDecryptString(albumKey, ciphertext);
+}

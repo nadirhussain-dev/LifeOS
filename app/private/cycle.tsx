@@ -1,6 +1,6 @@
 import { type BottomSheetModal } from '@gorhom/bottom-sheet';
 import { addMonths, format, parseISO, subMonths } from 'date-fns';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, TextInput, View } from 'react-native';
 
@@ -23,11 +23,13 @@ import {
   listCycleEntries,
   removeCycleEntry,
 } from '@/features/private/services/cycle';
+import { syncCycleReminders } from '@/features/private/services/cycle-reminders';
 import {
   SYMPTOMS,
   averageCycleLength,
   dayOfCycle,
   distinctTags,
+  fertileWindow,
   periodsFrom,
   predictedNextStart,
   type CycleEntry,
@@ -35,6 +37,7 @@ import {
   type Flow,
   type Symptom,
 } from '@/features/private/services/cycle-math';
+import { useCycleSettingsStore } from '@/features/private/store/cycle-settings-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { alpha } from '@/lib/color';
 import { confirm } from '@/lib/dialog-store';
@@ -54,6 +57,14 @@ export default function CycleScreen() {
   // reads is exactly the kind of lie exhaustive-deps exists to catch.
   const [entries, setEntries] = useState(listCycleEntries);
   const reload = useCallback(() => setEntries(listCycleEntries()), []);
+  // Every write can change the predicted next start, so the "period expected
+  // soon" reminder is rebuilt right alongside the screen's own data — see
+  // cycle-reminders.ts's header for why a periodic resync alone can't do
+  // this (it can't see cycle data before the vault has been unlocked once).
+  const reloadAndResync = useCallback(() => {
+    reload();
+    void syncCycleReminders();
+  }, [reload]);
   const [flow, setFlow] = useState<Flow | null>(null);
   const [symptoms, setSymptoms] = useState<Symptom[]>([]);
   const [note, setNote] = useState('');
@@ -66,6 +77,30 @@ export default function CycleScreen() {
   const average = useMemo(() => averageCycleLength(periods), [periods]);
   const nextStart = useMemo(() => predictedNextStart(periods, average), [periods, average]);
   const currentDay = useMemo(() => dayOfCycle(periods), [periods]);
+  const fertile = useMemo(() => fertileWindow(periods, average), [periods, average]);
+
+  const fertileWindowAck = useCycleSettingsStore((s) => s.fertileWindowAck);
+  const setFertileWindowAck = useCycleSettingsStore((s) => s.setFertileWindowAck);
+  const [ackPending, setAckPending] = useState(false);
+
+  // The one-time consent gate — see cycle-settings-store.ts's header. Only
+  // fires once there is actually a window to show; a person who never logs
+  // three periods never sees the prompt at all. Declining does not persist
+  // "no": the estimate simply stays hidden until it's shown again next visit,
+  // which is the direction this feature should err on.
+  useEffect(() => {
+    if (!fertile || fertileWindowAck || ackPending) return;
+    setAckPending(true);
+    void confirm({
+      title: t('private.fertileWindowConsentTitle'),
+      message: t('private.fertileWindowConsentBody'),
+      confirmLabel: t('private.fertileWindowConsentAccept'),
+      cancelLabel: t('common.cancel'),
+    }).then((ok) => {
+      if (ok) setFertileWindowAck(true);
+      setAckPending(false);
+    });
+  }, [fertile, fertileWindowAck, ackPending, t, setFertileWindowAck]);
   const suggestions = useMemo(
     () => ({
       customTags: distinctTags(entries, 'customTags'),
@@ -96,8 +131,8 @@ export default function CycleScreen() {
     setFlow(null);
     setSymptoms([]);
     setNote('');
-    reload();
-  }, [flow, symptoms, note, reload]);
+    reloadAndResync();
+  }, [flow, symptoms, note, reloadAndResync]);
 
   const openMoreDetails = () => {
     openSheet({ date: format(new Date(), 'yyyy-MM-dd'), flow, symptoms, note });
@@ -113,18 +148,18 @@ export default function CycleScreen() {
     }).then(async (ok) => {
       if (!ok) return;
       removeCycleEntry(entry);
-      reload();
+      reloadAndResync();
     });
 
   const handleSheetSave = (fields: CycleFields, id: string | null) => {
     if (id) editCycleEntry(id, fields);
     else addCycleEntry(fields);
-    reload();
+    reloadAndResync();
   };
 
   const handleSheetDelete = (entry: CycleEntry) => {
     removeCycleEntry(entry);
-    reload();
+    reloadAndResync();
   };
 
   const entryForDate = (dateKey: string): CycleEntryTarget =>
@@ -159,6 +194,23 @@ export default function CycleScreen() {
           {t('private.needMoreCycles')}
         </Text>
       )}
+
+      {fertile && fertileWindowAck ? (
+        <View
+          className={cardClass({ padding: 'md' }, 'gap-1.5')}
+          style={{ borderColor: alpha(tint, 0.3) }}
+        >
+          <Text className="font-sora-medium text-foreground">
+            {t('private.fertileWindowRange', {
+              start: format(parseISO(fertile.start), 'd MMM'),
+              end: format(parseISO(fertile.end), 'd MMM'),
+            })}
+          </Text>
+          {/* Persistent, not a one-time dialog — see cycle-math.ts's header on
+              why this notice travels with the number every time it renders. */}
+          <Text variant="caption">{t('private.fertileWindowDisclaimer')}</Text>
+        </View>
+      ) : null}
 
       <CycleMonthStrip
         monthAnchor={monthAnchor}

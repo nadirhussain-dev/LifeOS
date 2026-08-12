@@ -70,6 +70,24 @@ export type ResyncResult = {
   failed: number;
 };
 
+type ExtraReminderStep = { name: string; run: () => Promise<unknown> };
+
+/** Steps registered from outside this file — see the call in `runResync()`
+ *  below for why this exists instead of a direct import. */
+const extraSteps: ExtraReminderStep[] = [];
+
+/**
+ * Lets a module this file must never import from (see `runResync()`'s
+ * comment) still get a slot in the rebuild. The registerer is responsible
+ * for calling this exactly once, early enough that it has run before the
+ * first `resyncAllReminders()` — app/_layout.tsx's module-level init calls
+ * are where every current registration happens, the same place
+ * `initSentry()`/`initAds()` already run once at import time.
+ */
+export function registerReminderStep(name: string, run: () => Promise<unknown>): void {
+  extraSteps.push({ name, run });
+}
+
 /** In-flight resync, so overlapping triggers (launch + a settings change) can't
  *  interleave a cancel-all with somebody else's rebuild. */
 let inFlight: Promise<ResyncResult> | null = null;
@@ -166,6 +184,16 @@ async function runResync(): Promise<ResyncResult> {
   });
 
   await step('digest', () => syncDigest());
+
+  // Private-space reminders (Together, Cycle) register themselves here via
+  // `registerReminderStep` rather than being imported directly — this file
+  // is asserted (data-coverage.test.ts) to never reference `features/private`
+  // at all, because a notification renders on a lock screen to whoever is
+  // holding the phone, and the guard is meant to hold by construction rather
+  // than by remembering to redact each new category by hand.
+  for (const extra of extraSteps) {
+    await step(extra.name, extra.run);
+  }
 
   return { ran: true, scheduled, failed };
 }

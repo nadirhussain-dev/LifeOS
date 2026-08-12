@@ -17,6 +17,28 @@ export type SharedAlbum = {
    *  since photo commentary and relationship notes are different enough in
    *  intent that a couple may want them toggled independently. */
   allowNotes: boolean;
+  /** When this relationship actually started — distinct from `createdAt`,
+   *  which is only when this album row was made. Null until a member sets
+   *  it, in which case the Together screen falls back to `createdAt`.
+   *  Migration 0041. */
+  relationshipStartDate: number | null;
+  /** Marks this as the one shared album a member has designated as "us" —
+   *  see features/private/config/private-modules.ts's `together` module.
+   *  Migration 0041. */
+  isTogetherHub: boolean;
+  /** Opaque — see album-crypto.ts. A small opt-in cycle-status summary
+   *  (day-of-cycle, predicted next start — never raw entries), refreshed
+   *  whenever the sharer's cycle data changes. Null until shared. */
+  cycleShareCiphertext: string | null;
+  cycleShareUpdatedAt: number | null;
+  /** Whose summary `cycleShareCiphertext` currently holds — lets a viewer
+   *  tell "my own share" apart from a partner's. One slot only: if more than
+   *  one member in the album ever turns sharing on, whoever wrote most
+   *  recently is what's visible, same as any other single-value album field
+   *  (the name, the relationship start date). Fine for the common case this
+   *  is built for — cycle tracking is hard-gated to one gender by default —
+   *  not a general multi-person sharing primitive. */
+  cycleShareAuthorId: string | null;
 };
 
 export type AlbumRole = 'owner' | 'member';

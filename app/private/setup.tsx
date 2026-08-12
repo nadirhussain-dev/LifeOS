@@ -77,10 +77,20 @@ export default function PrivateSetupScreen() {
       return;
     }
     setBusy(true);
-    const key = await transition.run('sealing', () => setUpVault(pin));
-    // Seals a copy of the master key to the operator. No-ops when the build
-    // has no escrow key configured, in which case the vault stays E2E.
-    await uploadEscrow(key);
+    // Escrow upload is inside the same transition as the KDF, not a
+    // follow-up await after the overlay drops — it's a network call, and
+    // without this the screen goes from "visibly sealing" to "silently
+    // stuck" for however long that request takes, which is exactly the
+    // "is this actually doing anything?" gap this transition exists to
+    // close. See use-vault-transition.ts.
+    const key = await transition.run('sealing', async () => {
+      const masterKey = await setUpVault(pin);
+      // Seals a copy of the master key to the operator. No-ops when the
+      // build has no escrow key configured, in which case the vault stays
+      // E2E.
+      await uploadEscrow(masterKey);
+      return masterKey;
+    });
     setEnabledModules(chosen);
     setSetUpComplete(true);
     unlock(key, 'real');
@@ -228,6 +238,11 @@ export default function PrivateSetupScreen() {
               }}
               disabled={busy}
               dotCount={MIN_PIN_LENGTH}
+              // This is a fresh PIN, not an existing one being re-entered, so
+              // there's no already-set-up longer passphrase to stay
+              // compatible with — cap it at the same length the dots and the
+              // hint promise.
+              maxLength={MIN_PIN_LENGTH}
             />
 
             {step === 'pin' ? (

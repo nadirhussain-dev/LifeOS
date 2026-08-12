@@ -7,6 +7,7 @@ import {
   tryDecryptMilestoneTitle,
 } from '@/features/private/services/album-crypto';
 import * as repo from '@/features/private/services/album-repository';
+import { syncTogetherReminders } from '@/features/private/services/together-reminders';
 import type { AlbumMilestone } from '@/features/private/types/shared-album.types';
 
 /** Custom milestones (migration 0039) — same sibling-hook shape as
@@ -31,8 +32,16 @@ export function useAlbumMilestones(albumId: string | undefined, albumKey: Uint8A
 export function useAlbumMilestoneMutations(albumId?: string) {
   const queryClient = useQueryClient();
   const userId = useAuthStore((s) => s.user?.id ?? null);
-  const invalidate = () =>
+  // Rebuilds the Together "something's coming up" reminder immediately
+  // rather than waiting for the next unrelated resync — same reasoning as
+  // cycle.tsx's `reloadAndResync`. Cheap and safe to call regardless of
+  // whether `albumId` happens to be the Together hub right now:
+  // syncTogetherReminders() re-derives the hub itself and no-ops if this
+  // album isn't it.
+  const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: albumKeys.milestones(albumId ?? '') });
+    void syncTogetherReminders();
+  };
 
   const addMilestone = useMutation({
     mutationFn: (input: {

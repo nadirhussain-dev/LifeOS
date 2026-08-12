@@ -32,6 +32,10 @@ type Props = {
    *  landing on the same day as, say, day 730 is the more meaningful thing
    *  to say out loud. */
   todaysMilestoneTitle?: string | null;
+  /** Opens the standalone Together module (app/private/together.tsx) when
+   *  given — absent for a caller with nowhere to send that tap to. This strip
+   *  stays the in-album teaser; the module is where "us" actually lives. */
+  onOpenTogether?: () => void;
 };
 
 /**
@@ -50,6 +54,7 @@ export function TogetherStrip({
   onOpenChat,
   onManageMilestones,
   todaysMilestoneTitle,
+  onOpenTogether,
 }: Props) {
   const scheme = useColorScheme() ?? 'light';
   const theme = colors[scheme];
@@ -69,7 +74,12 @@ export function TogetherStrip({
         className="flex-row items-center gap-3 rounded-2xl px-4 py-3.5"
         style={{ backgroundColor: alpha(tint, 0.1) }}
       >
-        <View className="flex-1 flex-row items-center gap-3">
+        <Pressable
+          accessibilityRole={onOpenTogether ? 'button' : undefined}
+          onPress={onOpenTogether}
+          disabled={!onOpenTogether}
+          className="flex-1 flex-row items-center gap-3"
+        >
           <View className="flex-row">
             {memberNames.slice(0, 4).map((name, i) => (
               <View
@@ -96,7 +106,7 @@ export function TogetherStrip({
               {t('private.membersCount', { count: totalMembers })}
             </Text>
           </View>
-        </View>
+        </Pressable>
 
         <Pressable
           accessibilityRole="button"

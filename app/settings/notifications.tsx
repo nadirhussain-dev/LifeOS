@@ -15,6 +15,7 @@ import { colors } from '@/constants/theme';
 import { applyDeliveryMode } from '@/features/notifications/services/delivery';
 import { resyncAllReminders } from '@/features/notifications/services/reminder-scheduler';
 import { formatQuietWindow } from '@/features/notifications/services/quiet-hours';
+import { usePrivateStore } from '@/features/private/store/private-store';
 import {
   useNotificationsStore,
   type DeliveryMode,
@@ -115,6 +116,20 @@ export default function NotificationSettingsScreen() {
   const theme = colors[scheme];
 
   const store = useNotificationsStore();
+  const privateSetUp = usePrivateStore((s) => s.setUpComplete);
+  const enabledPrivateModules = usePrivateStore((s) => s.enabledModules);
+  // 'cycle' and 'together' are the private space's own categories (see
+  // notification.types.ts). Naming them here — icon, label, "period
+  // expected soon" description — would be exactly the disclosure the
+  // private space exists to prevent for anyone who has never set it up, and
+  // it stays a disclosure of *which* modules are in there even for someone
+  // who has, so each one only earns a row once its module is actually
+  // turned on. private-modules.ts's "absent, not locked" rule, applied here
+  // too.
+  const visibleCategories = CONFIGURABLE_CATEGORIES.filter((category) => {
+    if (category !== 'cycle' && category !== 'together') return true;
+    return privateSetUp && enabledPrivateModules.includes(category);
+  });
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [diagnostics, setDiagnostics] = useState<NotificationDiagnostics | null>(null);
   const [testing, setTesting] = useState(false);
@@ -361,7 +376,7 @@ export default function NotificationSettingsScreen() {
         >
           <SectionLabel>{t('notif.whatYouHearAbout')}</SectionLabel>
           <View className={cardClass({ padding: 'none' }, 'px-4')}>
-            {CONFIGURABLE_CATEGORIES.map((category, index) => {
+            {visibleCategories.map((category, index) => {
               const meta = CATEGORY_META[category];
               const Icon = meta.icon;
               return (

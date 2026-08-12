@@ -5,6 +5,8 @@ import {
   CalendarClock,
   CheckSquare,
   Droplet,
+  Droplets,
+  Heart,
   Moon,
   NotebookPen,
   PartyPopper,
@@ -36,7 +38,9 @@ export type NotificationCategory =
   | 'goals'
   | 'digest'
   | 'streak'
-  | 'split';
+  | 'split'
+  | 'together'
+  | 'cycle';
 
 export type NotificationCategoryMeta = {
   labelKey: string;
@@ -154,6 +158,26 @@ export const CATEGORY_META: Record<NotificationCategory, NotificationCategoryMet
     tint: '#0d9488',
     bypassQuietHours: false,
   },
+  /**
+   * The Together module's milestone nudge and Cycle's "period expected soon"
+   * reminder — the private space's two categories. Both are deliberately
+   * generic in body text (see together-reminders.ts / cycle-reminders.ts) so
+   * this switch controls whether the nudge fires at all, not what it says.
+   */
+  together: {
+    labelKey: 'notifCategory.together.label',
+    descriptionKey: 'notifCategory.together.description',
+    icon: Heart,
+    tint: '#317e25',
+    bypassQuietHours: false,
+  },
+  cycle: {
+    labelKey: 'notifCategory.cycle.label',
+    descriptionKey: 'notifCategory.cycle.description',
+    icon: Droplets,
+    tint: '#e0518a',
+    bypassQuietHours: false,
+  },
 };
 
 /** Ordered list of the categories users actually toggle in settings (excludes
@@ -172,6 +196,8 @@ export const CATEGORY_ORDER: NotificationCategory[] = [
   'digest',
   'streak',
   'split',
+  'together',
+  'cycle',
 ];
 
 /**
