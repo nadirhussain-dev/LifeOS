@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 
-import { albumKeys } from '@/features/private/hooks/use-shared-albums';
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import {
   STORAGE_PLANS,
@@ -12,9 +11,12 @@ import {
 import {
   adminSetPlanActive,
   adminUpsertPlan,
+  cancelMySubscription,
+  createCheckout,
   fetchMyPlan,
+  fetchMySubscription,
   fetchPlans,
-  setMyPlan,
+  type MySubscription,
   type UpsertPlanInput,
 } from '@/features/billing/services/billing-repository';
 import { useBillingStore } from '@/features/billing/store/billing-store';
@@ -32,6 +34,7 @@ import { useBillingStore } from '@/features/billing/store/billing-store';
 export function useBillingSync() {
   const session = useAuthStore((s) => s.session);
   const userId = useAuthStore((s) => s.user?.id ?? null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!session || !userId) {
@@ -39,11 +42,19 @@ export function useBillingSync() {
       return;
     }
     void refresh(userId);
+    // Also where a real subscription's status catches up after a Safepay
+    // checkout — the browser sheet closing and the app foregrounding is the
+    // one reliable moment to check, since safepay-webhook writes on its own
+    // schedule with no way to push a result to this device directly.
+    void queryClient.invalidateQueries({ queryKey: ['billing', 'subscription'] });
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void refresh(userId);
+      if (state === 'active') {
+        void refresh(userId);
+        void queryClient.invalidateQueries({ queryKey: ['billing', 'subscription'] });
+      }
     });
     return () => sub.remove();
-  }, [session, userId]);
+  }, [session, userId, queryClient]);
 }
 
 async function refresh(userId: string): Promise<void> {
@@ -84,30 +95,49 @@ export function usePlans() {
 }
 
 /**
- * The mock "subscribe" action — writes through `set_my_plan` (0031/0034),
- * then refreshes the cache and anything whose limits depend on the plan
- * (shared albums' own-count is the one thing currently gated by it). No
- * payment is taken; the confirm dialog in front of this call is what says
- * "preview". Takes the whole plan, not just its id, so the mock renewal
- * date is computed from the plan's own `period` rather than pattern-matching
- * a hardcoded id — an admin-created plan gets the same treatment as the
- * seeded ones.
+ * The real subscription row (0044), read through `my_subscription()`. Not
+ * cached in `billing-store.ts` the way `planId` is — this is queried live
+ * because it's read far less often (one settings screen) and needs to be
+ * fresher than the plan cache, not more durable.
  */
-export function useSubscribeMutation() {
-  const userId = useAuthStore((s) => s.user?.id ?? null);
-  const queryClient = useQueryClient();
+export function useMySubscription() {
+  const session = useAuthStore((s) => s.session);
+  return useQuery({
+    queryKey: ['billing', 'subscription'],
+    queryFn: fetchMySubscription,
+    enabled: !!session,
+  });
+}
 
+/** True once a coupon's `duration_cycles` has run out and Safepay would
+ *  otherwise renew at full price — see safepay-webhook's header for why
+ *  this is a one-tap reconfirmation rather than a silent price change. */
+export function usePendingRenewalConfirmation(subscription: MySubscription | null): boolean {
+  return subscription?.status === 'pending_renewal_confirmation';
+}
+
+/**
+ * Starts a real Safepay checkout for `plan`, optionally with a coupon code.
+ * Returns the checkout URL for the caller to open with
+ * `WebBrowser.openAuthSessionAsync` — this mutation only creates the
+ * checkout, it never grants the plan itself. The plan only changes once
+ * `safepay-webhook` says so; `useBillingSync`'s foreground refresh is what
+ * eventually picks that up.
+ */
+export function useCreateCheckoutMutation() {
   return useMutation({
-    mutationFn: async (plan: StoragePlan) => {
-      const days = plan.period === 'year' ? 365 : plan.period === 'month' ? 30 : null;
-      const renewsAt = days === null ? null : Date.now() + days * 86_400_000;
-      await setMyPlan(plan.id, renewsAt);
-      return { planId: plan.id, renewsAt };
-    },
-    onSuccess: ({ planId, renewsAt }) => {
-      useBillingStore.getState().setPlan(planId, renewsAt);
-      if (userId) void queryClient.invalidateQueries({ queryKey: albumKeys.list });
-    },
+    mutationFn: ({ plan, couponCode }: { plan: StoragePlan; couponCode?: string }) =>
+      createCheckout(plan.id, couponCode),
+  });
+}
+
+/** Requests cancellation at Safepay. Local state changes only once the
+ *  resulting webhook lands — see cancelMySubscription's own header. */
+export function useCancelSubscriptionMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: cancelMySubscription,
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['billing', 'subscription'] }),
   });
 }
 

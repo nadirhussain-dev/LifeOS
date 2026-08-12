@@ -5,6 +5,7 @@ import {
   CreditCard,
   Megaphone,
   ShieldAlert,
+  Tag,
   ToggleLeft,
   UserSearch,
   UsersRound,
@@ -124,6 +125,20 @@ export default function OperatorConsoleScreen() {
                   <UsersRound size={18} color={c.mutedForeground} />
                   <Text className="flex-1 font-sora-medium text-foreground">
                     {t('operator.operatorsTitle')}
+                  </Text>
+                </Pressable>
+              ) : null}
+              {/* Owner-only — coupons move real money (0045), same gate as
+                  the roster row above. */}
+              {owner ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push('/settings/operator/coupons')}
+                  className={cardClass({ padding: 'rowLg' }, 'flex-row items-center gap-3')}
+                >
+                  <Tag size={18} color={c.mutedForeground} />
+                  <Text className="flex-1 font-sora-medium text-foreground">
+                    {t('operator.couponsTitle')}
                   </Text>
                 </Pressable>
               ) : null}

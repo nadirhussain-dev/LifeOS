@@ -335,6 +335,91 @@ export async function removeOperator(userId: string): Promise<OperatorResult<nul
   return error ? { ok: false, error: friendly(error.message) } : { ok: true, data: null };
 }
 
+// --- coupons (owner-only; 0045) ---------------------------------------------
+//
+// Moves real money, so gated on `is_owner()` in the database, same as the
+// roster above — not merely `is_admin()`. This is a view over those RPCs,
+// same discipline the rest of this file already follows.
+
+export type Coupon = {
+  id: string;
+  code: string;
+  discountType: 'percent' | 'fixed';
+  discountValue: number;
+  durationCycles: number;
+  maxRedemptions: number | null;
+  redemptionsCount: number;
+  startsAt: number;
+  endsAt: number | null;
+  planIds: string[] | null;
+  active: boolean;
+  createdAt: number;
+};
+
+export type CreateCouponInput = {
+  code: string;
+  discountType: 'percent' | 'fixed';
+  discountValue: number;
+  durationCycles: number;
+  maxRedemptions: number | null;
+  startsAt: number;
+  endsAt: number | null;
+  planIds: string[] | null;
+};
+
+export async function listCoupons(): Promise<OperatorResult<Coupon[]>> {
+  const { data, error } = await supabase.rpc('admin_list_coupons');
+  if (error) return { ok: false, error: friendly(error.message) };
+
+  const rows = (data ?? []) as Record<string, unknown>[];
+  return {
+    ok: true,
+    data: rows.map((row) => ({
+      id: String(row.id ?? ''),
+      code: String(row.code ?? ''),
+      discountType: (row.discount_type as 'percent' | 'fixed') ?? 'percent',
+      discountValue: Number(row.discount_value ?? 0),
+      durationCycles: Number(row.duration_cycles ?? 1),
+      maxRedemptions: (row.max_redemptions as number | null) ?? null,
+      redemptionsCount: Number(row.redemptions_count ?? 0),
+      startsAt: Number(row.starts_at ?? 0),
+      endsAt: (row.ends_at as number | null) ?? null,
+      planIds: (row.plan_ids as string[] | null) ?? null,
+      active: row.active !== false,
+      createdAt: Number(row.created_at ?? 0),
+    })),
+  };
+}
+
+export async function createCoupon(input: CreateCouponInput): Promise<OperatorResult<string>> {
+  const { data, error } = await supabase.rpc('admin_create_coupon', {
+    p_code: input.code,
+    p_discount_type: input.discountType,
+    p_discount_value: input.discountValue,
+    p_duration_cycles: input.durationCycles,
+    p_max_redemptions: input.maxRedemptions,
+    p_starts_at: input.startsAt,
+    p_ends_at: input.endsAt,
+    p_plan_ids: input.planIds,
+  });
+  return error ? { ok: false, error: friendly(error.message) } : { ok: true, data: data as string };
+}
+
+export async function setCouponActive(
+  id: string,
+  active: boolean,
+  endsAt: number | null,
+  maxRedemptions: number | null,
+): Promise<OperatorResult<null>> {
+  const { error } = await supabase.rpc('admin_update_coupon', {
+    p_id: id,
+    p_active: active,
+    p_ends_at: endsAt,
+    p_max_redemptions: maxRedemptions,
+  });
+  return error ? { ok: false, error: friendly(error.message) } : { ok: true, data: null };
+}
+
 /**
  * The refusals that matter, translated.
  *
@@ -347,8 +432,14 @@ export async function removeOperator(userId: string): Promise<OperatorResult<nul
  */
 function friendly(message: string): string {
   const m = message.toLowerCase();
-  if (m.includes('only the owner')) {
+  if (m.includes('only the owner can manage operators')) {
     return 'Only the app’s owner can manage operators.';
+  }
+  if (m.includes('only the owner can manage coupons')) {
+    return 'Only the app’s owner can manage coupons.';
+  }
+  if (m.includes('only the owner')) {
+    return 'Only the app’s owner can do this.';
   }
   if (m.includes('not an administrator')) {
     return 'This needs full admin access — staff can view, but not act here.';

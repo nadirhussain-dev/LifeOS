@@ -1,7 +1,9 @@
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 import { Check, CloudUpload, HardDrive, Sparkles, Smartphone, Wifi, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, Switch, View } from 'react-native';
+import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
@@ -10,7 +12,14 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { formatPrice, periodI18nKey, type StoragePlan } from '@/features/billing/config/plans';
-import { usePlan, usePlans, useSubscribeMutation } from '@/features/billing/hooks/use-billing';
+import {
+  useCancelSubscriptionMutation,
+  useCreateCheckoutMutation,
+  useMySubscription,
+  usePendingRenewalConfirmation,
+  usePlan,
+  usePlans,
+} from '@/features/billing/hooks/use-billing';
 import { cachedBytes, clearMediaCache } from '@/features/media-sync/services/media-cache';
 import {
   countPendingMedia,
@@ -43,7 +52,11 @@ export default function MediaSettingsScreen() {
   const lastError = useMediaSyncStore((s) => s.lastError);
   const { planId, isPlus } = usePlan();
   const { data: plans = [] } = usePlans();
-  const subscribe = useSubscribeMutation();
+  const { data: subscription = null } = useMySubscription();
+  const needsRenewalConfirmation = usePendingRenewalConfirmation(subscription);
+  const checkout = useCreateCheckoutMutation();
+  const cancelSubscription = useCancelSubscriptionMutation();
+  const [couponCode, setCouponCode] = useState('');
 
   const [pending, setPending] = useState(0);
   const [cached, setCached] = useState(0);
@@ -91,8 +104,35 @@ export default function MediaSettingsScreen() {
     setEnabled(next);
   };
 
+  /**
+   * A real Safepay checkout, opened the same way Google sign-in already is
+   * (`features/auth/services/oauth.ts`) — `WebBrowser.openAuthSessionAsync`
+   * against the `lifeos` scheme, no new native config needed. The plan does
+   * NOT change here: this only starts a subscription, `safepay-webhook`
+   * confirms it, and `useBillingSync`'s foreground refresh (already running
+   * at the root) picks that up once the browser sheet closes.
+   */
   const choosePlan = (plan: StoragePlan) => {
-    if (!session || plan.id === planId || subscribe.isPending) return;
+    if (!session || plan.id === planId || checkout.isPending) return;
+
+    if (plan.period === 'free') {
+      if (!isPlus) return;
+      void confirm({
+        title: t('billing.cancelTitle'),
+        message: t('billing.cancelBody'),
+        confirmLabel: t('billing.cancelAction'),
+        cancelLabel: t('common.cancel'),
+        destructive: true,
+      }).then((ok) => {
+        if (!ok) return;
+        cancelSubscription.mutate(undefined, {
+          onSuccess: () => toast.success(t('billing.cancelRequested')),
+          onError: () => toast.error(t('errors.unknown')),
+        });
+      });
+      return;
+    }
+
     void confirm({
       title: t('billing.confirmTitle'),
       message: t('billing.confirmBody'),
@@ -100,10 +140,20 @@ export default function MediaSettingsScreen() {
       cancelLabel: t('common.cancel'),
     }).then((ok) => {
       if (!ok) return;
-      subscribe.mutate(plan, {
-        onSuccess: () => toast.success(t('billing.previewNotice')),
-        onError: () => toast.error(t('errors.unknown')),
-      });
+      checkout.mutate(
+        { plan, couponCode },
+        {
+          onSuccess: async (url) => {
+            const result = await WebBrowser.openAuthSessionAsync(
+              url,
+              Linking.createURL('/billing/callback'),
+            );
+            if (result.type === 'success') toast.success(t('billing.checkoutProcessing'));
+          },
+          onError: (error) =>
+            toast.error(error instanceof Error ? error.message : t('errors.unknown')),
+        },
+      );
     });
   };
 
@@ -214,17 +264,45 @@ export default function MediaSettingsScreen() {
         </View>
 
         {/*
-          Mock, on purpose: nothing in this card charges anyone. There is no
-          payment provider behind it yet (billing-store.ts), and the
-          confirmation dialog says "preview" before it changes anything —
-          this exists so the plan comparison and the storage number above it
-          have somewhere to point once real billing lands.
+          Real billing (0044/0045): choosing a paid plan opens a Safepay
+          checkout, choosing Free while already on a paid plan cancels the
+          live subscription. Neither branch of `choosePlan` changes `planId`
+          directly — see its own header for why.
         */}
+        {needsRenewalConfirmation ? (
+          <View className={cardClass({ padding: 'md' }, 'gap-2')} style={{ borderColor: c.accent }}>
+            <Text className="font-sora-medium text-foreground">{t('billing.renewalTitle')}</Text>
+            <Text variant="caption">{t('billing.renewalBody')}</Text>
+            <Button
+              label={t('billing.renewalAction')}
+              disabled={checkout.isPending}
+              onPress={() => {
+                const plan = plans.find((p) => p.id === subscription?.planId);
+                if (plan) choosePlan(plan);
+              }}
+            />
+          </View>
+        ) : null}
+
         <View className={cardClass({ padding: 'md' }, 'gap-3')}>
           <View className="flex-row items-center gap-2">
             <Sparkles size={16} color={c.accent} />
             <Text variant="micro">{t('billing.plans')}</Text>
           </View>
+
+          {!isPlus ? (
+            <TextInput
+              value={couponCode}
+              onChangeText={setCouponCode}
+              placeholder={t('billing.couponPlaceholder')}
+              placeholderTextColor={c.mutedForeground}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              className={cardClass({ padding: 'none' }, 'px-4 py-3 text-foreground')}
+              style={{ fontFamily: 'Sora_400Regular' }}
+            />
+          ) : null}
+
           <View className="gap-2">
             {plans.map((plan) => {
               const active = plan.id === planId;
@@ -233,7 +311,7 @@ export default function MediaSettingsScreen() {
                   key={plan.id}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: active, disabled: !session }}
-                  disabled={!session || subscribe.isPending}
+                  disabled={!session || checkout.isPending || cancelSubscription.isPending}
                   onPress={() => choosePlan(plan)}
                   className="flex-row items-center gap-3 rounded-2xl border px-4 py-3"
                   style={{
@@ -284,7 +362,39 @@ export default function MediaSettingsScreen() {
             <PerkRow icon={Check} label={t('billing.perkPlusInsights')} />
           </View>
 
-          <Text variant="caption">{t('billing.mockNote')}</Text>
+          {isPlus && subscription?.currentPeriodEnd ? (
+            <View className="gap-2 border-t border-border pt-3">
+              <Text variant="caption">
+                {t('billing.renewsOn', {
+                  date: new Date(subscription.currentPeriodEnd).toLocaleDateString(),
+                })}
+              </Text>
+              {subscription.status !== 'cancelled' ? (
+                <Button
+                  variant="secondary"
+                  label={t('billing.cancelAction')}
+                  disabled={cancelSubscription.isPending}
+                  onPress={() =>
+                    void confirm({
+                      title: t('billing.cancelTitle'),
+                      message: t('billing.cancelBody'),
+                      confirmLabel: t('billing.cancelAction'),
+                      cancelLabel: t('common.cancel'),
+                      destructive: true,
+                    }).then((ok) => {
+                      if (!ok) return;
+                      cancelSubscription.mutate(undefined, {
+                        onSuccess: () => toast.success(t('billing.cancelRequested')),
+                        onError: () => toast.error(t('errors.unknown')),
+                      });
+                    })
+                  }
+                />
+              ) : null}
+            </View>
+          ) : (
+            <Text variant="caption">{t('billing.chargedNote')}</Text>
+          )}
         </View>
 
         <View className={cardClass({ padding: 'md' }, 'gap-3')}>
