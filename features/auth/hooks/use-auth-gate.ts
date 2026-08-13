@@ -50,12 +50,22 @@ export function useAuthGate() {
 
     const inAuthGroup = segments[0] === '(auth)';
     const inOnboarding = segments[0] === '(onboarding)';
-    // The reset-password screen must stay reachable even with a session — the
-    // recovery link signs the user in precisely so they can set a new password.
-    const onResetScreen = segments.includes('reset-password');
+    // These four must stay reachable even once a session appears mid-screen —
+    // verifying a signup or recovery code (verify-signup, verify-reset) signs
+    // the user in *before* they've picked a password, precisely so the next
+    // screen (create-password, reset-password) can set one. Each of those
+    // screens navigates on when it's actually done; redirecting away the
+    // instant the session appears would skip the step it exists for.
+    const PASSWORD_SETUP_SCREENS = [
+      'verify-signup',
+      'create-password',
+      'verify-reset',
+      'reset-password',
+    ];
+    const onPasswordSetupScreen = segments.some((s) => PASSWORD_SETUP_SCREENS.includes(s));
     const authed = !!session || isGuest;
 
-    if (onResetScreen) return;
+    if (onPasswordSetupScreen) return;
 
     // `profile` loads asynchronously after sign-in (loadProfile()), so this
     // is null for a moment even for an account that finished onboarding long

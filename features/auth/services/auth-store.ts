@@ -81,9 +81,17 @@ type AuthState = {
 
   init: () => void;
   signIn: (email: string, password: string) => Promise<AuthResult>;
-  signUp: (email: string, password: string, displayName?: string) => Promise<AuthResult>;
+  /** Sends a 6-digit sign-up code to `email` and creates the account once it's
+   *  verified (see `verifySignupOtp`). No password yet — that's a separate
+   *  step once a session exists, via `updatePassword`. */
+  sendSignupOtp: (email: string, displayName?: string) => Promise<AuthResult>;
+  /** Verifies the sign-up code and establishes the session. */
+  verifySignupOtp: (email: string, token: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<AuthResult>;
+  /** Verifies a password-reset code and establishes the recovery session that
+   *  `updatePassword` then sets the new password against. */
+  verifyPasswordResetOtp: (email: string, token: string) => Promise<AuthResult>;
   updatePassword: (newPassword: string) => Promise<AuthResult>;
   deleteAccount: () => Promise<AuthResult>;
   continueAsGuest: () => void;
@@ -114,6 +122,9 @@ function friendly(message: string): string {
     return 'That email address looks invalid.';
   if (m.includes('email not confirmed')) return 'Please confirm your email first, then sign in.';
   if (m.includes('network')) return 'Network error — check your connection and try again.';
+  if (m.includes('otp') || m.includes('token has expired') || m.includes('token is invalid')) {
+    return 'That code is incorrect or has expired. Request a new one.';
+  }
   return message;
 }
 
@@ -229,14 +240,25 @@ export const useAuthStore = create<AuthState>()(
         return { ok: true };
       },
 
-      signUp: async (email, password, displayName) => {
+      sendSignupOtp: async (email, displayName) => {
         if (!isSupabaseConfigured) return NOT_CONFIGURED;
         const { error } = await withRetry(() =>
-          supabase.auth.signUp({
+          supabase.auth.signInWithOtp({
             email: email.trim(),
-            password,
-            options: displayName ? { data: { display_name: displayName.trim() } } : undefined,
+            options: {
+              shouldCreateUser: true,
+              data: displayName ? { display_name: displayName.trim() } : undefined,
+            },
           }),
+        );
+        if (error) return { ok: false, error: friendly(error.message) };
+        return { ok: true };
+      },
+
+      verifySignupOtp: async (email, token) => {
+        if (!isSupabaseConfigured) return NOT_CONFIGURED;
+        const { error } = await withRetry(() =>
+          supabase.auth.verifyOtp({ email: email.trim(), token: token.trim(), type: 'email' }),
         );
         if (error) return { ok: false, error: friendly(error.message) };
         set({ isGuest: false });
@@ -259,6 +281,15 @@ export const useAuthStore = create<AuthState>()(
           supabase.auth.resetPasswordForEmail(email.trim(), {
             redirectTo: passwordResetRedirectUrl(),
           }),
+        );
+        if (error) return { ok: false, error: friendly(error.message) };
+        return { ok: true };
+      },
+
+      verifyPasswordResetOtp: async (email, token) => {
+        if (!isSupabaseConfigured) return NOT_CONFIGURED;
+        const { error } = await withRetry(() =>
+          supabase.auth.verifyOtp({ email: email.trim(), token: token.trim(), type: 'recovery' }),
         );
         if (error) return { ok: false, error: friendly(error.message) };
         return { ok: true };

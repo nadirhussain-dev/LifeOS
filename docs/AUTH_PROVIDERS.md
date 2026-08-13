@@ -1,12 +1,13 @@
-# Google and Apple sign-in — what still needs doing
+# Google and Apple sign-in, and email OTP — what still needs doing
 
 The code is written and bundles clean. **None of it has run against a real
-provider**, because every step below needs an account only you can create. Until
-they are done, the two buttons appear (whenever `EXPO_PUBLIC_SUPABASE_*` are set)
-and fail with "That sign-in method is not switched on for this project yet."
+provider**, because every step below needs an account (or a dashboard setting)
+only you can create. Until they are done, the two OAuth buttons appear
+(whenever `EXPO_PUBLIC_SUPABASE_*` are set) and fail with "That sign-in method
+is not switched on for this project yet," and the email sign-up / password
+reset codes go out as magic links instead of 6-digit codes (§3 below).
 
-There is nothing to undo if you stop reading here. Email sign-in and guest mode
-are unaffected.
+There is nothing to undo if you stop reading here. Guest mode is unaffected.
 
 ---
 
@@ -112,7 +113,33 @@ is the only thing to look at — which value goes where, not the hashing itself.
 
 ---
 
-## 3. App Store note
+## 3. Email OTP (sign-up & password reset)
+
+Sign-up and "forgot password" both work by emailing a 6-digit code — entered
+on `verify-signup.tsx` / `verify-reset.tsx` — rather than a password chosen up
+front or a tap-through link. The client calls
+(`supabase.auth.signInWithOtp`, `supabase.auth.resetPasswordForEmail`,
+`supabase.auth.verifyOtp`, all in `features/auth/services/auth-store.ts`) are
+already in place and need nothing further from Supabase's API side. What
+decides whether the resulting email contains a **code** or a **link** is the
+email template, not the API call:
+
+1. **Supabase dashboard → Authentication → Email Templates.**
+2. Open **Confirm signup** and **Reset Password**. Each ships by default with
+   `{{ .ConfirmationURL }}` — replace that with `{{ .Token }}` (Supabase's
+   own docs call this "Enable One Time Passcode" in some UI versions; either
+   way, the token variable is what matters). Save both.
+3. Until this is done, `sendSignupOtp` / `resetPassword` still succeed and
+   still send an email — it just contains a magic link the OTP-entry screens
+   have nowhere to use, so verification will fail with "That code is
+   incorrect or has expired."
+
+Nothing else needs configuring for this part — no new redirect URL, no new
+provider toggle. Login (email + password) is unaffected either way.
+
+---
+
+## 4. App Store note
 
 Guideline 4.8 requires Sign in with Apple to be offered wherever another
 third-party login is, so **shipping Google to iOS without Apple is a rejection**.
@@ -121,7 +148,7 @@ Google alone.
 
 ---
 
-## 4. What is deliberately not built
+## 5. What is deliberately not built
 
 - **Account linking UI.** If somebody signs up with email and later uses Google
   with the same address, Supabase's own identity-linking settings decide what

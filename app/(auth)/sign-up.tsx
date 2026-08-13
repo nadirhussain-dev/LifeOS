@@ -11,39 +11,23 @@ import { UsernameField, type UsernameStatus } from '@/features/auth/components/u
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { useTheme } from '@/hooks/use-theme';
 import { isSupabaseConfigured } from '@/lib/env';
-import {
-  checkPassword,
-  passwordProblemKey,
-  PASSWORD_MIN_LENGTH,
-} from '@/features/auth/services/password-policy';
-import { notify } from '@/lib/dialog-store';
 
 export default function SignUpScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const { c } = useTheme();
-  const signUp = useAuthStore((s) => s.signUp);
-  const claimUsername = useAuthStore((s) => s.claimUsername);
+  const sendSignupOtp = useAuthStore((s) => s.sendSignupOtp);
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('empty');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const handleSignUp = async () => {
-    if (!email.trim() || !password) {
-      setError(t('auth.enterEmailPassword'));
-      return;
-    }
-    // The account's own email and name are passed in so a password built out of
-    // them is refused — for a phone somebody else may pick up, that is the
-    // guess that actually gets tried.
-    const strength = checkPassword(password, [email, name, username]);
-    if (!strength.ok) {
-      setError(t(passwordProblemKey(strength.problem), { min: PASSWORD_MIN_LENGTH }));
+  const handleContinue = async () => {
+    if (!email.trim()) {
+      setError(t('auth.enterEmail'));
       return;
     }
     // 'unavailable' means the availability probe couldn't run, which is not the
@@ -57,39 +41,16 @@ export default function SignUpScreen() {
     }
     setBusy(true);
     setError(null);
-    const result = await signUp(email, password, name);
+    const result = await sendSignupOtp(email, name);
+    setBusy(false);
     if (!result.ok) {
-      setBusy(false);
       setError(result.error);
       return;
     }
-
-    // The account exists now; the name is claimed separately so that losing a
-    // race for it can never roll back a successful sign-up. Only possible with
-    // a session — with email confirmation on, it's claimed after first log-in.
-    if (useAuthStore.getState().session) {
-      const claim = await claimUsername(username.trim());
-      if (claim !== 'ok') {
-        setBusy(false);
-        setError(claim === 'taken' ? t('auth.usernameJustTaken') : t('auth.usernameClaimFailed'));
-        return;
-      }
-    }
-    setBusy(false);
-    // If the project requires email confirmation, there's no session yet.
-    if (!useAuthStore.getState().session) {
-      // Kept as a dialog, unlike the other confirmations: this one is an
-      // instruction to go and do something in another app, and a toast that
-      // vanishes after four seconds is the wrong carrier for it. ('OK' was
-      // also hardcoded English here, in an app that ships Arabic and Urdu.)
-      await notify({
-        title: t('auth.checkInbox'),
-        message: t('auth.confirmationSent'),
-        confirmLabel: t('common.ok'),
-      });
-      router.replace('/(auth)/login');
-    }
-    // Otherwise the auth gate redirects into the app automatically.
+    router.push({
+      pathname: '/(auth)/verify-signup',
+      params: { email: email.trim(), name: name.trim(), username: username.trim() },
+    });
   };
 
   return (
@@ -106,8 +67,8 @@ export default function SignUpScreen() {
           <Text variant="muted">{t('auth.backupSubtitle')}</Text>
         </View>
 
-        {/* A provider account skips this entire form — including having to invent
-            a password and a username — so it goes above it. Nothing renders when
+        {/* A provider account skips this entire form — including the code and
+            the password it leads to — so it goes above it. Nothing renders when
             the build has no Supabase credentials. */}
         <SocialAuthButtons onError={setError} disabled={busy} />
 
@@ -144,14 +105,6 @@ export default function SignUpScreen() {
             keyboardType="email-address"
             autoComplete="email"
           />
-          <AuthField
-            label={t('auth.password')}
-            value={password}
-            onChangeText={setPassword}
-            placeholder={t('auth.atLeast6')}
-            secure
-            autoComplete="new-password"
-          />
 
           {error && (
             <Text variant="caption" className="text-destructive">
@@ -160,11 +113,11 @@ export default function SignUpScreen() {
           )}
 
           <Button
-            label={busy ? t('auth.creatingAccount') : t('auth.createAccount')}
+            label={busy ? t('auth.sendingCode') : t('common.continue')}
             variant="accent"
             size="lg"
             disabled={busy}
-            onPress={handleSignUp}
+            onPress={handleContinue}
           />
         </View>
 
