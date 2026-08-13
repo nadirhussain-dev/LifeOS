@@ -134,23 +134,30 @@ export default function SharedAlbumScreen() {
     setBusy(true);
     let failed = 0;
     let quota = false;
-    for (const [index, asset] of result.assets.entries()) {
-      const outcome = await addPhoto.mutateAsync({
-        albumKey,
-        addedBy: userId,
-        uri: asset.uri,
-        mimeType: asset.mimeType ?? 'image/jpeg',
-        width: asset.width ?? null,
-        height: asset.height ?? null,
-        captionCiphertext: null,
-        position: photos.length + index,
-      });
-      if (!outcome.ok) {
-        if (outcome.reason === 'quota') quota = true;
-        else failed += 1;
+    try {
+      for (const [index, asset] of result.assets.entries()) {
+        try {
+          const outcome = await addPhoto.mutateAsync({
+            albumKey,
+            addedBy: userId,
+            uri: asset.uri,
+            mimeType: asset.mimeType ?? 'image/jpeg',
+            width: asset.width ?? null,
+            height: asset.height ?? null,
+            captionCiphertext: null,
+            position: photos.length + index,
+          });
+          if (!outcome.ok) {
+            if (outcome.reason === 'quota') quota = true;
+            else failed += 1;
+          }
+        } catch {
+          failed += 1;
+        }
       }
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
     if (quota) toast.error(t('private.quotaReached'));
     else if (failed > 0) toast.error(t('private.uploadFailed'));
   };
@@ -314,7 +321,19 @@ export default function SharedAlbumScreen() {
         />
       ) : null}
 
-      {locked ? <Text variant="muted">{t('private.albumLockedBody')}</Text> : null}
+      {locked ? (
+        <View className="gap-3">
+          <Text variant="muted">{t('private.albumLockedBody')}</Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push(`/private/albums/${id}/members`)}
+            className="flex-row items-center justify-center gap-2 rounded-xl border border-border py-2.5"
+          >
+            <Users size={15} color={theme.mutedForeground} />
+            <Text variant="caption">{t('private.members')}</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       {photos.length === 0 ? (
         <View className="items-center gap-2 py-16">

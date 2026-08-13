@@ -8,10 +8,12 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
+import { useAuthStore } from '@/features/auth/services/auth-store';
 import {
   acceptAlbumInvite,
   peekAlbumInvite,
   redeemAlbumInvite,
+  type RedeemAlbumKeyResult,
 } from '@/features/private/services/album-invite';
 import { PrivateScreen } from '@/features/private/components/private-screen';
 import { usePrivateStore } from '@/features/private/store/private-store';
@@ -32,6 +34,16 @@ import { toast } from '@/lib/toast-store';
  * renders content the vault is guaranteed unlocked. If that detour was
  * needed, the token stays valid (it isn't consumed by a failed attempt) —
  * following the same link again after finishing setup picks up right here.
+ *
+ * That local-vault gate is a separate axis from having a Supabase account,
+ * though: a guest can set up a fully local private space with no sign-in at
+ * all, follow this link, and reach `join()` — which calls
+ * `accept_album_invitation`, granted to `authenticated` only (migration
+ * 0027). `peek_album_invitation` is granted to `anon` too, so the status
+ * check above always works; only the join step needs an account, so that's
+ * the one branch that checks `session` and offers sign-in instead of letting
+ * the mutation fail server-side. Same shape as `app/join/[token].tsx`'s
+ * split-invite screen.
  */
 type Phase = 'loading' | 'failed' | 'ready' | 'joining' | 'redeem' | 'redeeming' | 'done';
 
@@ -50,6 +62,7 @@ export default function AcceptAlbumInviteScreen() {
   const { c } = useTheme();
   const space = usePrivateStore((s) => s.space);
   const vaultKey = usePrivateStore((s) => s.key);
+  const session = useAuthStore((s) => s.session);
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [failureKey, setFailureKey] = useState<string>('private.inviteError');
@@ -91,13 +104,24 @@ export default function AcceptAlbumInviteScreen() {
     if (!vaultKey) return false;
     setPhase('redeeming');
     setError(null);
-    const result = await redeemAlbumInvite({
-      payload: payloadValue,
-      code: codeValue,
-      albumId: albumIdValue,
-      memberId: memberIdValue,
-      vaultKey,
-    });
+    let result: RedeemAlbumKeyResult;
+    try {
+      result = await redeemAlbumInvite({
+        payload: payloadValue,
+        code: codeValue,
+        albumId: albumIdValue,
+        memberId: memberIdValue,
+        vaultKey,
+      });
+    } catch {
+      // The key may already be stored locally even if the server-side
+      // confirm_album_key call above failed (network drop, etc.) — that call
+      // is only a UX hint, never a gate (see album-invite.ts's header), so
+      // this is safe to retry rather than treat as fatal.
+      setError(t('receive.errorCode'));
+      setPhase('redeem');
+      return false;
+    }
     if (!result.ok) {
       setError(
         result.reason === 'unsupported-version'
@@ -163,6 +187,29 @@ export default function AcceptAlbumInviteScreen() {
   }
 
   if (phase === 'ready' || phase === 'joining') {
+    // The token stays valid either way (see this screen's header) — it isn't
+    // consumed by peeking, so returning here after signing in resumes the
+    // same invitation.
+    if (!session) {
+      return (
+        <PrivateScreen
+          moduleId="shared-albums"
+          title={t('private.acceptAlbumTitle')}
+          tint={c.accent}
+          footer={
+            <Button
+              variant="accent"
+              size="lg"
+              label={t('sync.signInCreate')}
+              onPress={() => router.push('/(auth)/login')}
+            />
+          }
+        >
+          <Text variant="muted">{t('private.acceptAlbumNeedsAccount')}</Text>
+        </PrivateScreen>
+      );
+    }
+
     return (
       <PrivateScreen
         moduleId="shared-albums"

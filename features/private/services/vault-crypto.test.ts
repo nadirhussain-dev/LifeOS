@@ -88,7 +88,7 @@ describe('encryption', () => {
 });
 
 describe('key derivation', () => {
-  // Each derivation is ~120k PBKDF2 rounds in pure JS and takes a second or
+  // Each derivation is ~60k PBKDF2 rounds in pure JS and takes a second or
   // two, which is the point — the default 5s per-test budget is not enough for
   // two of them in one test.
   const SLOW = 30_000;

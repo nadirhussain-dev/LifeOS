@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 
+import { ErrorBoundary } from '@/components/error-boundary';
 import { useSecureScreen } from '@/features/private/components/secure-screen';
 
 /**
@@ -13,14 +14,19 @@ export default function PrivateLayout() {
   useSecureScreen();
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        // No swipe-back out of the space: the gesture is easy to trigger by
-        // accident and lands on whatever was underneath, which on a shared
-        // screen is the wrong direction to fail.
-        gestureEnabled: false,
-      }}
-    />
+    // Confines a render-time throw anywhere in the private space to this
+    // segment instead of the single root ErrorBoundary (app/_layout.tsx)
+    // tearing down the whole app's navigation state to recover from it.
+    <ErrorBoundary>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          // No swipe-back out of the space: the gesture is easy to trigger by
+          // accident and lands on whatever was underneath, which on a shared
+          // screen is the wrong direction to fail.
+          gestureEnabled: false,
+        }}
+      />
+    </ErrorBoundary>
   );
 }

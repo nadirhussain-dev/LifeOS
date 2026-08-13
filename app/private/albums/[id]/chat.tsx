@@ -4,15 +4,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Send } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  ActivityIndicator,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, TextInput, View } from 'react-native';
+import Animated, { useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
@@ -51,6 +44,21 @@ export default function AlbumChatScreen() {
   const theme = colors[scheme];
   const tint = resolveTint(TINT, scheme);
   const { t } = useTranslation();
+
+  // Reads the *live* IME inset (WindowInsets on Android) frame by frame,
+  // rather than `KeyboardAvoidingView`'s one-shot height estimate from the
+  // Keyboard module's show/hide event. That estimate is what caused the two
+  // failed attempts before this: `behavior="height"` did nothing (fights the
+  // `flex-1` container for control of this view's size) and `behavior="padding"`
+  // used a keyboard-height snapshot that didn't account for Gboard's
+  // toolbar row (stickers/GIF/clipboard) expanding a beat after the base
+  // keyboard appears, so the padding fell short of — or in a later
+  // measurement, overshot — the keyboard's actual settled height, leaving a
+  // visible gap either way. `keyboard.height` tracks the real inset
+  // continuously, so the padding always matches whatever is actually on
+  // screen, animation included.
+  const keyboard = useAnimatedKeyboard();
+  const keyboardPadding = useAnimatedStyle(() => ({ paddingBottom: keyboard.height.value }));
 
   const key = usePrivateStore((s) => s.key);
   const space = usePrivateStore((s) => s.space);
@@ -98,11 +106,7 @@ export default function AlbumChatScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-background"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={insets.top}
-    >
+    <Animated.View className="flex-1 bg-background" style={keyboardPadding}>
       <View
         className="flex-row items-center gap-3 px-5 pb-3"
         style={{ paddingTop: insets.top + 8 }}
@@ -217,6 +221,6 @@ export default function AlbumChatScreen() {
           </Pressable>
         </View>
       ) : null}
-    </KeyboardAvoidingView>
+    </Animated.View>
   );
 }

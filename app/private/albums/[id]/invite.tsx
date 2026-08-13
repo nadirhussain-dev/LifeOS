@@ -8,6 +8,7 @@ import { Pressable, ScrollView, Share, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
+import { InlineError } from '@/components/ui/query-error';
 import { Text } from '@/components/ui/text';
 import {
   useAlbumDetail,
@@ -52,10 +53,12 @@ export default function AlbumInviteScreen() {
     null,
   );
   const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState<unknown>(undefined);
 
   const generate = async () => {
     if (!albumKey || !member || !id) return;
     setGenerating(true);
+    setGenError(undefined);
     try {
       if (isResend) {
         const b = await resendAlbumKey(albumKey);
@@ -79,6 +82,8 @@ export default function AlbumInviteScreen() {
           });
         }
       }
+    } catch (err) {
+      setGenError(err);
     } finally {
       setGenerating(false);
     }
@@ -211,6 +216,8 @@ export default function AlbumInviteScreen() {
             {t('transfer.warnBody')}
           </Text>
         </View>
+
+        {genError !== undefined ? <InlineError error={genError} /> : null}
 
         <Button
           variant="secondary"

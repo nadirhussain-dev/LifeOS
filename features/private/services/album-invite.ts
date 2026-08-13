@@ -33,8 +33,10 @@ function assertOk(error: unknown): void {
 
 /** Long enough to read a QR code over a phone call without the link going
  *  stale mid-conversation; short enough that an unredeemed invite is not a
- *  standing liability. Not a security boundary — the token's entropy is. */
-const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+ *  standing liability. Not a security boundary — the token's entropy is.
+ *  Exported: album-repository.ts's addMemberByEmail mints the Postgres
+ *  invitation up front now (see migration 0045) and needs the same TTL. */
+export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type AlbumInvite = {
   /** Shown on the inviting device, read aloud or scanned on the joining one. */
@@ -158,4 +160,63 @@ export async function resendAlbumKey(
   albumKey: Uint8Array,
 ): Promise<{ code: string; payload: string }> {
   return createTransfer(albumKey);
+}
+
+export type MyAlbumInvite = {
+  id: string;
+  albumId: string;
+  token: string;
+  invitedBy: string | null;
+  createdAt: number;
+  expiresAt: number;
+};
+
+/**
+ * Invitations addressed to the signed-in account, discoverable without
+ * needing the link/token handed to them out of band — migration 0045's
+ * `shared_album_invitations_read_by_email` policy scopes this to rows whose
+ * email matches the caller's own profile, nothing else. Feeds the Invites
+ * inbox (app/private/albums/invites.tsx); the album name stays ciphertext
+ * either way, same as the token-based accept screen.
+ *
+ * `email` has to be passed in and filtered on here, not left to RLS alone:
+ * `shared_album_invitations_read` (migration 0027) is a second, OR'd policy
+ * that lets any *member* of the album see all its invitation rows — it
+ * exists for the members screen's "waiting on key" view, where the owner
+ * needs to see the invite they just sent. Without this `.eq`, that policy
+ * makes this query return the owner's own outgoing invites too, so inviting
+ * someone else showed up as "you have a pending album invite" on the
+ * inviter's own account.
+ */
+export async function listMyAlbumInvitations(email: string): Promise<MyAlbumInvite[]> {
+  const { data, error } = await supabase
+    .from('shared_album_invitations')
+    .select('id, album_id, token, invited_by, created_at, expires_at')
+    .eq('email', email.trim().toLowerCase())
+    .is('accepted_at', null)
+    .is('declined_at', null)
+    .gt('expires_at', Date.now())
+    .order('created_at', { ascending: false });
+  assertOk(error);
+  return (data ?? []).map((r) => ({
+    id: String(r.id),
+    albumId: String(r.album_id),
+    token: String(r.token),
+    invitedBy: r.invited_by ? String(r.invited_by) : null,
+    createdAt: Number(r.created_at),
+    expiresAt: Number(r.expires_at),
+  }));
+}
+
+/** The invitee's explicit "no" — see migration 0045's `decline_album_invitation`.
+ *  Removes the placeholder member row server-side in the same call, so the
+ *  owner's member list stops showing "pending" for someone who has declined. */
+export async function declineAlbumInvite(token: string): Promise<{ status: string }> {
+  const { data, error } = await supabase.rpc('decline_album_invitation', {
+    p_token: token,
+    p_now: Date.now(),
+  });
+  assertOk(error);
+  const row = Array.isArray(data) ? data[0] : data;
+  return { status: String(row?.status ?? 'invalid') };
 }
