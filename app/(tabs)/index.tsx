@@ -34,7 +34,10 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
  */
 const FULL_SECTIONS: { label: string; ids: WidgetId[] }[] = [
   { label: 'Today', ids: ['today-tasks', 'habit-row', 'today-timeline'] },
-  { label: 'For you', ids: ['recent-notes', 'productivity-summary', 'daily-quote'] },
+  {
+    label: 'For you',
+    ids: ['insight-teaser', 'recent-notes', 'productivity-summary', 'daily-quote'],
+  },
 ];
 /** Rendered as the compact Wellbeing tiles instead of full-width widgets. */
 const TILE_HANDLED: WidgetId[] = ['water-intake', 'reflect'];

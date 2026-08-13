@@ -16,7 +16,11 @@ import { QuickLogSheet } from '@/features/habits/components/quick-log-sheet';
 import { StreakHeatmap } from '@/features/habits/components/streak-heatmap';
 import { useHabit, useHabitLogs } from '@/features/habits/hooks/use-habit';
 import { useHabitMutations } from '@/features/habits/hooks/use-habit-mutations';
-import { calculateHabitStreaks, toDateKey } from '@/features/habits/services/habit-streaks';
+import {
+  calculateHabitStreaks,
+  habitLevelForStreak,
+  toDateKey,
+} from '@/features/habits/services/habit-streaks';
 import type { HabitWithToday } from '@/features/habits/types/habit.types';
 
 const QUANTIFIED_TYPES = new Set(['count', 'duration', 'distance', 'time']);
@@ -36,6 +40,7 @@ export default function HabitDetailScreen() {
 
   const { logs, skips } = logData;
   const streaks = calculateHabitStreaks(habit, logs, skips);
+  const level = habitLevelForStreak(streaks.currentStreak);
   const todayKey = toDateKey(new Date());
   const todayLog = logs.find((log) => log.logDate === todayKey);
   const isQuantified = QUANTIFIED_TYPES.has(habit.type);
@@ -128,6 +133,20 @@ export default function HabitDetailScreen() {
             <Text variant="caption">
               {habit.type === 'negative' ? t('habits.daysWithout') : t('habits.currentStreak')}
             </Text>
+            {level ? (
+              <View
+                className="mt-0.5 rounded-full px-2 py-0.5"
+                style={{ backgroundColor: `${streakColor[scheme]}1f` }}
+              >
+                <Text
+                  variant="caption"
+                  className="font-sora-semibold"
+                  style={{ color: streakColor[scheme] }}
+                >
+                  {t(level.nameKey)}
+                </Text>
+              </View>
+            ) : null}
             {/* Said out loud rather than hidden. The streak survived a missed
                 day, and pretending otherwise would be the app lying to make a
                 number look better. */}

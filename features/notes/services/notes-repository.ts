@@ -8,11 +8,14 @@ import {
   noteTagLinks,
   noteTags,
   notes,
+  tasks,
 } from '@/database/schema';
+import { createTask } from '@/features/tasks/services/tasks-repository';
 import { generateId } from '@/lib/id';
 import { LOCAL_USER_ID } from '@/lib/local-user';
 import type {
   CreateNoteInput,
+  GeneratedTask,
   Note,
   NoteAttachment,
   NoteBacklink,
@@ -431,4 +434,63 @@ export function listBacklinksForNote(noteId: string): NoteBacklink[] {
     .where(and(inArray(notes.id, sourceIds), isNull(notes.deletedAt)))
     .all()
     .map((note) => ({ id: note.id, title: note.title || 'Untitled note' }));
+}
+
+/** Stable id for "note X generated task Y" — unlike `mentions`, these aren't
+ *  re-derived from body text on every save (each call here is one deliberate
+ *  user action), but the same stable-id shape keeps every entryLinks write in
+ *  this file consistent. */
+function generatedTaskLinkId(noteId: string, taskId: string): string {
+  return `generated_from:${noteId}:${taskId}`;
+}
+
+/**
+ * Creates a task from this note and records the connection both ways: the
+ * task's own `sourceNoteId` column (a direct, cheap "where did this come
+ * from" pointer, read from the task's side) and a `generated_from` entryLinks
+ * row (so the note's side — "what came out of this" — can list every task
+ * ever generated, not just track the most recent one).
+ */
+export function createTaskFromNote(noteId: string, title: string) {
+  const task = createTask({ title, sourceNoteId: noteId });
+  const now = Date.now();
+  getDb()
+    .insert(entryLinks)
+    .values({
+      id: generatedTaskLinkId(noteId, task.id),
+      userId: LOCAL_USER_ID,
+      sourceType: 'note',
+      sourceId: noteId,
+      targetType: 'task',
+      targetId: task.id,
+      relation: 'generated_from',
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run();
+  return task;
+}
+
+/** Tasks created from this note — the note-side view of `generated_from`. */
+export function listTasksGeneratedFromNote(noteId: string): GeneratedTask[] {
+  const links = getDb()
+    .select()
+    .from(entryLinks)
+    .where(
+      and(
+        eq(entryLinks.sourceType, 'note'),
+        eq(entryLinks.sourceId, noteId),
+        eq(entryLinks.relation, 'generated_from'),
+        isNull(entryLinks.deletedAt),
+      ),
+    )
+    .all();
+  if (links.length === 0) return [];
+
+  const taskIds = links.map((link) => link.targetId);
+  return getDb()
+    .select({ id: tasks.id, title: tasks.title, status: tasks.status })
+    .from(tasks)
+    .where(and(inArray(tasks.id, taskIds), isNull(tasks.deletedAt)))
+    .all();
 }

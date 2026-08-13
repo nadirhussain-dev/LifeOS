@@ -13,7 +13,9 @@ import { SheetHeader } from '@/components/ui/sheet-header';
 import { colors } from '@/constants/theme';
 import { AttributeRow } from '@/components/ui/attribute-row';
 import { ReminderPicker } from '@/components/ui/reminder-picker';
+import { NOTE_TEMPLATES } from '@/features/notes/config/note-templates';
 import { NoteCategoryPicker } from '@/features/notes/components/note-category-picker';
+import { NoteTemplatePicker } from '@/features/notes/components/note-template-picker';
 import { useNoteMutations } from '@/features/notes/hooks/use-note-mutations';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 
@@ -29,6 +31,13 @@ export default function NewNoteScreen() {
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [isPinned, setIsPinned] = useState(false);
   const [reminderAt, setReminderAt] = useState<number | null>(null);
+  const [templateId, setTemplateId] = useState<string | null>(null);
+
+  const selectTemplate = (id: string | null) => {
+    setTemplateId(id);
+    const template = NOTE_TEMPLATES.find((candidate) => candidate.id === id);
+    setBody(template ? t(template.bodyKey) : '');
+  };
 
   const focusProgress = useSharedValue(0);
   const underlineStyle = useAnimatedStyle(() => ({
@@ -104,9 +113,20 @@ export default function NewNoteScreen() {
           </AttributeRow>
         </View>
 
+        <NoteTemplatePicker selectedId={templateId} onSelect={selectTemplate} />
+
         <TextInput
           value={body}
-          onChangeText={setBody}
+          onChangeText={(text) => {
+            setBody(text);
+            // A template is only the starting point — once the user diverges
+            // from it, the chip shouldn't keep claiming to be "selected."
+            if (
+              templateId &&
+              text !== t(NOTE_TEMPLATES.find((tpl) => tpl.id === templateId)?.bodyKey ?? '')
+            )
+              setTemplateId(null);
+          }}
           multiline
           accessibilityLabel={t('notes.noteBody')}
           placeholder={t('notes.writeSomething')}

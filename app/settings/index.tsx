@@ -12,6 +12,7 @@ import {
   GraduationCap,
   Info,
   Languages,
+  LayoutGrid,
   LifeBuoy,
   Scale,
   ShieldAlert,
@@ -48,6 +49,7 @@ import {
   hasOwner,
   isOperator as checkOperator,
 } from '@/features/operator/services/operator-repository';
+import { useModuleCurationStore } from '@/features/hub/store/module-curation-store';
 import { isVaultSetUp } from '@/features/private/services/vault-keys';
 import { usePrivateStore } from '@/features/private/store/private-store';
 import { useProfileStore } from '@/features/profile/store/profile-store';
@@ -88,6 +90,8 @@ export default function SettingsScreen() {
   const setLanguage = useLanguageStore((state) => state.setLanguage);
   const themePreference = useAppearanceStore((state) => state.themePreference);
   const setThemePreference = useAppearanceStore((state) => state.setThemePreference);
+  const showAllModules = useModuleCurationStore((state) => state.showAllModules);
+  const setShowAllModules = useModuleCurationStore((state) => state.setShowAllModules);
 
   const appLockEnabled = useProfileStore((state) => state.appLockEnabled);
   const setAppLockEnabled = useProfileStore((state) => state.setAppLockEnabled);
@@ -320,6 +324,26 @@ export default function SettingsScreen() {
               value={t(`language.${language}`)}
               isFirst
               onPress={() => setLanguageSheetOpen(true)}
+            />
+          </View>
+        </View>
+
+        <View className="gap-2">
+          <SectionLabel>{t('settings.hub')}</SectionLabel>
+          <View className={cardClass({ padding: 'none' }, 'px-4')}>
+            <SettingsRow
+              icon={LayoutGrid}
+              label={t('settings.showAllModules')}
+              subtitle={t('settings.showAllModulesSubtitle')}
+              isFirst
+              right={
+                <Switch
+                  value={showAllModules}
+                  onValueChange={setShowAllModules}
+                  trackColor={{ true: colors[scheme].accent, false: colors[scheme].border }}
+                  thumbColor="#ffffff"
+                />
+              }
             />
           </View>
         </View>

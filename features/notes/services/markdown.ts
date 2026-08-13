@@ -101,6 +101,27 @@ export function stripMarkdown(body: string): string {
     .trim();
 }
 
+export type OpenWikiLink = { start: number; query: string };
+
+/**
+ * Whether the cursor sits inside an unclosed `[[...` right now — and if so,
+ * where that link starts and what's been typed so far. Powers the
+ * autocomplete panel: it only appears while you're actively inside `[[ ]]`,
+ * not any time `[[` appears earlier in the note.
+ *
+ * Walks back from the cursor to the nearest `[[`. If a `]]` (or a newline, or
+ * another `[[`) shows up between that point and the cursor, the link already
+ * closed or was abandoned, so this returns null rather than reopening it.
+ */
+export function findOpenWikiLink(text: string, cursor: number): OpenWikiLink | null {
+  const before = text.slice(0, cursor);
+  const start = before.lastIndexOf('[[');
+  if (start === -1) return null;
+  const query = before.slice(start + 2);
+  if (query.includes(']]') || query.includes('\n') || query.includes('[[')) return null;
+  return { start, query };
+}
+
 /** Flips the Nth checklist item (0-indexed among checklist lines only) in raw body text. */
 export function toggleChecklistAt(body: string, checklistIndex: number): string {
   const rawLines = body.split('\n');

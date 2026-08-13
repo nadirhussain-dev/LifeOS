@@ -6,6 +6,7 @@ import {
   Clock3,
   Flag,
   Repeat,
+  Repeat2,
   StickyNote,
   Tag,
   Trash2,
@@ -22,9 +23,10 @@ import { colors } from '@/constants/theme';
 import { AttributeRow } from '@/components/ui/attribute-row';
 import { CategoryPicker } from '@/features/tasks/components/category-picker';
 import { DueDateField } from '@/features/tasks/components/due-date-field';
+import { HabitLinkPicker } from '@/features/tasks/components/habit-link-picker';
 import { PriorityPicker } from '@/features/tasks/components/priority-picker';
 import { RecurrencePicker } from '@/features/tasks/components/recurrence-picker';
-import { useTask } from '@/features/tasks/hooks/use-task';
+import { useSourceNote, useTask } from '@/features/tasks/hooks/use-task';
 import { useTaskMutations } from '@/features/tasks/hooks/use-task-mutations';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 import { toDateKey } from '@/lib/date';
@@ -44,6 +46,7 @@ export default function TaskDetailScreen() {
   const { t } = useTranslation();
   const keyboardHeight = useKeyboardHeight();
   const { data: task } = useTask(id);
+  const { data: sourceNote } = useSourceNote(task?.sourceNoteId);
   const { update, archive, remove } = useTaskMutations();
 
   const [title, setTitle] = useState('');
@@ -137,6 +140,17 @@ export default function TaskDetailScreen() {
           }}
         />
 
+        {sourceNote && (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push(`/note/${sourceNote.id}`)}
+            className="flex-row items-center gap-1.5 self-start rounded-full border border-border px-3 py-1.5"
+          >
+            <StickyNote size={13} color={colors[scheme].mutedForeground} />
+            <Text variant="caption">{t('tasks.createdFromNote', { title: sourceNote.title })}</Text>
+          </Pressable>
+        )}
+
         <View className={cardClass({ padding: 'none', elevation: 'e1' }, 'px-4')}>
           <AttributeRow icon={Flag} label={t('fields.priority')} isFirst>
             <PriorityPicker
@@ -184,6 +198,23 @@ export default function TaskDetailScreen() {
             <CategoryPicker
               value={task.categoryId}
               onChange={(categoryId) => update.mutate({ id: task.id, input: { categoryId } })}
+            />
+          </AttributeRow>
+
+          <AttributeRow icon={Repeat2} label={t('fields.habit')}>
+            <HabitLinkPicker
+              value={task.habitId}
+              onChange={(habitId) =>
+                update.mutate({
+                  id: task.id,
+                  input: {
+                    habitId,
+                    habitLogDate: habitId
+                      ? toDateKey(task.dueDate ? new Date(task.dueDate) : new Date())
+                      : null,
+                  },
+                })
+              }
             />
           </AttributeRow>
         </View>

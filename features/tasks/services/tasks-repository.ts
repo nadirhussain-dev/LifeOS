@@ -2,7 +2,8 @@ import { addDays, addMonths, addWeeks, addYears, endOfDay, startOfDay, subDays }
 import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 
 import { getDb } from '@/database/client';
-import { taskCategories, tasks } from '@/database/schema';
+import { entryLinks, taskCategories, tasks } from '@/database/schema';
+import { logHabit, unlogHabit } from '@/features/habits/services/habits-repository';
 import { generateId } from '@/lib/id';
 import { LOCAL_USER_ID } from '@/lib/local-user';
 import type {
@@ -72,6 +73,9 @@ export function createTask(input: CreateTaskInput): Task {
     position: 0,
     reminderEnabled: input.reminderEnabled ?? false,
     reminderNotificationId: null,
+    sourceNoteId: input.sourceNoteId ?? null,
+    habitId: input.habitId ?? null,
+    habitLogDate: input.habitLogDate ?? null,
     createdAt: now,
     updatedAt: now,
   };
@@ -114,6 +118,53 @@ function nextRecurrenceDueDate(dueDate: number, frequency: TaskRecurrenceFrequen
   }
 }
 
+/** Stable id for "this task's completion logged this habit" — a `completed_by`
+ *  entryLinks row, source the task (the thing that happened), target the habit
+ *  (the thing it satisfied). This is the first code to ever write that
+ *  relation type; the direction is a convention this function establishes,
+ *  not one specified elsewhere. */
+function completedByLinkId(taskId: string, habitId: string): string {
+  return `completed_by:${taskId}:${habitId}`;
+}
+
+function writeCompletedByLink(taskId: string, habitId: string) {
+  const db = getDb();
+  const id = completedByLinkId(taskId, habitId);
+  const now = Date.now();
+  const existing = db.select().from(entryLinks).where(eq(entryLinks.id, id)).get();
+  if (existing) {
+    if (existing.deletedAt !== null) {
+      db.update(entryLinks)
+        .set({ deletedAt: null, updatedAt: now })
+        .where(eq(entryLinks.id, id))
+        .run();
+    }
+    return;
+  }
+  db.insert(entryLinks)
+    .values({
+      id,
+      userId: LOCAL_USER_ID,
+      sourceType: 'task',
+      sourceId: taskId,
+      targetType: 'habit',
+      targetId: habitId,
+      relation: 'completed_by',
+      createdAt: now,
+      updatedAt: now,
+    })
+    .run();
+}
+
+function removeCompletedByLink(taskId: string, habitId: string) {
+  const now = Date.now();
+  getDb()
+    .update(entryLinks)
+    .set({ deletedAt: now, updatedAt: now })
+    .where(eq(entryLinks.id, completedByLinkId(taskId, habitId)))
+    .run();
+}
+
 export function completeTask(id: string) {
   const now = Date.now();
   const task = getTask(id);
@@ -123,6 +174,14 @@ export function completeTask(id: string) {
     .set({ status: 'completed', completedAt: now, updatedAt: now, syncStatus: 'pending' })
     .where(eq(tasks.id, id))
     .run();
+
+  // A task linked to a habit finishing IS that habit getting done for the
+  // day — logHabit is itself idempotent (see its own doc comment), so this
+  // stays safe even if completeTask were ever called twice on the same task.
+  if (task?.habitId && task.habitLogDate) {
+    logHabit(task.habitId, task.habitLogDate);
+    writeCompletedByLink(task.id, task.habitId);
+  }
 
   if (task && task.recurrenceFrequency !== 'none' && task.dueDate) {
     createTask({
@@ -139,11 +198,18 @@ export function completeTask(id: string) {
 }
 
 export function reopenTask(id: string) {
+  const task = getTask(id);
+
   getDb()
     .update(tasks)
     .set({ status: 'todo', completedAt: null, updatedAt: Date.now(), syncStatus: 'pending' })
     .where(eq(tasks.id, id))
     .run();
+
+  if (task?.habitId && task.habitLogDate) {
+    unlogHabit(task.habitId, task.habitLogDate);
+    removeCompletedByLink(task.id, task.habitId);
+  }
 }
 
 export function archiveTask(id: string) {

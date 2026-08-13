@@ -14,10 +14,13 @@ import { colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AdSlot } from '@/features/ads/components/ad-slot';
 import { ModuleCard } from '@/features/hub/components/module-card';
+import { MODULE_FOCUS_MAP } from '@/features/hub/config/module-focus-map';
 import { HUB_SECTIONS, type HubModule } from '@/features/hub/config/modules';
+import { useModuleCurationStore } from '@/features/hub/store/module-curation-store';
 import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 import { PRIVATE_MODULES } from '@/features/private/config/private-modules';
 import { usePrivateStore } from '@/features/private/store/private-store';
+import { useProfileStore } from '@/features/profile/store/profile-store';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { alpha } from '@/lib/color';
 
@@ -48,25 +51,51 @@ export default function HubScreen() {
 
   const flags = useModuleFlagsStore((s) => s.flags);
 
+  const focusAreas = useProfileStore((s) => s.focusAreas);
+  const showAllModules = useModuleCurationStore((s) => s.showAllModules);
+  const setShowAllModules = useModuleCurationStore((s) => s.setShowAllModules);
+  // Nobody answering the focus question isn't the same as answering "none of
+  // these" — curating down to zero signal would hide half the app from
+  // someone who simply skipped a screen, so an empty answer curates nothing.
+  const curationActive = !showAllModules && focusAreas.length > 0;
+  const isCurated = (moduleId: string) => {
+    const area = MODULE_FOCUS_MAP[moduleId];
+    return !!area && !focusAreas.includes(area);
+  };
+
   /**
-   * Two independent filters, and they hide for different reasons.
+   * Three independent filters, and they hide for different reasons.
    *
    * The operator's switch removes a module the app itself has pulled — broken,
    * or its backend is down. The user's own "keep this private" choice moves a
    * module into the section below, where it appears only while the vault is
-   * open. A module can be subject to both, in which case the operator wins:
-   * unlocking your vault should not hand you back a module known to be broken.
+   * open. Curation is the one *offered* filter — a module outside the user's
+   * onboarding focus areas — and it's the one with a way back on this very
+   * screen (the "N more modules" prompt below), unlike the other two.
    */
   const sections = useMemo(
     () =>
       HUB_SECTIONS.map((section) => {
         const visible = section.modules.filter(
-          (module) => flags[module.id]?.enabled !== false && !privatised.includes(module.id),
+          (module) =>
+            flags[module.id]?.enabled !== false &&
+            !privatised.includes(module.id) &&
+            !(curationActive && isCurated(module.id)),
         );
         return { ...section, modules: visible, rows: toRows(visible) };
       }).filter((section) => section.modules.length > 0),
-    [flags, privatised],
+    [flags, privatised, curationActive, focusAreas], // eslint-disable-line react-hooks/exhaustive-deps
   );
+
+  const curatedOutCount = useMemo(() => {
+    if (!curationActive) return 0;
+    return HUB_SECTIONS.flatMap((section) => section.modules).filter(
+      (module) =>
+        flags[module.id]?.enabled !== false &&
+        !privatised.includes(module.id) &&
+        isCurated(module.id),
+    ).length;
+  }, [flags, privatised, curationActive, focusAreas]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Disabled modules, with whatever the operator said about them. Shown rather
    * than silently vanished: a module that disappears without explanation
@@ -197,6 +226,21 @@ export default function HubScreen() {
             </View>
           </View>
         ))}
+
+        {curatedOutCount > 0 ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setShowAllModules(true)}
+            className={cardClass(
+              { padding: 'rowLg' },
+              'flex-row items-center justify-center gap-2 border-dashed',
+            )}
+          >
+            <Text className="font-sora-medium" style={{ color: colors[scheme].accent }}>
+              {t('hub.showMoreModules', { count: curatedOutCount })}
+            </Text>
+          </Pressable>
+        ) : null}
 
         {disabled.length > 0 ? (
           <View className="gap-3">

@@ -6,6 +6,7 @@ import {
   Moon,
   Music2,
   Settings,
+  Sparkles,
   StickyNote,
   Target,
   Users,
@@ -80,6 +81,24 @@ export const HUB_SECTIONS: HubSection[] = [
     id: 'growth',
     labelKey: 'hubSection.growth',
     modules: [
+      {
+        id: 'insights',
+        titleKey: 'hubModule.insightsTitle',
+        subtitleKey: 'hubModule.insightsSubtitle',
+        icon: Sparkles,
+        // Insights isn't its own life area — it's a computed view across the
+        // others — so it takes the neutral chrome tint (the same reasoning
+        // Settings uses below) rather than claiming a 13th hue on an already
+        // tightly-packed wheel.
+        tint: moduleTints.settings,
+        status: 'ready',
+        getRoute: () => '/insights',
+        // Owns no tables of its own — nothing here to move into the private
+        // space, so canBePrivate is false for the same reason as Settings.
+        tables: [],
+        searchKinds: [],
+        canBePrivate: false,
+      },
       {
         id: 'goals',
         titleKey: 'hubModule.goalsTitle',

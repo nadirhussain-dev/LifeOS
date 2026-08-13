@@ -169,3 +169,30 @@ export function calculateHabitStreaks(
     graceUsed,
   };
 }
+
+export type HabitLevel = { tier: number; nameKey: string };
+
+/**
+ * Named tiers for the current streak — the one gamified "hook" the habits
+ * module gets, deliberately small: a title that escalates, not points, coins
+ * or a shop. Based on `currentStreak` rather than `bestStreak` so the level
+ * can be lost, the same honesty the grace-day mechanic above already commits
+ * to — a badge that can never go down isn't really a level.
+ *
+ * 66 days for "Blaze" isn't an arbitrary round number — it's the commonly
+ * cited average time for a habit to become automatic.
+ */
+const HABIT_LEVELS: HabitLevel[] = [
+  { tier: 6, nameKey: 'habits.levelLegend' },
+  { tier: 5, nameKey: 'habits.levelWildfire' },
+  { tier: 4, nameKey: 'habits.levelBlaze' },
+  { tier: 3, nameKey: 'habits.levelFlame' },
+  { tier: 2, nameKey: 'habits.levelEmber' },
+  { tier: 1, nameKey: 'habits.levelSpark' },
+];
+const HABIT_LEVEL_THRESHOLD_DAYS = [365, 180, 66, 21, 7, 3];
+
+export function habitLevelForStreak(currentStreak: number): HabitLevel | null {
+  const index = HABIT_LEVEL_THRESHOLD_DAYS.findIndex((days) => currentStreak >= days);
+  return index === -1 ? null : HABIT_LEVELS[index];
+}

@@ -5,6 +5,7 @@ import {
   listAttachmentsForNote,
   listBacklinksForNote,
   listTagsForNote,
+  listTasksGeneratedFromNote,
 } from '@/features/notes/services/notes-repository';
 
 export function useNote(id: string) {
@@ -29,5 +30,12 @@ export function useNoteBacklinks(id: string) {
   return useQuery({
     queryKey: ['notes', 'detail', id, 'backlinks'],
     queryFn: async () => listBacklinksForNote(id),
+  });
+}
+
+export function useNoteGeneratedTasks(id: string) {
+  return useQuery({
+    queryKey: ['notes', 'detail', id, 'generated-tasks'],
+    queryFn: async () => listTasksGeneratedFromNote(id),
   });
 }

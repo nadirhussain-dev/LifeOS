@@ -1,18 +1,27 @@
-import { format, isToday } from 'date-fns';
+import { format, isToday, subDays } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 
 import { fetchDailyQuote } from '@/features/dashboard/services/dashboard-mock-data';
-import { listHabitsWithToday } from '@/features/habits/services/habits-repository';
+import { listTransactions } from '@/features/budget/services/budget-repository';
+import {
+  listAllHabitLogsBetween,
+  listHabitsWithToday,
+} from '@/features/habits/services/habits-repository';
+import { buildDailyMetrics } from '@/features/insights/services/daily-metrics';
+import { computeInsights } from '@/features/insights/services/insight-engine';
 import { getEntryByDate, listEntriesBetween } from '@/features/journal/services/journal-repository';
 import { calculateJournalStreak } from '@/features/journal/services/journal-streak';
 import { stripMarkdown } from '@/features/notes/services/markdown';
 import { listRecentNotes } from '@/features/notes/services/notes-repository';
+import { listSleepSessions } from '@/features/sleep/services/sleep-repository';
+import { listStudySessions } from '@/features/study/services/study-repository';
 import { getDueBucket } from '@/features/tasks/services/task-grouping';
 import { getWeeklyCompletionStats, listTasks } from '@/features/tasks/services/tasks-repository';
 import { listTimelineForDate } from '@/features/timeline/services/timeline-repository';
 import { toDateKey } from '@/lib/date';
 import type {
   HabitRowData,
+  InsightTeaserData,
   RecentNotesData,
   ReflectData,
   TodayTasksData,
@@ -116,4 +125,29 @@ export function useProductivitySummary() {
 
 export function useDailyQuote() {
   return useQuery({ queryKey: ['dashboard', 'daily-quote'], queryFn: fetchDailyQuote });
+}
+
+/** Same join + engine as the full Insights screen (see features/insights),
+ *  over a fixed 30-day window — the dashboard teaser doesn't offer a range
+ *  picker, so there's no reactive range to thread through a shared hook. */
+export function useInsightTeaser() {
+  return useQuery({
+    queryKey: ['dashboard', 'insight-teaser'],
+    queryFn: async (): Promise<InsightTeaserData> => {
+      const days = 30;
+      const start = format(subDays(new Date(), days - 1), 'yyyy-MM-dd');
+      const end = format(new Date(), 'yyyy-MM-dd');
+      const daily = buildDailyMetrics({
+        days,
+        sleepSessions: listSleepSessions(),
+        studySessions: listStudySessions(),
+        habits: listHabitsWithToday(false),
+        habitLogs: listAllHabitLogsBetween(start, end),
+        transactions: listTransactions(),
+        journalEntries: listEntriesBetween(start, end),
+      });
+      const { status, headline } = computeInsights(daily);
+      return { status, headline };
+    },
+  });
 }

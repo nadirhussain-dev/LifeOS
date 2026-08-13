@@ -51,3 +51,11 @@ export type NoteBacklink = {
   id: string;
   title: string;
 };
+
+/** A task created from this note via the "Create task" action — the note's
+ *  own view of the `generated_from` entryLinks relation. */
+export type GeneratedTask = {
+  id: string;
+  title: string;
+  status: 'todo' | 'in_progress' | 'completed' | 'archived';
+};

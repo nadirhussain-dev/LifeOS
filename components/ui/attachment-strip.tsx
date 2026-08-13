@@ -1,7 +1,15 @@
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { ImagePlus, Pause, Play, Trash2, X } from 'lucide-react-native';
+import {
+  File as FileIcon,
+  ImagePlus,
+  Paperclip,
+  Pause,
+  Play,
+  Trash2,
+  X,
+} from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, Modal, Pressable, ScrollView, View } from 'react-native';
@@ -10,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
+import { fileNameFromUri, pickNoteFile } from '@/features/notes/services/note-attachment-import';
 
 export type AttachmentPreview = {
   id: string;
@@ -21,8 +30,21 @@ export type AttachmentPreview = {
 type Props = {
   attachments: AttachmentPreview[];
   onAddImage: (uri: string) => void;
+  onAddFile?: (uri: string, kind: 'pdf' | 'file') => void;
   onRemove: (id: string) => void;
 };
+
+function FileAttachmentTile({ uri }: { uri: string }) {
+  const scheme = useColorScheme() ?? 'light';
+  return (
+    <View className="h-20 w-20 items-center justify-center gap-1 rounded-xl border border-border bg-muted p-1.5">
+      <FileIcon size={18} color={colors[scheme].mutedForeground} />
+      <Text variant="caption" numberOfLines={1} style={{ maxWidth: 68 }}>
+        {fileNameFromUri(uri)}
+      </Text>
+    </View>
+  );
+}
 
 function formatDuration(ms: number | null) {
   if (!ms) return '0:00';
@@ -61,7 +83,7 @@ function AudioAttachmentTile({ uri, durationMs }: { uri: string; durationMs: num
   );
 }
 
-export function AttachmentStrip({ attachments, onAddImage, onRemove }: Props) {
+export function AttachmentStrip({ attachments, onAddImage, onAddFile, onRemove }: Props) {
   const { t } = useTranslation();
   const scheme = useColorScheme() ?? 'light';
   const insets = useSafeAreaInsets();
@@ -81,6 +103,13 @@ export function AttachmentStrip({ attachments, onAddImage, onRemove }: Props) {
     }
   };
 
+  const pickFile = async () => {
+    const picked = await pickNoteFile();
+    if (!picked) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onAddFile?.(picked.uri, picked.kind);
+  };
+
   return (
     <>
       <ScrollView
@@ -98,8 +127,10 @@ export function AttachmentStrip({ attachments, onAddImage, onRemove }: Props) {
               >
                 <Image source={{ uri: attachment.uri }} className="h-20 w-20 rounded-xl" />
               </Pressable>
-            ) : (
+            ) : attachment.kind === 'audio' ? (
               <AudioAttachmentTile uri={attachment.uri} durationMs={attachment.durationMs} />
+            ) : (
+              <FileAttachmentTile uri={attachment.uri} />
             )}
             <Pressable
               accessibilityRole="button"
@@ -119,8 +150,18 @@ export function AttachmentStrip({ attachments, onAddImage, onRemove }: Props) {
           className="h-20 w-20 items-center justify-center gap-1 rounded-xl border border-dashed border-border"
         >
           <ImagePlus size={18} color={colors[scheme].mutedForeground} />
-          <Text variant="caption">Photo</Text>
+          <Text variant="caption">{t('common.photo')}</Text>
         </Pressable>
+        {onAddFile && (
+          <Pressable
+            accessibilityRole="button"
+            onPress={pickFile}
+            className="h-20 w-20 items-center justify-center gap-1 rounded-xl border border-dashed border-border"
+          >
+            <Paperclip size={18} color={colors[scheme].mutedForeground} />
+            <Text variant="caption">{t('common.file')}</Text>
+          </Pressable>
+        )}
       </ScrollView>
 
       <Modal

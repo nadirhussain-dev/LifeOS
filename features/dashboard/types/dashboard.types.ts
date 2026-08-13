@@ -1,3 +1,4 @@
+import type { InsightCandidate, InsightsStatus } from '@/features/insights/types/insights.types';
 import type { TimelineEvent } from '@/features/timeline/types/timeline.types';
 
 export type WidgetId =
@@ -8,7 +9,8 @@ export type WidgetId =
   | 'recent-notes'
   | 'water-intake'
   | 'productivity-summary'
-  | 'daily-quote';
+  | 'daily-quote'
+  | 'insight-teaser';
 
 export type TaskPreview = {
   id: string;
@@ -61,4 +63,11 @@ export type RecentNotesData = {
 export type DailyQuoteData = {
   quote: string;
   author: string;
+};
+
+/** The dashboard's compact preview of the Insights screen's headline —
+ *  same status/candidate shape the full screen uses, just rendered smaller. */
+export type InsightTeaserData = {
+  status: InsightsStatus;
+  headline: InsightCandidate | null;
 };

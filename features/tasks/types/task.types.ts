@@ -25,6 +25,13 @@ export type Task = {
   position: number;
   reminderEnabled: boolean;
   reminderNotificationId: string | null;
+  /** Set when this task was created from a note via the note's "Create task" action. */
+  sourceNoteId: string | null;
+  /** The habit this task's completion logs, and the day it logs it for — both
+   *  set together when the task is linked to a habit, and fixed at link time
+   *  (not re-derived if the due date changes afterward). */
+  habitId: string | null;
+  habitLogDate: string | null;
   createdAt: number;
   updatedAt: number;
 };
@@ -45,6 +52,9 @@ export type CreateTaskInput = {
   /** Internal only — set by completeTask() when auto-cloning a recurring task. Not exposed in any picker UI. */
   recurrenceParentId?: string | null;
   reminderEnabled?: boolean;
+  sourceNoteId?: string | null;
+  habitId?: string | null;
+  habitLogDate?: string | null;
 };
 
 export type UpdateTaskInput = Partial<CreateTaskInput> & {

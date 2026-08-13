@@ -1,5 +1,16 @@
+import { useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Archive, ArchiveRestore, Bell, Star, Tag, Tags, Trash2 } from 'lucide-react-native';
+import {
+  Archive,
+  ArchiveRestore,
+  Bell,
+  ListPlus,
+  Star,
+  Tag,
+  Tags,
+  Trash2,
+} from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
@@ -13,6 +24,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { VoiceNoteRecorder } from '@/components/ui/voice-note-recorder';
 import { colors } from '@/constants/theme';
 import { BacklinksPanel } from '@/features/notes/components/backlinks-panel';
+import { GeneratedTasksPanel } from '@/features/notes/components/generated-tasks-panel';
 import { NoteCategoryPicker } from '@/features/notes/components/note-category-picker';
 import { NoteEditorBody } from '@/features/notes/components/note-editor-body';
 import { TagPicker } from '@/features/notes/components/tag-picker';
@@ -20,11 +32,16 @@ import {
   useNote,
   useNoteAttachments,
   useNoteBacklinks,
+  useNoteGeneratedTasks,
   useNoteTagsForNote,
 } from '@/features/notes/hooks/use-note';
 import { useNoteMutations } from '@/features/notes/hooks/use-note-mutations';
 import { useNoteTags } from '@/features/notes/hooks/use-notes';
-import { createTag, deleteTag } from '@/features/notes/services/notes-repository';
+import {
+  createTag,
+  createTaskFromNote,
+  deleteTag,
+} from '@/features/notes/services/notes-repository';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 
 const AUTOSAVE_DELAY_MS = 500;
@@ -46,8 +63,10 @@ export default function NoteDetailScreen() {
   const { data: allTags = [], refetch: refetchAllTags } = useNoteTags();
   const { data: attachments = [] } = useNoteAttachments(id);
   const { data: backlinks = [] } = useNoteBacklinks(id);
+  const { data: generatedTasks = [] } = useNoteGeneratedTasks(id);
   const { update, remove, archive, unarchive, setTags, attach, removeAttachment } =
     useNoteMutations();
+  const queryClient = useQueryClient();
 
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -102,6 +121,14 @@ export default function NoteDetailScreen() {
     refetchNoteTags();
   };
 
+  const handleCreateTask = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const task = createTaskFromNote(note.id, note.title.trim() || t('notes.untitledTaskTitle'));
+    queryClient.invalidateQueries({ queryKey: ['notes', 'detail', note.id, 'generated-tasks'] });
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    router.push(`/task/${task.id}`);
+  };
+
   return (
     <View className="flex-1 bg-background">
       <Stack.Screen options={{ headerShown: false }} />
@@ -111,6 +138,14 @@ export default function NoteDetailScreen() {
         tint="#eab308"
         right={
           <View className="flex-row gap-4">
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleCreateTask}
+              hitSlop={8}
+              accessibilityLabel={t('notes.createTask')}
+            >
+              <ListPlus size={20} color={colors[scheme].foreground} />
+            </Pressable>
             <Pressable
               accessibilityRole="button"
               onPress={() => update.mutate({ id: note.id, input: { isPinned: !note.isPinned } })}
@@ -194,6 +229,7 @@ export default function NoteDetailScreen() {
         </View>
 
         <NoteEditorBody
+          noteId={note.id}
           value={body}
           onChangeText={setBody}
           placeholder={t('notes.writeSomething')}
@@ -208,12 +244,14 @@ export default function NoteDetailScreen() {
           <AttachmentStrip
             attachments={attachments}
             onAddImage={(uri) => attach.mutate({ id: note.id, kind: 'image', uri })}
+            onAddFile={(uri, kind) => attach.mutate({ id: note.id, kind, uri })}
             onRemove={(attachmentId) =>
               removeAttachment.mutate({ id: attachmentId, noteId: note.id })
             }
           />
         </View>
 
+        <GeneratedTasksPanel tasks={generatedTasks} />
         <BacklinksPanel backlinks={backlinks} />
       </ScrollView>
     </View>

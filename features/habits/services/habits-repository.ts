@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
 
 import { getDb } from '@/database/client';
 import {
@@ -186,6 +186,24 @@ export function listLogsForHabit(habitId: string): HabitLog[] {
     .select()
     .from(habitLogs)
     .where(and(eq(habitLogs.habitId, habitId), isNull(habitLogs.deletedAt)))
+    .all();
+}
+
+/** Every habit's logs across an inclusive date range, in one query — the
+ * per-habit `listLogsForHabit` above can't answer "how many habits got done
+ * on this day" across the whole set, which cross-module Insights needs. */
+export function listAllHabitLogsBetween(startDate: string, endDate: string): HabitLog[] {
+  return getDb()
+    .select()
+    .from(habitLogs)
+    .where(
+      and(
+        eq(habitLogs.userId, LOCAL_USER_ID),
+        isNull(habitLogs.deletedAt),
+        gte(habitLogs.logDate, startDate),
+        lte(habitLogs.logDate, endDate),
+      ),
+    )
     .all();
 }
 

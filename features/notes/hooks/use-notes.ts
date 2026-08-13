@@ -15,12 +15,18 @@ export function useNotes() {
   return useQuery({
     queryKey: ['notes'],
     queryFn: async () => listNotes(),
-    select: (notes) =>
-      searchQuery.trim()
-        ? notes.filter((note) =>
-            note.title.toLowerCase().includes(searchQuery.trim().toLowerCase()),
-          )
-        : notes,
+    // Matches global search's own reach (features/search/services/search-sources.ts),
+    // which already scores note bodies — the in-module list search used to stop at
+    // the title, so a note you could find from global search was invisible here.
+    select: (notes) => {
+      const query = searchQuery.trim().toLowerCase();
+      if (!query) return notes;
+      return notes.filter(
+        (note) =>
+          note.title.toLowerCase().includes(query) ||
+          (note.body ?? '').toLowerCase().includes(query),
+      );
+    },
   });
 }
 

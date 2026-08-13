@@ -23,6 +23,7 @@ export const SEGMENT_TO_MODULE: Record<string, string> = {
   journal: 'journal',
   hub: 'hub',
   goals: 'goals',
+  insights: 'insights',
   study: 'study',
   notes: 'notes',
   note: 'notes',

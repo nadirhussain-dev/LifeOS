@@ -280,6 +280,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(tabs)" />
                 <Stack.Screen name="notes" />
                 <Stack.Screen name="music" />
+                <Stack.Screen name="insights/index" />
                 <Stack.Screen name="goals/index" />
                 <Stack.Screen name="goals/[id]" />
                 <Stack.Screen name="goals/[id]/edit" options={{ presentation: 'modal' }} />
