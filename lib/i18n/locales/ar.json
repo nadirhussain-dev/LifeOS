@@ -913,7 +913,13 @@
     "goingToBed": "ذاهب إلى النوم",
     "reminderNotifTitle": "وقت الاسترخاء 🌙",
     "reminderNotifBody": "وقت النوم {{time}} — ابدأ الاستعداد لنوم هنيء.",
-    "lastNightEyebrow": "الليلة الماضية"
+    "lastNightEyebrow": "الليلة الماضية",
+    "insightsAction": "إحصاءات النوم",
+    "insightsTitle": "إحصاءات النوم",
+    "rangeYear": "سنة",
+    "goalMetRate": "الهدف المُحقَّق",
+    "nightsTracked": "الليالي المسجَّلة",
+    "avgQuality": "متوسط الجودة"
   },
   "study": {
     "title": "الدراسة",
@@ -1033,7 +1039,12 @@
     "reminderNotifTitle": "حان وقت الدراسة",
     "reminderNotifBody": "مستعد لجلسة؟",
     "enableNotifBody": "فعّل الإشعارات لتطبيق LifeOS لتصلك هذه التذكيرات.",
-    "today": "اليوم"
+    "today": "اليوم",
+    "insightsAction": "إحصاءات الدراسة",
+    "insightsTitle": "إحصاءات الدراسة",
+    "rangeYear": "سنة",
+    "bySubject": "حسب المادة",
+    "noSessionsInRange": "لم تُسجَّل جلسات في هذه الفترة بعد."
   },
   "music": {
     "title": "الموسيقى",
@@ -1109,7 +1120,21 @@
     "nextTrack": "المقطع التالي",
     "hidePlayer": "إخفاء المشغّل",
     "playHint": "يشغّل هذه الأغنية",
-    "notOnThisDevice": "ليست على هذا الجهاز"
+    "notOnThisDevice": "ليست على هذا الجهاز",
+    "tabAll": "الأغاني",
+    "tabFavorites": "المفضّلة",
+    "tabMostPlayed": "الأكثر تشغيلًا",
+    "noFavoritesYet": "لا توجد مفضّلات بعد — اضغط على القلب في أي أغنية لإضافتها.",
+    "noPlaysYet": "لم يُشغَّل شيء بعد. شغّل بعض الأغاني وستظهر هنا.",
+    "favoriteA11y": "إضافة \"{{title}}\" إلى المفضّلة",
+    "unfavoriteA11y": "إزالة \"{{title}}\" من المفضّلة",
+    "playCount_zero": "لم تُشغَّل",
+    "playCount_one": "شُغِّلت مرة واحدة",
+    "playCount_two": "شُغِّلت مرتين",
+    "playCount_few": "شُغِّلت {{count}} مرات",
+    "playCount_many": "شُغِّلت {{count}} مرة",
+    "playCount_other": "شُغِّلت {{count}} مرة",
+    "lastPlayed": "آخر تشغيل {{time}}"
   },
   "albumCategory": {
     "gym": "تقدّم الجيم",

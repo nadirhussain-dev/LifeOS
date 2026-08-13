@@ -5,6 +5,9 @@ export type Song = {
   uri: string;
   durationMs: number | null;
   addedAt: number;
+  isFavorite: boolean;
+  playCount: number;
+  lastPlayedAt: number | null;
 };
 
 export type Playlist = {

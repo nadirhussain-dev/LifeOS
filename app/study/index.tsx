@@ -2,6 +2,7 @@ import { format, parseISO } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, View } from 'react-native';
 import {
+  BarChart3,
   GraduationCap,
   Minus,
   NotebookPen,
@@ -115,6 +116,11 @@ export default function StudyScreen() {
             icon: NotebookPen,
             label: t('study.logPastAction'),
             onPress: () => router.push('/study/log'),
+          },
+          {
+            icon: BarChart3,
+            label: t('study.insightsAction'),
+            onPress: () => router.push('/study/insights'),
           },
           {
             icon: Settings2,

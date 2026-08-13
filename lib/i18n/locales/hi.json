@@ -857,7 +857,13 @@
     "goingToBed": "सोने जा रहा हूँ",
     "reminderNotifTitle": "आराम का समय 🌙",
     "reminderNotifBody": "सोने का समय {{time}} है — अच्छी नींद की तैयारी शुरू करें।",
-    "lastNightEyebrow": "बीती रात"
+    "lastNightEyebrow": "बीती रात",
+    "insightsAction": "नींद की जानकारी",
+    "insightsTitle": "नींद की जानकारी",
+    "rangeYear": "वर्ष",
+    "goalMetRate": "लक्ष्य पूरा हुआ",
+    "nightsTracked": "दर्ज रातें",
+    "avgQuality": "औसत गुणवत्ता"
   },
   "study": {
     "title": "अध्ययन",
@@ -965,7 +971,12 @@
     "reminderNotifTitle": "पढ़ने का समय",
     "reminderNotifBody": "एक सत्र के लिए तैयार?",
     "enableNotifBody": "यह अनुस्मारक पाने के लिए LifeOS के नोटिफ़िकेशन चालू करें।",
-    "today": "आज"
+    "today": "आज",
+    "insightsAction": "पढ़ाई की जानकारी",
+    "insightsTitle": "पढ़ाई की जानकारी",
+    "rangeYear": "वर्ष",
+    "bySubject": "विषय के अनुसार",
+    "noSessionsInRange": "इस अवधि में अभी कोई सत्र दर्ज नहीं है।"
   },
   "music": {
     "title": "संगीत",
@@ -1029,7 +1040,17 @@
     "nextTrack": "अगला ट्रैक",
     "hidePlayer": "प्लेयर छिपाएँ",
     "playHint": "यह गाना चलाता है",
-    "notOnThisDevice": "इस डिवाइस पर नहीं"
+    "notOnThisDevice": "इस डिवाइस पर नहीं",
+    "tabAll": "गाने",
+    "tabFavorites": "पसंदीदा",
+    "tabMostPlayed": "सबसे ज़्यादा बजाए गए",
+    "noFavoritesYet": "अभी कोई पसंदीदा नहीं — किसी गाने पर दिल के निशान को दबाएँ।",
+    "noPlaysYet": "अभी कुछ नहीं बजाया गया। कुछ गाने बजाएँ, वे यहाँ दिखेंगे।",
+    "favoriteA11y": "\"{{title}}\" को पसंदीदा में जोड़ें",
+    "unfavoriteA11y": "\"{{title}}\" को पसंदीदा से हटाएँ",
+    "playCount_one": "{{count}} बार बजाया गया",
+    "playCount_other": "{{count}} बार बजाया गया",
+    "lastPlayed": "आख़िरी बार {{time}} बजाया गया"
   },
   "albumCategory": {
     "gym": "जिम प्रगति",

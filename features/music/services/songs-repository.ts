@@ -15,6 +15,9 @@ function toSong(row: typeof songs.$inferSelect): Song {
     uri: row.uri,
     durationMs: row.durationMs,
     addedAt: row.addedAt,
+    isFavorite: row.isFavorite,
+    playCount: row.playCount,
+    lastPlayedAt: row.lastPlayedAt,
   };
 }
 
@@ -56,6 +59,9 @@ export function createSong(input: {
     uri: input.uri,
     durationMs: input.durationMs,
     addedAt: now,
+    isFavorite: false,
+    playCount: 0,
+    lastPlayedAt: null,
   };
   getDb()
     .insert(songs)
@@ -74,6 +80,38 @@ export function updateSong(id: string, input: { title?: string; artist?: string 
   getDb()
     .update(songs)
     .set({ ...input, updatedAt: Date.now(), syncStatus: 'pending' })
+    .where(eq(songs.id, id))
+    .run();
+}
+
+export function toggleSongFavorite(id: string, isFavorite: boolean) {
+  getDb()
+    .update(songs)
+    .set({ isFavorite, updatedAt: Date.now(), syncStatus: 'pending' })
+    .where(eq(songs.id, id))
+    .run();
+}
+
+/** Called once a track actually starts playing (see `loadIndex` in
+ * player-controller.ts) — bumps the counter the library's "Most played" tab
+ * and the song-detail screen both read. Best-effort: a play that fails to
+ * record is not worth surfacing as an error to someone trying to listen to
+ * music, so callers fire this without awaiting or catching. */
+export function recordSongPlayed(id: string) {
+  const row = getDb()
+    .select({ playCount: songs.playCount })
+    .from(songs)
+    .where(eq(songs.id, id))
+    .get();
+  if (!row) return;
+  getDb()
+    .update(songs)
+    .set({
+      playCount: row.playCount + 1,
+      lastPlayedAt: Date.now(),
+      updatedAt: Date.now(),
+      syncStatus: 'pending',
+    })
     .where(eq(songs.id, id))
     .run();
 }

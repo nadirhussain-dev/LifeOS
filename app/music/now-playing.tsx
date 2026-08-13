@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import {
   ChevronDown,
+  Heart,
   ListMusic,
   Moon,
   Pause,
@@ -24,6 +25,7 @@ import { QueueSheet } from '@/features/music/components/queue-sheet';
 import { SleepTimerSheet } from '@/features/music/components/sleep-timer-sheet';
 import { WaveformScrubber } from '@/features/music/components/waveform-scrubber';
 import { useNowPlaying } from '@/features/music/hooks/use-player';
+import { useSongMutations, useSongs } from '@/features/music/hooks/use-songs';
 import { songColor } from '@/features/music/utils/song-art';
 import { formatDuration } from '@/features/music/utils/format-duration';
 import { alpha } from '@/lib/color';
@@ -85,6 +87,9 @@ export default function NowPlayingScreen() {
     clearPlayer,
   } = useNowPlaying();
 
+  const { data: songs = [] } = useSongs();
+  const { toggleFavorite } = useSongMutations();
+
   const [queueOpen, setQueueOpen] = useState(false);
   const [sleepOpen, setSleepOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -97,6 +102,10 @@ export default function NowPlayingScreen() {
 
   if (!currentSong) return null;
 
+  // The queue holds a snapshot from whenever it was built, so favorite state
+  // is read from the live library query instead — otherwise toggling it here
+  // wouldn't visibly update until the queue was rebuilt.
+  const liveSong = songs.find((song) => song.id === currentSong.id) ?? currentSong;
   const seed = currentSong.id;
   const accent = songColor(seed);
   const RepeatIcon = repeatMode === 'one' ? Repeat1 : Repeat;
@@ -141,13 +150,38 @@ export default function NowPlayingScreen() {
         </View>
 
         {/* Title */}
-        <View className="gap-1 pb-5">
-          <Text numberOfLines={1} className="font-sora-extrabold text-2xl" style={{ color: WHITE }}>
-            {currentSong.title}
-          </Text>
-          <Text numberOfLines={1} style={{ color: alpha(WHITE, 0.7), fontSize: 15 }}>
-            {currentSong.artist ?? t('music.unknownArtist')}
-          </Text>
+        <View className="flex-row items-center gap-3 pb-5">
+          <View className="flex-1 gap-1">
+            <Text
+              numberOfLines={1}
+              className="font-sora-extrabold text-2xl"
+              style={{ color: WHITE }}
+            >
+              {currentSong.title}
+            </Text>
+            <Text numberOfLines={1} style={{ color: alpha(WHITE, 0.7), fontSize: 15 }}>
+              {currentSong.artist ?? t('music.unknownArtist')}
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              liveSong.isFavorite
+                ? t('music.unfavoriteA11y', { title: liveSong.title })
+                : t('music.favoriteA11y', { title: liveSong.title })
+            }
+            accessibilityState={{ selected: liveSong.isFavorite }}
+            onPress={() =>
+              toggleFavorite.mutate({ id: currentSong.id, isFavorite: !liveSong.isFavorite })
+            }
+            hitSlop={12}
+          >
+            <Heart
+              size={24}
+              color={liveSong.isFavorite ? accent : WHITE}
+              fill={liveSong.isFavorite ? accent : 'transparent'}
+            />
+          </Pressable>
         </View>
 
         {/* Waveform seek */}
