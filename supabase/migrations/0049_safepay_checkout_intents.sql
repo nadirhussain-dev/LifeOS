@@ -1,4 +1,4 @@
--- 0046 — The attribution link between a checkout and a webhook.
+-- 0049 — The attribution link between a checkout and a webhook.
 --
 -- Confirmed against Safepay's own Node SDK (`checkout.createSubscription`):
 -- the only pass-through field a subscription checkout accepts is a single

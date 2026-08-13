@@ -95,7 +95,7 @@ export function usePlans() {
 }
 
 /**
- * The real subscription row (0044), read through `my_subscription()`. Not
+ * The real subscription row (0047), read through `my_subscription()`. Not
  * cached in `billing-store.ts` the way `planId` is — this is queried live
  * because it's read far less often (one settings screen) and needs to be
  * fresher than the plan cache, not more durable.

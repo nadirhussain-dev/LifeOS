@@ -94,17 +94,20 @@ Deno.serve(async (req: Request) => {
     const admin = createClient(supabaseUrl, serviceKey);
 
     // Idempotency: a retried delivery is a no-op, not a double-processed
-    // payment.
-    const { data: existing } = await admin
-      .from('payment_events')
-      .select('id')
-      .eq('id', event.id)
-      .maybeSingle();
-    if (existing) return json({ ok: true, replayed: true });
-
-    await admin
+    // payment. The insert itself — not a preceding select — is the guard:
+    // `payment_events.id` is the primary key (migration 0047), so this
+    // either claims the event id or fails because a concurrent delivery
+    // already has, with nothing in between where two requests could both
+    // see "not yet recorded" and both fall through to process it. Safepay
+    // retries on anything but a 200, so concurrent redeliveries of the same
+    // event id are an expected case, not an edge case.
+    const { error: insertError } = await admin
       .from('payment_events')
       .insert({ id: event.id, type: event.type, payload, received_at: Date.now() });
+    if (insertError) {
+      if (insertError.code === '23505') return json({ ok: true, replayed: true });
+      return json({ error: insertError.message }, 500);
+    }
 
     const now = Date.now();
 
@@ -178,22 +181,32 @@ Deno.serve(async (req: Request) => {
         .eq('safepay_subscription_id', event.subscriptionId);
 
       // Finalize the coupon redemption on the FIRST successful payment only
-      // — a checkout that never reaches a payment must not consume it.
+      // — a checkout that never reaches a payment must not consume it, and a
+      // renewal payment on cycle 2+ must not consume it again.
+      //
+      // Insert first, increment only if the insert actually claimed the row
+      // — the reverse order (increment, then insert) let a failed or racing
+      // insert leave the counter incremented with no redemption row to show
+      // for it. `unique (coupon_id, user_id)` (migration 0048) is what makes
+      // the insert itself the guard: two payment_succeeded events for the
+      // same coupon+user can both attempt it, but only one can succeed, so
+      // `increment_coupon_redemption` — which has its own race-safe
+      // `where redemptions_count < max_redemptions` — only ever runs once
+      // per genuine redemption.
       if (sub.coupon_id) {
-        const { data: already } = await admin
-          .from('coupon_redemptions')
-          .select('id')
-          .eq('coupon_id', sub.coupon_id)
-          .eq('user_id', sub.user_id)
-          .maybeSingle();
-        if (!already) {
+        const { error: redemptionError } = await admin.from('coupon_redemptions').insert({
+          coupon_id: sub.coupon_id,
+          user_id: sub.user_id,
+          subscription_id: event.subscriptionId,
+          redeemed_at: now,
+        });
+        if (!redemptionError) {
           await admin.rpc('increment_coupon_redemption', { p_coupon_id: sub.coupon_id });
-          await admin.from('coupon_redemptions').insert({
-            coupon_id: sub.coupon_id,
-            user_id: sub.user_id,
-            subscription_id: event.subscriptionId,
-            redeemed_at: now,
-          });
+        } else if (redemptionError.code !== '23505') {
+          // Anything but "already redeemed" is worth surfacing, but must not
+          // fail the whole webhook — the subscription/profile writes above
+          // already landed and Safepay still needs its 200.
+          console.error('coupon redemption insert failed', redemptionError);
         }
       }
 

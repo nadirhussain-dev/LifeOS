@@ -1,14 +1,14 @@
--- 0045 — Coupons: owner-issued, time-boxed, cycle-limited discounts.
+-- 0048 — Coupons: owner-issued, time-boxed, cycle-limited discounts.
 --
 -- The one thing worth stating up front: Safepay Plans are fixed-price
--- objects (0044's header). There is no "apply a discount to this active
+-- objects (0047's header). There is no "apply a discount to this active
 -- subscription" call — a discounted price is a *different* Plan. So a
 -- coupon here does not touch price at checkout time the way a cart discount
 -- would; it tells `safepay-checkout` which discounted Plan to create (once,
 -- cached in `plan_coupon_variants`) and check the customer out against
 -- instead of the base one, and it tells the webhook how many billing cycles
 -- to honour that price for before asking the user to reconfirm at full price
--- (see `subscriptions.status = 'pending_renewal_confirmation'`, 0044).
+-- (see `subscriptions.status = 'pending_renewal_confirmation'`, 0047).
 --
 -- Gated on `is_owner()`, not merely `is_admin()` — same reasoning 0033 gives
 -- for roster mutations: this moves real money, so the worst a compromised
@@ -72,7 +72,7 @@ create table if not exists public.plan_coupon_variants (
 alter table public.plan_coupon_variants enable row level security;
 -- No policy — internal to safepay-checkout's service-role client only.
 
--- Now that coupons exists, give 0044's subscriptions.coupon_id a real FK.
+-- Now that coupons exists, give 0047's subscriptions.coupon_id a real FK.
 alter table public.subscriptions
   add constraint subscriptions_coupon_id_fkey
   foreign key (coupon_id) references public.coupons(id);

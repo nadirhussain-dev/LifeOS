@@ -133,6 +133,26 @@ export default function MediaSettingsScreen() {
       return;
     }
 
+    // Safepay has no "modify an active subscription" call — only fixed-price
+    // Plans and a fresh checkout (safepay.ts's own header). A plan already
+    // active going straight into a second checkout would leave the FIRST
+    // Safepay subscription running untouched: `subscriptions.user_id` is
+    // this app's own primary key, so the new subscription.created webhook
+    // just upserts over the row and this app loses track of the old
+    // safepay_subscription_id — but Safepay itself was never told to stop
+    // billing it. That is a silent second recurring charge with no way back
+    // into the app to find or cancel it. So a plan-to-plan switch has to go
+    // through Free first: cancel, let that webhook land, then subscribe to
+    // the new plan from a clean slate.
+    if (isPlus) {
+      void notify({
+        title: t('billing.switchPlanTitle'),
+        message: t('billing.switchPlanBody'),
+        confirmLabel: t('common.ok'),
+      });
+      return;
+    }
+
     void confirm({
       title: t('billing.confirmTitle'),
       message: t('billing.confirmBody'),
@@ -264,7 +284,7 @@ export default function MediaSettingsScreen() {
         </View>
 
         {/*
-          Real billing (0044/0045): choosing a paid plan opens a Safepay
+          Real billing (0047/0048): choosing a paid plan opens a Safepay
           checkout, choosing Free while already on a paid plan cancels the
           live subscription. Neither branch of `choosePlan` changes `planId`
           directly — see its own header for why.

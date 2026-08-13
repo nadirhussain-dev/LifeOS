@@ -94,12 +94,12 @@ export async function adminSetPlanActive(id: string, active: boolean): Promise<v
   if (error) throw toSupabaseError(error);
 }
 
-// --- real billing (0044/0045/0046) ------------------------------------------
+// --- real billing (0047/0048/0049) ------------------------------------------
 //
 // Everything below replaces the mock `setMyPlan` write with the actual
 // Safepay flow: `safepay-checkout` starts a subscription, `safepay-webhook`
 // (never called from the client) is what actually confirms it, and
-// `my_subscription()` (0044) is the one-row read of where that landed.
+// `my_subscription()` (0047) is the one-row read of where that landed.
 
 export type SubscriptionStatus =
   'pending' | 'active' | 'past_due' | 'pending_renewal_confirmation' | 'cancelled';

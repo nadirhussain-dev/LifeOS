@@ -44,7 +44,7 @@ const blankForm = (): FormState => ({
 
 /**
  * Coupons — owner-only, both to see this row (operator.tsx) and to call
- * every RPC behind it (0045), the same "moves real money, gated on
+ * every RPC behind it (0048), the same "moves real money, gated on
  * `is_owner()`, never merely `is_admin()`" discipline 0033 already applies
  * to the roster. A coupon only ever changes what `safepay-checkout` charges
  * at the moment of subscribing — it cannot touch anyone already subscribed.

@@ -1,4 +1,4 @@
--- 0044 — Where a real subscription actually lives.
+-- 0047 — Where a real subscription actually lives.
 --
 -- 0031's header said `set_my_plan` was "the one place a real payment webhook
 -- would write to later." This migration is that webhook's landing surface.
@@ -38,8 +38,8 @@ create table if not exists public.subscriptions (
   plan_id text not null references public.billing_plans(id),
   coupon_id uuid,
   -- null = no discount attached to this subscription. Decremented by the
-  -- webhook on every subscription.payment_succeeded; see 0045 for the coupon
-  -- this references (added after this table, so no FK yet — 0045 adds it).
+  -- webhook on every subscription.payment_succeeded; see 0048 for the coupon
+  -- this references (added after this table, so no FK yet — 0048 adds it).
   cycles_remaining integer,
   status text not null default 'pending'
     check (status in ('pending', 'active', 'past_due', 'pending_renewal_confirmation', 'cancelled')),

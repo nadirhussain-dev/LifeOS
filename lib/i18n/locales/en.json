@@ -2102,6 +2102,8 @@
     "renewalTitle": "Your discount has ended",
     "renewalBody": "Confirm to keep your plan at the regular price. Nothing changes until you do.",
     "renewalAction": "Confirm and continue",
+    "switchPlanTitle": "Cancel your current plan first",
+    "switchPlanBody": "Safepay can't switch you straight from one paid plan to another. Cancel your current plan, then pick the new one once that's confirmed.",
     "insightsUpsellTitle": "See your trends",
     "insightsUpsellBody": "Cycle length, recovery streaks and mood — trends over what you already log, for Plus accounts.",
     "seePlans": "See plans",

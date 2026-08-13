@@ -92,7 +92,7 @@ Deno.serve(async (req: Request) => {
           : Math.max(0, (plan.price_cents as number) - coupon.discount_value);
 
       // service-role client for everything past this point: billing_plans/
-      // plan_coupon_variants have no client write policy (0034/0045's own
+      // plan_coupon_variants have no client write policy (0034/0048's own
       // headers), same as every other admin-owned table in this schema.
       const admin = createClient(supabaseUrl, serviceKey);
 
@@ -136,7 +136,7 @@ Deno.serve(async (req: Request) => {
     if (!safepayPlanId) return json({ error: 'could not resolve a Safepay plan' }, 500);
 
     // The link the webhook uses to attribute the resulting subscription back
-    // to this user/plan/coupon — see 0046's header for why this exists.
+    // to this user/plan/coupon — see 0049's header for why this exists.
     const admin = createClient(supabaseUrl, serviceKey);
     const { data: intent, error: intentError } = await admin
       .from('checkout_intents')
