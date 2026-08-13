@@ -369,6 +369,9 @@ export const songs = sqliteTable('songs', {
   /** Storage object path once the bytes are uploaded; null while the file
    * exists only on the device that imported it. */
   remotePath: text('remote_path'),
+  isFavorite: integer('is_favorite', { mode: 'boolean' }).notNull().default(false),
+  playCount: integer('play_count').notNull().default(0),
+  lastPlayedAt: integer('last_played_at'),
   syncStatus: text('sync_status', { enum: ['pending', 'synced', 'conflict'] })
     .notNull()
     .default('pending'),
@@ -1104,7 +1107,10 @@ export const TABLE_BOOTSTRAP_SQL = `
     deleted_at INTEGER,
     sync_status TEXT NOT NULL DEFAULT 'pending',
     server_updated_at INTEGER,
-    remote_path TEXT
+    remote_path TEXT,
+    is_favorite INTEGER NOT NULL DEFAULT 0,
+    play_count INTEGER NOT NULL DEFAULT 0,
+    last_played_at INTEGER
   );
 
   CREATE TABLE IF NOT EXISTS playlists (
@@ -1440,6 +1446,8 @@ export const INDEX_BOOTSTRAP_SQL = `
   CREATE INDEX IF NOT EXISTS idx_calendar_events_start ON calendar_events(user_id, start_at);
   CREATE INDEX IF NOT EXISTS idx_water_intake_logs_date ON water_intake_logs(user_id, log_date);
   CREATE INDEX IF NOT EXISTS idx_songs_user ON songs(user_id, added_at);
+  CREATE INDEX IF NOT EXISTS idx_songs_favorite ON songs(user_id, is_favorite);
+  CREATE INDEX IF NOT EXISTS idx_songs_play_count ON songs(user_id, play_count);
   CREATE INDEX IF NOT EXISTS idx_playlists_position ON playlists(user_id, position);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_playlist_songs_position ON playlist_songs(playlist_id, position);
   CREATE INDEX IF NOT EXISTS idx_goals_status ON goals(user_id, status, position);
@@ -1647,6 +1655,15 @@ export const ADDITIVE_COLUMNS: Record<string, { name: string; ddl: string }[]> =
       ddl: 'ALTER TABLE songs ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0',
     },
     { name: 'remote_path', ddl: 'ALTER TABLE songs ADD COLUMN remote_path TEXT' },
+    {
+      name: 'is_favorite',
+      ddl: 'ALTER TABLE songs ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0',
+    },
+    {
+      name: 'play_count',
+      ddl: 'ALTER TABLE songs ADD COLUMN play_count INTEGER NOT NULL DEFAULT 0',
+    },
+    { name: 'last_played_at', ddl: 'ALTER TABLE songs ADD COLUMN last_played_at INTEGER' },
   ],
   playlists: [
     {

@@ -1,5 +1,6 @@
+import { formatDistanceToNow } from 'date-fns';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Trash2 } from 'lucide-react-native';
+import { Heart, Trash2 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TextInput, View } from 'react-native';
@@ -23,7 +24,7 @@ export default function SongDetailScreen() {
 
   const { data: songs = [] } = useSongs();
   const song = songs.find((item) => item.id === id) ?? null;
-  const { update, remove } = useSongMutations();
+  const { update, remove, toggleFavorite } = useSongMutations();
 
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
@@ -63,6 +64,14 @@ export default function SongDetailScreen() {
         eyebrow={t('music.songEyebrow')}
         tint={tint}
         actions={[
+          {
+            icon: Heart,
+            label: song.isFavorite
+              ? t('music.unfavoriteA11y', { title: song.title })
+              : t('music.favoriteA11y', { title: song.title }),
+            onPress: () => toggleFavorite.mutate({ id: song.id, isFavorite: !song.isFavorite }),
+            tint: song.isFavorite ? tint : undefined,
+          },
           {
             icon: Trash2,
             label: t('music.deleteSong'),
@@ -105,6 +114,14 @@ export default function SongDetailScreen() {
         <Text variant="muted">
           {t('music.duration', { duration: formatDuration(song.durationMs) })}
         </Text>
+        <Text variant="muted">{t('music.playCount', { count: song.playCount })}</Text>
+        {song.lastPlayedAt && (
+          <Text variant="muted">
+            {t('music.lastPlayed', {
+              time: formatDistanceToNow(song.lastPlayedAt, { addSuffix: true }),
+            })}
+          </Text>
+        )}
       </View>
     </View>
   );

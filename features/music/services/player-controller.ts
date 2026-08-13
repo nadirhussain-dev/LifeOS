@@ -1,9 +1,11 @@
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 import { AppState, type AppStateStatus } from 'react-native';
 
+import { recordSongPlayed } from '@/features/music/services/songs-repository';
 import { usePlayerStore } from '@/features/music/store/player-store';
 import { usePlayerUiStore } from '@/features/music/store/player-ui-store';
 import type { RepeatMode, Song } from '@/features/music/types/music.types';
+import { queryClient } from '@/lib/query-client';
 
 let player: AudioPlayer | null = null;
 let audioModeConfigured = false;
@@ -143,6 +145,13 @@ function loadIndex(index: number, autoplay: boolean) {
   }
 
   if (autoplay) p.play();
+
+  // A "play" is "this track just loaded into the player" — matches every
+  // call site here (queue start, next/previous, finished-track advance,
+  // jump-to-index), and needs no separate autoplay check since none of them
+  // ever pass autoplay: false today.
+  recordSongPlayed(song.id);
+  void queryClient.invalidateQueries({ queryKey: ['music', 'songs'] });
 }
 
 function handleTrackFinished() {

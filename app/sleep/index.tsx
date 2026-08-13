@@ -1,6 +1,6 @@
 import { format, parseISO } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { Hourglass, Moon, Settings2, Sun } from 'lucide-react-native';
+import { BarChart3, Hourglass, Moon, Settings2, Sun } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
@@ -57,6 +57,11 @@ export default function SleepScreen() {
         eyebrow={t('sleep.eyebrow')}
         tint={sleepTint}
         actions={[
+          {
+            icon: BarChart3,
+            label: t('sleep.insightsAction'),
+            onPress: () => router.push('/sleep/insights'),
+          },
           {
             icon: Settings2,
             label: t('sleep.settingsAction'),

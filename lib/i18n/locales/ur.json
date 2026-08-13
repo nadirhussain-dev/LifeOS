@@ -857,7 +857,13 @@
     "goingToBed": "سونے جا رہا ہوں",
     "reminderNotifTitle": "آرام کا وقت 🌙",
     "reminderNotifBody": "سونے کا وقت {{time}} ہے — اچھی نیند کی تیاری شروع کریں۔",
-    "lastNightEyebrow": "گزشتہ رات"
+    "lastNightEyebrow": "گزشتہ رات",
+    "insightsAction": "نیند کی بصیرت",
+    "insightsTitle": "نیند کی بصیرت",
+    "rangeYear": "سال",
+    "goalMetRate": "ہدف پورا ہوا",
+    "nightsTracked": "درج راتیں",
+    "avgQuality": "اوسط معیار"
   },
   "study": {
     "title": "مطالعہ",
@@ -965,7 +971,12 @@
     "reminderNotifTitle": "پڑھنے کا وقت",
     "reminderNotifBody": "ایک نشست کے لیے تیار؟",
     "enableNotifBody": "یہ یاد دہانی پانے کے لیے LifeOS کی اطلاعات آن کریں۔",
-    "today": "آج"
+    "today": "آج",
+    "insightsAction": "پڑھائی کی بصیرت",
+    "insightsTitle": "پڑھائی کی بصیرت",
+    "rangeYear": "سال",
+    "bySubject": "مضمون کے لحاظ سے",
+    "noSessionsInRange": "اس عرصے میں ابھی کوئی نشست درج نہیں ہوئی۔"
   },
   "music": {
     "title": "موسیقی",
@@ -1029,7 +1040,17 @@
     "nextTrack": "اگلا ٹریک",
     "hidePlayer": "پلیئر چھپائیں",
     "playHint": "یہ گانا چلاتا ہے",
-    "notOnThisDevice": "اس ڈیوائس پر نہیں"
+    "notOnThisDevice": "اس ڈیوائس پر نہیں",
+    "tabAll": "گانے",
+    "tabFavorites": "پسندیدہ",
+    "tabMostPlayed": "سب سے زیادہ سنے گئے",
+    "noFavoritesYet": "ابھی کوئی پسندیدہ نہیں — کسی گانے پر دل کے نشان کو دبائیں۔",
+    "noPlaysYet": "ابھی کچھ نہیں بجایا گیا۔ کچھ گانے بجائیں، وہ یہاں دکھیں گے۔",
+    "favoriteA11y": "\"{{title}}\" کو پسندیدہ میں شامل کریں",
+    "unfavoriteA11y": "\"{{title}}\" کو پسندیدہ سے ہٹائیں",
+    "playCount_one": "{{count}} بار بجایا گیا",
+    "playCount_other": "{{count}} بار بجایا گیا",
+    "lastPlayed": "آخری بار {{time}} بجایا گیا"
   },
   "albumCategory": {
     "gym": "جم کی پیش رفت",

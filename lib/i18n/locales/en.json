@@ -857,7 +857,13 @@
     "goingToBed": "Going to bed",
     "reminderNotifTitle": "Time to wind down 🌙",
     "reminderNotifBody": "Bedtime is {{time}} — start getting ready for a good night's sleep.",
-    "lastNightEyebrow": "Last night"
+    "lastNightEyebrow": "Last night",
+    "insightsAction": "Sleep insights",
+    "insightsTitle": "Sleep Insights",
+    "rangeYear": "Year",
+    "goalMetRate": "Goal met",
+    "nightsTracked": "Nights tracked",
+    "avgQuality": "Avg quality"
   },
   "study": {
     "title": "Study",
@@ -965,7 +971,12 @@
     "reminderNotifTitle": "Time to study",
     "reminderNotifBody": "Ready for a session?",
     "enableNotifBody": "Turn notifications on for LifeOS to get this reminder.",
-    "today": "Today"
+    "today": "Today",
+    "insightsAction": "Study insights",
+    "insightsTitle": "Study Insights",
+    "rangeYear": "Year",
+    "bySubject": "By subject",
+    "noSessionsInRange": "No sessions logged in this range yet."
   },
   "music": {
     "title": "Music",
@@ -1029,7 +1040,17 @@
     "nextTrack": "Next track",
     "hidePlayer": "Hide player",
     "playHint": "Plays this song",
-    "notOnThisDevice": "Not on this device"
+    "notOnThisDevice": "Not on this device",
+    "tabAll": "Songs",
+    "tabFavorites": "Favorites",
+    "tabMostPlayed": "Most played",
+    "noFavoritesYet": "No favorites yet — tap the heart on a song to add one.",
+    "noPlaysYet": "Nothing played yet. Play a few songs and they'll show up here.",
+    "favoriteA11y": "Add \"{{title}}\" to favorites",
+    "unfavoriteA11y": "Remove \"{{title}}\" from favorites",
+    "playCount_one": "Played {{count}} time",
+    "playCount_other": "Played {{count}} times",
+    "lastPlayed": "Last played {{time}}"
   },
   "albumCategory": {
     "gym": "Gym Progress",

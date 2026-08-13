@@ -1,7 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { importSongs } from '@/features/music/services/song-import';
-import { deleteSong, listSongs, updateSong } from '@/features/music/services/songs-repository';
+import {
+  deleteSong,
+  listSongs,
+  toggleSongFavorite,
+  updateSong,
+} from '@/features/music/services/songs-repository';
 
 export function useSongs() {
   return useQuery({ queryKey: ['music', 'songs'], queryFn: listSongs });
@@ -32,5 +37,11 @@ export function useSongMutations() {
     onSuccess: invalidate,
   });
 
-  return { importFromDevice, update, remove };
+  const toggleFavorite = useMutation({
+    mutationFn: async ({ id, isFavorite }: { id: string; isFavorite: boolean }) =>
+      toggleSongFavorite(id, isFavorite),
+    onSuccess: invalidate,
+  });
+
+  return { importFromDevice, update, remove, toggleFavorite };
 }

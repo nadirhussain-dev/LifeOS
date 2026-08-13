@@ -2,6 +2,7 @@ import { FlashList } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ListMusic, Play, Plus, Shuffle } from 'lucide-react-native';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
@@ -9,6 +10,7 @@ import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { Segmented } from '@/components/ui/segmented';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
@@ -20,8 +22,17 @@ import { usePlaylists } from '@/features/music/hooks/use-playlists';
 import { useSongMutations, useSongs } from '@/features/music/hooks/use-songs';
 import { SongRow } from '@/features/music/components/song-row';
 import { PlaylistTile } from '@/features/music/components/playlist-tile';
+import type { Song } from '@/features/music/types/music.types';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { alpha, tintGradient } from '@/lib/color';
+
+type LibraryTab = 'all' | 'favorites' | 'mostPlayed';
+
+function sortByMostPlayed(songs: Song[]): Song[] {
+  return [...songs]
+    .filter((song) => song.playCount > 0)
+    .sort((a, b) => b.playCount - a.playCount || (b.lastPlayedAt ?? 0) - (a.lastPlayedAt ?? 0));
+}
 
 export default function MusicScreen() {
   const router = useRouter();
@@ -31,8 +42,15 @@ export default function MusicScreen() {
 
   const { data: songs = [], isLoading, isError, refetch } = useSongs();
   const { data: playlists = [] } = usePlaylists();
-  const { importFromDevice, remove } = useSongMutations();
+  const { importFromDevice, remove, toggleFavorite } = useSongMutations();
   const { currentSong, isPlaying, playQueue, shuffleAll } = useNowPlaying();
+  const [tab, setTab] = useState<LibraryTab>('all');
+
+  const visibleSongs = useMemo(() => {
+    if (tab === 'favorites') return songs.filter((song) => song.isFavorite);
+    if (tab === 'mostPlayed') return sortByMostPlayed(songs);
+    return songs;
+  }, [songs, tab]);
 
   const handleAddSongs = () => importFromDevice.mutate();
 
@@ -83,7 +101,7 @@ export default function MusicScreen() {
         />
       ) : (
         <FlashList
-          data={songs}
+          data={visibleSongs}
           keyExtractor={(song) => song.id}
           contentContainerStyle={{ paddingTop: 4, paddingBottom: 160 }}
           ListHeaderComponent={
@@ -202,19 +220,37 @@ export default function MusicScreen() {
                 </ScrollView>
               </View>
 
-              <Text variant="subheading" className="px-4 pt-1">
-                {t('music.allSongs')}
-              </Text>
+              <View className="gap-3 px-4 pt-1">
+                <Text variant="subheading">{t('music.allSongs')}</Text>
+                <Segmented
+                  options={[
+                    { value: 'all', label: t('music.tabAll') },
+                    { value: 'favorites', label: t('music.tabFavorites') },
+                    { value: 'mostPlayed', label: t('music.tabMostPlayed') },
+                  ]}
+                  value={tab}
+                  onChange={setTab}
+                  activeColor={tint}
+                />
+              </View>
             </View>
+          }
+          ListEmptyComponent={
+            <Text variant="muted" className="px-5 py-6 text-center">
+              {tab === 'favorites' ? t('music.noFavoritesYet') : t('music.noPlaysYet')}
+            </Text>
           }
           renderItem={({ item, index }) => (
             <SongRow
               song={item}
               isActive={currentSong?.id === item.id}
               isPlaying={isPlaying}
-              onPress={() => playQueue(songs, index)}
+              onPress={() => playQueue(visibleSongs, index)}
               onLongPress={() => router.push(`/music/song/${item.id}`)}
               onDelete={() => remove.mutate(item.id)}
+              onToggleFavorite={() =>
+                toggleFavorite.mutate({ id: item.id, isFavorite: !item.isFavorite })
+              }
             />
           )}
         />

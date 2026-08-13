@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { CloudOff, Pause, Play, Trash2, X } from 'lucide-react-native';
+import { CloudOff, Heart, Pause, Play, Trash2, X } from 'lucide-react-native';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
@@ -27,6 +27,9 @@ type Props = {
   onDelete?: () => void;
   /** Playlist context: unlinks the song from this playlist only. */
   onRemove?: () => void;
+  /** Omit to hide the favorite heart entirely (e.g. a context where toggling
+   * it doesn't make sense); pass it everywhere the row can be favorited. */
+  onToggleFavorite?: () => void;
 };
 
 function SongRowComponent({
@@ -37,6 +40,7 @@ function SongRowComponent({
   onLongPress,
   onDelete,
   onRemove,
+  onToggleFavorite,
 }: Props) {
   const scheme = useColorScheme() ?? 'light';
   const tint = moduleTint('music', scheme);
@@ -104,6 +108,30 @@ function SongRowComponent({
       </View>
 
       <Text variant="caption">{formatDuration(song.durationMs)}</Text>
+
+      {onToggleFavorite && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            song.isFavorite
+              ? t('music.unfavoriteA11y', { title: song.title })
+              : t('music.favoriteA11y', { title: song.title })
+          }
+          accessibilityState={{ selected: song.isFavorite }}
+          onPress={() => {
+            void Haptics.selectionAsync();
+            onToggleFavorite();
+          }}
+          hitSlop={10}
+          className="p-1"
+        >
+          <Heart
+            size={16}
+            color={song.isFavorite ? tint : colors[scheme].mutedForeground}
+            fill={song.isFavorite ? tint : 'transparent'}
+          />
+        </Pressable>
+      )}
     </Pressable>
   );
 
