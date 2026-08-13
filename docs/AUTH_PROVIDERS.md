@@ -125,17 +125,36 @@ decides whether the resulting email contains a **code** or a **link** is the
 email template, not the API call:
 
 1. **Supabase dashboard → Authentication → Email Templates.**
-2. Open **Confirm signup** and **Reset Password**. Each ships by default with
-   `{{ .ConfirmationURL }}` — replace that with `{{ .Token }}` (Supabase's
-   own docs call this "Enable One Time Passcode" in some UI versions; either
-   way, the token variable is what matters). Save both.
-3. Until this is done, `sendSignupOtp` / `resetPassword` still succeed and
-   still send an email — it just contains a magic link the OTP-entry screens
-   have nowhere to use, so verification will fail with "That code is
+2. For each of **Confirm signup**, **Reset Password**, and **Magic Link**,
+   open the template, switch to **Source** (the HTML view, not the plain
+   WYSIWYG one), and paste in the matching file from `supabase/templates/`:
+   `confirm-signup.html`, `reset-password.html`, `magic-link.html`. Each is a
+   complete, ready-to-paste document — styled to match the app (the emerald
+   accent and neutral palette from `constants/design-tokens.ts`, dark-mode
+   aware, no logo image to host since the wordmark is styled text) — built
+   around `{{ .Token }}` rather than `{{ .ConfirmationURL }}`, which is what
+   actually switches the email from a link to a 6-digit code. Set each
+   template's **Subject** to the line noted in a comment at the top of its
+   file (e.g. "Your LifeOS verification code").
+3. **Magic Link is the one easy to skip.** It doesn't correspond to a button
+   anywhere in the app — it's what Supabase sends instead of "Confirm signup"
+   if someone enters an email that already has an account into the sign-up
+   screen (`sendSignupOtp`'s `signInWithOtp` treats that as a passwordless
+   login, not an error). Leave it unstyled and that's the one email in the
+   whole flow that still looks like a default Supabase template.
+4. Until all three are done, `sendSignupOtp` / `resetPassword` still succeed
+   and still send an email — it just contains a magic link the OTP-entry
+   screens have nowhere to use, so verification will fail with "That code is
    incorrect or has expired."
 
 Nothing else needs configuring for this part — no new redirect URL, no new
 provider toggle. Login (email + password) is unaffected either way.
+
+The `{{ if .Data.display_name }}` greeting in each template reads the name
+passed to `sendSignupOtp` at signup time (`features/auth/services/auth-store.ts`)
+straight from the user's metadata — nothing to configure for that either, and
+it degrades to a plain "Hi," if it's absent (Google/Apple accounts never hit
+these templates at all, since neither goes through email).
 
 ---
 

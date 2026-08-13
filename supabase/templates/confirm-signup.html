@@ -1,0 +1,214 @@
+<!--
+  Supabase Auth → Authentication → Email Templates → "Confirm signup" → Source.
+
+  Fires when `sendSignupOtp` (features/auth/services/auth-store.ts) creates a
+  new account — see docs/AUTH_PROVIDERS.md §3. `{{ .Token }}` is the 6-digit
+  code the app's verify-signup screen asks for; there is no link anywhere in
+  this email on purpose, since LifeOS never sends anyone to a browser for this.
+
+  Subject line to set alongside this template:
+    Your LifeOS verification code
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
+    <title>Your LifeOS verification code</title>
+    <style>
+      body,
+      table,
+      td {
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: #f8fbf9;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #0e1210 !important;
+        }
+        .card {
+          background: #1a201d !important;
+          border-color: #2b332e !important;
+        }
+        .fg {
+          color: #eef3f0 !important;
+        }
+        .muted {
+          color: #9aa8a1 !important;
+        }
+        .code-box {
+          background: #202723 !important;
+          border-color: #2b332e !important;
+        }
+        .code-text {
+          color: #eef3f0 !important;
+        }
+        .accent {
+          color: #47d19f !important;
+        }
+        .divider {
+          border-color: #2b332e !important;
+        }
+      }
+    </style>
+  </head>
+  <body style="background: #f8fbf9">
+    <table
+      role="presentation"
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      style="background: #f8fbf9"
+    >
+      <tr>
+        <td align="center" style="padding: 40px 16px">
+          <table
+            role="presentation"
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            style="max-width: 480px"
+          >
+            <!-- Wordmark — text, not an image: no asset to host, nothing that can
+                 render as a broken-image icon in a client that blocks remote images. -->
+            <tr>
+              <td align="center" style="padding-bottom: 28px">
+                <span
+                  style="
+                    font-family: 'Sora', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                    font-size: 20px;
+                    font-weight: 700;
+                    letter-spacing: -0.2px;
+                    color: #161c19;
+                  "
+                  class="fg"
+                >
+                  Life<span style="color: #188b61" class="accent">OS</span>
+                </span>
+              </td>
+            </tr>
+
+            <!-- Card -->
+            <tr>
+              <td
+                class="card"
+                style="
+                  background: #ffffff;
+                  border: 1px solid #e2e9e5;
+                  border-radius: 20px;
+                  padding: 36px 32px;
+                "
+              >
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td
+                      class="fg"
+                      style="
+                        font-family: 'Sora', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                        font-size: 20px;
+                        font-weight: 600;
+                        color: #161c19;
+                        padding-bottom: 8px;
+                      "
+                    >
+                      {{ if .Data.display_name }}Hi {{ .Data.display_name }},{{ else }}Hi,{{ end }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      class="muted"
+                      style="
+                        font-family:
+                          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+                          sans-serif;
+                        font-size: 15px;
+                        line-height: 1.6;
+                        color: #6d7a74;
+                        padding-bottom: 28px;
+                      "
+                    >
+                      Use this code to verify
+                      <strong class="fg" style="color: #161c19">{{ .Email }}</strong>
+                      and finish creating your LifeOS account.
+                    </td>
+                  </tr>
+
+                  <!-- The code -->
+                  <tr>
+                    <td align="center" style="padding-bottom: 28px">
+                      <table role="presentation" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td
+                            class="code-box"
+                            style="
+                              background: #eef3f0;
+                              border: 1px solid #e2e9e5;
+                              border-radius: 16px;
+                              padding: 18px 28px;
+                            "
+                          >
+                            <span
+                              class="code-text fg"
+                              style="
+                                font-family: 'SF Mono', 'Consolas', 'Menlo', monospace;
+                                font-size: 32px;
+                                font-weight: 700;
+                                letter-spacing: 10px;
+                                color: #161c19;
+                              "
+                              >{{ .Token }}</span
+                            >
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="border-top: 1px solid #eef3f0; padding-top: 20px" class="divider">
+                      <span
+                        class="muted"
+                        style="
+                          font-family:
+                            -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+                            sans-serif;
+                          font-size: 13px;
+                          line-height: 1.6;
+                          color: #6d7a74;
+                        "
+                      >
+                        This code is single-use and expires shortly. If you didn't try to create a
+                        LifeOS account, you can ignore this email — nothing happens without it.
+                      </span>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td align="center" style="padding-top: 24px">
+                <span
+                  class="muted"
+                  style="
+                    font-family:
+                      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+                      sans-serif;
+                    font-size: 12px;
+                    color: #9aa8a1;
+                  "
+                  >LifeOS</span
+                >
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

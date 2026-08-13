@@ -115,19 +115,28 @@ Deno.serve(async (req: Request) => {
         from: Deno.env.get('INVITE_FROM') ?? 'LifeOS <invites@lifeos.app>',
         to: [payload.email],
         subject: `${inviterName} added you to ${groupName}`,
+        // Brand colors match constants/design-tokens.ts's light palette
+        // (accent #188b61, foreground #161c19, mutedForeground #6d7a74,
+        // border #e2e9e5) — this used to carry a leftover teal (#0d9488)
+        // nothing else in the app uses. Kept as one plain <div>, not the
+        // templated card in supabase/templates/: this email carries a link,
+        // not a code, so it doesn't share that shape.
         html: `
-          <div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px">
-            <h2 style="margin:0 0 12px">${inviterName} added you to “${groupName}”</h2>
-            <p style="color:#4d5852;line-height:1.5;margin:0 0 20px">
+          <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px">
+            <div style="font-family:'Sora','Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:18px;font-weight:700;letter-spacing:-0.2px;color:#161c19;margin:0 0 20px">
+              Life<span style="color:#188b61">OS</span>
+            </div>
+            <h2 style="margin:0 0 12px;color:#161c19">${inviterName} added you to “${groupName}”</h2>
+            <p style="color:#6d7a74;line-height:1.5;margin:0 0 20px">
               You are sharing expenses in this group on LifeOS. Open the link below
               to join and see what you owe or are owed.
             </p>
             <a href="${link}"
-               style="display:inline-block;background:#0d9488;color:#fff;text-decoration:none;
+               style="display:inline-block;background:#188b61;color:#ffffff;text-decoration:none;
                       padding:12px 20px;border-radius:10px;font-weight:600">
               Join ${groupName}
             </a>
-            <p style="color:#9aa8a1;font-size:12px;line-height:1.5;margin:20px 0 0">
+            <p style="color:#9aa8a1;font-size:12px;line-height:1.5;margin:20px 0 0;border-top:1px solid #e2e9e5;padding-top:16px">
               This invitation expires in 14 days. If you weren't expecting it you can ignore this email.
             </p>
           </div>`,
