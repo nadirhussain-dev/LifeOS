@@ -71,6 +71,7 @@ export default function PrivateSetupScreen() {
     setChosen((prev) => (prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]));
 
   const finish = async () => {
+    if (busy) return;
     if (pin !== confirmPin) {
       setError(t('private.pinMismatch'));
       setConfirmPin('');

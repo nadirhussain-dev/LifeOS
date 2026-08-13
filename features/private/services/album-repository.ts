@@ -9,6 +9,7 @@ import type {
   AlbumPhoto,
   SharedAlbum,
 } from '@/features/private/types/shared-album.types';
+import { INVITE_TTL_MS } from '@/features/private/services/album-invite';
 import { generateId } from '@/lib/id';
 import { supabase } from '@/lib/supabase';
 import { toSupabaseError } from '@/lib/supabase-error';
@@ -245,26 +246,30 @@ export async function renameAlbum(albumId: string, nameCiphertext: string): Prom
   assertOk(error);
 }
 
-/** Adds somebody by email as a placeholder member — the invite flow's
- *  Postgres half. Mirrors split-repository.ts's addMemberByEmail exactly,
- *  including generating its own id rather than returning one: the invite
- *  screen reads the member's id back off the refetched member list, the
- *  same way the Split invite screen does. */
+/** Adds somebody by email — the invite flow's Postgres half. Goes through
+ *  `add_shared_album_member_by_email` (migration 0045), which creates the
+ *  placeholder member row AND mints its Postgres invitation atomically, so
+ *  an invitee who already has the app can find it in their own Invites
+ *  inbox (album-invite.ts's `listMyAlbumInvitations`) immediately — no
+ *  separate manual "Send" step, and no lookup of whether the email even
+ *  has an account: membership is never granted here, only requested. See
+ *  the migration's header for why an earlier version of this function did
+ *  that lookup and why it was removed. */
 export async function addMemberByEmail(input: {
   albumId: string;
   email: string;
   displayName: string | null;
 }): Promise<void> {
   const now = Date.now();
-  const { error } = await supabase.from('shared_album_members').insert({
-    id: generateId(),
-    album_id: input.albumId,
-    user_id: null,
-    email: input.email.trim().toLowerCase(),
-    display_name: input.displayName,
-    role: 'member',
-    created_at: now,
-    updated_at: now,
+  const { error } = await supabase.rpc('add_shared_album_member_by_email', {
+    p_member_id: generateId(),
+    p_album_id: input.albumId,
+    p_email: input.email.trim().toLowerCase(),
+    p_display_name: input.displayName,
+    p_invitation_id: generateId(),
+    p_token: generateId(),
+    p_expires_at: now + INVITE_TTL_MS,
+    p_now: now,
   });
   assertOk(error);
 }

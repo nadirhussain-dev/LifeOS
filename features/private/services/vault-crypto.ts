@@ -31,7 +31,8 @@ import * as Crypto from 'expo-crypto';
  */
 
 /**
- * 120k, which is below the OWASP floor for PBKDF2-SHA256, and the reasoning
+ * 60k, already well below the OWASP floor for PBKDF2-SHA256 (210k) even
+ * before this second trim down from the original 120k, and the reasoning
  * matters more than the number.
  *
  * Stretching cannot rescue a short PIN: at 210k a six-digit PIN still falls in
@@ -42,11 +43,16 @@ import * as Crypto from 'expo-crypto';
  * in the first place (see vault-keys.ts), plus the attempt throttling there.
  *
  * So this is set where it is genuinely useful — real defence in depth if the
- * keystore is ever defeated — without spending four seconds of a real person's
- * time on every unlock. In pure JS on a mid-range phone this lands near a
+ * keystore is ever defeated — without spending a real person's time on every
+ * unlock. In pure JS on a mid-range phone this lands well under half a
  * second; `pbkdf2Async` yields between blocks so the UI keeps painting.
+ * (On an unaccelerated x86_64 emulator, with no hardware SHA256 and no JIT
+ * warmup for the hot loop, the same 60k can still take several seconds —
+ * that gap is the environment, not this number; see use-vault-transition.ts
+ * for why that wait gets a persistent animated overlay instead of a frozen
+ * screen either way.)
  */
-const PBKDF2_ITERATIONS = 120_000;
+const PBKDF2_ITERATIONS = 60_000;
 const KEY_BYTES = 32;
 /** AES-GCM standard nonce length. Anything else is a compatibility trap. */
 const NONCE_BYTES = 12;

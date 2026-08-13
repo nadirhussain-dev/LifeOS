@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuthStore } from '@/features/auth/services/auth-store';
@@ -70,8 +70,18 @@ export function useAlbumKey(albumId: string | undefined) {
   });
 }
 
+/** Requires a session, not just a query the caller happens to guard: every
+ *  RLS policy behind `listAlbums` filters through `my_album_ids()` (migration
+ *  0027), which is granted to `authenticated` only — evaluating that policy
+ *  as `anon` throws "permission denied for function my_album_ids" instead of
+ *  quietly returning zero rows, for a plain SELECT with nothing wrong with
+ *  it. `enabled` here is what stops that call from ever being attempted, the
+ *  same role `useGroupSummaries` (use-split.ts) gives its own `enabled` — the
+ *  difference is this one can't be forgotten by a screen that calls
+ *  `useAlbums`/`useTogetherHub` without threading a flag through. */
 export function useAlbums() {
-  return useQuery({ queryKey: albumKeys.list, queryFn: repo.listAlbums });
+  const session = useAuthStore((s) => s.session);
+  return useQuery({ queryKey: albumKeys.list, queryFn: repo.listAlbums, enabled: !!session });
 }
 
 /** Which one of the caller's shared albums (if any) is designated as the
@@ -197,10 +207,25 @@ export function useAlbumMessages(albumId: string | undefined, albumKey: Uint8Arr
  * session or a locked album never opens a channel for something it cannot
  * decrypt anyway.
  */
+/**
+ * Five screens mount this for the same album at once when the stack keeps
+ * the caller behind them alive — together.tsx's hub view, the album detail
+ * screen, and its chat/notes/plans tabs are all one tap apart and none of
+ * them unmounts the others. Supabase-js keys channels by topic string and
+ * hands back the *same* `RealtimeChannel` object for a topic it already has,
+ * so two mounts racing to `.channel('shared-album:<id>')` the same album
+ * both land on one channel — the second mount's `.on()` calls then land on a
+ * channel the first mount already `.subscribe()`d, which throws ("cannot add
+ * postgres_changes callbacks ... after subscribe()"). `instanceId` (`useId`,
+ * stable per mount, unique across mounts) makes every mount's topic string
+ * unique, so each gets its own channel and lifecycle — no collision even
+ * when five screens are all subscribed to the same album's changes.
+ */
 export function useAlbumRealtime(albumId: string | undefined): void {
   const queryClient = useQueryClient();
   const space = usePrivateStore((s) => s.space);
   const vaultKeyValue = usePrivateStore((s) => s.key);
+  const instanceId = useId();
 
   useEffect(() => {
     if (!albumId || !vaultKeyValue || space !== 'real') return;
@@ -228,7 +253,7 @@ export function useAlbumRealtime(albumId: string | undefined): void {
     };
 
     const channel = supabase
-      .channel(`shared-album:${albumId}`)
+      .channel(`shared-album:${albumId}:${instanceId}`)
       .on(
         'postgres_changes',
         {
@@ -290,7 +315,7 @@ export function useAlbumRealtime(albumId: string | undefined): void {
       if (messagesDebounce) clearTimeout(messagesDebounce);
       void supabase.removeChannel(channel);
     };
-  }, [albumId, vaultKeyValue, space, queryClient]);
+  }, [albumId, vaultKeyValue, space, queryClient, instanceId]);
 }
 
 // --- mutations ---------------------------------------------------------------

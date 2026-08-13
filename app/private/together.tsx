@@ -22,7 +22,7 @@ import { AlbumDateField } from '@/features/private/components/album-date-field';
 import { MilestoneSheet } from '@/features/private/components/milestone-sheet';
 import { OnThisDayCard } from '@/features/private/components/on-this-day-card';
 import { PrivateScreen } from '@/features/private/components/private-screen';
-import { privateModule } from '@/features/private/config/private-modules';
+import { filterByRole, privateModule } from '@/features/private/config/private-modules';
 import {
   useAlbumMilestoneMutations,
   useAlbumMilestones,
@@ -45,6 +45,7 @@ import {
 } from '@/features/private/services/cycle-math';
 import { nextMilestone, onThisDay, todaysMilestone } from '@/features/private/services/together';
 import { usePrivateStore } from '@/features/private/store/private-store';
+import { useProfileStore } from '@/features/profile/store/profile-store';
 import type { SharedAlbum } from '@/features/private/types/shared-album.types';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { alpha } from '@/lib/color';
@@ -66,6 +67,7 @@ export default function TogetherScreen() {
   const tint = resolveTint(TINT, scheme);
   const { t } = useTranslation();
   const space = usePrivateStore((s) => s.space);
+  const session = useAuthStore((s) => s.session);
 
   const { albums = [], hub } = useTogetherHub();
   const { setTogetherHub } = useSharedAlbumMutations();
@@ -74,6 +76,29 @@ export default function TogetherScreen() {
     return (
       <PrivateScreen moduleId="together" title={t('private.togetherModuleTitle')} tint={tint}>
         <Text variant="muted">{t('private.albumsRealSpaceOnly')}</Text>
+      </PrivateScreen>
+    );
+  }
+
+  // Together is one designated shared album (use-shared-albums.ts's
+  // useTogetherHub) — same authenticated-only backend as albums/index.tsx,
+  // same guard, for the same reason (see that screen's header).
+  if (!session) {
+    return (
+      <PrivateScreen moduleId="together" title={t('private.togetherModuleTitle')} tint={tint}>
+        <View className="items-center gap-3 py-10">
+          <Text variant="subheading" className="text-center">
+            {t('private.albumsSignInTitle')}
+          </Text>
+          <Text variant="muted" className="text-center">
+            {t('private.albumsSignInBody')}
+          </Text>
+          <Button
+            variant="accent"
+            label={t('sync.signInCreate')}
+            onPress={() => router.push('/(auth)/login')}
+          />
+        </View>
       </PrivateScreen>
     );
   }
@@ -196,6 +221,17 @@ function TogetherHubView({ hub, tint }: { hub: SharedAlbum; tint: string }) {
   );
   const milestoneSheet = useRef<BottomSheetModal>(null);
   const userId = useAuthStore((s) => s.user?.id ?? null);
+  const gender = useProfileStore((s) => s.gender);
+  const showAllModules = usePrivateStore((s) => s.showAllModules);
+
+  // Sharing *your own* cycle status only makes sense for someone who can
+  // access the Cycle module in the first place — same gate as the module
+  // card itself (private-modules.ts's `hardGateByRole`), so this toggle
+  // never offers to share data a `male`/unanswered account has no tracker
+  // for. Viewing a *partner's* already-shared summary (`partnerCycleSummary`
+  // below) is a separate concern and stays ungated — the viewer's own gender
+  // has no bearing on whether they're allowed to see what their partner sent.
+  const canShareCycle = filterByRole(['cycle'], gender, showAllModules).length > 0;
 
   const isSharingCycle = hub.cycleShareCiphertext !== null && hub.cycleShareAuthorId === userId;
   const partnerCycleSummary = useMemo(() => {
@@ -254,7 +290,14 @@ function TogetherHubView({ hub, tint }: { hub: SharedAlbum; tint: string }) {
       tint={tint}
     >
       {locked ? (
-        <Text variant="muted">{t('private.togetherLocked')}</Text>
+        <View className="gap-3">
+          <Text variant="muted">{t('private.togetherLocked')}</Text>
+          <Button
+            variant="secondary"
+            label={t('private.members')}
+            onPress={() => router.push(`/private/albums/${hub.id}/members`)}
+          />
+        </View>
       ) : (
         <>
           <View className={cardClass({ padding: 'md' }, 'gap-3')}>
@@ -333,24 +376,26 @@ function TogetherHubView({ hub, tint }: { hub: SharedAlbum; tint: string }) {
             </View>
           ) : null}
 
-          <View className={cardClass({ padding: 'none' }, 'px-4')}>
-            <View className="flex-row items-center gap-3 py-3.5">
-              <Droplets size={17} color={theme.mutedForeground} />
-              <View className="flex-1">
-                <Text className="font-sora-medium text-foreground">
-                  {t('private.togetherShareCycle')}
-                </Text>
-                <Text variant="caption">{t('private.togetherShareCycleHint')}</Text>
+          {canShareCycle ? (
+            <View className={cardClass({ padding: 'none' }, 'px-4')}>
+              <View className="flex-row items-center gap-3 py-3.5">
+                <Droplets size={17} color={theme.mutedForeground} />
+                <View className="flex-1">
+                  <Text className="font-sora-medium text-foreground">
+                    {t('private.togetherShareCycle')}
+                  </Text>
+                  <Text variant="caption">{t('private.togetherShareCycleHint')}</Text>
+                </View>
+                <Switch
+                  value={isSharingCycle}
+                  onValueChange={(next) =>
+                    next ? shareCurrentCycleSummary() : setCycleShare.mutate(null)
+                  }
+                  trackColor={{ true: tint, false: theme.border }}
+                />
               </View>
-              <Switch
-                value={isSharingCycle}
-                onValueChange={(next) =>
-                  next ? shareCurrentCycleSummary() : setCycleShare.mutate(null)
-                }
-                trackColor={{ true: tint, false: theme.border }}
-              />
             </View>
-          </View>
+          ) : null}
 
           <Pressable
             accessibilityRole="button"
