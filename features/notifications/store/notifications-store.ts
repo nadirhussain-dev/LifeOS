@@ -38,6 +38,32 @@ export type NotificationsState = {
   /** expo-notifications id for the currently-scheduled digest, so it can be
    * cancelled before rescheduling. */
   digestNotificationId: string | null;
+  /**
+   * When the app last accounted for reminders arriving — the watermark that
+   * `recordMissedRepeatingDeliveries` measures "fired while you were away"
+   * against.
+   *
+   * Null on a fresh install, and deliberately not backfilled: there is nothing
+   * behind a first launch to have missed, and treating zero as the watermark
+   * would record an occurrence for every repeating schedule the moment the app
+   * first opens.
+   */
+  lastArrivalCheckAt: number | null;
+  /**
+   * Whether the OS currently permits notifications at all, re-read on every
+   * return to the foreground.
+   *
+   * Permission is not a one-time gate: it can be revoked in system settings
+   * long after it was granted, and when it is, every reminder in the app dies
+   * silently. Nothing in-app changes — the master switch still reads ON, each
+   * category still reads ON, each item's own reminder toggle still reads ON —
+   * so the app goes on describing reminders that cannot fire. Only the
+   * Notification Settings screen knew, and only while it was open.
+   *
+   * Null until the first check, so a surface can tell "not asked yet" from
+   * "asked, and the answer was no" and stay quiet during launch.
+   */
+  systemPermissionGranted: boolean | null;
 
   setMasterEnabled: (enabled: boolean) => void;
   setCategoryEnabled: (category: NotificationCategory, enabled: boolean) => void;
@@ -46,6 +72,8 @@ export type NotificationsState = {
   setDeliveryMode: (mode: DeliveryMode) => void;
   setDigestTime: (hour: number, minute: number) => void;
   setDigestNotificationId: (id: string | null) => void;
+  setLastArrivalCheckAt: (at: number) => void;
+  setSystemPermissionGranted: (granted: boolean) => void;
 };
 
 export const useNotificationsStore = create<NotificationsState>()(
@@ -66,6 +94,8 @@ export const useNotificationsStore = create<NotificationsState>()(
       digestHour: 8,
       digestMinute: 0,
       digestNotificationId: null,
+      lastArrivalCheckAt: null,
+      systemPermissionGranted: null,
 
       setMasterEnabled: (masterEnabled) => set({ masterEnabled }),
       setCategoryEnabled: (category, enabled) =>
@@ -76,11 +106,24 @@ export const useNotificationsStore = create<NotificationsState>()(
       setDeliveryMode: (deliveryMode) => set({ deliveryMode }),
       setDigestTime: (digestHour, digestMinute) => set({ digestHour, digestMinute }),
       setDigestNotificationId: (digestNotificationId) => set({ digestNotificationId }),
+      setLastArrivalCheckAt: (lastArrivalCheckAt) => set({ lastArrivalCheckAt }),
+      setSystemPermissionGranted: (systemPermissionGranted) => set({ systemPermissionGranted }),
     }),
     {
       name: 'notifications-store',
       storage: createJSONStorage(() => AsyncStorage),
       version: 1,
+      /**
+       * Everything except the permission flag, which is a fact about the OS
+       * rather than a preference. Writing it to disk would restore a stale
+       * answer on the next launch and show — or hide — the "notifications are
+       * blocked" notice based on what was true last time the app ran. It starts
+       * null every launch and is filled in by the first real check.
+       */
+      partialize: (state) => {
+        const { systemPermissionGranted: _omitted, ...persisted } = state;
+        return persisted as NotificationsState;
+      },
       // Changing the default above only affects fresh installs — everyone who
       // already ran the app has 'digest' written to disk and would keep losing
       // their reminders. v1 clears that one-time: an install still sitting on

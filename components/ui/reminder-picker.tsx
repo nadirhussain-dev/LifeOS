@@ -1,14 +1,24 @@
 import { addDays, addHours, format, set } from 'date-fns';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
+import { shiftTimestampOutOfQuietHours } from '@/features/notifications/services/quiet-hours';
+import { useNotificationsStore } from '@/features/notifications/store/notifications-store';
+import {
+  CATEGORY_META,
+  type NotificationCategory,
+} from '@/features/notifications/types/notification.types';
 
 type Props = {
   value: number | null;
   onChange: (value: number | null) => void;
+  /** Which category the reminder will be scheduled under, so the picker can say
+   *  whether quiet hours are going to move it. Notes are the only caller today. */
+  category?: NotificationCategory;
 };
 
 const QUICK_PICKS = [
@@ -34,9 +44,34 @@ const QUICK_PICKS = [
  * common "remind me later" cases without the cross-platform hassle of
  * @react-native-community/datetimepicker's mode="datetime" (iOS-only; Android
  * needs a separate date then time dialog). */
-export function ReminderPicker({ value, onChange }: Props) {
+export function ReminderPicker({ value, onChange, category = 'notes' }: Props) {
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
+
+  // Subscribed rather than read once, so the line below re-evaluates if quiet
+  // hours are changed while this screen is open.
+  const quietEnabled = useNotificationsStore((s) => s.quietHoursEnabled);
+  const quietStart = useNotificationsStore((s) => s.quietStartMinutes);
+  const quietEnd = useNotificationsStore((s) => s.quietEndMinutes);
+
+  /**
+   * When quiet hours will move this reminder, and where to.
+   *
+   * Picking 11pm and being reminded at 7am is the correct behaviour — a note
+   * saying "take a look at this" is not worth waking someone for — but it is
+   * indefensible to do it silently. The picker shows a time; the user has every
+   * reason to believe that is when it will fire.
+   *
+   * Mirrors the same two conditions `scheduleOneTimeNotification` applies, so
+   * what this predicts is what actually happens.
+   */
+  const shiftedTo = useMemo(() => {
+    if (value === null) return null;
+    if (CATEGORY_META[category].bypassQuietHours) return null;
+    const shifted = shiftTimestampOutOfQuietHours(value);
+    return shifted === value ? null : shifted;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, category, quietEnabled, quietStart, quietEnd]);
 
   return (
     <View className="gap-2">
@@ -68,6 +103,11 @@ export function ReminderPicker({ value, onChange }: Props) {
           </Pressable>
         ))}
       </View>
+      {shiftedTo !== null && (
+        <Text variant="caption">
+          {t('reminder.quietHoursShift', { time: format(shiftedTo, 'h:mm a') })}
+        </Text>
+      )}
     </View>
   );
 }

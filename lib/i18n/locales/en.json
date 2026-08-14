@@ -43,7 +43,8 @@
     "in1Hour": "In 1 hour",
     "thisEvening": "This evening",
     "tomorrow9am": "Tomorrow 9am",
-    "nextWeek": "Next week"
+    "nextWeek": "Next week",
+    "quietHoursShift": "Quiet hours — this will arrive at {{time}} instead."
   },
   "dashboard": {
     "water": "Water",
@@ -1307,6 +1308,8 @@
   },
   "notif": {
     "title": "Notifications",
+    "unreadCount_one": "{{count}} unread",
+    "unreadCount_other": "{{count}} unread",
     "inboxEyebrow": "Inbox",
     "settingsEyebrow": "Settings",
     "emptyTitle": "You’re all caught up",
@@ -1319,6 +1322,10 @@
     "clearAllTitle": "Clear all notifications?",
     "clearAllBody": "This removes everything from your inbox. Scheduled reminders still fire.",
     "dailyReminder": "Daily reminder",
+    "dailyTimes_one": "Daily reminder",
+    "dailyTimes_other": "Daily · {{count}} times a day",
+    "plusMore_one": "+{{count}} more",
+    "plusMore_other": "+{{count}} more",
     "inTime": "In {{time}}",
     "allNotifications": "All notifications",
     "masterDescription": "Master switch for every LifeOS reminder",

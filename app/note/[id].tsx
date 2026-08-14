@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Archive,
   ArchiveRestore,
@@ -11,7 +11,7 @@ import {
   Tags,
   Trash2,
 } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -96,6 +96,31 @@ export default function NoteDetailScreen() {
     return () => clearTimeout(timeout);
   }, [body]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * One task per press, however fast the press.
+   *
+   * The write is synchronous but `router.push` is not, so the button stays
+   * mounted and pressable for the length of the navigation transition. A
+   * double-tap — or one impatient second tap while the screen is still on its
+   * way out — ran the handler twice and left two identical tasks behind, which
+   * is what a note titled once produced two of.
+   *
+   * A ref, not state: it has to take effect within the same tick as the first
+   * press, before React has re-rendered anything. `useFocusEffect` clears it on
+   * the way back, so deliberately generating a second task from the same note
+   * still works — GeneratedTasksPanel lists them all, and more than one is a
+   * supported outcome. Only the accidental repeat is blocked.
+   *
+   * Above the `!note` guard below, or these three hooks would run in a
+   * different order on the render where the note has not loaded yet.
+   */
+  const creatingTask = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      creatingTask.current = false;
+    }, []),
+  );
+
   if (!note) return null;
 
   const selectedTagIds = noteTags.map((tag) => tag.id);
@@ -122,6 +147,8 @@ export default function NoteDetailScreen() {
   };
 
   const handleCreateTask = () => {
+    if (creatingTask.current) return;
+    creatingTask.current = true;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const task = createTaskFromNote(note.id, note.title.trim() || t('notes.untitledTaskTitle'));
     queryClient.invalidateQueries({ queryKey: ['notes', 'detail', note.id, 'generated-tasks'] });

@@ -1,6 +1,23 @@
 import { nextMilestone, onThisDay, todaysMilestone } from '@/features/private/services/together';
 import type { AlbumMilestone, AlbumPhoto } from '@/features/private/types/shared-album.types';
 
+/** `yyyy-MM-dd` at local midday, as epoch ms.
+ *
+ *  Deliberately not `new Date('2025-08-10').getTime()`: a date-only string
+ *  parses as UTC midnight, but `onThisDay` compares calendar days in the
+ *  device's own zone (a photo taken at 11pm belongs to that local day, which is
+ *  the behaviour a user expects). West of Greenwich every fixture therefore
+ *  landed on the *previous* local day, no anniversary matched, and the nearest-
+ *  anniversary test fell through to the oldest-photo branch — failing on a
+ *  developer's machine while passing in CI's UTC.
+ *
+ *  Midday, so the calendar day survives any offset and any DST shift. The
+ *  milestone suites below already build their dates this way. */
+const at = (date: string): number => {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(year, month - 1, day, 12).getTime();
+};
+
 const photo = (id: string, createdAt: number, remotePath: string | null = 'p.bin'): AlbumPhoto => ({
   id,
   albumId: 'alb-1',
@@ -23,25 +40,16 @@ describe('onThisDay', () => {
   });
 
   it('finds a photo from exactly one year ago today', () => {
-    const now = new Date('2026-08-10T12:00:00Z');
-    const match = onThisDay(
-      [
-        photo('a', new Date('2025-08-10T09:00:00Z').getTime()),
-        photo('b', new Date('2025-06-01').getTime()),
-      ],
-      now,
-    );
+    const now = new Date(at('2026-08-10'));
+    const match = onThisDay([photo('a', at('2025-08-10')), photo('b', at('2025-06-01'))], now);
     expect(match?.photo.id).toBe('a');
     expect(match?.yearsAgo).toBe(1);
   });
 
   it('prefers the nearest anniversary over a more distant one', () => {
-    const now = new Date('2026-08-10T12:00:00Z');
+    const now = new Date(at('2026-08-10'));
     const match = onThisDay(
-      [
-        photo('two-years', new Date('2024-08-10').getTime()),
-        photo('one-year', new Date('2025-08-10').getTime()),
-      ],
+      [photo('two-years', at('2024-08-10')), photo('one-year', at('2025-08-10'))],
       now,
     );
     expect(match?.photo.id).toBe('one-year');
@@ -49,38 +57,35 @@ describe('onThisDay', () => {
   });
 
   it('falls back to the oldest photo once the album is at least a year old', () => {
-    const now = new Date('2026-08-10T12:00:00Z');
+    const now = new Date(at('2026-08-10'));
     const match = onThisDay(
-      [
-        photo('oldest', new Date('2025-01-15').getTime()),
-        photo('newer', new Date('2025-06-01').getTime()),
-      ],
+      [photo('oldest', at('2025-01-15')), photo('newer', at('2025-06-01'))],
       now,
     );
     expect(match?.photo.id).toBe('oldest');
   });
 
   it('shows nothing for an album younger than a year with no anniversary', () => {
-    const now = new Date('2026-08-10T12:00:00Z');
-    const match = onThisDay([photo('recent', new Date('2026-05-01').getTime())], now);
+    const now = new Date(at('2026-08-10'));
+    const match = onThisDay([photo('recent', at('2026-05-01'))], now);
     expect(match).toBeNull();
   });
 
   it('maxYearsLookback=1 only reaches the most recent anniversary, never a more distant one', () => {
-    const now = new Date('2026-08-10T12:00:00Z');
-    const match = onThisDay([photo('two-years', new Date('2024-08-10').getTime())], now, 1);
+    const now = new Date(at('2026-08-10'));
+    const match = onThisDay([photo('two-years', at('2024-08-10'))], now, 1);
     expect(match).toBeNull();
   });
 
   it('maxYearsLookback=1 skips the oldest-photo fallback entirely', () => {
-    const now = new Date('2026-08-10T12:00:00Z');
-    const match = onThisDay([photo('oldest', new Date('2023-01-15').getTime())], now, 1);
+    const now = new Date(at('2026-08-10'));
+    const match = onThisDay([photo('oldest', at('2023-01-15'))], now, 1);
     expect(match).toBeNull();
   });
 
   it('a wider maxYearsLookback still finds a two-year anniversary', () => {
-    const now = new Date('2026-08-10T12:00:00Z');
-    const match = onThisDay([photo('two-years', new Date('2024-08-10').getTime())], now, 15);
+    const now = new Date(at('2026-08-10'));
+    const match = onThisDay([photo('two-years', at('2024-08-10'))], now, 15);
     expect(match?.yearsAgo).toBe(2);
   });
 });

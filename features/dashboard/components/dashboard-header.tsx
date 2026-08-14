@@ -52,16 +52,49 @@ export function DashboardHeader() {
           accessibilityRole="button"
           onPress={() => router.push('/notifications')}
           hitSlop={8}
-          accessibilityLabel={t('settings.notifications')}
+          accessibilityLabel={
+            unread > 0
+              ? `${t('settings.notifications')}, ${t('notif.unreadCount', { count: unread })}`
+              : t('settings.notifications')
+          }
           className="h-11 w-11 items-center justify-center rounded-full border border-border bg-surface"
         >
           <Bell color={colors[scheme].foreground} size={20} />
           {unread > 0 && (
             <View
-              className="absolute end-1.5 top-1.5 h-4 min-w-4 items-center justify-center rounded-full px-1"
-              style={{ backgroundColor: colors[scheme].destructive }}
+              /* On a round button the badge belongs on the rim, but `top-1.5
+                 end-1.5` insets it from the *square* bounding box: that put its
+                 centre ~11px from the centre of a 22px-radius circle — halfway
+                 in, overlapping the bell glyph rather than reading as a badge
+                 attached to the button. Flush to the corner puts it ~18px out,
+                 riding the arc at the 45° point where the eye looks for it.
+
+                 Flush rather than overhanging (`-top-1 -end-1`, the usual iOS
+                 look): Android clips children that leave the parent's bounds
+                 whatever `overflow` says, so an overhang would lose a slice of
+                 the circle on exactly the device this was reported on. */
+              className="absolute end-0 top-0 h-[18px] min-w-[18px] items-center justify-center rounded-full px-1"
+              style={{
+                backgroundColor: colors[scheme].destructive,
+                // Separates the red from the button's border and the glyph
+                // beneath it — without the ring they touch and read as one
+                // smudged shape at this size.
+                borderWidth: 2,
+                borderColor: colors[scheme].background,
+              }}
             >
-              <Text style={{ color: '#ffffff', fontSize: 9, fontFamily: 'Sora_700Bold' }}>
+              <Text
+                // The badge is a fixed 18px box, so OS font scaling has nowhere
+                // to go — the count would clip instead of growing. The label is
+                // on the Pressable above, which is what a screen reader gets.
+                allowFontScaling={false}
+                style={{
+                  color: '#ffffff',
+                  fontSize: 10,
+                  lineHeight: 12,
+                  fontFamily: 'Sora_700Bold',
+                }}
+              >
                 {unread > 9 ? '9+' : unread}
               </Text>
             </View>

@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 
 /**
  * That the safety features are actually reachable.
@@ -38,11 +38,24 @@ function sourceFiles(...directories: string[]): string[] {
   return out;
 }
 
-/** Files whose source mentions `needle`, as repo-relative paths. */
+/** Files whose source mentions `needle`, as repo-relative POSIX paths.
+ *
+ *  Forward slashes even on Windows: every assertion below is written with `/`
+ *  (`stringContaining('private/albums')`, and the exact-match on the uploader),
+ *  and `join(ROOT, path)` accepts either separator on the way back. Without the
+ *  normalisation these read `features\private\...` and the suite fails only on
+ *  a Windows machine — CI runs Ubuntu, so it stayed green while the local run
+ *  did not. The `endsWith('services/reports.ts')` filters have the same
+ *  dependency, and would silently stop excluding anything rather than fail. */
 function filesMentioning(needle: string, ...directories: string[]): string[] {
   return sourceFiles(...directories)
     .filter((path) => readFileSync(path, 'utf8').includes(needle))
-    .map((path) => path.slice(ROOT.length + 1));
+    .map((path) =>
+      path
+        .slice(ROOT.length + 1)
+        .split(sep)
+        .join('/'),
+    );
 }
 
 describe('reporting is reachable', () => {

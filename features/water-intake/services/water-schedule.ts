@@ -21,6 +21,29 @@ import type { WaterReminderSettings } from '@/features/water-intake/types/water-
  */
 const MAX_WATER_SLOTS = Platform.OS === 'ios' ? 12 : 24;
 
+export type TimeSlot = { hour: number; minute: number };
+
+/**
+ * Thins `slots` down to `permitted` of them, keeping the spread.
+ *
+ * The second bound on hydration, after MAX_WATER_SLOTS: how many slots are
+ * still free in the pending-notification queue once everything more important
+ * has been scheduled (see scheduling-budget.ts). Picking evenly rather than
+ * taking the first N keeps the reminders across the whole waking window — a
+ * truncated list would stop reminding at lunchtime and call it a day.
+ *
+ * Always keeps the first and last slot, so the window's edges survive whatever
+ * the allowance turns out to be.
+ */
+export function spreadAcross(slots: TimeSlot[], permitted: number): TimeSlot[] {
+  if (permitted >= slots.length) return slots;
+  if (permitted <= 0) return [];
+  if (permitted === 1) return [slots[0]];
+
+  const step = (slots.length - 1) / (permitted - 1);
+  return Array.from({ length: permitted }, (_, i) => slots[Math.round(step * i)]);
+}
+
 export function timeSlots(settings: WaterReminderSettings): { hour: number; minute: number }[] {
   const startMinutes = settings.startHour * 60;
   const endMinutes = settings.endHour * 60;

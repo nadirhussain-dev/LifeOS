@@ -43,7 +43,8 @@
     "in1Hour": "1 घंटे में",
     "thisEvening": "आज शाम",
     "tomorrow9am": "कल सुबह 9 बजे",
-    "nextWeek": "अगले सप्ताह"
+    "nextWeek": "अगले सप्ताह",
+    "quietHoursShift": "शांत घंटे — यह इसके बजाय {{time}} पर आएगा।"
   },
   "dashboard": {
     "water": "पानी",
@@ -1307,6 +1308,8 @@
   },
   "notif": {
     "title": "नोटिफ़िकेशन",
+    "unreadCount_one": "{{count}} अपठित",
+    "unreadCount_other": "{{count}} अपठित",
     "inboxEyebrow": "इनबॉक्स",
     "settingsEyebrow": "सेटिंग्स",
     "emptyTitle": "सब निपट गया",
@@ -1319,6 +1322,10 @@
     "clearAllTitle": "सभी नोटिफ़िकेशन साफ़ करें?",
     "clearAllBody": "यह आपके इनबॉक्स से सब कुछ हटा देगा। निर्धारित याद दिलाने वाले फिर भी चलेंगे।",
     "dailyReminder": "दैनिक याद",
+    "dailyTimes_one": "दैनिक याद",
+    "dailyTimes_other": "दैनिक · दिन में {{count}} बार",
+    "plusMore_one": "+{{count}} और",
+    "plusMore_other": "+{{count}} और",
     "inTime": "{{time}} में",
     "allNotifications": "सभी नोटिफ़िकेशन",
     "masterDescription": "LifeOS की हर याद के लिए मुख्य स्विच",

@@ -1,7 +1,8 @@
-import { and, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, isNull, lte, ne, sql } from 'drizzle-orm';
 
 import { getDb } from '@/database/client';
 import { notificationLog } from '@/database/schema';
+import { firedWhileAway } from '@/features/notifications/services/missed-occurrences';
 import { generateId } from '@/lib/id';
 import { LOCAL_USER_ID } from '@/lib/local-user';
 import type {
@@ -173,6 +174,112 @@ function insertDelivered(input: {
     })
     .run();
   return id;
+}
+
+/**
+ * Stamps one-time reminders whose moment has passed as delivered.
+ *
+ * `recordNotificationDelivery` is driven by expo's arrival listener, which only
+ * runs while the app is alive. A reminder that fires with the app killed — the
+ * normal case for a morning nudge — is shown by the OS, and JS never hears
+ * about it. The row keeps `deliveredAt = null` forever, so the bell badge
+ * (which requires a recorded arrival) could never count it: the inbox listed
+ * the notification as delivered, via `notificationStatus`'s clock fallback,
+ * while the badge insisted there was nothing unread. Two views of one table
+ * disagreeing.
+ *
+ * This closes that by writing down what `notificationStatus` already infers:
+ * past + one-time + not cancelled + never stamped ⇒ it fired. `deliveredAt` is
+ * set to `scheduledAt`, not `now`, so the inbox timestamp reads when it
+ * actually arrived rather than when the app happened to reopen.
+ *
+ * Deliberately limited to `repeats = 'none'`. A repeating row's `scheduledAt`
+ * points at its NEXT occurrence, so it is never "past" and there is no record
+ * of how many times it fired while the app was closed — stamping it would both
+ * lie and consume the schedule row. Those still only register when the app is
+ * running to hear them; catching them needs a background task, which is a
+ * native change to validate on a device.
+ *
+ * Returns the number of rows stamped so callers can skip a cache invalidation
+ * when nothing changed. Idempotent — a stamped row no longer matches.
+ */
+export function reconcilePassedNotifications(now = Date.now()): number {
+  const result = getDb()
+    .update(notificationLog)
+    .set({ deliveredAt: sql`${notificationLog.scheduledAt}` })
+    .where(
+      and(
+        eq(notificationLog.userId, LOCAL_USER_ID),
+        isNull(notificationLog.canceledAt),
+        isNull(notificationLog.deliveredAt),
+        eq(notificationLog.repeats, 'none'),
+        lte(notificationLog.scheduledAt, now),
+      ),
+    )
+    .run();
+  return result.changes ?? 0;
+}
+
+/**
+ * Records repeating reminders that fired while the app was closed.
+ *
+ * The companion to `reconcilePassedNotifications`, which handles one-time rows
+ * and deliberately skips repeating ones. A daily habit reminder firing every
+ * morning for a week left no trace in the inbox: the arrival listener needs a
+ * live process, and the schedule row's `scheduledAt` points at the next fire,
+ * so nothing ever read as past. See missed-occurrences.ts for the arithmetic
+ * that recovers when the last one was.
+ *
+ * One row per schedule, not one per occurrence. A week away is "this reminder
+ * fired while you were gone", not seven identical entries — the schedule row
+ * itself survives untouched, still pointing at the next fire.
+ *
+ * `cap` bounds a long absence: someone returning after a month with fifteen
+ * schedules should not find the inbox rebuilt around notifications they have
+ * already seen and dismissed on the lock screen.
+ *
+ * MUST run before the resync's `cancelAllScheduled()`, which deletes exactly
+ * the scheduled rows this reads.
+ */
+export function recordMissedRepeatingDeliveries(since: number, now = Date.now(), cap = 20): number {
+  const db = getDb();
+  const rows = db
+    .select()
+    .from(notificationLog)
+    .where(
+      and(
+        eq(notificationLog.userId, LOCAL_USER_ID),
+        isNull(notificationLog.canceledAt),
+        isNull(notificationLog.deliveredAt),
+        ne(notificationLog.repeats, 'none'),
+      ),
+    )
+    .all();
+
+  let recorded = 0;
+  for (const row of rows) {
+    if (recorded >= cap) break;
+    const occurrence = firedWhileAway(
+      row.scheduledAt,
+      row.repeats as NotificationRepeat,
+      since,
+      now,
+    );
+    if (occurrence === null) continue;
+
+    insertDelivered({
+      notificationId: row.notificationId,
+      category: row.category as NotificationCategory,
+      title: row.title,
+      body: row.body,
+      route: row.route,
+      params: row.params ? (JSON.parse(row.params) as Record<string, string>) : null,
+      deliveredAt: occurrence,
+      repeats: 'none',
+    });
+    recorded += 1;
+  }
+  return recorded;
 }
 
 /**
