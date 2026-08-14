@@ -21,10 +21,13 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { Text as RNText, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AnimatedSplash } from '@/components/animated-splash';
+import { initDatabase } from '@/database/client';
+import { reportError } from '@/lib/error-reporting';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { NotificationBanner } from '@/components/ui/notification-banner';
 import { ToastHost } from '@/components/ui/toast';
@@ -211,12 +214,59 @@ function ModuleRouteGuard() {
   return null;
 }
 
+/**
+ * Shown when the encrypted database cannot be opened, which is the one failure
+ * the app has nothing to fall back to — every screen reads from it.
+ *
+ * Deliberately plain `View`/`Text` with inline styles: this renders before
+ * fonts have loaded and outside the ErrorBoundary (which lives further down
+ * this tree and so cannot catch a throw from RootLayout itself), so it must not
+ * depend on anything that might also be broken.
+ */
+function DatabaseUnavailable({ message, background }: { message: string; background: string }) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 32,
+        gap: 12,
+        backgroundColor: background,
+      }}
+    >
+      <RNText style={{ fontSize: 18, fontWeight: '700', color: '#ef4444', textAlign: 'center' }}>
+        LifeOS can’t open its database
+      </RNText>
+      <RNText style={{ fontSize: 14, color: '#6b7280', textAlign: 'center' }}>{message}</RNText>
+    </View>
+  );
+}
+
 export default function RootLayout() {
   const init = useAuthStore((state) => state.init);
   const isInitialized = useAuthStore((state) => state.isInitialized);
   const profileHydrated = useProfileStore((state) => state.hydrated);
   const scheme = useColorScheme() ?? 'light';
   const [splashDone, setSplashDone] = useState(false);
+  /**
+   * The database is opened here rather than on first use, because the
+   * SQLCipher key comes from the keystore and that is async — see
+   * database/client.ts. Nothing below may touch the database until this is
+   * true, which is why the effect that rebuilds reminders waits on it too.
+   */
+  const [dbReady, setDbReady] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
+
+  useEffect(() => {
+    initDatabase().then(
+      () => setDbReady(true),
+      (error: unknown) => {
+        reportError(error, { scope: 'database-init' });
+        setDbError(error instanceof Error ? error.message : String(error));
+      },
+    );
+  }, []);
   const [fontsLoaded] = useFonts({
     Sora_400Regular,
     Sora_500Medium,
@@ -230,6 +280,9 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    // Every call below reads the database, so none of them may run before it
+    // is open. This effect re-runs once `dbReady` flips.
+    if (!dbReady) return;
     init();
     // Reconcile scheduled reminders with the delivery mode and refresh the
     // morning digest with today's counts on every launch — local notifications
@@ -242,20 +295,28 @@ export default function RootLayout() {
     void resyncAllReminders();
     // Refresh the home-screen widget's snapshot with today's counts (Android).
     syncTodayWidget();
-  }, [init]);
+  }, [init, dbReady]);
 
   useEffect(() => {
-    if (fontsLoaded && isInitialized && profileHydrated) SplashScreen.hideAsync();
-  }, [fontsLoaded, isInitialized, profileHydrated]);
+    // `dbError` hides the splash too, or the failure screen below would sit
+    // invisible behind it and the app would look like it hung.
+    if ((fontsLoaded && isInitialized && profileHydrated && dbReady) || dbError) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, isInitialized, profileHydrated, dbReady, dbError]);
 
   // The app's ground color. Applied to the root view + every navigator scene
   // (contentStyle below) so boot and screen transitions never flash the
   // default white scene — the bug this replaced, worst in dark mode.
   const c = colors[scheme];
 
-  // Wait for fonts, the initial session check, and the persisted profile so the
-  // gate can route to auth / onboarding / app without a flash of the wrong one.
-  if (!fontsLoaded || !isInitialized || !profileHydrated) return null;
+  if (dbError) return <DatabaseUnavailable message={dbError} background={c.background} />;
+
+  // Wait for fonts, the initial session check, the persisted profile and the
+  // encrypted database so the gate can route to auth / onboarding / app without
+  // a flash of the wrong one — and so no screen queries a database that is not
+  // open yet.
+  if (!fontsLoaded || !isInitialized || !profileHydrated || !dbReady) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: c.background }}>
