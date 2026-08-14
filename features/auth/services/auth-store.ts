@@ -3,13 +3,15 @@ import type { Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import { releaseThisDevice, revokeAllDevices } from '@/features/auth/services/device-session';
 import {
   reconcileAccountOnSignIn,
-  wipeLocalData,
+  wipeDeviceData,
 } from '@/features/sync/services/account-reconcile';
 import { GUEST_SENTINEL, useSyncStore } from '@/features/sync/store/sync-store';
 import { ensureProfileRow } from '@/features/auth/services/ensure-profile';
 import { isSupabaseConfigured } from '@/lib/env';
+import { reportError } from '@/lib/error-reporting';
 import { looksOffline } from '@/lib/supabase-error';
 import { passwordResetRedirectUrl, supabase } from '@/lib/supabase';
 import { toast } from '@/lib/toast-store';
@@ -27,6 +29,21 @@ const NOT_CONFIGURED = {
 /** Result shape both sign-in and sign-up return so screens can show a friendly
  * error without importing Supabase's error types. */
 export type AuthResult = { ok: true } | { ok: false; error: string };
+
+/** How much a sign-out should tear down. Defaults are the ordinary case; every
+ *  field exists for one caller that genuinely needs the other answer. */
+export type SignOutOptions = {
+  /**
+   * Erase this device's copy of everything on the way out. On by default:
+   * signing out is the moment a phone stops being yours, and leaving a full
+   * local database behind — journal, finances, photographs — because the
+   * session token was removed is a privacy answer that only looks complete.
+   */
+  wipeDevice?: boolean;
+  /** Hand the account's device slot back so the next device signs in without
+   *  a code. Off only when the slot is already gone (this device was revoked). */
+  release?: boolean;
+};
 
 export type AuthProfile = {
   id: string;
@@ -87,7 +104,19 @@ type AuthState = {
   sendSignupOtp: (email: string, displayName?: string) => Promise<AuthResult>;
   /** Verifies the sign-up code and establishes the session. */
   verifySignupOtp: (email: string, token: string) => Promise<AuthResult>;
-  signOut: () => Promise<void>;
+  /**
+   * Signs out and, unless told otherwise, wipes this device — see
+   * `SignOutOptions`.
+   *
+   * This is the mechanism, not the flow. It does NOT push unsynced work
+   * first, and it will therefore destroy anything that never reached the
+   * server. UI call sites must go through `confirmAndSignOut()` in
+   * `features/auth/services/sign-out-flow.ts`, which owns the evacuation and
+   * the confirmation; the split exists because the evacuation lives in
+   * `sync-engine`, which imports this store, and importing it back would put a
+   * cycle between the two.
+   */
+  signOut: (options?: SignOutOptions) => Promise<void>;
   resetPassword: (email: string) => Promise<AuthResult>;
   /** Verifies a password-reset code and establishes the recovery session that
    *  `updatePassword` then sets the new password against. */
@@ -265,7 +294,42 @@ export const useAuthStore = create<AuthState>()(
         return { ok: true };
       },
 
-      signOut: async () => {
+      /**
+       * Signs out and clears this device.
+       *
+       * The order is the interesting part, and each step is where it is
+       * because the next one makes it impossible:
+       *
+       *  1. **Release the device slot**, while there is still a session to
+       *     release it with. Skipping this would leave the roster claiming
+       *     this phone holds the account, and the user's *next* phone would be
+       *     met by a one-time code for a device that is no longer signed in.
+       *  2. **Wipe.** Before the sign-out rather than after, because a crash
+       *     between the two must not leave a signed-out phone carrying a full
+       *     database.
+       *  3. **Sign out.**
+       *
+       * The push of unsynced work happens before all of this, in
+       * `confirmAndSignOut()` — see the note on the type above.
+       */
+      signOut: async (options) => {
+        const wipeDevice = options?.wipeDevice ?? true;
+
+        if ((options?.release ?? true) && get().session) {
+          await releaseThisDevice();
+        }
+
+        if (wipeDevice) {
+          try {
+            wipeDeviceData();
+          } catch (error) {
+            // Reported, not fatal. Refusing to sign out because the wipe threw
+            // would strand somebody signed in on a device they are trying to
+            // leave — the worse of the two failures by a wide margin.
+            reportError(error, { scope: 'sign-out-wipe' });
+          }
+        }
+
         explicitSignOut = true;
         try {
           await supabase.auth.signOut();
@@ -304,12 +368,25 @@ export const useAuthStore = create<AuthState>()(
 
       deleteAccount: async () => {
         if (!isSupabaseConfigured) return NOT_CONFIGURED;
+
+        // Before the account goes, not after: this queues a wipe for every
+        // device on the roster and revokes them all. Once `deleteUser` runs the
+        // rows cascade away and there is no longer an account to issue orders
+        // on behalf of — so a phone that is offline right now would otherwise
+        // keep its full local copy with nothing left to ever tell it otherwise.
+        // Best-effort, and deliberately not allowed to block the deletion,
+        // which is the user's right and not conditional on bookkeeping.
+        await revokeAllDevices('account_deleted');
+
         // Server-side deletion (auth user + all their rows) runs in an edge
         // function — the client can't call auth.admin.deleteUser. See
         // supabase/functions/delete-account. Requires App/Play store compliance.
         const { error } = await supabase.functions.invoke('delete-account');
         if (error) return { ok: false, error: friendly(error.message) };
-        wipeLocalData();
+        // The full device wipe, not the account-switch one: there is no account
+        // to come back to, so nothing about this install should still describe
+        // the person who just deleted theirs.
+        wipeDeviceData();
         explicitSignOut = true;
         try {
           await supabase.auth.signOut();

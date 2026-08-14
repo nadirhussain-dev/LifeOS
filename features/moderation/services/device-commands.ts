@@ -1,7 +1,8 @@
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { useModerationStore } from '@/features/moderation/store/moderation-store';
 import { evacuateBeforeWipe } from '@/features/sync/services/sync-engine';
-import { wipeLocalData } from '@/features/sync/services/account-reconcile';
+import { wipeDeviceData, wipeLocalData } from '@/features/sync/services/account-reconcile';
+import { getDeviceId } from '@/lib/device-id';
 import { isSupabaseConfigured } from '@/lib/env';
 import { reportError } from '@/lib/error-reporting';
 import { supabase } from '@/lib/supabase';
@@ -62,7 +63,13 @@ async function run(): Promise<void> {
 
   let commands: DeviceCommand[];
   try {
-    const { data, error } = await supabase.rpc('pending_device_commands');
+    // Named, because a command can now be aimed at ONE device: migration 0047
+    // queues a wipe for the phone that just lost the account, and the phone
+    // that just took it must not carry that order out on itself. Commands with
+    // no target (a moderator blocking the whole account) still reach everyone.
+    const { data, error } = await supabase.rpc('pending_device_commands', {
+      p_device_id: await getDeviceId(),
+    });
     if (error || !data) return;
     commands = (data as Record<string, unknown>[]).map((row) => ({
       id: String(row.id),
@@ -109,7 +116,24 @@ async function performLocalWipe(command: DeviceCommand): Promise<void> {
   }
 
   try {
-    wipeLocalData();
+    // Two different wipes, because the two orders mean different things.
+    //
+    // A moderation block leaves the device in use by the same person, who may
+    // be unblocked tomorrow — so `wipeLocalData` keeps the onboarding flag and
+    // does not pretend the app was never set up here.
+    //
+    // Losing the account to another device is the opposite: this phone is done
+    // with this account, possibly because it was sold or handed on, and the
+    // whole point of the order is that nothing personal survives it. That is
+    // `wipeDeviceData`, which also clears the onboarding answers.
+    if (
+      command.detail.reason === 'signed_in_elsewhere' ||
+      command.detail.reason === 'account_deleted'
+    ) {
+      wipeDeviceData();
+    } else {
+      wipeLocalData();
+    }
   } catch (error) {
     // A failed wipe must not be acknowledged. Leaving the command outstanding
     // is what gets it retried on the next launch.

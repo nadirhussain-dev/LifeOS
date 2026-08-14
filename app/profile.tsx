@@ -23,6 +23,7 @@ import {
 } from '@/features/profile/services/avatar';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { alpha } from '@/lib/color';
+import { confirmAndSignOut } from '@/features/auth/services/sign-out-flow';
 import { confirm } from '@/lib/dialog-store';
 import { toast } from '@/lib/toast-store';
 
@@ -48,7 +49,6 @@ export default function ProfileScreen() {
   const updateDisplayName = useAuthStore((s) => s.updateDisplayName);
   const claimUsername = useAuthStore((s) => s.claimUsername);
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
-  const signOut = useAuthStore((s) => s.signOut);
   const { status } = useAccountStanding();
 
   const [name, setName] = useState(profile?.displayName ?? '');
@@ -326,17 +326,7 @@ export default function ProfileScreen() {
               icon={LogOut}
               label={t('sync.signOut')}
               chevron={false}
-              onPress={() =>
-                void confirm({
-                  title: t('sync.signOutTitle'),
-                  message: t('sync.signOutBody'),
-                  confirmLabel: t('sync.signOut'),
-                  cancelLabel: t('common.cancel'),
-                }).then(async (ok) => {
-                  if (!ok) return;
-                  void signOut();
-                })
-              }
+              onPress={() => void confirmAndSignOut()}
             />
             <SettingsRow
               icon={Trash2}
