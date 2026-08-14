@@ -1,121 +1,129 @@
 # SQLCipher — at-rest database encryption
 
-**Status:** the encryption key primitive is implemented and safe
-(`features/security/lib/db-key.ts` → `getOrCreateDbKey()`). Flipping the actual
-DB engine to an encrypted one is a **native change that must be built and
-validated on a device** — it can't be verified with `expo export`, and a mistake
-means the DB won't open. Follow these steps on a dev build, then keep it.
+**Status: implemented in code, never run.** `database/client.ts` opens the
+database through `@op-engineering/op-sqlite` with the key from
+`features/security/lib/db-key.ts`, and `app/_layout.tsx` holds rendering until
+it is open. Everything below the "Verify on device" heading is still
+outstanding — **no build containing this has ever been made or launched**, and
+a mistake here means the app cannot open its database at all.
 
-## Why it's not wired by default
+## The one non-obvious decision
 
-`expo-sqlite` has no SQLCipher support. Encryption requires swapping to
-`@op-engineering/op-sqlite` (which supports `encryptionKey` when built with the
-SQLCipher flag) and drizzle's op-sqlite driver. That touches the DB open path,
-the raw-SQL adapter used by the sync engine, and needs a one-time data migration
-for any existing plaintext DB. Because a subtle error bricks the whole app and
-can't be caught without running it, it's documented rather than shipped blind.
+Do **not** use `drizzle-orm/op-sqlite`. It is built on `SQLiteAsyncDialect`, so
+every `.all()`, `.get()` and `.run()` returns a Promise — adopting it is not an
+engine swap, it is an async rewrite of all 24 repositories and every hook and
+screen above them. This was discovered by trying it: `tsc` produced hundreds of
+`Property 'map' does not exist on type 'Promise<...>'`.
 
-## Steps
+The database is therefore driven through `drizzle-orm/expo-sqlite`, whose
+`SQLiteSyncDialect` keeps everything synchronous. That driver asks its client
+for exactly one method — `prepareSync(sql)` — and `opSqliteClient()` in
+`database/client.ts` supplies it over op-sqlite's own synchronous
+`executeSync`/`executeRawSync`. No repository changed.
 
-### 1. Install + enable SQLCipher
+`database/op-sqlite-client.test.ts` exercises that shim against a real SQLite
+(`node:sqlite` standing in for the native engine), because nothing about it
+fails at compile time: the client is passed `as never`, so a wrong field name
+shows up as empty lists on a device rather than an error here.
+
+## What has been done
+
+### 1. Install + enable SQLCipher — DONE
 
 ```bash
 npx expo install @op-engineering/op-sqlite
 ```
 
-In `package.json`, enable the SQLCipher build:
+`package.json` carries the build flag:
 
 ```json
 "op-sqlite": { "sqlcipher": true }
 ```
 
-Then rebuild the dev client (`eas build -p android --profile development`) — the
-flag is compiled in.
+**The flag is compiled in, so it only takes effect in a native build made after
+it was added.** `initDatabase()` calls `isSQLCipher()` and throws if the running
+binary lacks it — a silent fallback would give a perfectly working app writing
+plaintext, which is the worst outcome available here.
 
-### 2. Fetch the key before any DB access
+### 2. Open before any DB access — DONE
 
-`getDb()` is synchronous but the key is async (SecureStore). Resolve it once at
-boot, before the first query. In `app/_layout.tsx`, gate rendering on it:
+The key is async (SecureStore) and is needed before the first byte is read, so
+`getDb()` no longer opens on demand: it throws until `initDatabase()` has run.
+`app/_layout.tsx` holds rendering on `dbReady`, and the effect that rebuilds
+reminders waits on it too — everything it calls reads the database.
 
-```ts
-const [dbReady, setDbReady] = useState(false);
-useEffect(() => {
-  void initDatabase().then(() => setDbReady(true));
-}, []);
-if (!fontsLoaded || !isInitialized || !profileHydrated || !dbReady) return null;
-```
+A failure renders `DatabaseUnavailable` rather than a blank screen. It uses raw
+`View`/`Text` with inline styles on purpose: it renders before fonts load, and
+outside the `ErrorBoundary` (which lives further down the same tree and so
+cannot catch a throw from `RootLayout` itself).
 
-### 3. Rewrite `database/client.ts`
+### 3. `database/client.ts` — DONE
 
-```ts
-import { drizzle } from 'drizzle-orm/op-sqlite';
-import { open, type DB } from '@op-engineering/op-sqlite';
-import * as schema from '@/database/schema';
-import { getOrCreateDbKey } from '@/features/security/lib/db-key';
+See the file. Two things differ from what this document originally prescribed:
 
-let raw: DB | null = null;
-let instance: ReturnType<typeof drizzle<typeof schema>> | null = null;
+- **The drizzle driver is `expo-sqlite`, not `op-sqlite`** — see "The one
+  non-obvious decision" above. This is the important one.
+- **`bootstrapDatabase()` is reused as-is** rather than reimplemented. Its
+  `BootstrapTarget` was already an abstract two-method interface, so the
+  op-sqlite adapter satisfies it directly and `applyAdditiveColumns` did not
+  change at all.
 
-/** Call once at boot (before getDb) — opens the encrypted DB and bootstraps. */
-export async function initDatabase(): Promise<void> {
-  if (instance) return;
-  const encryptionKey = await getOrCreateDbKey();
-  const db = open({ name: 'lifeos.db', encryptionKey });
+### 4. Existing plaintext data — DONE (it is deleted)
 
-  // op-sqlite's executeSync runs ONE statement; TABLE_BOOTSTRAP_SQL is many.
-  for (const stmt of schema.TABLE_BOOTSTRAP_SQL.split(';')) {
-    if (stmt.trim()) db.executeSync(stmt);
-  }
-  applyAdditiveColumns(db);
-  for (const stmt of schema.INDEX_BOOTSTRAP_SQL.split(';')) {
-    if (stmt.trim()) db.executeSync(stmt);
-  }
+op-sqlite stores its file in a different directory from expo-sqlite, so the old
+plaintext `lifeos.db` is not migrated or overwritten — it is orphaned.
+`discardLegacyPlaintextDatabase()` deletes it (plus `-wal`/`-shm`) once the
+encrypted database is open **and** at schema, so a failure leaves the only copy
+of the data intact.
 
-  raw = db;
-  instance = drizzle(db, { schema });
-}
+Leaving it would have made the whole change cosmetic: the journal text,
+coordinates and ledger this protects would still be on disk in the clear.
 
-export function getDb() {
-  if (!instance) throw new Error('initDatabase() must run before getDb()');
-  return instance;
-}
-
-// getRawDb() adapter: the sync engine expects expo-sqlite's getAllSync/
-// getFirstSync/runSync/execSync. Wrap op-sqlite's executeSync (returns { rows }).
-export function getRawDb() {
-  const db = raw!;
-  return {
-    getAllSync: <T>(sql: string, params: unknown[] = []) =>
-      (db.executeSync(sql, params).rows ?? []) as T[],
-    getFirstSync: <T>(sql: string, params: unknown[] = []) =>
-      ((db.executeSync(sql, params).rows ?? [])[0] ?? null) as T | null,
-    runSync: (sql: string, params: unknown[] = []) => db.executeSync(sql, params),
-    execSync: (sql: string) => {
-      for (const s of sql.split(';')) if (s.trim()) db.executeSync(s);
-    },
-  };
-}
-```
-
-`applyAdditiveColumns` changes from `PRAGMA table_info` via `getAllSync` +
-`execSync` to the same calls on the op-sqlite `db` — the logic is identical.
-
-### 4. One-time data migration (existing installs only)
-
-An existing **plaintext** `lifeos.db` cannot be read by the encrypted engine. For
-a fresh install there's nothing to do. For a device that already has data:
-
-- Simplest: Settings → Data → **Export data** (JSON) before upgrading, then the
-  encrypted DB starts empty (re-import is manual today), **or**
-- Use SQLCipher's `sqlcipher_export` to copy the plaintext DB into an encrypted
-  one at first launch (one-off ATTACH script).
-
-Since LifeOS hasn't shipped to real users, wiping and starting fresh on the dev
-device is acceptable.
+**Data does not carry across.** SQLCipher cannot read a plaintext file, and
+`sqlcipher_export` over an ATTACH is a lot of unverifiable machinery for a
+pre-release app with no users. Use Settings → Data → **Export data** first if
+you want your rows; re-import is manual today.
 
 ### 5. Verify on device
 
-- App launches (DB opens with the key).
-- Create a task, force-quit, relaunch → it's still there (bootstrap + persistence OK).
-- Pull `lifeos.db` off the device (ADB) and confirm it is NOT readable as plain
-  SQLite (it's SQLCipher-encrypted).
+**This is the outstanding work.** Everything above is written but has never run.
+The native module is not in any existing build, so the app will not start until
+a new one is made:
+
+```bash
+eas build -p android --profile development
+```
+
+Then, in order — each step fails differently, so do not skip ahead:
+
+1. **App launches at all.** If it shows "LifeOS can't open its database" saying
+   the build lacks SQLCipher, the `package.json` flag did not reach the build.
+   Any other message is `initDatabase()` failing for a different reason and the
+   text is the error.
+2. **The schema exists.** Open Tasks, Habits, Budget. Empty lists are expected
+   (the old data is gone by design); a crash or an error state is the
+   statement-splitting or the `prepareSync` shim being wrong.
+3. **Writes land.** Create a task, force-quit, relaunch → it is still there.
+   This is what proves `rowsAffected` maps onto drizzle's `changes` correctly;
+   `database/op-sqlite-client.test.ts` covers it against `node:sqlite`, not
+   against the real native engine.
+4. **Sync still works.** Sign in and run a sync. The sync engine is the heaviest
+   user of the raw adapter (`getAllSync`/`getFirstSync`/`runSync`) and the only
+   place that builds SQL by table name.
+5. **It is actually encrypted.** Pull the file off the device and confirm it is
+   not readable as plain SQLite:
+
+   ```bash
+   adb shell "run-as com.lifeos.app cat databases/lifeos.db" > lifeos.db
+   sqlite3 lifeos.db ".tables"   # must fail: "file is not a database"
+   ```
+
+   A file that opens fine is the failure this whole change exists to prevent —
+   `isSQLCipher()` should have thrown first, so treat it as a real bug.
+
+6. **The plaintext file is gone.** Confirm the old expo-sqlite copy no longer
+   exists, since it holds the same data unencrypted:
+
+   ```bash
+   adb shell "run-as com.lifeos.app ls files/SQLite/"   # no lifeos.db
+   ```
