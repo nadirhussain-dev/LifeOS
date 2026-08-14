@@ -49,6 +49,8 @@ import { AppLockOverlay } from '@/features/security/components/app-lock-overlay'
 import { useAppLock } from '@/features/security/hooks/use-app-lock';
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { useAuthGate } from '@/features/auth/hooks/use-auth-gate';
+import { useDeviceSessionSync } from '@/features/auth/hooks/use-device-session';
+import { DeviceGateOverlay } from '@/features/auth/components/device-gate-overlay';
 import { useUsageReporter } from '@/features/analytics/hooks/use-usage-reporter';
 import { AmbientBackground } from '@/components/ui/ambient-background';
 import { DialogHost } from '@/components/ui/dialog-host';
@@ -143,6 +145,13 @@ function UsageReporter() {
  * clears itself and a blocked account can be told why. Renders nothing. */
 function AccountStandingBridge() {
   useAccountStandingSync();
+  return null;
+}
+
+/** Claims the account for this device and notices when another one takes it —
+ *  see migration 0047 and use-device-session.ts. Renders nothing. */
+function DeviceSessionBridge() {
+  useDeviceSessionSync();
   return null;
 }
 
@@ -410,6 +419,7 @@ export default function RootLayout() {
               <SyncTrigger />
               <SyncStatusBridge />
               <AccountStandingBridge />
+              <DeviceSessionBridge />
               <BillingSyncBridge />
               <UsageReporter />
               <WidgetSync />
@@ -451,6 +461,10 @@ export default function RootLayout() {
                 cold-start splash. Blocked sits under the lock deliberately —
                 the device's owner still authenticates first. */}
             <BlockedOverlay />
+            {/* Under the block and the lock, above everything else. A blocked
+                account has a bigger problem than which phone it is on, and the
+                device's owner still authenticates before either is shown. */}
+            <DeviceGateOverlay />
             <AppLockOverlay />
             {!splashDone && (
               <AnimatedSplash

@@ -22,6 +22,7 @@ import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useUsageStore } from '@/features/analytics/store/usage-store';
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { confirmAndSignOut } from '@/features/auth/services/sign-out-flow';
 import { SYNC_MODULES } from '@/features/sync/config/sync-tables';
 import { useSyncStatus } from '@/features/sync/hooks/use-sync';
 import { useOpenConflictCount } from '@/features/sync/hooks/use-sync-conflicts';
@@ -48,7 +49,6 @@ export default function SyncSettingsScreen() {
 
   const session = useAuthStore((s) => s.session);
   const profile = useAuthStore((s) => s.profile);
-  const signOut = useAuthStore((s) => s.signOut);
   const deleteAccount = useAuthStore((s) => s.deleteAccount);
 
   const { status, lastSyncedAt, lastError } = useSyncStatus();
@@ -141,17 +141,11 @@ export default function SyncSettingsScreen() {
     void syncNow({ force: true });
   };
 
+  // Confirmation, the final push, and the "you have unsynced work" stop all
+  // live in the flow — signing out now clears this device, so the dialogs are
+  // part of the operation rather than decoration around it.
   const handleSignOut = () => {
-    void confirm({
-      title: t('sync.signOutTitle'),
-      message: t('sync.signOutBody'),
-      confirmLabel: t('sync.signOut'),
-      cancelLabel: t('common.cancel'),
-      destructive: true,
-    }).then(async (ok) => {
-      if (!ok) return;
-      void signOut();
-    });
+    void confirmAndSignOut();
   };
 
   const handleDeleteAccount = () => {

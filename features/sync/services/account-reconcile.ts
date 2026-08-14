@@ -1,7 +1,10 @@
+import { useDeviceSessionStore } from '@/features/auth/store/device-session-store';
+import { useModerationStore } from '@/features/moderation/store/moderation-store';
 import { useProfileStore } from '@/features/profile/store/profile-store';
 import { useSyncStore } from '@/features/sync/store/sync-store';
 import { clearAllData } from '@/lib/data-management';
 import { reportError } from '@/lib/error-reporting';
+import { cancelAllScheduled } from '@/lib/notifications';
 import { queryClient } from '@/lib/query-client';
 
 /**
@@ -95,4 +98,64 @@ export function wipeLocalData(): void {
   useSyncStore.getState().resetCursors();
   useSyncStore.getState().setLastUserId(null);
   useProfileStore.getState().resetAnswers();
+  cancelScheduledReminders();
+}
+
+/**
+ * The deeper wipe: this device back to the state it was in before anybody
+ * signed in on it.
+ *
+ * `wipeLocalData` above is for an account *switch*, where the device is still
+ * in use and being onboarded again would be noise. This one is for sign-out,
+ * account deletion, and losing the account to another device — the three cases
+ * where the answer to "is any of my data still on that phone?" has to be no.
+ *
+ * So it additionally clears what `wipeLocalData` deliberately keeps:
+ *
+ *  - **The onboarding answers AND the completion flag** (`reset()`, not
+ *    `resetAnswers()`). The name, the gender, the chosen focus areas are things
+ *    the person told this app about themselves. They are not sync cursors, and
+ *    leaving them behind for whoever picks the phone up next would make
+ *    "removed everything" untrue in the most personal way available.
+ *  - **The cached moderation verdict**, which names an account that no longer
+ *    has anything here.
+ *  - **The device-session verdict**, so the next sign-in starts from 'unknown'
+ *    and claims cleanly rather than inheriting the previous account's standing.
+ *
+ * The consequence is deliberate and worth stating: signing out returns the app
+ * to first-run, so the next launch shows onboarding rather than a login form.
+ * That is what wiping the device means. Onboarding reaches into the auth flow
+ * one step past the welcome screen, so signing back in is still two taps.
+ *
+ * What it does NOT clear is the device id itself (see lib/device-id.ts) — an
+ * install that changed identity on every sign-out could never be recognised as
+ * "the device already signed in", which is the roster's whole purpose.
+ */
+export function wipeDeviceData(): void {
+  clearAllData();
+  queryClient.clear();
+  useSyncStore.getState().resetCursors();
+  useSyncStore.getState().setLastUserId(null);
+  useProfileStore.getState().reset();
+  useModerationStore.getState().clear();
+  useDeviceSessionStore.getState().clear();
+  cancelScheduledReminders();
+}
+
+/**
+ * Cancels every scheduled reminder on the way out.
+ *
+ * Not optional tidying: reminders are scheduled with the OS, which knows
+ * nothing about this database and will keep firing "Time to journal" and
+ * habit nudges built from rows that no longer exist — on a phone whose data
+ * was supposed to be gone, to whoever is now holding it.
+ *
+ * Deliberately not awaited. Both wipes are synchronous by design (callers wipe
+ * and re-render immediately) and the OS scheduler only offers an async clear;
+ * a failure here is survivable, since the reminders it leaves point at nothing.
+ */
+function cancelScheduledReminders(): void {
+  void cancelAllScheduled().catch((error) => {
+    reportError(error, { scope: 'wipe-cancel-reminders' });
+  });
 }

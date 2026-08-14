@@ -149,7 +149,16 @@ export function BlockedOverlay() {
             variant="ghost"
             size="lg"
             label={t('sync.signOut')}
-            onPress={() => void signOut()}
+            /*
+              Straight to the mechanism, not through `confirmAndSignOut`. The
+              block already wiped this device and the server refuses every
+              push, so the evacuation that flow runs would find nothing to save
+              and then stop the user with an "unsynced changes" warning about
+              data that no longer exists — turning the only exit from this
+              screen into a dead end. `release: false` for the same reason: a
+              blocked account's device roster is not its problem.
+            */
+            onPress={() => void signOut({ release: false })}
           />
         </View>
       </View>

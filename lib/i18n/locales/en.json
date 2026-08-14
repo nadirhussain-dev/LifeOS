@@ -1447,6 +1447,28 @@
       "description": "A nudge when your period is expected soon. Never shown as a private-space reminder."
     }
   },
+  "device": {
+    "takeoverTitle": "Continue on this device?",
+    "takeoverBody": "Your account is already open on another device. One account can be signed in on one device at a time.",
+    "takeoverBodyNamed": "Your account is already open on {{device}}. One account can be signed in on one device at a time.",
+    "lastUsed": "Last used {{ago}}",
+    "whatHappens": "What happens next",
+    "whatHappensBody": "We’ll email you a 6-digit code. Once you enter it, this device takes over the account — the other device is signed out and everything of yours is removed from it.",
+    "sendCode": "Email me a code",
+    "moveAccount": "Move my account here",
+    "movingAccount": "Moving…",
+    "codeIncorrect": "That code is incorrect or has expired. Request a new one.",
+    "proofExpired": "That took too long. Request a new code and try again.",
+    "noEmail": "There’s no email address on this account — sign out and sign in again.",
+    "signOutInstead": "Sign out of this device instead",
+    "revokedTitle": "Signed out on this device",
+    "revokedBody": "Your account was opened on another device, so it was signed out here.",
+    "revokedBodyNamed": "Your account was opened on {{device}}, so it was signed out here.",
+    "revokedDeleted": "This account was deleted, so everything has been removed from this device.",
+    "revokedDismiss": "Got it",
+    "wipedTitle": "This device was cleared",
+    "wipedBody": "Anything that had synced is safe in your account and comes back when you sign in again."
+  },
   "sync": {
     "title": "Sync & Account",
     "eyebrow": "Settings",
@@ -1468,7 +1490,7 @@
     "whatSyncsNote": "Turn off any module to keep it on this device only. Photos, audio, and reminders always stay local for now.",
     "signOut": "Sign out",
     "signOutTitle": "Sign out?",
-    "signOutBody": "Your synced data stays in your account. Data on this device remains available in guest mode.",
+    "signOutBody": "This clears LifeOS on this device — your synced data stays in your account and comes back when you sign in again. Anything that hasn’t synced will be gone.",
     "deleteAccount": "Delete account",
     "deleteAccountTitle": "Delete account?",
     "deleteAccountBody": "This permanently deletes your account and all your synced data from the cloud, and clears this device. This cannot be undone.",
@@ -1490,7 +1512,11 @@
     "conflictKeepTheirs": "Keep theirs",
     "conflictDismissAll": "Keep all the newer versions",
     "conflictDismissAllTitle": "Keep the newer versions?",
-    "conflictDismissAllBody": "This clears the list. Your replaced versions are not recoverable afterwards."
+    "conflictDismissAllBody": "This clears the list. Your replaced versions are not recoverable afterwards.",
+    "signOutUnsyncedTitle": "Some data hasn’t synced",
+    "signOutUnsyncedBody": "{{modules}} hasn’t reached your account yet. Signing out now removes it from this device for good.",
+    "signOutUnsyncedOffline": "We couldn’t reach your account to save your latest changes. Signing out now removes anything unsynced from this device for good.",
+    "signOutAnyway": "Sign out anyway"
   },
   "syncModule": {
     "tasks": "Tasks",

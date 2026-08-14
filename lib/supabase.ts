@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking';
 import { AppState } from 'react-native';
 
+import { getDeviceId } from './device-id';
 import { env, isSupabaseConfigured } from './env';
 import { secureSessionStorage } from './secure-session-storage';
 
@@ -33,6 +34,36 @@ export const supabase = createClient(url, anonKey, {
   },
   global: {
     headers: { 'x-client-info': 'lifeos-mobile' },
+    /**
+     * Stamps every request with this install's device id, which is what
+     * migration 0047's `may_access_own_data()` matches against the account's
+     * device roster to enforce one-device-at-a-time.
+     *
+     * A wrapped fetch rather than a static entry in `headers` above, for two
+     * reasons that both matter:
+     *
+     *  - The id lives in the OS keystore and is therefore only available
+     *    asynchronously. A static header would have to be resolved before
+     *    `createClient` runs, which is at module load, which cannot await.
+     *  - It has to reach *every* path that talks to the project — PostgREST,
+     *    RPC, Storage, Edge Functions — and each of those builds its own
+     *    request. `global.fetch` is the single choke point they all share.
+     *
+     * `await`ing here costs nothing after the first call: `getDeviceId()`
+     * resolves from a cached promise.
+     */
+    fetch: async (input, init) => {
+      const headers = new Headers(init?.headers);
+      try {
+        headers.set('x-lifeos-device', await getDeviceId());
+      } catch {
+        // No keystore, no id. Sending the request without the header is right:
+        // the server treats an unidentified device as unknown, which is the
+        // conservative reading, and an account that has never registered a
+        // device is unrestricted either way.
+      }
+      return fetch(input, { ...init, headers });
+    },
   },
 });
 
