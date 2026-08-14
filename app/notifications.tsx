@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { BellOff, CheckCheck, Clock, Trash2 } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Linking, Pressable, ScrollView, View } from 'react-native';
 
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { moduleTints } from '@/constants/design-tokens';
@@ -18,17 +18,22 @@ import {
   FALLBACK_NOTIFICATION_ICON,
   type LoggedNotification,
 } from '@/features/notifications/types/notification.types';
+import { groupScheduled } from '@/features/notifications/services/inbox-grouping';
 import { notificationStatus } from '@/features/notifications/services/notification-status';
+import { useNotificationsStore } from '@/features/notifications/store/notifications-store';
 import { alpha } from '@/lib/color';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { confirm } from '@/lib/dialog-store';
 
 function NotificationRow({
   item,
+  count = 1,
   onPress,
   onDelete,
 }: {
   item: LoggedNotification;
+  /** Schedules this row stands for — see groupScheduled. */
+  count?: number;
   onPress: () => void;
   onDelete: () => void;
 }) {
@@ -44,7 +49,12 @@ function NotificationRow({
   const timeLabel =
     status === 'scheduled'
       ? item.repeats === 'daily'
-        ? t('notif.dailyReminder')
+        ? // A daily schedule with several slots says how often as well as what:
+          // "Daily reminder" alone was identical across all fourteen hydration
+          // rows, which is what made them unreadable.
+          count > 1
+          ? t('notif.dailyTimes', { count })
+          : t('notif.dailyReminder')
         : t('notif.inTime', { time: formatDistanceToNow(item.scheduledAt) })
       : formatDistanceToNow(item.scheduledAt, { addSuffix: true });
 
@@ -77,6 +87,14 @@ function NotificationRow({
         <View className="mt-1 flex-row items-center gap-1.5">
           {status === 'scheduled' && <Clock size={11} color={theme.mutedForeground} />}
           <Text variant="caption">{timeLabel}</Text>
+          {/* Daily cadence is already spelled out in timeLabel; a weekly habit
+              across four weekdays is not, so say how many are behind this one
+              rather than repeating the row four times. */}
+          {count > 1 && item.repeats !== 'daily' && (
+            <Text variant="caption" style={{ color: tint }}>
+              {t('notif.plusMore', { count: count - 1 })}
+            </Text>
+          )}
         </View>
       </View>
     </Pressable>
@@ -98,6 +116,8 @@ export default function NotificationsInboxScreen() {
   const theme = colors[scheme];
   const { notifications } = useNotificationInbox();
   const { markRead, markAllRead, remove, clearAll } = useNotificationActions();
+  // Strictly false — null is "not checked yet", not "blocked".
+  const permissionRevoked = useNotificationsStore((s) => s.systemPermissionGranted === false);
 
   const { upcoming, recent, hasUnread } = useMemo(() => {
     const now = Date.now();
@@ -112,7 +132,9 @@ export default function NotificationsInboxScreen() {
         if (!n.readAt) unread = true;
       }
     }
-    return { upcoming: up, recent: rec, hasUnread: unread };
+    // Scheduled rows collapse per schedule and run soonest-first; delivered
+    // ones stay individual and newest-first, as the query returns them.
+    return { upcoming: groupScheduled(up), recent: rec, hasUnread: unread };
   }, [notifications]);
 
   const handlePress = (item: LoggedNotification) => {
@@ -150,12 +172,26 @@ export default function NotificationsInboxScreen() {
           >
             <BellOff size={28} color={theme.mutedForeground} />
           </View>
+          {/* Empty *because* nothing can arrive is the likeliest way to see
+              this screen with a revoked permission, and "You're all caught up"
+              is precisely the wrong thing to say about it. */}
           <Text className="font-sora-semibold text-lg text-foreground">
-            {t('notif.emptyTitle')}
+            {permissionRevoked ? t('notif.systemOff') : t('notif.emptyTitle')}
           </Text>
           <Text variant="muted" className="text-center">
-            {t('notif.emptyBody')}
+            {permissionRevoked ? t('notif.permissionBlockedNote') : t('notif.emptyBody')}
           </Text>
+          {permissionRevoked && (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => void Linking.openSettings()}
+              className="mt-1 rounded-xl border border-border px-4 py-2.5"
+            >
+              <Text className="font-sora-medium" style={{ color: theme.accent }}>
+                {t('notif.openSystemSettings')}
+              </Text>
+            </Pressable>
+          )}
         </View>
       </View>
     );
@@ -172,6 +208,27 @@ export default function NotificationsInboxScreen() {
         contentContainerClassName="gap-5 px-5 py-4 pb-10"
         showsVerticalScrollIndicator={false}
       >
+        {/* The screen someone opens when reminders have stopped arriving, so
+            it is where the reason belongs. Nothing else in the app changes
+            when the OS permission is revoked — every switch still reads ON. */}
+        {permissionRevoked && (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void Linking.openSettings()}
+            className="flex-row items-center gap-3 rounded-2xl border p-3.5"
+            style={{
+              borderColor: theme.destructive,
+              backgroundColor: alpha(theme.destructive, 0.08),
+            }}
+          >
+            <BellOff size={18} color={theme.destructive} />
+            <View className="flex-1">
+              <Text className="font-sora-medium text-foreground">{t('notif.systemOff')}</Text>
+              <Text variant="caption">{t('notif.openSystemSettings')}</Text>
+            </View>
+          </Pressable>
+        )}
+
         <View className="flex-row gap-2">
           <Pressable
             accessibilityRole="button"
@@ -195,10 +252,13 @@ export default function NotificationsInboxScreen() {
           </Pressable>
         </View>
 
-        {upcoming.length > 0 && (
+        {/* Recent leads. This is an inbox: it answers "what did I miss", and
+            queued reminders had been pushing every arrival below the fold —
+            fourteen hydration slots are enough to hide them entirely. */}
+        {recent.length > 0 && (
           <View className="gap-2">
-            <SectionLabel>{t('notif.upcoming')}</SectionLabel>
-            {upcoming.map((item) => (
+            <SectionLabel>{t('notif.recent')}</SectionLabel>
+            {recent.map((item) => (
               <NotificationRow
                 key={item.id}
                 item={item}
@@ -209,15 +269,19 @@ export default function NotificationsInboxScreen() {
           </View>
         )}
 
-        {recent.length > 0 && (
+        {upcoming.length > 0 && (
           <View className="gap-2">
-            <SectionLabel>{t('notif.recent')}</SectionLabel>
-            {recent.map((item) => (
+            <SectionLabel>{t('notif.upcoming')}</SectionLabel>
+            {upcoming.map((group) => (
               <NotificationRow
-                key={item.id}
-                item={item}
-                onPress={() => handlePress(item)}
-                onDelete={() => remove.mutate(item.id)}
+                key={group.lead.id}
+                item={group.lead}
+                count={group.count}
+                onPress={() => handlePress(group.lead)}
+                // The whole schedule, not just the occurrence on screen —
+                // removing one slot of fourteen would look like nothing
+                // happened.
+                onDelete={() => group.ids.forEach((id) => remove.mutate(id))}
               />
             ))}
           </View>

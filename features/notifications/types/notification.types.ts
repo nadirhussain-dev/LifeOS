@@ -117,8 +117,18 @@ export const CATEGORY_META: Record<NotificationCategory, NotificationCategoryMet
     labelKey: 'notifCategory.notes.label',
     descriptionKey: 'notifCategory.notes.description',
     icon: StickyNote,
+    /**
+     * Not a bypass. The rule this table follows — stated in delivery.ts — is
+     * that only time-critical categories may cross quiet hours: a task due now,
+     * a calendar event, money, bedtime. "Take a look at this note" is none of
+     * those, and with `true` it did exactly what the window exists to prevent:
+     * fired at 00:21, inside the default 22:00–07:00.
+     *
+     * A note reminder set for the middle of the night now shifts to the end of
+     * the window instead of waking anybody up.
+     */
     tint: '#eab308',
-    bypassQuietHours: true,
+    bypassQuietHours: false,
   },
   goals: {
     labelKey: 'notifCategory.goals.label',

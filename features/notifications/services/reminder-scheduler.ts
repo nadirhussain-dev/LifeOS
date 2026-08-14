@@ -16,8 +16,15 @@ import { scheduleCalendarEventReminder } from '@/features/timeline/services/cale
 import { listUpcomingCalendarEvents } from '@/features/timeline/services/calendar-events-repository';
 import { scheduleWaterReminders } from '@/features/water-intake/services/water-reminders';
 import { useWaterSettingsStore } from '@/features/water-intake/store/water-settings-store';
+import { recordMissedRepeatingDeliveries } from '@/features/notifications/services/notification-log-repository';
+import { seedSlots } from '@/features/notifications/services/scheduling-budget';
+import { useNotificationsStore } from '@/features/notifications/store/notifications-store';
 import { reportError } from '@/lib/error-reporting';
-import { cancelAllScheduled, hasNotificationPermission } from '@/lib/notifications';
+import {
+  cancelAllScheduled,
+  getScheduledCount,
+  hasNotificationPermission,
+} from '@/lib/notifications';
 
 /**
  * Rebuilds every reminder the app owns, from scratch.
@@ -106,9 +113,39 @@ async function runResync(): Promise<ResyncResult> {
     return { ran: false, scheduled: 0, failed: 0 };
   }
 
+  /**
+   * Harvest first, and specifically before `cancelAllScheduled()` below, which
+   * deletes exactly the scheduled rows this reads.
+   *
+   * A repeating reminder that fired while the app was closed is only knowable
+   * from its schedule row — the cadence plus the next fire says when the last
+   * one was. The rebuild is about to throw those rows away and write fresh
+   * ones pointing at future occurrences, taking the evidence with them.
+   *
+   * Skipped on a first launch (`lastArrivalCheckAt === null`): there is nothing
+   * behind it to have missed.
+   */
+  const { lastArrivalCheckAt, setLastArrivalCheckAt } = useNotificationsStore.getState();
+  const checkedAt = Date.now();
+  if (lastArrivalCheckAt !== null) {
+    try {
+      recordMissedRepeatingDeliveries(lastArrivalCheckAt, checkedAt);
+    } catch (error) {
+      // A missed-arrival record is a nicety; losing it must not cost the user
+      // the entire reminder rebuild that follows.
+      reportError(error, { scope: 'reminder-resync:missed-arrivals' });
+    }
+  }
+  setLastArrivalCheckAt(checkedAt);
+
   // Clears the OS queue and the inbox rows that mirror it, so orphans from a
   // deleted item or a previous install cannot survive the rebuild.
   await cancelAllScheduled();
+  // The one moment the slot ledger can be made truthful: the queue is empty by
+  // construction, so whatever the OS still reports is the real floor. Every
+  // schedule below spends against it and stops at the ceiling rather than
+  // letting iOS discard something of its own choosing.
+  seedSlots(await getScheduledCount());
 
   let scheduled = 0;
   let failed = 0;

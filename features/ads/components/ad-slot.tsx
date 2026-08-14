@@ -59,6 +59,15 @@ function loadAdsModule(): typeof GoogleMobileAdsModule | null {
  * nothing if the ad itself fails to load (a dev environment without the
  * native module, or no network) — never an empty grey box.
  *
+ * "Fails to load" was too narrow a condition for that promise. A banner that
+ * is still fetching — or that quietly never fills without ever calling
+ * `onAdFailedToLoad` — renders at zero height, which left the "AD" eyebrow and
+ * the "Remove ads with Plus" link framing a labelled hole in the middle of the
+ * screen. So the chrome waits for `onAdLoaded`: until an ad is actually on
+ * screen there is nothing to label and nothing to offer removing. The banner
+ * itself stays mounted throughout, because unmounting it is what would stop it
+ * ever loading.
+ *
  * The unit id is env-driven per platform (EXPO_PUBLIC_ADMOB_BANNER_UNIT_ID_
  * ANDROID/IOS, see lib/env.ts) and falls back to `TestIds.BANNER` — Google's
  * official, platform-aware test unit — when unset, so a build with no AdMob
@@ -77,6 +86,7 @@ export function AdSlot({ placement }: Props) {
   const { isPlus } = usePlan();
   const checkedAt = useBillingStore((s) => s.checkedAt);
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   // The operator's global kill switch (app/settings/operator.tsx's Ads
   // toggle) — same remote flag system as every Hub module, absence-means-on
   // so a network blip never strips ads *back in* for someone who turned
@@ -95,22 +105,31 @@ export function AdSlot({ placement }: Props) {
       : env.EXPO_PUBLIC_ADMOB_BANNER_UNIT_ID_ANDROID;
 
   return (
-    <View className="items-center gap-2" testID={`ad-slot-${placement}`}>
-      <Text variant="micro">{t('ads.eyebrow')}</Text>
+    // No gap until the banner has height, or the two invisible children would
+    // space themselves apart and reintroduce the hole this closes.
+    <View
+      className="items-center"
+      style={loaded ? { gap: 8 } : undefined}
+      testID={`ad-slot-${placement}`}
+    >
+      {loaded && <Text variant="micro">{t('ads.eyebrow')}</Text>}
       <BannerAd
         unitId={realUnitId || TestIds.BANNER}
         size={BannerAdSize.BANNER}
+        onAdLoaded={() => setLoaded(true)}
         onAdFailedToLoad={() => setFailed(true)}
       />
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => router.push('/settings/media')}
-        hitSlop={8}
-      >
-        <Text variant="caption" className="font-sora-semibold" style={{ color: c.accent }}>
-          {t('ads.removeWithPlus')}
-        </Text>
-      </Pressable>
+      {loaded && (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/settings/media')}
+          hitSlop={8}
+        >
+          <Text variant="caption" className="font-sora-semibold" style={{ color: c.accent }}>
+            {t('ads.removeWithPlus')}
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }

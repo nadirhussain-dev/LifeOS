@@ -5,7 +5,6 @@ import { TextInput, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { InlineError } from '@/components/ui/query-error';
-import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { PrivateScreen } from '@/features/private/components/private-screen';
 import { privateModule } from '@/features/private/config/private-modules';

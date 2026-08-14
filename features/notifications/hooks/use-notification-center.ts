@@ -1,15 +1,20 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
+import { AppState } from 'react-native';
 
-import { recordNotificationDelivery } from '@/features/notifications/services/notification-log-repository';
+import {
+  recordNotificationDelivery,
+  reconcilePassedNotifications,
+} from '@/features/notifications/services/notification-log-repository';
 import { useInAppNotificationStore } from '@/features/notifications/store/in-app-notification-store';
 import {
   CATEGORY_META,
   type NotificationCategory,
 } from '@/features/notifications/types/notification.types';
+import { useNotificationsStore } from '@/features/notifications/store/notifications-store';
 import { reportError } from '@/lib/error-reporting';
-import { addNotificationReceivedListener } from '@/lib/notifications';
+import { addNotificationReceivedListener, hasNotificationPermission } from '@/lib/notifications';
 
 /**
  * Turns an arriving notification into something the app itself can show.
@@ -30,6 +35,48 @@ import { addNotificationReceivedListener } from '@/lib/notifications';
 export function useNotificationCenter(): void {
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  /**
+   * Catch up on anything that fired while the app was not running.
+   *
+   * The listener below only hears arrivals in a live process, so a reminder
+   * that fires overnight leaves no trace and the badge stays at zero even
+   * though the inbox lists it. Reconciling on launch and on every return to
+   * the foreground is when the answer can actually change — a notification
+   * cannot fire between two foreground moments without one of them following
+   * it. Cheap enough to run unconditionally: one indexed UPDATE that matches
+   * nothing in the common case.
+   */
+  useEffect(() => {
+    const catchUp = () => {
+      try {
+        if (reconcilePassedNotifications() > 0) {
+          void queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        }
+      } catch (error) {
+        reportError(error, { scope: 'notification-reconcile' });
+      }
+
+      /**
+       * Re-read the OS permission on the same beat.
+       *
+       * Permission is not a one-time gate — it can be revoked in system
+       * settings at any point, and revoking it kills every reminder silently:
+       * the master switch, each category and each item's own toggle all go on
+       * reading ON. Returning to the app is exactly when someone has come back
+       * from those settings, so it is the moment to find out.
+       */
+      void hasNotificationPermission()
+        .then(useNotificationsStore.getState().setSystemPermissionGranted)
+        .catch(() => undefined);
+    };
+
+    catchUp();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') catchUp();
+    });
+    return () => sub.remove();
+  }, [queryClient]);
 
   useEffect(() => {
     const unsubscribe = addNotificationReceivedListener((received) => {

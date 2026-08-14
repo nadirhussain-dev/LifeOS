@@ -7,6 +7,11 @@ import {
 } from '@/features/notifications/services/notification-log-repository';
 import { resolveNotificationContent } from '@/features/notifications/services/notification-visibility';
 import {
+  hasHeadroom,
+  releaseSlot,
+  spendSlot,
+} from '@/features/notifications/services/scheduling-budget';
+import {
   shiftDailyOutOfQuietHours,
   shiftTimestampOutOfQuietHours,
 } from '@/features/notifications/services/quiet-hours';
@@ -237,6 +242,7 @@ export async function cancelNotification(id: string | null | undefined): Promise
   await Notifications.cancelScheduledNotificationAsync(id).catch(() => undefined);
   // Keep the inbox in lock-step with what's actually queued.
   deleteLogByNotificationId(id);
+  releaseSlot();
 }
 
 export async function cancelNotifications(ids: (string | null | undefined)[]): Promise<void> {
@@ -344,6 +350,11 @@ export async function scheduleOneTimeNotification(params: {
     triggerAt = shiftTimestampOutOfQuietHours(triggerAt);
   }
   if (triggerAt <= Date.now()) return null;
+  // Past the platform ceiling the OS accepts the call and silently discards
+  // something — see scheduling-budget.ts. Declining is the honest outcome: it
+  // leaves a null id the next resync retries, instead of a reminder the app
+  // believes in and the platform has already thrown away.
+  if (!hasHeadroom(SCHEDULING_BUDGET)) return null;
 
   const granted = await requestNotificationPermission();
   if (!granted) return null;
@@ -363,6 +374,7 @@ export async function scheduleOneTimeNotification(params: {
       channelId: channelForCategory(category),
     },
   });
+  spendSlot();
 
   if (params.data?.category) {
     logScheduledNotification({
@@ -404,6 +416,7 @@ export async function scheduleDailyNotification(params: {
   if (category && !CATEGORY_META[category].bypassQuietHours) {
     ({ hour, minute } = shiftDailyOutOfQuietHours(hour, minute));
   }
+  if (!hasHeadroom(SCHEDULING_BUDGET)) return null;
 
   const granted = await requestNotificationPermission();
   if (!granted) return null;
@@ -422,6 +435,7 @@ export async function scheduleDailyNotification(params: {
       channelId: channelForCategory(category),
     },
   });
+  spendSlot();
 
   if (params.data?.category) {
     logScheduledNotification({
@@ -469,6 +483,8 @@ export async function scheduleWeeklyNotification(params: {
     ({ hour, minute } = shiftDailyOutOfQuietHours(hour, minute));
   }
 
+  if (!hasHeadroom(SCHEDULING_BUDGET)) return null;
+
   const granted = await requestNotificationPermission();
   if (!granted) return null;
   await channelsSettled();
@@ -486,6 +502,7 @@ export async function scheduleWeeklyNotification(params: {
       channelId: channelForCategory(category),
     },
   });
+  spendSlot();
 
   if (params.data?.category) {
     logScheduledNotification({

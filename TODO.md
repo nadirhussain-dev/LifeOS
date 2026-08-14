@@ -191,8 +191,8 @@ method is not switched on for this project yet." Email and guest are unaffected.
       auth or sync can run. 0016 drops columns that older app builds still push,
       so apply it during a release rather than ahead of one — a stale client's
       sync will fail loudly.
-- [ ] **Device validation** — run `eas login && eas init && eas build -p android --profile development`, install the APK, and confirm reminders fire + widget renders + sign-in/sync works. _#1 next step._
-- [ ] **Notification status-bar icon** — provide a 96×96 white-on-transparent PNG in `assets/`; then wire `"icon"` into the `expo-notifications` plugin.
+- [ ] **Device validation** — _partly done._ An Android dev build runs on hardware and local reminders have been observed firing and landing in the in-app inbox. Still unconfirmed: the home-screen **widget** rendering, and **sign-in/sync** — the latter blocked on a Supabase project existing at all.
+- [x] **Notification status-bar icon** — `assets/notification-icon.png` (96×96 RGBA) is wired into the `expo-notifications` plugin with `color: #6366f1`, and renders tinted in the tray.
 - [ ] **Real bundle identifier** — replace the `com.lifeos.app` placeholder before any store submission.
 - [ ] **iOS widget prerequisite** — a paid Apple Developer account (to build/test on a device).
 

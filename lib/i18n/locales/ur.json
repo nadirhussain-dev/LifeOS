@@ -43,7 +43,8 @@
     "in1Hour": "ایک گھنٹے میں",
     "thisEvening": "آج شام",
     "tomorrow9am": "کل صبح 9 بجے",
-    "nextWeek": "اگلے ہفتے"
+    "nextWeek": "اگلے ہفتے",
+    "quietHoursShift": "خاموش اوقات — یہ اس کے بجائے {{time}} پر آئے گا۔"
   },
   "dashboard": {
     "water": "پانی",
@@ -1307,6 +1308,8 @@
   },
   "notif": {
     "title": "نوٹیفکیشنز",
+    "unreadCount_one": "{{count}} غیر پڑھا",
+    "unreadCount_other": "{{count}} غیر پڑھے",
     "inboxEyebrow": "ان باکس",
     "settingsEyebrow": "ترتیبات",
     "emptyTitle": "سب کچھ ہو گیا",
@@ -1319,6 +1322,10 @@
     "clearAllTitle": "تمام نوٹیفکیشنز صاف کریں؟",
     "clearAllBody": "یہ آپ کے ان باکس سے سب کچھ ہٹا دے گا۔ مقرر شدہ یاد دہانیاں پھر بھی چلیں گی۔",
     "dailyReminder": "روزانہ یاد دہانی",
+    "dailyTimes_one": "روزانہ یاد دہانی",
+    "dailyTimes_other": "روزانہ · دن میں {{count}} بار",
+    "plusMore_one": "+{{count}} مزید",
+    "plusMore_other": "+{{count}} مزید",
     "inTime": "{{time}} میں",
     "allNotifications": "تمام نوٹیفکیشنز",
     "masterDescription": "LifeOS کی ہر یاد دہانی کا مرکزی سوئچ",
