@@ -76,14 +76,6 @@ function inCircle(x, y, cx, cy, r) {
 
 const TAU = Math.PI * 2;
 
-/** Rounded line segment, for stroke-based marks. */
-function inCapsule(x, y, ax, ay, bx, by, width) {
-  const dx = bx - ax;
-  const dy = by - ay;
-  const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy)));
-  return Math.hypot(x - (ax + t * dx), y - (ay + t * dy)) <= width / 2;
-}
-
 function inRing(x, y, cx, cy, r, width) {
   const d = Math.hypot(x - cx, y - cy);
   return d <= r + width / 2 && d >= r - width / 2;

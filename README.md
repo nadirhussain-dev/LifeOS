@@ -7,12 +7,16 @@ you create an account and switch sync on, module by module.
 Built with Expo (React Native), SQLite on the device, and Supabase (Postgres +
 Row Level Security) as the optional backend.
 
-> **Status: pre-release.** The code typechecks, lints, and passes 288 unit tests
-> plus 173 assertions against a real Postgres. **None of it has been observed
-> running on a physical device**, and no Supabase project has been created yet.
-> Notifications and widgets cannot run in Expo Go at all — they need a dev
-> build. See [Known limitations](#known-limitations) before trusting anything
-> here.
+> **Status: pre-release.** The code typechecks, lints, and passes 471 unit tests
+> plus 173 assertions against a real Postgres. It **runs on a physical Android
+> device** from a dev build: the app launches, screens work, and local
+> reminders have been observed firing and landing in the in-app inbox.
+>
+> Everything involving a server is still unproven — **no Supabase project has
+> been created**, so sign-in and sync have never run against a real backend. iOS
+> has never been built at all (it needs a paid Apple Developer account).
+> Notifications and widgets cannot run in Expo Go — they need a dev build. See
+> [Known limitations](#known-limitations) before trusting anything here.
 
 ---
 
@@ -402,11 +406,13 @@ profile to use.
 Stated plainly, because each of these is the kind of thing a README usually
 implies away:
 
-- **Nothing has been validated on a physical device.** No notification has been
-  observed firing, no widget rendering, no sign-in completing on hardware.
+- **Device validation is partial.** An Android dev build runs, and local
+  reminders have been seen firing and reaching the in-app inbox. Not yet
+  confirmed on hardware: the home-screen widget rendering, sign-in, and sync.
+  Nothing has ever been built for iOS.
 - **No Supabase project exists yet.** The migration runner supports staging and
   production; neither database has been created, so nothing has been applied
-  anywhere real.
+  anywhere real — which is why sign-in and sync remain unproven above.
 - **Migration 0016 is breaking for old clients.** It drops columns older builds
   still push. Apply it with a client release, not ahead of one.
 - **Media files never leave the device.** Only their metadata syncs. Uploading
