@@ -20,6 +20,14 @@ import type { SupabaseErrorKind } from '@/lib/supabase-error';
  * permission refusals and unapplied migrations alike, none of which a user can
  * fix by looking at their wifi. `message` still overrides everything for the
  * cases a screen genuinely knows better.
+ *
+ * The `error === undefined` fallback (`common.loadFailedBody`) must stay
+ * cause-agnostic for the same reason. Most screens here read the LOCAL
+ * database and never touch the network at all, so a default that names the
+ * connection is wrong by construction on all of them — as the SQLCipher shim
+ * bug proved, when a `TypeError` from drizzle put "Check your connection" on
+ * Journal, Sleep, Study and Water while the network was entirely healthy, and
+ * sent the search for the cause in exactly the wrong direction.
  */
 
 const ICONS: Record<SupabaseErrorKind, typeof TriangleAlert> = {

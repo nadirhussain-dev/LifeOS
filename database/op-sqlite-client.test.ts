@@ -50,10 +50,25 @@ function fakeOpSqlite(db: DatabaseSync) {
         insertId: Number(result.lastInsertRowid),
       };
     },
-    executeRawSync: (sql: string, params: unknown[] = []) =>
-      (db.prepare(sql).all(...(params as [])) as Record<string, unknown>[]).map((row) =>
-        Object.values(row),
-      ),
+    /**
+     * op-sqlite does NOT return the rows themselves here. `executeRawSync`
+     * hands back a `RawQueryResult` — `{ rowsAffected, insertId, rawRows,
+     * columnNames }`, built in cpp/utils.cpp — and the row arrays live under
+     * `rawRows`. An earlier version of this fake returned the bare array, which
+     * is what a reasonable reading of the name suggests and is not what the
+     * engine does; every typed select in the app then died on `rows.map is not
+     * a function` while this suite stayed green. The fake mirrors the real
+     * shape now, because that is the only thing it is here to do.
+     */
+    executeRawSync: (sql: string, params: unknown[] = []) => {
+      const rows = db.prepare(sql).all(...(params as [])) as Record<string, unknown>[];
+      return {
+        rowsAffected: 0,
+        insertId: 0,
+        rawRows: rows.map((row) => Object.values(row)),
+        columnNames: rows.length ? Object.keys(rows[0]) : [],
+      };
+    },
     close: () => db.close(),
   };
 }
