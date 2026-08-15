@@ -18,7 +18,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from '@/lib/toast-store';
 
 /** Pulls the recovery tokens out of a Supabase reset link (they arrive in the
- * URL hash fragment, e.g. lifeos://reset-password#access_token=...&type=recovery). */
+ * URL hash fragment, e.g. daykeep://reset-password#access_token=...&type=recovery). */
 function parseRecoveryTokens(url: string): { accessToken: string; refreshToken: string } | null {
   const fragment = url.includes('#')
     ? url.slice(url.indexOf('#') + 1)

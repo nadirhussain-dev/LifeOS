@@ -12,7 +12,7 @@ import { create } from 'zustand';
 type FocusModeState = {
   active: boolean;
   startedAt: number | null;
-  /** Titles of LifeOS reminders swallowed during this block, in arrival order.
+  /** Titles of Daykeep reminders swallowed during this block, in arrival order.
    * They are already rows in the in-app inbox — this is only so the timer screen
    * can say how many are waiting and the end-of-session summary can name them. */
   heldTitles: string[];

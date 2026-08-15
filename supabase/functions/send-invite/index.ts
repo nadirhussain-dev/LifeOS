@@ -10,7 +10,7 @@
 //
 // Deploy:
 //   supabase functions deploy send-invite
-//   supabase secrets set RESEND_API_KEY=...  INVITE_FROM="LifeOS <invites@yourdomain.com>"
+//   supabase secrets set RESEND_API_KEY=...  INVITE_FROM="Daykeep <invites@yourdomain.com>"
 //   supabase secrets set APP_INVITE_BASE_URL="https://yourdomain.com/join"
 //
 // The sending domain must have SPF and DKIM configured or invitations land in
@@ -89,7 +89,7 @@ Deno.serve(async (req: Request) => {
   });
   if (insertError) return json({ error: 'forbidden', detail: insertError.message }, 403);
 
-  const base = Deno.env.get('APP_INVITE_BASE_URL') ?? 'https://lifeos.app/join';
+  const base = Deno.env.get('APP_INVITE_BASE_URL') ?? 'https://daykeep.app/join';
   const link = `${base}/${token}`;
 
   const resendKey = Deno.env.get('RESEND_API_KEY');
@@ -112,7 +112,7 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: Deno.env.get('INVITE_FROM') ?? 'LifeOS <invites@lifeos.app>',
+        from: Deno.env.get('INVITE_FROM') ?? 'Daykeep <invites@daykeep.app>',
         to: [payload.email],
         subject: `${inviterName} added you to ${groupName}`,
         // Brand colors match constants/design-tokens.ts's light palette
@@ -128,7 +128,7 @@ Deno.serve(async (req: Request) => {
             </div>
             <h2 style="margin:0 0 12px;color:#161c19">${inviterName} added you to “${groupName}”</h2>
             <p style="color:#6d7a74;line-height:1.5;margin:0 0 20px">
-              You are sharing expenses in this group on LifeOS. Open the link below
+              You are sharing expenses in this group on Daykeep. Open the link below
               to join and see what you owe or are owed.
             </p>
             <a href="${link}"

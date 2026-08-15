@@ -1,7 +1,7 @@
 -- ---------------------------------------------------------------------------
 -- 0012 — Admin user directory.
 --
--- The operator's view of who is using LifeOS: a searchable list of accounts and
+-- The operator's view of who is using Daykeep: a searchable list of accounts and
 -- a per-account drill-down, so a support mail or an abuse report can be
 -- answered without opening a SQL console and joining six tables by hand.
 --

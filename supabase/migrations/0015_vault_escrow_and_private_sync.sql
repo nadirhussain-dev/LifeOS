@@ -1,7 +1,7 @@
 -- ---------------------------------------------------------------------------
 -- 0015 — Key escrow, private-module sync, and operator content access.
 --
--- ⚠️  THIS FILE CHANGES WHAT LIFEOS PROMISES ITS USERS.  ⚠️
+-- ⚠️  THIS FILE CHANGES WHAT DAYKEEP PROMISES ITS USERS.  ⚠️
 --
 -- Before it, a user's private space could not be read by anyone but them, as a
 -- property of the mathematics: the vault key existed only inside their phone's

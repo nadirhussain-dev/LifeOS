@@ -24,7 +24,7 @@ import { Platform } from 'react-native';
  * Failures are swallowed on purpose: an OS that refuses the flag should cost
  * the flag, not the screen the user opened.
  */
-const CAPTURE_KEY = 'lifeos-private';
+const CAPTURE_KEY = 'daykeep-private';
 
 export function useSecureScreen(): void {
   useEffect(() => {

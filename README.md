@@ -1,4 +1,4 @@
-# LifeOS
+# Daykeep
 
 A local-first personal life operating system — tasks, habits, journal, money,
 health and memories in one app. Your data lives on your phone. It leaves only if
@@ -41,7 +41,7 @@ Row Level Security) as the optional backend.
 ## What it is
 
 Most life apps are a cloud service with an app attached: the data is theirs, the
-device is a window onto it, and losing signal means losing the app. LifeOS is the
+device is a window onto it, and losing signal means losing the app. Daykeep is the
 other way round.
 
 - **Local-first.** Every write goes to on-device SQLite first. The app is fully
@@ -362,7 +362,7 @@ profile to use.
   share — that would rewrite a ledger other people depend on — and the app says
   so rather than implying otherwise.
 
-> **LifeOS is not end-to-end encrypted when a build carries
+> **Daykeep is not end-to-end encrypted when a build carries
 > `EXPO_PUBLIC_VAULT_ESCROW_PUBLIC_KEY`.** With that key set, every private
 > space's master key is also sealed to the operator key and uploaded, so staff
 > can open any signed-in user's private data for abuse handling. This is a
@@ -421,7 +421,7 @@ implies away:
   decline to run it; the server-side denial cannot be declined.
 - **Appeals have no route back in.** A blocked user cannot export their own data,
   so a data-access request is served by an admin running SQL by hand.
-- **The bundle identifier is `com.lifeos.app`.** Kept deliberately, but it is a
+- **The bundle identifier is `com.daykeep.app`.** Kept deliberately, but it is a
   generic name on a domain nobody here owns. Both stores only require
   uniqueness, so it will work; it is worth knowing it cannot be changed once
   either store has accepted a build under it.

@@ -14,7 +14,7 @@ import { acceptInvitation, peekInvitation } from '@/features/split/services/spli
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 /**
- * Invitation landing screen — the target of `lifeos://join/<token>` and of the
+ * Invitation landing screen — the target of `daykeep://join/<token>` and of the
  * https link in the invitation email.
  *
  * The token is the whole authority here, so the screen shows as little as

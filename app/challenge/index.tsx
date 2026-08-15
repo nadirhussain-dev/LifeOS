@@ -12,9 +12,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { ChallengeLadder } from '@/features/challenge/components/challenge-ladder';
-import { DayChain } from '@/features/challenge/components/day-chain';
+import { Braid } from '@/features/challenge/components/braid';
 import { DemotionSheet } from '@/features/challenge/components/demotion-sheet';
-import { ModuleChains } from '@/features/challenge/components/module-chains';
 import { ShareButton, ShareCard } from '@/features/challenge/components/share-card';
 import { ShieldSlots } from '@/features/challenge/components/shield-slots';
 import { TodayChecklist } from '@/features/challenge/components/today-checklist';
@@ -175,9 +174,7 @@ export default function ChallengeScreen() {
 
         <ChallengeLadder tiers={tiers} qualifiedDays={qualifiedDays} />
 
-        <DayChain days={chain.data ?? []} />
-
-        <ModuleChains days={chain.data ?? []} modules={today.data?.required ?? []} />
+        <Braid days={chain.data ?? []} modules={today.data?.required ?? []} />
 
         <View className="flex-row gap-2">
           <View className="flex-1">

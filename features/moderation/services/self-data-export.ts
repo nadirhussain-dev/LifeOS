@@ -66,13 +66,13 @@ export async function exportOwnServerData(): Promise<SelfExportResult> {
   if (result.exported.length === 0) return result;
 
   try {
-    const file = new File(Paths.cache, `lifeos-account-data-${Date.now()}.json`);
+    const file = new File(Paths.cache, `daykeep-account-data-${Date.now()}.json`);
     file.create({ overwrite: true });
     file.write(
       JSON.stringify(
         {
           exportedAt: new Date().toISOString(),
-          note: 'Everything LifeOS holds on its servers for this account, including items marked deleted.',
+          note: 'Everything Daykeep holds on its servers for this account, including items marked deleted.',
           // Named in the file, because a person reading this months later has no
           // other way to know it is not the whole picture.
           notIncluded:
@@ -87,7 +87,7 @@ export async function exportOwnServerData(): Promise<SelfExportResult> {
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(file.uri, {
         mimeType: 'application/json',
-        dialogTitle: 'Your LifeOS data',
+        dialogTitle: 'Your Daykeep data',
       });
     }
     result.ok = true;

@@ -4,10 +4,10 @@
   Fires when `sendSignupOtp` (features/auth/services/auth-store.ts) creates a
   new account — see docs/AUTH_PROVIDERS.md §3. `{{ .Token }}` is the 6-digit
   code the app's verify-signup screen asks for; there is no link anywhere in
-  this email on purpose, since LifeOS never sends anyone to a browser for this.
+  this email on purpose, since Daykeep never sends anyone to a browser for this.
 
   Subject line to set alongside this template:
-    Your LifeOS verification code
+    Your Daykeep verification code
 -->
 <!doctype html>
 <html lang="en">
@@ -16,7 +16,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <meta name="supported-color-schemes" content="light dark" />
-    <title>Your LifeOS verification code</title>
+    <title>Your Daykeep verification code</title>
     <style>
       body,
       table,
@@ -134,7 +134,7 @@
                     >
                       Use this code to verify
                       <strong class="fg" style="color: #161c19">{{ .Email }}</strong>
-                      and finish creating your LifeOS account.
+                      and finish creating your Daykeep account.
                     </td>
                   </tr>
 
@@ -183,7 +183,7 @@
                         "
                       >
                         This code is single-use and expires shortly. If you didn't try to create a
-                        LifeOS account, you can ignore this email — nothing happens without it.
+                        Daykeep account, you can ignore this email — nothing happens without it.
                       </span>
                     </td>
                   </tr>
@@ -202,7 +202,7 @@
                     font-size: 12px;
                     color: #9aa8a1;
                   "
-                  >LifeOS</span
+                  >Daykeep</span
                 >
               </td>
             </tr>

@@ -1,5 +1,5 @@
 /**
- * The tones a LifeOS reminder can arrive with, and the two platform shapes each
+ * The tones a Daykeep reminder can arrive with, and the two platform shapes each
  * one has to be expressed in.
  *
  * ## Why the sound is one app-wide choice
@@ -172,7 +172,7 @@ function tone(
   traits: SoundTrait[],
   preview: number,
 ): NotificationSound {
-  return { id, name, family, traits, file: `lifeos_${id}.wav`, preview };
+  return { id, name, family, traits, file: `daykeep_${id}.wav`, preview };
 }
 
 /* The `require`s are deliberate and have no import equivalent: Metro resolves an
@@ -185,43 +185,43 @@ export const NOTIFICATION_SOUNDS: NotificationSound[] = [
     'Chime',
     'bells',
     ['bright', 'lingering'],
-    require('@/assets/sounds/lifeos_chime.wav'),
+    require('@/assets/sounds/daykeep_chime.wav'),
   ),
-  tone('halo', 'Halo', 'bells', ['bright', 'airy'], require('@/assets/sounds/lifeos_halo.wav')),
+  tone('halo', 'Halo', 'bells', ['bright', 'airy'], require('@/assets/sounds/daykeep_halo.wav')),
   tone(
     'ember',
     'Ember',
     'bells',
     ['warm', 'metallic'],
-    require('@/assets/sounds/lifeos_ember.wav'),
+    require('@/assets/sounds/daykeep_ember.wav'),
   ),
   tone(
     'filament',
     'Filament',
     'bells',
     ['bright', 'metallic'],
-    require('@/assets/sounds/lifeos_filament.wav'),
+    require('@/assets/sounds/daykeep_filament.wav'),
   ),
   tone(
     'carillon',
     'Carillon',
     'bells',
     ['metallic', 'lingering'],
-    require('@/assets/sounds/lifeos_carillon.wav'),
+    require('@/assets/sounds/daykeep_carillon.wav'),
   ),
   tone(
     'vesper',
     'Vesper',
     'bells',
     ['deep', 'lingering'],
-    require('@/assets/sounds/lifeos_vesper.wav'),
+    require('@/assets/sounds/daykeep_vesper.wav'),
   ),
   tone(
     'beacon',
     'Beacon',
     'bells',
     ['deep', 'lingering'],
-    require('@/assets/sounds/lifeos_beacon.wav'),
+    require('@/assets/sounds/daykeep_beacon.wav'),
   ),
 
   // Mallets — tuned bars. Fast and dry; the least intrusive family.
@@ -230,42 +230,42 @@ export const NOTIFICATION_SOUNDS: NotificationSound[] = [
     'Ripple',
     'mallets',
     ['wooden', 'quick'],
-    require('@/assets/sounds/lifeos_ripple.wav'),
+    require('@/assets/sounds/daykeep_ripple.wav'),
   ),
   tone(
     'tumble',
     'Tumble',
     'mallets',
     ['wooden', 'quick'],
-    require('@/assets/sounds/lifeos_tumble.wav'),
+    require('@/assets/sounds/daykeep_tumble.wav'),
   ),
   tone(
     'lattice',
     'Lattice',
     'mallets',
     ['bright', 'wooden'],
-    require('@/assets/sounds/lifeos_lattice.wav'),
+    require('@/assets/sounds/daykeep_lattice.wav'),
   ),
   tone(
     'bamboo',
     'Bamboo',
     'mallets',
     ['warm', 'wooden'],
-    require('@/assets/sounds/lifeos_bamboo.wav'),
+    require('@/assets/sounds/daykeep_bamboo.wav'),
   ),
   tone(
     'pebble',
     'Pebble',
     'mallets',
     ['dry', 'quick'],
-    require('@/assets/sounds/lifeos_pebble.wav'),
+    require('@/assets/sounds/daykeep_pebble.wav'),
   ),
   tone(
     'thimble',
     'Thimble',
     'mallets',
     ['dry', 'quick'],
-    require('@/assets/sounds/lifeos_thimble.wav'),
+    require('@/assets/sounds/daykeep_thimble.wav'),
   ),
 
   // Glass & air — slow, pure, the softest family.
@@ -274,57 +274,63 @@ export const NOTIFICATION_SOUNDS: NotificationSound[] = [
     'Bloom',
     'glass',
     ['glassy', 'lingering'],
-    require('@/assets/sounds/lifeos_bloom.wav'),
+    require('@/assets/sounds/daykeep_bloom.wav'),
   ),
   tone(
     'prism',
     'Prism',
     'glass',
     ['bright', 'glassy'],
-    require('@/assets/sounds/lifeos_prism.wav'),
+    require('@/assets/sounds/daykeep_prism.wav'),
   ),
-  tone('frost', 'Frost', 'glass', ['bright', 'airy'], require('@/assets/sounds/lifeos_frost.wav')),
+  tone('frost', 'Frost', 'glass', ['bright', 'airy'], require('@/assets/sounds/daykeep_frost.wav')),
   tone(
     'lantern',
     'Lantern',
     'glass',
     ['soft', 'glassy'],
-    require('@/assets/sounds/lifeos_lantern.wav'),
+    require('@/assets/sounds/daykeep_lantern.wav'),
   ),
   tone(
     'aurora',
     'Aurora',
     'glass',
     ['soft', 'lingering'],
-    require('@/assets/sounds/lifeos_aurora.wav'),
+    require('@/assets/sounds/daykeep_aurora.wav'),
   ),
-  tone('nimbus', 'Nimbus', 'glass', ['soft', 'airy'], require('@/assets/sounds/lifeos_nimbus.wav')),
+  tone(
+    'nimbus',
+    'Nimbus',
+    'glass',
+    ['soft', 'airy'],
+    require('@/assets/sounds/daykeep_nimbus.wav'),
+  ),
 
   // Keys & strings — plucked and struck. Warmer, more human.
-  tone('amber', 'Amber', 'keys', ['warm', 'plucked'], require('@/assets/sounds/lifeos_amber.wav')),
+  tone('amber', 'Amber', 'keys', ['warm', 'plucked'], require('@/assets/sounds/daykeep_amber.wav')),
   tone(
     'thread',
     'Thread',
     'keys',
     ['plucked', 'quick'],
-    require('@/assets/sounds/lifeos_thread.wav'),
+    require('@/assets/sounds/daykeep_thread.wav'),
   ),
   tone(
     'lyre',
     'Lyre',
     'keys',
     ['plucked', 'lingering'],
-    require('@/assets/sounds/lifeos_lyre.wav'),
+    require('@/assets/sounds/daykeep_lyre.wav'),
   ),
   tone(
     'quill',
     'Quill',
     'keys',
     ['plucked', 'sweeping'],
-    require('@/assets/sounds/lifeos_quill.wav'),
+    require('@/assets/sounds/daykeep_quill.wav'),
   ),
-  tone('wool', 'Wool', 'keys', ['soft', 'warm'], require('@/assets/sounds/lifeos_wool.wav')),
-  tone('reed', 'Reed', 'keys', ['warm', 'airy'], require('@/assets/sounds/lifeos_reed.wav')),
+  tone('wool', 'Wool', 'keys', ['soft', 'warm'], require('@/assets/sounds/daykeep_wool.wav')),
+  tone('reed', 'Reed', 'keys', ['warm', 'airy'], require('@/assets/sounds/daykeep_reed.wav')),
 
   // Digital — dry and deliberate, with no pretence of being an instrument.
   tone(
@@ -332,36 +338,42 @@ export const NOTIFICATION_SOUNDS: NotificationSound[] = [
     'Pulse',
     'digital',
     ['digital', 'dry'],
-    require('@/assets/sounds/lifeos_pulse.wav'),
+    require('@/assets/sounds/daykeep_pulse.wav'),
   ),
-  tone('ping', 'Ping', 'digital', ['digital', 'quick'], require('@/assets/sounds/lifeos_ping.wav')),
+  tone(
+    'ping',
+    'Ping',
+    'digital',
+    ['digital', 'quick'],
+    require('@/assets/sounds/daykeep_ping.wav'),
+  ),
   tone(
     'relay',
     'Relay',
     'digital',
     ['digital', 'bright'],
-    require('@/assets/sounds/lifeos_relay.wav'),
+    require('@/assets/sounds/daykeep_relay.wav'),
   ),
   tone(
     'console',
     'Console',
     'digital',
     ['digital', 'dry'],
-    require('@/assets/sounds/lifeos_console.wav'),
+    require('@/assets/sounds/daykeep_console.wav'),
   ),
   tone(
     'ledger',
     'Ledger',
     'digital',
     ['digital', 'deep'],
-    require('@/assets/sounds/lifeos_ledger.wav'),
+    require('@/assets/sounds/daykeep_ledger.wav'),
   ),
   tone(
     'telegraph',
     'Telegraph',
     'digital',
     ['digital', 'insistent'],
-    require('@/assets/sounds/lifeos_telegraph.wav'),
+    require('@/assets/sounds/daykeep_telegraph.wav'),
   ),
 
   // Motion — the only family whose pitch moves.
@@ -370,30 +382,30 @@ export const NOTIFICATION_SOUNDS: NotificationSound[] = [
     'Droplet',
     'motion',
     ['sweeping', 'soft'],
-    require('@/assets/sounds/lifeos_droplet.wav'),
+    require('@/assets/sounds/daykeep_droplet.wav'),
   ),
   tone(
     'skyward',
     'Skyward',
     'motion',
     ['sweeping', 'bright'],
-    require('@/assets/sounds/lifeos_skyward.wav'),
+    require('@/assets/sounds/daykeep_skyward.wav'),
   ),
   tone(
     'swoop',
     'Swoop',
     'motion',
     ['sweeping', 'quick'],
-    require('@/assets/sounds/lifeos_swoop.wav'),
+    require('@/assets/sounds/daykeep_swoop.wav'),
   ),
   tone(
     'bubble',
     'Bubble',
     'motion',
     ['sweeping', 'bright'],
-    require('@/assets/sounds/lifeos_bubble.wav'),
+    require('@/assets/sounds/daykeep_bubble.wav'),
   ),
-  tone('kite', 'Kite', 'motion', ['sweeping', 'airy'], require('@/assets/sounds/lifeos_kite.wav')),
+  tone('kite', 'Kite', 'motion', ['sweeping', 'airy'], require('@/assets/sounds/daykeep_kite.wav')),
 
   // Alerts — for when the phone needs to insist.
   tone(
@@ -401,21 +413,21 @@ export const NOTIFICATION_SOUNDS: NotificationSound[] = [
     'Sentry',
     'alerts',
     ['insistent', 'digital'],
-    require('@/assets/sounds/lifeos_sentry.wav'),
+    require('@/assets/sounds/daykeep_sentry.wav'),
   ),
   tone(
     'cascade',
     'Cascade',
     'alerts',
     ['insistent', 'metallic'],
-    require('@/assets/sounds/lifeos_cascade.wav'),
+    require('@/assets/sounds/daykeep_cascade.wav'),
   ),
   tone(
     'summit',
     'Summit',
     'alerts',
     ['insistent', 'deep'],
-    require('@/assets/sounds/lifeos_summit.wav'),
+    require('@/assets/sounds/daykeep_summit.wav'),
   ),
 
   // Neither of these is a tone of ours, so neither has a name to keep — these

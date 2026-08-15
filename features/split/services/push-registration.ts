@@ -8,7 +8,7 @@ import { notificationsAvailable } from '@/lib/notifications';
 /**
  * Expo push-token registration.
  *
- * Only shared features need this: every other reminder in LifeOS is scheduled
+ * Only shared features need this: every other reminder in Daykeep is scheduled
  * locally on the device that owns it, and needs no server round-trip. A split
  * group is the first thing where somebody ELSE's action has to reach you, which
  * is the only reason a token has to leave the device at all.

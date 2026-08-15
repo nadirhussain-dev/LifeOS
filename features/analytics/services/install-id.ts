@@ -1,12 +1,12 @@
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 
-const INSTALL_ID_KEY = 'lifeos.install.id';
+const INSTALL_ID_KEY = 'daykeep.install.id';
 
 /**
  * A random id for this installation, and nothing else.
  *
- * It exists for one question: how many people are using LifeOS. Guest mode is a
+ * It exists for one question: how many people are using Daykeep. Guest mode is a
  * supported way to use the app, so counting only signed-in accounts would
  * under-report by however many people never make one — and the honest fix is a
  * number that is joinable to no account, no device identifier and no content.

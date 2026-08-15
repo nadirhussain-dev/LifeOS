@@ -549,7 +549,7 @@ export default function SettingsScreen() {
               subtitle={t('settings.supportSubtitle')}
               onPress={() =>
                 Linking.openURL(
-                  `mailto:${env.EXPO_PUBLIC_SUPPORT_EMAIL}?subject=${encodeURIComponent('LifeOS support')}`,
+                  `mailto:${env.EXPO_PUBLIC_SUPPORT_EMAIL}?subject=${encodeURIComponent('Daykeep support')}`,
                 )
               }
             />

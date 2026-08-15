@@ -8,7 +8,7 @@ import { applyLayoutDirection } from '@/features/settings/lib/layout-direction';
 export const LANGUAGES = ['en', 'ur', 'hi', 'ar'] as const;
 export type Language = (typeof LANGUAGES)[number];
 
-/** The device's language if LifeOS supports it, otherwise English. */
+/** The device's language if Daykeep supports it, otherwise English. */
 export function deviceLanguage(): Language {
   try {
     const code = getLocales()[0]?.languageCode ?? 'en';
@@ -60,7 +60,7 @@ export const useLanguageStore = create<LanguageState>()(
       },
     }),
     {
-      name: 'lifeos-language',
+      name: 'daykeep-language',
       storage: languageStorage,
       partialize: ({ hydrated: _hydrated, ...rest }) => rest,
       onRehydrateStorage: () => (state) => {

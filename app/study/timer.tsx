@@ -306,7 +306,7 @@ export default function StudyTimerScreen() {
               : t('study.hintBreak')}
         </Text>
 
-        {/* Focus shield: what LifeOS is holding back, and the one thing it
+        {/* Focus shield: what Daykeep is holding back, and the one thing it
             can't do on its own (silence the phone). */}
         {shieldUp && (
           <View className="w-full items-center gap-2.5">

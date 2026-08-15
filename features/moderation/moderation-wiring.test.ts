@@ -68,7 +68,7 @@ describe('reporting is reachable', () => {
   });
 
   it('offers it on the surfaces where users meet each other', () => {
-    // Expense groups are the only place in LifeOS a stranger can reach you:
+    // Expense groups are the only place in Daykeep a stranger can reach you:
     // they add your email, invite you, and then write group and expense names
     // you can read. If reporting is anywhere, it has to be here.
     const screens = filesMentioning('ReportSheet', 'app');

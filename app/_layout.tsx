@@ -253,7 +253,7 @@ function DatabaseUnavailable({ message, background }: { message: string; backgro
       }}
     >
       <RNText style={{ fontSize: 18, fontWeight: '700', color: '#ef4444', textAlign: 'center' }}>
-        LifeOS can’t open its database
+        Daykeep can’t open its database
       </RNText>
       <RNText style={{ fontSize: 14, color: '#6b7280', textAlign: 'center' }}>{message}</RNText>
     </View>

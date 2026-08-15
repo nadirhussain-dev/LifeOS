@@ -692,7 +692,7 @@ export const galleryPhotos = sqliteTable('gallery_photos', {
 });
 
 /**
- * Central log of every local notification LifeOS schedules — the data behind
+ * Central log of every local notification Daykeep schedules — the data behind
  * the in-app Notification Inbox. Each module still owns its own reminder
  * scheduling; lib/notifications.ts writes a row here on every successful
  * schedule and clears it on cancel, so the inbox never drifts from what's

@@ -10,7 +10,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { LifeOSMark } from '@/components/ui/lifeos-mark';
+import { DaykeepMark } from '@/components/ui/daykeep-mark';
 import { colors } from '@/constants/design-tokens';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -92,10 +92,10 @@ export function AnimatedSplash({ onFinish }: { onFinish: () => void }) {
         <View style={[styles.mark, { backgroundColor: c.mark, shadowColor: c.mark }]}>
           {/* Was a generic Lucide leaf — so the launcher icon, the native
               splash and this one were three different marks. */}
-          <LifeOSMark size={40} color={c.glyph} layered={false} />
+          <DaykeepMark size={40} color={c.glyph} layered={false} />
         </View>
       </Animated.View>
-      <Animated.Text style={[styles.word, { color: c.word }, wordStyle]}>LifeOS</Animated.Text>
+      <Animated.Text style={[styles.word, { color: c.word }, wordStyle]}>Daykeep</Animated.Text>
     </Animated.View>
   );
 }

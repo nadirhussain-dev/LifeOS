@@ -143,7 +143,7 @@ export async function exportAllData(): Promise<void> {
   // so the gap is stated, by name, in the thing they keep.
   if (omitted.length > 0) data.omittedPrivateModules = omitted;
 
-  const file = new File(Paths.cache, `lifeos-export-${Date.now()}.json`);
+  const file = new File(Paths.cache, `daykeep-export-${Date.now()}.json`);
   if (file.exists) file.delete();
   file.create();
   file.write(JSON.stringify(data, null, 2));
@@ -151,7 +151,7 @@ export async function exportAllData(): Promise<void> {
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(file.uri, {
       mimeType: 'application/json',
-      dialogTitle: 'Export LifeOS data',
+      dialogTitle: 'Export Daykeep data',
     });
   }
 }

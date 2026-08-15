@@ -1,12 +1,12 @@
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 
-const DB_KEY_ID = 'lifeos.db.key';
+const DB_KEY_ID = 'daykeep.db.key';
 
 /**
  * Returns the app's SQLite encryption key, generating a fresh 256-bit key in the
  * device's hardware-backed keystore (iOS Keychain / Android Keystore) on first
- * use. This is the key SQLCipher uses to encrypt lifeos.db at rest (see
+ * use. This is the key SQLCipher uses to encrypt daykeep.db at rest (see
  * docs/SQLCIPHER.md for wiring it into the DB engine).
  *
  * The key never leaves SecureStore and is only readable after first unlock, so

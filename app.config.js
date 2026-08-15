@@ -104,7 +104,7 @@ module.exports = ({ config }) => {
       throw new Error(`\n\n${credentialsHelp(missing)}\n`);
     }
     console.warn(
-      `[lifeos] ${missing.join(', ')} not set — auth and cloud sync will be disabled ` +
+      `[daykeep] ${missing.join(', ')} not set — auth and cloud sync will be disabled ` +
         '(guest mode still works). See .env.example.',
     );
   }
@@ -115,7 +115,7 @@ module.exports = ({ config }) => {
     !ADMOB_IOS_APP_ID
   ) {
     console.warn(
-      '[lifeos] ADMOB_ANDROID_APP_ID/ADMOB_IOS_APP_ID not set for the "production" build — ' +
+      '[daykeep] ADMOB_ANDROID_APP_ID/ADMOB_IOS_APP_ID not set for the "production" build — ' +
         "shipping Google's universal TEST AdMob App IDs. Fine for internal testing, but Google " +
         'policy prohibits serving test ads to real users once this reaches the store. ' +
         'See .env.example.',

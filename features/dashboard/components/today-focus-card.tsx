@@ -18,7 +18,7 @@ import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 /**
  * The dashboard's calm summary hero — the reference implementation of the
- * LifeOS design system. It embodies four principles at once:
+ * Daykeep design system. It embodies four principles at once:
  *   • Summary before detail — the whole day reads in one glance.
  *   • Progress principle + goal-gradient — three rings make momentum visible.
  *   • One primary action — exactly one accent CTA that always answers

@@ -42,10 +42,10 @@ import {
  * is what makes it look lived-in rather than staged.
  */
 
-const SALT_KEY = 'lifeos.vault.salt';
-const REAL_KEY = 'lifeos.vault.wrapped';
-const DECOY_KEY = 'lifeos.vault.wrapped.alt';
-const ATTEMPTS_KEY = 'lifeos.vault.attempts';
+const SALT_KEY = 'daykeep.vault.salt';
+const REAL_KEY = 'daykeep.vault.wrapped';
+const DECOY_KEY = 'daykeep.vault.wrapped.alt';
+const ATTEMPTS_KEY = 'daykeep.vault.attempts';
 
 /** Short enough to be memorable, long enough that throttling can outlast a
  * person with the phone in their hand. */

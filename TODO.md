@@ -1,4 +1,4 @@
-# LifeOS — Remaining Tasks
+# Daykeep — Remaining Tasks
 
 Roadmap for the **Reminders / Notifications / Widgets** work.
 Everything in the shipped section is on branch `feat/notifications-and-widgets` and
@@ -172,7 +172,7 @@ method is not switched on for this project yet." Email and guest are unaffected.
       redirects to the app.
 - [ ] **Supabase → Providers → Google** — client id + secret.
 - [ ] **Supabase → URL Configuration → Redirect URLs** — add both
-      `lifeos://auth/callback` and `lifeos:///auth/callback`. An unlisted
+      `daykeep://auth/callback` and `daykeep:///auth/callback`. An unlisted
       redirect is refused before the user sees anything.
 - [ ] **Apple** — needs the paid developer account (same one blocking the iOS
       widget): App ID capability, a Sign in with Apple key (`.p8`, one download
@@ -193,7 +193,7 @@ method is not switched on for this project yet." Email and guest are unaffected.
       sync will fail loudly.
 - [ ] **Device validation** — _partly done._ An Android dev build runs on hardware and local reminders have been observed firing and landing in the in-app inbox. Still unconfirmed: the home-screen **widget** rendering, and **sign-in/sync** — the latter blocked on a Supabase project existing at all.
 - [x] **Notification status-bar icon** — `assets/notification-icon.png` (96×96 RGBA) is wired into the `expo-notifications` plugin with `color: #6366f1`, and renders tinted in the tray.
-- [ ] **Real bundle identifier** — replace the `com.lifeos.app` placeholder before any store submission.
+- [ ] **Real bundle identifier** — replace the `com.daykeep.app` placeholder before any store submission.
 - [ ] **iOS widget prerequisite** — a paid Apple Developer account (to build/test on a device).
 
 ## 🔐 Private space (shipped — these harden it further)
@@ -225,7 +225,7 @@ method is not switched on for this project yet." Email and guest are unaffected.
 
 ## 🔑 Operator access & escrow (0014 + 0015 shipped) — READ THIS FIRST
 
-**LifeOS is no longer end-to-end encrypted.** The vault master key is sealed to
+**Daykeep is no longer end-to-end encrypted.** The vault master key is sealed to
 an operator X25519 key and uploaded, so staff can open any signed-in user's
 private space. This was a deliberate decision; the app copy and PRIVACY.md have
 been rewritten to say so.
@@ -255,7 +255,7 @@ ON CONFLICT DO UPDATE` against it regardless of whether a conflicting row
       `EXPO_PUBLIC_VAULT_ESCROW_PUBLIC_KEY` unset — Art. 9 health data (cycle,
       recovery) server-side in decryptable form is a bigger breach target and
       harder App Store conversation than the abuse-handling case for it — and
-      PRIVACY.md's "What LifeOS staff can access" section is rewritten to say
+      PRIVACY.md's "What Daykeep staff can access" section is rewritten to say
       plainly that this capability exists in code but is switched off, rather
       than asserting access that doesn't happen. Revisit only with a concrete
       abuse/legal need, and update PRIVACY.md before flipping the switch, not
@@ -424,7 +424,7 @@ the UI:
       the app turns intents into rows on its next run. The action carries the
       **local date of the tap**, so a glass logged at 11:50pm is not filed
       against tomorrow.
-- [x] **Habits check-off widget** — its own widget (`LifeOSHabits`), because a
+- [x] **Habits check-off widget** — its own widget (`DaykeepHabits`), because a
       list needs height and a glance needs none. Marks done; does not un-tick —
       a home-screen control has no undo, and `logHabit`'s upsert is what makes
       the safe direction replay-proof.

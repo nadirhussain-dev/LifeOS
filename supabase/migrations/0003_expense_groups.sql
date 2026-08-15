@@ -1,7 +1,7 @@
 -- ---------------------------------------------------------------------------
 -- Shared expense groups (split expenses with friends / colleagues / family)
 --
--- This is the first *shared* data in LifeOS. Every table in 0001 is governed by
+-- This is the first *shared* data in Daykeep. Every table in 0001 is governed by
 -- a `*_own` policy (user_id = auth.uid()), so a row belongs to exactly one
 -- person. A split group is the opposite: many people read and write the same
 -- rows, and access is decided by membership rather than ownership.

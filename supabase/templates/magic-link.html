@@ -1,7 +1,7 @@
 <!--
   Supabase Auth → Authentication → Email Templates → "Magic Link" → Source.
 
-  This one is a corner case, not a feature LifeOS exposes directly: if someone
+  This one is a corner case, not a feature Daykeep exposes directly: if someone
   enters an email on the sign-up screen that already has an account,
   `sendSignupOtp`'s `signInWithOtp` quietly signs them in instead of erroring,
   and Supabase sends THIS template rather than "Confirm signup" — because as
@@ -10,7 +10,7 @@
   like it came from a different app. See docs/AUTH_PROVIDERS.md §3.
 
   Subject line to set alongside this template:
-    Your LifeOS sign-in code
+    Your Daykeep sign-in code
 -->
 <!doctype html>
 <html lang="en">
@@ -19,7 +19,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <meta name="supported-color-schemes" content="light dark" />
-    <title>Your LifeOS sign-in code</title>
+    <title>Your Daykeep sign-in code</title>
     <style>
       body,
       table,
@@ -135,7 +135,7 @@
                         padding-bottom: 28px;
                       "
                     >
-                      You already have a LifeOS account for
+                      You already have a Daykeep account for
                       <strong class="fg" style="color: #161c19">{{ .Email }}</strong>. Use this code
                       to sign in.
                     </td>
@@ -205,7 +205,7 @@
                     font-size: 12px;
                     color: #9aa8a1;
                   "
-                  >LifeOS</span
+                  >Daykeep</span
                 >
               </td>
             </tr>

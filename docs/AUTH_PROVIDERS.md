@@ -51,8 +51,8 @@ changing.
 2. **Authentication → URL Configuration → Redirect URLs** → add:
 
    ```
-   lifeos://auth/callback
-   lifeos:///auth/callback
+   daykeep://auth/callback
+   daykeep:///auth/callback
    ```
 
    Both, because `Linking.createURL` emits the triple-slash form on some
@@ -69,7 +69,7 @@ Sign in on a device. The failure modes map onto messages in `oauth.ts`:
 
 - _"That sign-in method is not switched on"_ → step 1b.1 not done.
 - _"This app's sign-in address has not been allowlisted"_ → step 1b.2 not done,
-  or the scheme does not match `expo.scheme` in `app.json` (`lifeos`).
+  or the scheme does not match `expo.scheme` in `app.json` (`daykeep`).
 - Browser opens, you approve, and it returns to a blank app → the redirect URL is
   allowlisted but is not the one the app asked for. Log `oauthRedirectUrl()` and
   add exactly that string.
@@ -85,7 +85,7 @@ tested in a simulator without an iCloud account signed in.
 ### 2a. Apple Developer portal
 
 1. **Certificates, Identifiers & Profiles → Identifiers** → your App ID
-   (`com.lifeos.app`, or whatever it becomes — see the "real bundle identifier"
+   (`com.daykeep.app`, or whatever it becomes — see the "real bundle identifier"
    item in `TODO.md`) → tick **Sign in with Apple**.
 2. **Keys → new key** → tick **Sign in with Apple** → download the `.p8`. You
    get exactly one download; losing it means making a new key.
@@ -135,7 +135,7 @@ email template, not the API call:
    around `{{ .Token }}` rather than `{{ .ConfirmationURL }}`, which is what
    actually switches the email from a link to a 6-digit code. Set each
    template's **Subject** to the line noted in a comment at the top of its
-   file (e.g. "Your LifeOS verification code").
+   file (e.g. "Your Daykeep verification code").
 3. **Magic Link is the one easy to skip.** It doesn't correspond to a button
    anywhere in the app — it's what Supabase sends instead of "Confirm signup"
    if someone enters an email that already has an account into the sign-up

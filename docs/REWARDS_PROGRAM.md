@@ -8,7 +8,7 @@ implemented and shipped in migrations 0048–0050 unless marked otherwise; §6�
 describe the parts that arrive with a physical prize and are deliberately not
 built.
 
-> **The offer, as the user sees it:** pick at least three parts of LifeOS you
+> **The offer, as the user sees it:** pick at least three parts of Daykeep you
 > will keep alive every day. Keep all of them going, online, and climb a ladder
 > of rewards. Miss a day and a **shield** absorbs it, if you have one — you can
 > hold three. Run out, and you fall back down the ladder.

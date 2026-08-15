@@ -83,7 +83,7 @@ const ENVIRONMENTS = {
 /** Arbitrary but fixed: two runs must pick the same number to queue behind each
  * other. Derived from the string so it is reproducible and collision-unlikely
  * against any other advisory lock the database uses. */
-const LOCK_ID = 0x1_1fe_05; // "lifeos"
+const LOCK_ID = 0x1_1fe_05; // "daykeep"
 
 const LEDGER = `
   create table if not exists public.schema_migrations (
@@ -203,7 +203,7 @@ async function connect(environment) {
     // authenticity check, which is why the host must come from an environment
     // variable you control rather than from anything user-supplied.
     ssl: { rejectUnauthorized: false },
-    application_name: 'lifeos-migrate',
+    application_name: 'daykeep-migrate',
   });
   await client.connect();
   return client;

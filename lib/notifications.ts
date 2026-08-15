@@ -138,7 +138,7 @@ const URGENCIES = ['time-sensitive', 'reminders', 'digest'] as const;
 type Urgency = (typeof URGENCIES)[number];
 
 function channelIdFor(urgency: Urgency, soundId: NotificationSoundId): string {
-  return `lifeos-${urgency}-v${CHANNEL_VERSION}-${soundId}`;
+  return `daykeep-${urgency}-v${CHANNEL_VERSION}-${soundId}`;
 }
 
 /**
@@ -149,9 +149,9 @@ function channelIdFor(urgency: Urgency, soundId: NotificationSoundId): string {
  * channel — and app.json's `defaultChannel`, which is where such a push lands,
  * is a build-time constant that cannot track a runtime preference either. This
  * channel exists to be that fixed target. It keeps the system default sound;
- * the reminder tone applies to the reminders LifeOS schedules itself.
+ * the reminder tone applies to the reminders Daykeep schedules itself.
  */
-const PUSH_CHANNEL_ID = `lifeos-general-v${CHANNEL_VERSION}`;
+const PUSH_CHANNEL_ID = `daykeep-general-v${CHANNEL_VERSION}`;
 
 /** Every channel this app should own right now. Anything else of ours that
  *  Android is still holding is from an older version or an older tone. */
@@ -178,7 +178,7 @@ function channelForCategory(category?: NotificationCategory): string {
 const ACCENT = '#6366f1';
 
 /**
- * Deletes every `lifeos-` channel that is not one of `keep`.
+ * Deletes every `daykeep-` channel that is not one of `keep`.
  *
  * Covers both jobs at once — retiring a bumped version, and clearing away the
  * tone the user just switched off — because from Android's side they are the
@@ -197,7 +197,7 @@ async function pruneForeignChannels(keep: string[]): Promise<void> {
   await Promise.all(
     (existing ?? [])
       .filter((channel): channel is NonNullable<typeof channel> => !!channel)
-      .filter((channel) => channel.id.startsWith('lifeos-') && !kept.has(channel.id))
+      .filter((channel) => channel.id.startsWith('daykeep-') && !kept.has(channel.id))
       .map((channel) =>
         Notifications.deleteNotificationChannelAsync(channel.id).catch(() => undefined),
       ),
@@ -620,7 +620,7 @@ function nextWeeklyOccurrence(weekday: number, hour: number, minute: number): nu
   return next.getTime();
 }
 
-/** How many LifeOS notifications the OS currently holds. */
+/** How many Daykeep notifications the OS currently holds. */
 export async function getScheduledCount(): Promise<number> {
   const Notifications = getNotifications();
   if (!Notifications) return 0;
@@ -639,7 +639,7 @@ export async function getScheduledCount(): Promise<number> {
  */
 export const SCHEDULING_BUDGET = Platform.OS === 'ios' ? 60 : Number.POSITIVE_INFINITY;
 
-/** Cancels every LifeOS-scheduled notification and clears their inbox rows —
+/** Cancels every Daykeep-scheduled notification and clears their inbox rows —
  * the true kill switch behind the master toggle, so turning notifications off
  * silences already-queued reminders too, not just future scheduling. No-ops in
  * Expo Go Android. */
@@ -713,7 +713,7 @@ export async function cancelScheduledInCategory(category: NotificationCategory):
 
 /** Posts a notification right now, bypassing the category gate, quiet hours and
  * the inbox log. Backs the "Send a test notification" button in Notification
- * Settings: when reminders aren't arriving, this separates "LifeOS never
+ * Settings: when reminders aren't arriving, this separates "Daykeep never
  * scheduled it" from "Android is refusing to show it", which are otherwise
  * indistinguishable from the user's side.
  *
@@ -819,7 +819,7 @@ export async function openExactAlarmSettings(): Promise<boolean> {
   if (!exactAlarmSettingsAvailable) return false;
   try {
     // Sent without `package:` data (Linking.sendIntent cannot attach a data URI),
-    // so this lands on the full app list rather than LifeOS's own toggle. The
+    // so this lands on the full app list rather than Daykeep's own toggle. The
     // fallback is the app's settings page, from which most OEM skins also reach
     // "Alarms & reminders".
     await Linking.sendIntent('android.settings.REQUEST_SCHEDULE_EXACT_ALARM');
@@ -841,7 +841,7 @@ export type NotificationDiagnostics = {
   /** True once permission has been asked for and refused — the state that needs
    * a trip to system settings rather than another in-app prompt. */
   permissionBlocked: boolean;
-  /** How many LifeOS notifications are queued with the OS right now. The number
+  /** How many Daykeep notifications are queued with the OS right now. The number
    * users actually need: reminders can look configured in-app while nothing is
    * queued, which is the signature of a scheduling gate silently dropping them. */
   scheduledCount: number;
@@ -873,7 +873,7 @@ export async function getNotificationDiagnostics(): Promise<NotificationDiagnost
     const raw = await Notifications.getNotificationChannelsAsync().catch(() => []);
     channels = (raw ?? [])
       .filter((channel): channel is NonNullable<typeof channel> => !!channel)
-      .filter((channel) => channel.id.startsWith('lifeos-'))
+      .filter((channel) => channel.id.startsWith('daykeep-'))
       .map((channel) => ({
         id: channel.id,
         name: channel.name ?? channel.id,

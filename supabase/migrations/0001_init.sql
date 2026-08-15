@@ -1,4 +1,4 @@
--- LifeOS — initial Supabase schema for sync (v1)
+-- Daykeep — initial Supabase schema for sync (v1)
 --
 -- Run this in your Supabase project's SQL editor (or via the Supabase CLI).
 -- It creates a `profiles` table (auto-populated on sign-up) plus the v1 sync

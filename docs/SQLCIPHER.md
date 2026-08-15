@@ -71,7 +71,7 @@ See the file. Two things differ from what this document originally prescribed:
 ### 4. Existing plaintext data — DONE (it is deleted)
 
 op-sqlite stores its file in a different directory from expo-sqlite, so the old
-plaintext `lifeos.db` is not migrated or overwritten — it is orphaned.
+plaintext `daykeep.db` is not migrated or overwritten — it is orphaned.
 `discardLegacyPlaintextDatabase()` deletes it (plus `-wal`/`-shm`) once the
 encrypted database is open **and** at schema, so a failure leaves the only copy
 of the data intact.
@@ -96,7 +96,7 @@ eas build -p android --profile development
 
 Then, in order — each step fails differently, so do not skip ahead:
 
-1. **App launches at all.** If it shows "LifeOS can't open its database" saying
+1. **App launches at all.** If it shows "Daykeep can't open its database" saying
    the build lacks SQLCipher, the `package.json` flag did not reach the build.
    Any other message is `initDatabase()` failing for a different reason and the
    text is the error.
@@ -114,8 +114,8 @@ Then, in order — each step fails differently, so do not skip ahead:
    not readable as plain SQLite:
 
    ```bash
-   adb shell "run-as com.lifeos.app cat databases/lifeos.db" > lifeos.db
-   sqlite3 lifeos.db ".tables"   # must fail: "file is not a database"
+   adb shell "run-as com.daykeep.app cat databases/daykeep.db" > daykeep.db
+   sqlite3 daykeep.db ".tables"   # must fail: "file is not a database"
    ```
 
    A file that opens fine is the failure this whole change exists to prevent —
@@ -125,5 +125,5 @@ Then, in order — each step fails differently, so do not skip ahead:
    exists, since it holds the same data unencrypted:
 
    ```bash
-   adb shell "run-as com.lifeos.app ls files/SQLite/"   # no lifeos.db
+   adb shell "run-as com.daykeep.app ls files/SQLite/"   # no daykeep.db
    ```

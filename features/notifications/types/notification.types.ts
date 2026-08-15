@@ -19,7 +19,7 @@ import {
 } from 'lucide-react-native';
 
 /**
- * Every local notification LifeOS schedules is tagged with one of these
+ * Every local notification Daykeep schedules is tagged with one of these
  * categories. The category drives three things: the per-category on/off
  * switch in Notification Settings, whether the notification bypasses quiet
  * hours (time-critical, user-timed ones do), and the icon/label shown in the

@@ -38,7 +38,7 @@ export type OAuthProvider = 'google' | 'apple';
 /** Where Google's consent screen sends the browser back to. Must be registered
  *  in Supabase → Authentication → URL Configuration → Redirect URLs, or the
  *  provider refuses the request before the user sees anything. In a build this
- *  resolves via the `lifeos` scheme; under Expo Go it is an `exp://` URL, which
+ *  resolves via the `daykeep` scheme; under Expo Go it is an `exp://` URL, which
  *  is why the development entry has to be allowlisted separately. */
 export function oauthRedirectUrl(): string {
   return Linking.createURL('/auth/callback');

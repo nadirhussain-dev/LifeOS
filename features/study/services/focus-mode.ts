@@ -5,13 +5,13 @@ import { useFocusModeStore } from '@/features/study/store/focus-mode-store';
 import { announceHeldReminders } from '@/lib/notifications';
 
 /**
- * The shield around a study focus block: while it's up, nothing LifeOS controls
+ * The shield around a study focus block: while it's up, nothing Daykeep controls
  * is allowed to interrupt.
  *
  * What it does, and where each piece lives:
  *
  *  - Music pauses (features/music/services/player-controller).
- *  - LifeOS reminders are swallowed instead of shown. The foreground handler in
+ *  - Daykeep reminders are swallowed instead of shown. The foreground handler in
  *    lib/notifications checks the focus flag and holds them; they are already
  *    rows in the in-app inbox, and everything held is re-announced as a single
  *    summary the moment the block ends, so no reminder is lost — only deferred.

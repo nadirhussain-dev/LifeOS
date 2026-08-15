@@ -63,7 +63,7 @@ create policy "usage_daily_read_own" on public.usage_daily
   for select using (user_id = auth.uid());
 
 -- --- usage: signed-out installs --------------------------------------------
--- Guest mode is a first-class way to use LifeOS, so a user-keyed table alone
+-- Guest mode is a first-class way to use Daykeep, so a user-keyed table alone
 -- would under-report actives by however many people never make an account.
 -- `install_id` is a random UUID in SecureStore: stable per install, meaningless
 -- off-device, and never joined to a uid.

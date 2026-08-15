@@ -1,6 +1,6 @@
 /**
  * Public environment for the app. Deliberately lenient: missing/blank Supabase
- * creds must NOT crash the app — LifeOS is offline-first and fully usable in
+ * creds must NOT crash the app — Daykeep is offline-first and fully usable in
  * guest mode with no backend at all. Auth and sync check `isSupabaseConfigured`
  * and stay disabled (guest-only) until real values are present.
  *
@@ -22,7 +22,7 @@ export const env = {
   EXPO_PUBLIC_SUPABASE_URL: read(process.env.EXPO_PUBLIC_SUPABASE_URL),
   EXPO_PUBLIC_SUPABASE_ANON_KEY: read(process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY),
   /** Where the password-reset email links back to. Optional — falls back to the
-   * app's `lifeos://reset-password` deep link (see lib/supabase.ts). */
+   * app's `daykeep://reset-password` deep link (see lib/supabase.ts). */
   EXPO_PUBLIC_SUPABASE_REDIRECT_URL: read(process.env.EXPO_PUBLIC_SUPABASE_REDIRECT_URL),
   /** Sentry DSN. Optional — when absent, crash/error reporting stays local-only
    * (console + dev banner). See lib/sentry.ts. */
@@ -57,9 +57,9 @@ export const env = {
    */
   EXPO_PUBLIC_PRIVACY_URL:
     read(process.env.EXPO_PUBLIC_PRIVACY_URL) ||
-    'https://nadirhussain786.github.io/LifeOS/privacy/',
+    'https://nadirhussain786.github.io/Daykeep/privacy/',
   EXPO_PUBLIC_TERMS_URL:
-    read(process.env.EXPO_PUBLIC_TERMS_URL) || 'https://nadirhussain786.github.io/LifeOS/terms/',
+    read(process.env.EXPO_PUBLIC_TERMS_URL) || 'https://nadirhussain786.github.io/Daykeep/terms/',
   /** Where support and data-access requests go. Both stores require a working
    *  contact address; a block screen's mailto was the only one the app had. */
   EXPO_PUBLIC_SUPPORT_EMAIL: read(process.env.EXPO_PUBLIC_SUPPORT_EMAIL) || 'nh262464@gmail.com',

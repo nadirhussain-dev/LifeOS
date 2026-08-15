@@ -32,7 +32,7 @@ import { Platform } from 'react-native';
  * themselves.
  */
 
-const KEY = 'lifeos.device-id';
+const KEY = 'daykeep.device-id';
 
 /** SecureStore has no web implementation; degrade rather than fail to boot.
  *  Same decision, for the same reason, as lib/secure-session-storage.ts. */

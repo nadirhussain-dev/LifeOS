@@ -151,7 +151,7 @@ export default function NotificationSettingsScreen() {
   }, [refreshDiagnostics]);
 
   /** Posts a real notification through the real pipeline. When reminders aren't
-   * arriving this is the one check that separates "LifeOS never scheduled it"
+   * arriving this is the one check that separates "Daykeep never scheduled it"
    * from "Android is dropping it", which look identical from the outside. */
   const handleTest = async () => {
     setTesting(true);
