@@ -149,7 +149,16 @@ export const CATEGORY_META: Record<NotificationCategory, NotificationCategoryMet
     descriptionKey: 'notifCategory.streak.description',
     icon: PartyPopper,
     tint: '#a855f7',
-    bypassQuietHours: false,
+    /**
+     * Time-critical, which was not true until this category had a scheduler.
+     *
+     * The streak reminder is a last call: it fires at 20:00 naming what is still
+     * outstanding, and it is only worth sending while the day can still be
+     * saved. Left non-bypassing, "smart digest" delivery mode would fold it into
+     * the following morning's brief — arriving the day after the streak it was
+     * warning about had already been lost, which is worse than silence.
+     */
+    bypassQuietHours: true,
   },
   /**
    * Shared expense groups. The only category that arrives as a PUSH rather than
@@ -220,16 +229,20 @@ export const CATEGORY_ORDER: NotificationCategory[] = [
  * reminders, and `features/study/services/study-reminders.ts` schedules the
  * weekly study nudge.
  *
- * `streak` stays out, and not for want of effort. A streak-at-risk reminder has
- * to know whether the habit has been done *at the moment it fires*, and a local
+ * `streak` is now in too, and the reasoning that kept it out is worth keeping
+ * because it was right at the time. A streak-at-risk reminder has to know
+ * whether the work has been done *at the moment it fires*, and a local
  * notification carries text fixed at scheduling time — so every version of it
- * nags people who already finished. That needs server push; until then the
- * in-app celebration covers the ground worth covering. See the "Deferred (by
- * design)" section of TODO.md.
+ * nagged people who had already finished. The conclusion drawn from that was
+ * "this needs server push".
+ *
+ * It did not. It needed a cheaper trigger rather than a smarter one:
+ * `features/challenge/services/challenge-reminders.ts` cancels and re-queues the
+ * reminder on every write, so its text is rebuilt from current state and it is
+ * cancelled outright the moment the day is finished. Nothing fires at somebody
+ * who is done, because by then there is nothing queued.
  */
-export const CONFIGURABLE_CATEGORIES: NotificationCategory[] = CATEGORY_ORDER.filter(
-  (category) => category !== 'streak',
-);
+export const CONFIGURABLE_CATEGORIES: NotificationCategory[] = CATEGORY_ORDER;
 
 /** Fallback icon for any category not found in the map (defensive). */
 export const FALLBACK_NOTIFICATION_ICON: LucideIcon = BellRing;

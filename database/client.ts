@@ -2,6 +2,7 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 
 import { bootstrapDatabase, type BootstrapTarget } from '@/database/bootstrap';
 import * as schema from '@/database/schema';
+import { notifyWrite } from '@/database/write-observer';
 import { getOrCreateDbKey } from '@/features/security/lib/db-key';
 
 /**
@@ -95,12 +96,22 @@ function execScript(db: OpDatabase, sql: string): void {
  * The accessors are lazy on purpose: drizzle's `run()` destructures `changes`,
  * while `all()`/`get()` go straight to the row accessors, and executing on
  * construction would run every query twice.
+ *
+ * It is also the one place every drizzle statement passes through, which is why
+ * `notifyWrite` hangs off it — see database/write-observer.ts for why the streak
+ * challenge observes writes here rather than in fifty mutation hooks, and why
+ * the raw path below (`adapt`, used by sync and import) is deliberately not
+ * observed.
  */
 export function opSqliteClient(db: OpDatabase) {
   return {
     prepareSync(sql: string) {
       return {
         executeSync(params: unknown[] = []) {
+          // On execution rather than on prepare: drizzle calls `executeSync`
+          // exactly when it intends to run the statement, so this counts real
+          // writes and not statements that were built and abandoned.
+          notifyWrite(sql);
           let result: ReturnType<OpDatabase['executeSync']> | null = null;
           const runOnce = () => (result ??= db.executeSync(sql, params as never[]));
           return {
