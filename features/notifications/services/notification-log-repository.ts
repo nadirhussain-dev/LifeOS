@@ -72,11 +72,30 @@ export function logScheduledNotification(input: LogNotificationInput): string {
   return id;
 }
 
-/** Removes the log row(s) for a cancelled notification id. Called from the
- * cancel path so the inbox never shows reminders that are no longer queued. */
+/**
+ * Removes the log row(s) for a cancelled notification id. Called from the
+ * cancel path so the inbox never shows reminders that are no longer queued.
+ *
+ * Deliberately only touches rows that have NOT been delivered.
+ *
+ * Cancelling is a statement about the future — "this will not arrive" — and the
+ * row for something that already arrived is history, not a queue entry. Without
+ * the `deliveredAt IS NULL` guard the two were conflated, and the record of a
+ * reminder that fired was erased by the next thing to touch its item: editing
+ * the task, ticking it off, or simply opening the app, because the launch
+ * rebuild re-syncs every item and each re-sync cancels the old id first. The
+ * badge dropped back to zero with it. The user-visible shape of that bug is a
+ * reminder that arrives on the lock screen and then cannot be found anywhere in
+ * the app afterwards.
+ */
 export function deleteLogByNotificationId(notificationId: string | null | undefined): void {
   if (!notificationId) return;
-  getDb().delete(notificationLog).where(eq(notificationLog.notificationId, notificationId)).run();
+  getDb()
+    .delete(notificationLog)
+    .where(
+      and(eq(notificationLog.notificationId, notificationId), isNull(notificationLog.deliveredAt)),
+    )
+    .run();
 }
 
 /** Inbox contents, newest scheduled/delivered first. Excludes cancelled rows. */

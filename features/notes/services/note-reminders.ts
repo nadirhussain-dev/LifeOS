@@ -9,7 +9,10 @@ import type { Note } from '@/features/notes/types/note.types';
 export async function syncNoteReminder(note: Note): Promise<void> {
   await cancelNotification(note.reminderNotificationId);
 
-  if (!note.reminderAt) {
+  // An archived note is out of the way by definition — reminding about it is
+  // the app arguing with a decision the user already made. Same rule the task
+  // reminder applies to an archived task.
+  if (!note.reminderAt || note.isArchived) {
     setNoteReminderNotificationId(note.id, null);
     return;
   }

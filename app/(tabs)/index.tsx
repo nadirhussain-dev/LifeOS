@@ -1,6 +1,6 @@
 import { type BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, ScrollView, View } from 'react-native';
@@ -73,6 +73,28 @@ export default function DashboardScreen() {
     await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     setRefreshing(false);
   }, [queryClient]);
+
+  /**
+   * Refresh whenever the dashboard comes back into view.
+   *
+   * Every widget here is derived data — today's tasks, the habit row, the
+   * timeline, the journal streak — read under a `['dashboard', …]` key that
+   * belongs to no module. So a task's due time changing, a habit being ticked
+   * off or a note being written invalidated their own module's queries and left
+   * this screen untouched, and with a 60s staleTime and a tab that stays mounted
+   * it could sit on stale numbers indefinitely. Pull-to-refresh was the only
+   * cure, which asks the user to know the screen is lying.
+   *
+   * Focus is the right beat: it is the moment the data is about to be read, and
+   * the moment somebody has just come back from changing it. Cheap — these are
+   * local SQLite reads — and it does not fire while the tab sits in the
+   * background.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    }, [queryClient]),
+  );
 
   const placed = new Set<WidgetId>([
     ...FULL_SECTIONS.flatMap((section) => section.ids),

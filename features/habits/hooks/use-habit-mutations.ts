@@ -77,8 +77,15 @@ export function useHabitMutations() {
     onSuccess: invalidate,
   });
 
+  /** Un-archiving has to put the reminder back: `archive` cancelled it, and the
+   *  habit's own reminder time still says it should be firing. Without this it
+   *  stayed silent until some later launch happened to run the rebuild. */
   const unarchive = useMutation({
-    mutationFn: async (id: string) => unarchiveHabit(id),
+    mutationFn: async (id: string) => {
+      unarchiveHabit(id);
+      const habit = getHabit(id);
+      if (habit) await syncHabitReminder(habit);
+    },
     onSuccess: invalidate,
   });
 

@@ -72,8 +72,15 @@ export function useNoteMutations() {
     onSuccess: invalidate,
   });
 
+  /** Un-archiving has to put the reminder back: `archive` cancelled it, and
+   *  without this the note returns to the list looking like it still has one
+   *  while nothing is queued. */
   const unarchive = useMutation({
-    mutationFn: async (id: string) => unarchiveNote(id),
+    mutationFn: async (id: string) => {
+      unarchiveNote(id);
+      const note = getNote(id);
+      if (note) await syncNoteReminder(note);
+    },
     onSuccess: invalidate,
   });
 

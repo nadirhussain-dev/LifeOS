@@ -3,6 +3,10 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import {
+  DEFAULT_NOTIFICATION_SOUND_ID,
+  type NotificationSoundId,
+} from '@/features/notifications/config/notification-sounds';
+import {
   CATEGORY_ORDER,
   type NotificationCategory,
 } from '@/features/notifications/types/notification.types';
@@ -30,6 +34,15 @@ export type NotificationsState = {
   /** Quiet window as minutes-from-midnight. Wraps past midnight when start > end. */
   quietStartMinutes: number;
   quietEndMinutes: number;
+  /**
+   * The tone every LifeOS reminder arrives with.
+   *
+   * One app-wide choice rather than one per category, because on Android the
+   * sound belongs to the notification *channel* and each tone therefore costs a
+   * channel in the user's system settings — see
+   * config/notification-sounds.ts for the full reasoning.
+   */
+  soundId: NotificationSoundId;
   /** 'individual' (the default) = every reminder fires at its own time;
    * 'digest' = opt-in, folding non-urgent nudges into one morning summary. */
   deliveryMode: DeliveryMode;
@@ -67,6 +80,7 @@ export type NotificationsState = {
 
   setMasterEnabled: (enabled: boolean) => void;
   setCategoryEnabled: (category: NotificationCategory, enabled: boolean) => void;
+  setSoundId: (id: NotificationSoundId) => void;
   setQuietHoursEnabled: (enabled: boolean) => void;
   setQuietHours: (startMinutes: number, endMinutes: number) => void;
   setDeliveryMode: (mode: DeliveryMode) => void;
@@ -84,6 +98,7 @@ export const useNotificationsStore = create<NotificationsState>()(
       quietHoursEnabled: true,
       quietStartMinutes: 22 * 60,
       quietEndMinutes: 7 * 60,
+      soundId: DEFAULT_NOTIFICATION_SOUND_ID,
       // Individual, not digest. Digest reads like a considerate default but it
       // silently cancels every water/habit/journal/goal reminder the user set up
       // (see CONSOLIDATED_CATEGORIES in services/delivery.ts) and replaces them
@@ -100,6 +115,7 @@ export const useNotificationsStore = create<NotificationsState>()(
       setMasterEnabled: (masterEnabled) => set({ masterEnabled }),
       setCategoryEnabled: (category, enabled) =>
         set((state) => ({ categories: { ...state.categories, [category]: enabled } })),
+      setSoundId: (soundId) => set({ soundId }),
       setQuietHoursEnabled: (quietHoursEnabled) => set({ quietHoursEnabled }),
       setQuietHours: (quietStartMinutes, quietEndMinutes) =>
         set({ quietStartMinutes, quietEndMinutes }),

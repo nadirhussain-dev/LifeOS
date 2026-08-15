@@ -1385,6 +1385,44 @@
     "redactedTitle": "LifeOS",
     "redactedBody": "آپ کے لیے ایک یاد دہانی ہے۔"
   },
+  "notifSound": {
+    "section": "آواز",
+    "title": "یاد دہانی کی آواز",
+    "eyebrow": "اطلاعات",
+    "previewNote": "کوئی ٹون سننے اور اسے ہر یاد دہانی کے لیے منتخب کرنے کو اس پر ٹیپ کریں۔",
+    "androidNote": "اگر آپ اینڈرائیڈ سیٹنگز میں کسی LifeOS چینل کی آواز پہلے ہی بدل چکے ہیں، تو وہی انتخاب اس پر غالب رہے گا۔",
+    "systemLabel": "سسٹم ڈیفالٹ",
+    "systemDescription": "وہی جو آپ کا باقی فون استعمال کرتا ہے",
+    "silentLabel": "خاموش",
+    "silentDescription": "دکھائی دے گی اور وائبریٹ کرے گی — آواز نہیں",
+    "family": {
+      "bells": "گھنٹیاں",
+      "mallets": "میلٹ",
+      "glass": "شیشہ و ہوا",
+      "keys": "کلیدیں و تار",
+      "digital": "ڈیجیٹل",
+      "motion": "حرکت",
+      "alerts": "الرٹ",
+      "system": "سسٹم"
+    },
+    "trait": {
+      "bright": "روشن",
+      "warm": "گرم",
+      "soft": "نرم",
+      "dry": "خشک",
+      "deep": "گہرا",
+      "airy": "ہوا جیسا",
+      "quick": "تیز",
+      "lingering": "دیر تک گونجتا",
+      "metallic": "دھاتی",
+      "wooden": "لکڑی جیسا",
+      "glassy": "شیشے جیسا",
+      "plucked": "جھنکارتا",
+      "digital": "ڈیجیٹل",
+      "sweeping": "سرکتا",
+      "insistent": "اصرار بھرا"
+    }
+  },
   "notifCategory": {
     "tasks": {
       "label": "کاموں کی یاد دہانیاں",

@@ -165,7 +165,19 @@ function removeCompletedByLink(taskId: string, habitId: string) {
     .run();
 }
 
-export function completeTask(id: string) {
+/**
+ * Marks a task done, and — for a recurring one — returns the next occurrence it
+ * created, so the caller can schedule that occurrence's reminder.
+ *
+ * The return value is the whole point of the signature. `reminderEnabled` was
+ * not among the fields copied onto the clone, so it fell to its `false` default
+ * and a repeating task's reminder died the first time the task was ticked off:
+ * it fired once, ever, and every occurrence after that was silent. Copying the
+ * flag alone would not have been enough either, because nothing scheduled the
+ * clone — it would have sat with `reminderEnabled = true` and no notification
+ * until some later launch happened to run the rebuild.
+ */
+export function completeTask(id: string): Task | null {
   const now = Date.now();
   const task = getTask(id);
 
@@ -184,7 +196,7 @@ export function completeTask(id: string) {
   }
 
   if (task && task.recurrenceFrequency !== 'none' && task.dueDate) {
-    createTask({
+    return createTask({
       title: task.title,
       notes: task.notes,
       priority: task.priority,
@@ -193,8 +205,11 @@ export function completeTask(id: string) {
       hasDueTime: task.hasDueTime,
       recurrenceFrequency: task.recurrenceFrequency,
       recurrenceParentId: task.recurrenceParentId ?? task.id,
+      reminderEnabled: task.reminderEnabled,
     });
   }
+
+  return null;
 }
 
 export function reopenTask(id: string) {

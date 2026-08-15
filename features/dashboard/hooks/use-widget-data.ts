@@ -47,12 +47,8 @@ export function useTodayTasks() {
           id: task.id,
           title: task.title,
           done: false,
-          dueLabel:
-            getDueBucket(task) === 'overdue'
-              ? 'Overdue'
-              : task.hasDueTime && task.dueDate
-                ? format(task.dueDate, 'h:mm a')
-                : undefined,
+          overdue: getDueBucket(task) === 'overdue',
+          dueLabel: task.hasDueTime && task.dueDate ? format(task.dueDate, 'h:mm a') : undefined,
         })),
       };
     },

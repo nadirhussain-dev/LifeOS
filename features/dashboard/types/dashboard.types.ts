@@ -16,7 +16,15 @@ export type TaskPreview = {
   id: string;
   title: string;
   done: boolean;
+  /** Formatted due time (e.g. "2:30 PM"), absent for an all-day task. */
   dueLabel?: string;
+  /**
+   * Carried as a flag rather than inferred from `dueLabel`. The widget used to
+   * decide the destructive tint with `dueLabel === 'Overdue'` — a comparison
+   * against an English literal, which meant the label could not be translated
+   * without silently losing the colour in every other language.
+   */
+  overdue: boolean;
 };
 
 export type TodayTasksData = {

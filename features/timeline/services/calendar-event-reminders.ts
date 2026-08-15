@@ -36,4 +36,9 @@ export async function cancelCalendarEventReminder(
   event: Pick<CalendarEvent, 'id' | 'reminderNotificationId'>,
 ): Promise<void> {
   await cancelNotification(event.reminderNotificationId);
+  // Clearing the column is what every other module's cancel does, and skipping
+  // it left the row pointing at an id the OS no longer knows — so a later sync
+  // would "cancel" a stranger's notification id and the event looked like it
+  // still had a reminder queued.
+  setCalendarEventReminderNotificationId(event.id, null);
 }
