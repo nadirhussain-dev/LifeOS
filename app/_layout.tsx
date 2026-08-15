@@ -52,6 +52,7 @@ import { useAuthGate } from '@/features/auth/hooks/use-auth-gate';
 import { useDeviceSessionSync } from '@/features/auth/hooks/use-device-session';
 import { DeviceGateOverlay } from '@/features/auth/components/device-gate-overlay';
 import { useUsageReporter } from '@/features/analytics/hooks/use-usage-reporter';
+import { useChallengeTracking } from '@/features/challenge/hooks/use-challenge-tracking';
 import { AmbientBackground } from '@/components/ui/ambient-background';
 import { DialogHost } from '@/components/ui/dialog-host';
 import { Grain } from '@/components/ui/grain';
@@ -138,6 +139,13 @@ function WidgetSync() {
  * live inside the router (reads the pathname). Renders nothing. */
 function UsageReporter() {
   useUsageReporter();
+  return null;
+}
+
+/** Observes database writes and hands the day's evidence to the server. Only
+ *  does anything once somebody is actually in a run. Renders nothing. */
+function ChallengeTracking() {
+  useChallengeTracking();
   return null;
 }
 
@@ -351,6 +359,10 @@ export default function RootLayout() {
                 <Stack.Screen name="notes" />
                 <Stack.Screen name="music" />
                 <Stack.Screen name="insights/index" />
+                <Stack.Screen name="challenge/index" />
+                <Stack.Screen name="challenge/join" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="challenge/swap" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="challenge/timeline" />
                 <Stack.Screen name="goals/index" />
                 <Stack.Screen name="goals/[id]" />
                 <Stack.Screen name="goals/[id]/edit" options={{ presentation: 'modal' }} />
@@ -422,6 +434,7 @@ export default function RootLayout() {
               <DeviceSessionBridge />
               <BillingSyncBridge />
               <UsageReporter />
+              <ChallengeTracking />
               <WidgetSync />
               <LanguageBridge />
               <PushRegistrationBridge />

@@ -3,6 +3,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'expo-router';
 import {
   CreditCard,
+  Flame,
   Megaphone,
   ShieldAlert,
   ToggleLeft,
@@ -109,6 +110,16 @@ export default function OperatorConsoleScreen() {
                 <CreditCard size={18} color={c.mutedForeground} />
                 <Text className="flex-1 font-sora-medium text-foreground">
                   {t('billing.plans')}
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/settings/operator/rewards')}
+                className={cardClass({ padding: 'rowLg' }, 'flex-row items-center gap-3')}
+              >
+                <Flame size={18} color={c.mutedForeground} />
+                <Text className="flex-1 font-sora-medium text-foreground">
+                  {t('operator.rewardsTitle')}
                 </Text>
               </Pressable>
               {/* Owner-only, on purpose — see roster.tsx's header. Any other

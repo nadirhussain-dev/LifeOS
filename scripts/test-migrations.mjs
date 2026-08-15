@@ -5036,6 +5036,632 @@ await test('0037 raising the free plan’s price live raises what a free account
 });
 
 // ---------------------------------------------------------------------------
+console.log('\nstreak challenge (0048)');
+// ---------------------------------------------------------------------------
+//
+// The settlement state machine is the one place in this schema where a bug is
+// both expensive and completely silent: it decides whether somebody keeps a
+// year of progress, and it decides it overnight, in a cron job, for people who
+// are asleep. Nobody files a bug report saying "my counter should be 90 and it
+// is 45" — they uninstall.
+//
+// So the whole machine is exercised here rather than sampled. It is testable at
+// all because 0048 keeps the arithmetic (`challenge_credit_day`,
+// `challenge_settle_missed_day`) separate from the clock: both take the day as
+// an argument, so a year can be played out in a few statements without any time
+// travel and without touching the entry points' window checks — which get their
+// own tests further down, through the real RPC, against the real `now()`.
+
+const RUNNER = 'aaaaaaaa-0000-4000-8000-000000000001';
+const RUNNER2 = 'aaaaaaaa-0000-4000-8000-000000000002';
+await createUser(db, RUNNER, 'runner@example.com');
+await createUser(db, RUNNER2, 'runner2@example.com');
+
+const SEASON = (
+  await one(
+    `insert into public.challenge_seasons (name, enabled) values ('Test Season', true)
+     returning id`,
+  )
+).id;
+
+// The real ladder, because the demotion targets are read off it and a toy
+// ladder would not surface the interaction between "previous rung" and the
+// 45-day cap that the cap exists to fix.
+for (const [dayThreshold, name] of [
+  [7, 'Spark'],
+  [30, 'Ember'],
+  [60, 'Flame'],
+  [90, 'Blaze'],
+  [120, 'Keystone'],
+  [180, 'Half Year'],
+  [240, 'Forge'],
+  [300, 'Summit'],
+  [365, 'Year One'],
+]) {
+  await db.query(
+    `insert into public.challenge_tiers (season_id, day_threshold, name) values ($1, $2, $3)`,
+    [SEASON, dayThreshold, name],
+  );
+}
+for (const m of ['habits', 'water', 'journal', 'tasks', 'sleep']) {
+  await db.query(`insert into public.challenge_modules (season_id, module_id) values ($1, $2)`, [
+    SEASON,
+    m,
+  ]);
+}
+
+const runRow = (user) =>
+  one(`select * from public.challenge_enrollments where user_id = $1 and season_id = $2`, [
+    user,
+    SEASON,
+  ]);
+
+const setRun = (user, cols) => {
+  const keys = Object.keys(cols);
+  const sets = keys.map((k, i) => `${k} = $${i + 3}`).join(', ');
+  return db.query(
+    `update public.challenge_enrollments set ${sets} where user_id = $1 and season_id = $2`,
+    [user, SEASON, ...keys.map((k) => cols[k])],
+  );
+};
+
+/** Puts a run back to a known state and empties its ledger. */
+const resetRun = async (user, cols = {}) => {
+  await db.query(`delete from public.challenge_days where user_id = $1`, [user]);
+  await db.query(`delete from public.challenge_events where user_id = $1`, [user]);
+  await setRun(user, {
+    qualified_days: 0,
+    perfect_run: 0,
+    shields: 0,
+    shields_earned: 0,
+    recent_misses: 0,
+    current_tier_day: 0,
+    highest_tier_day: 0,
+    shield_earn_days: 30,
+    status: 'active',
+    completed_at: null,
+    ...cols,
+  });
+};
+
+// Dates are arbitrary and fixed — the arithmetic under test never asks what
+// today is.
+const BASE = Date.UTC(2026, 0, 1);
+const day = (n) => new Date(BASE + n * 86400000).toISOString().slice(0, 10);
+
+const credit = (user, n, modules = '{habits,water,journal}') =>
+  one(`select public.challenge_credit_day($1::uuid, $2::uuid, $3::date, $4::text[], 120) as v`, [
+    user,
+    SEASON,
+    day(n),
+    modules,
+  ]);
+
+const settle = (user, n) =>
+  one(`select public.challenge_settle_missed_day($1::uuid, $2::uuid, $3::date) as v`, [
+    user,
+    SEASON,
+    day(n),
+  ]);
+
+// --- enrolment -------------------------------------------------------------
+
+await test('0048 enrolling freezes the contract and resolves the shield interval', async () => {
+  await asUser(db, RUNNER, async () => {
+    await db.query(
+      `select public.enroll_in_challenge($1::uuid, 0, $2::text[], $3::text[], 'dev-runner')`,
+      [SEASON, '{habits,water,journal}', '{}'],
+    );
+  });
+  const r = await runRow(RUNNER);
+  expectEqual(r.shield_earn_days, 30, 'base shield interval');
+  expectEqual(r.qualified_days, 0, 'starts at zero');
+  expectEqual(r.status, 'active', 'status');
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.challenge_enrollment_modules
+        where user_id = $1 and role = 'required' and removed_on is null`,
+      [RUNNER],
+    ),
+    3,
+    'required modules',
+  );
+});
+
+await test('0048 enrolling twice is refused — one live run per account', async () => {
+  await asUser(db, RUNNER, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `select public.enroll_in_challenge($1::uuid, 0, $2::text[], $3::text[], 'dev-other')`,
+          [SEASON, '{habits,water,journal}', '{}'],
+        ),
+      'already in a run',
+    );
+  });
+});
+
+await test('0048 fewer than the required modules is refused', async () => {
+  await asUser(db, RUNNER2, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `select public.enroll_in_challenge($1::uuid, 0, $2::text[], $3::text[], 'dev-2')`,
+          [SEASON, '{habits,water}', '{}'],
+        ),
+      'at least',
+    );
+  });
+});
+
+await test('0048 a module that is not eligible this season is refused', async () => {
+  await asUser(db, RUNNER2, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `select public.enroll_in_challenge($1::uuid, 0, $2::text[], $3::text[], 'dev-2')`,
+          [SEASON, '{habits,water,budget}', '{}'],
+        ),
+      'may not be committed',
+    );
+  });
+});
+
+await test('0048 extras and the annual plan stack down to the shield floor, never below', async () => {
+  await db.query(`update public.profiles set plan_id = 'plus_yearly' where id = $1`, [RUNNER2]);
+  await asUser(db, RUNNER2, async () => {
+    await db.query(
+      `select public.enroll_in_challenge($1::uuid, 0, $2::text[], $3::text[], 'dev-runner2')`,
+      [SEASON, '{habits,water,journal}', '{tasks,sleep}'],
+    );
+  });
+  const r = await runRow(RUNNER2);
+  // 30 base − 5 (two or more extras) − 5 (annual) = 20, which is the floor.
+  expectEqual(r.shield_earn_days, 20, 'stacked interval, clamped at the floor');
+  expectEqual(r.shields, 1, 'annual head start');
+  expectEqual(r.plan_at_enrolment, 'plus_yearly', 'plan recorded at enrolment');
+});
+
+// --- crediting a day -------------------------------------------------------
+
+await test('0048 a credited day advances progress, and crediting it again does nothing', async () => {
+  await resetRun(RUNNER);
+  await credit(RUNNER, 1);
+  let r = await runRow(RUNNER);
+  expectEqual(r.qualified_days, 1, 'first day');
+  expectEqual(r.perfect_run, 1, 'perfect run');
+
+  const again = await credit(RUNNER, 1);
+  expectEqual(again.v.alreadyCounted, true, 'reported as already counted');
+  r = await runRow(RUNNER);
+  expectEqual(r.qualified_days, 1, 'still one day, not two');
+});
+
+await test('0048 a shield arrives exactly on the interval, and rungs light as they pass', async () => {
+  await resetRun(RUNNER);
+  for (let n = 1; n <= 30; n++) await credit(RUNNER, n);
+  const r = await runRow(RUNNER);
+  expectEqual(r.qualified_days, 30, 'thirty days');
+  expectEqual(r.shields, 1, 'one shield');
+  expectEqual(r.shields_earned, 1, 'earned once');
+  expectEqual(r.current_tier_day, 30, 'standing on the day-30 rung');
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.challenge_events
+        where user_id = $1 and kind = 'tier_reached'`,
+      [RUNNER],
+    ),
+    2,
+    'rungs 7 and 30 both logged',
+  );
+});
+
+await test('0048 a fourth shield is never granted, however clean the run', async () => {
+  await resetRun(RUNNER, { qualified_days: 60, perfect_run: 29, shields: 3, current_tier_day: 60 });
+  await credit(RUNNER, 61);
+  const r = await runRow(RUNNER);
+  expectEqual(r.perfect_run, 30, 'the interval was reached');
+  expectEqual(r.shields, 3, 'and the cap held');
+});
+
+await test('0048 misses age out once a clean run is rebuilt', async () => {
+  await resetRun(RUNNER, { qualified_days: 40, perfect_run: 29, recent_misses: 2 });
+  await credit(RUNNER, 41);
+  expectEqual((await runRow(RUNNER)).recent_misses, 0, 'escalation counter cleared');
+});
+
+await test('0048 reaching the final rung completes the run', async () => {
+  await resetRun(RUNNER, { qualified_days: 364, perfect_run: 364, current_tier_day: 300 });
+  const res = await credit(RUNNER, 365);
+  expectEqual(res.v.completed, true, 'reported complete');
+  const r = await runRow(RUNNER);
+  expectEqual(r.status, 'completed', 'status');
+  expectEqual(r.current_tier_day, 365, 'final rung');
+});
+
+// --- settling a lost day ---------------------------------------------------
+
+await test('0048 a shield absorbs the miss: progress untouched, clean record gone', async () => {
+  await resetRun(RUNNER, {
+    qualified_days: 50,
+    perfect_run: 50,
+    shields: 2,
+    current_tier_day: 30,
+  });
+  const res = await settle(RUNNER, 51);
+  expectEqual(res.v.outcome, 'shielded', 'outcome');
+  const r = await runRow(RUNNER);
+  expectEqual(r.qualified_days, 50, 'progress untouched');
+  expectEqual(r.shields, 1, 'one shield spent');
+  expectEqual(r.perfect_run, 0, 'perfect run broken all the same');
+  expectEqual(
+    (
+      await one(`select outcome from public.challenge_days where user_id = $1 and local_day = $2`, [
+        RUNNER,
+        day(51),
+      ])
+    ).outcome,
+    'shielded',
+    'ledger records the shielded day, not a silent gap',
+  );
+});
+
+await test('0048 with no shield left, progress falls to the rung below', async () => {
+  await resetRun(RUNNER, {
+    qualified_days: 93,
+    perfect_run: 93,
+    shields: 0,
+    current_tier_day: 90,
+  });
+  const res = await settle(RUNNER, 94);
+  expectEqual(res.v.outcome, 'missed', 'outcome');
+  const r = await runRow(RUNNER);
+  expectEqual(r.qualified_days, 90, 'back to the day-90 rung');
+  expectEqual(r.current_tier_day, 90, 'and standing on it');
+  expectEqual(r.recent_misses, 1, 'escalation counter armed');
+  expectEqual(r.highest_tier_day, 0, 'highest reached is never walked back by a fall');
+});
+
+await test('0048 a second miss inside the window drops one rung further', async () => {
+  await resetRun(RUNNER, {
+    qualified_days: 65,
+    perfect_run: 0,
+    shields: 0,
+    recent_misses: 1,
+    current_tier_day: 60,
+  });
+  await settle(RUNNER, 66);
+  // 60 is the rung below 65; the second miss steps past it to 30. The 45-day
+  // cap would allow anything down to 20, so it does not bind here.
+  expectEqual((await runRow(RUNNER)).qualified_days, 30, 'two rungs down');
+});
+
+await test('0048 the demotion cap bites at the top of the ladder', async () => {
+  await resetRun(RUNNER, {
+    qualified_days: 364,
+    perfect_run: 364,
+    shields: 0,
+    current_tier_day: 300,
+  });
+  await settle(RUNNER, 365);
+  const r = await runRow(RUNNER);
+  // The rung below 364 is 300, a fall of 64. The cap holds it to 45.
+  expectEqual(r.qualified_days, 319, 'lost 45 days, not 64');
+  expectEqual(r.current_tier_day, 300, 'which still stands on the 300 rung');
+});
+
+await test('0048 settling the same lost day twice changes nothing', async () => {
+  await resetRun(RUNNER, { qualified_days: 50, perfect_run: 50, shields: 2 });
+  await settle(RUNNER, 51);
+  const res = await settle(RUNNER, 51);
+  expectEqual(res.v.alreadySettled, true, 'reported as already settled');
+  expectEqual((await runRow(RUNNER)).shields, 1, 'and did not spend a second shield');
+});
+
+// --- the nightly settler ---------------------------------------------------
+
+await test('0048 the settler closes every unaccounted day up to, but not including, today', async () => {
+  await resetRun(RUNNER, { qualified_days: 40, perfect_run: 40, shields: 1 });
+  const today = (await one(`select public.challenge_local_day(now(), 0, 0) as d`)).d;
+  await db.query(
+    `update public.challenge_enrollments
+        set last_settled_day = public.challenge_local_day(now(), 0, 0) - 4
+      where user_id = $1 and season_id = $2`,
+    [RUNNER, SEASON],
+  );
+
+  expectEqual((await one(`select public.settle_stale_runs() as n`)).n, 3, 'three days settled');
+
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.challenge_days
+        where user_id = $1 and outcome = 'shielded'`,
+      [RUNNER],
+    ),
+    1,
+    'the shield covered the first of them',
+  );
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.challenge_days where user_id = $1 and outcome = 'missed'`,
+      [RUNNER],
+    ),
+    2,
+    'the other two were misses',
+  );
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.challenge_days
+        where user_id = $1 and local_day >= $2::date`,
+      [RUNNER, today],
+    ),
+    0,
+    'today is still winnable and was left alone',
+  );
+});
+
+// --- the contract, through the real entry point ----------------------------
+
+const serverDay = (await one(`select public.challenge_local_day(now(), 0, 0)::text as d`)).d;
+
+await test('0048 two of three modules writes nothing and names what is outstanding', async () => {
+  await resetRun(RUNNER);
+  const res = await asUser(db, RUNNER, () =>
+    one(`select public.record_challenge_day($1::date, $2::jsonb, 120, 'dev-runner') as v`, [
+      serverDay,
+      JSON.stringify({ habits: 2, water: 5 }),
+    ]),
+  );
+  expectEqual(res.v.qualified, false, 'not qualified');
+  expectEqual(JSON.stringify(res.v.outstanding), '["journal"]', 'the missing one is named');
+  expectEqual(
+    await count(`select count(*)::int n from public.challenge_days where user_id = $1`, [RUNNER]),
+    0,
+    'and nothing was written to the ledger',
+  );
+});
+
+await test('0048 all three qualifies the day', async () => {
+  const res = await asUser(db, RUNNER, () =>
+    one(`select public.record_challenge_day($1::date, $2::jsonb, 120, 'dev-runner') as v`, [
+      serverDay,
+      JSON.stringify({ habits: 2, water: 5, journal: 1 }),
+    ]),
+  );
+  expectEqual(res.v.qualified, true, 'qualified');
+  expectEqual((await runRow(RUNNER)).qualified_days, 1, 'progress advanced');
+});
+
+await test('0048 an extra module going untouched never costs the day', async () => {
+  await resetRun(RUNNER);
+  await db.query(
+    `insert into public.challenge_enrollment_modules
+       (user_id, season_id, module_id, role, added_on)
+     values ($1, $2, 'tasks', 'extra', $3::date - 1)`,
+    [RUNNER, SEASON, serverDay],
+  );
+  const res = await asUser(db, RUNNER, () =>
+    one(`select public.record_challenge_day($1::date, $2::jsonb, 120, 'dev-runner') as v`, [
+      serverDay,
+      JSON.stringify({ habits: 1, water: 1, journal: 1 }),
+    ]),
+  );
+  expectEqual(res.v.qualified, true, 'the contract is the required set, not everything');
+});
+
+await test('0048 a day outside the window is refused rather than quietly moved', async () => {
+  await resetRun(RUNNER);
+  const res = await asUser(db, RUNNER, () =>
+    one(`select public.record_challenge_day($1::date - 5, $2::jsonb, 120, 'dev-runner') as v`, [
+      serverDay,
+      JSON.stringify({ habits: 1, water: 1, journal: 1 }),
+    ]),
+  );
+  expectEqual(res.v.ok, false, 'refused');
+  expectEqual(res.v.reason, 'day out of window', 'and says why');
+});
+
+await test('0048 a session below the floor does not qualify', async () => {
+  const res = await asUser(db, RUNNER, () =>
+    one(`select public.record_challenge_day($1::date, $2::jsonb, 5, 'dev-runner') as v`, [
+      serverDay,
+      JSON.stringify({ habits: 1, water: 1, journal: 1 }),
+    ]),
+  );
+  expectEqual(res.v.ok, false, 'refused');
+  expectEqual(res.v.reason, 'session too short', 'and says why');
+});
+
+// --- swapping --------------------------------------------------------------
+
+await test('0048 the picker is locked for the first thirty days', async () => {
+  await asUser(db, RUNNER, async () => {
+    await expectRejection(
+      () => db.query(`select public.swap_challenge_module('journal', 'sleep')`),
+      'locked',
+    );
+  });
+});
+
+await test('0048 a swap takes effect tomorrow, and cannot rescue today', async () => {
+  await db.query(
+    `update public.challenge_enrollments
+        set enrolled_local_day = public.challenge_local_day(now(), 0, 0) - 40
+      where user_id = $1 and season_id = $2`,
+    [RUNNER, SEASON],
+  );
+  await asUser(db, RUNNER, async () => {
+    await db.query(`select public.swap_challenge_module('journal', 'sleep')`);
+  });
+
+  const today = await asUser(db, RUNNER, () => one(`select public.challenge_today() as v`));
+  expectEqual(
+    JSON.stringify([...today.v.required].sort()),
+    JSON.stringify(['habits', 'journal', 'water']),
+    'today still owes the module that was swapped out',
+  );
+  expectEqual(
+    (
+      await one(
+        `select removed_on::text as d from public.challenge_enrollment_modules
+          where user_id = $1 and module_id = 'journal'`,
+        [RUNNER],
+      )
+    ).d,
+    new Date(new Date(`${serverDay}T00:00:00Z`).getTime() + 86400000).toISOString().slice(0, 10),
+    'and it leaves the contract tomorrow, not today',
+  );
+  expectEqual((await runRow(RUNNER)).swaps_used, 1, 'one swap spent');
+});
+
+// --- the part that makes all of the above worth anything -------------------
+
+await test('0048 a signed-in user cannot write their own progress', async () => {
+  const before = (await runRow(RUNNER)).qualified_days;
+  await asUser(db, RUNNER, async () => {
+    // No update policy exists, so this matches no rows rather than raising —
+    // which is exactly why the assertion is on the value and not on a throw.
+    await db.query(
+      `update public.challenge_enrollments set qualified_days = 9999 where user_id = $1`,
+      [RUNNER],
+    );
+  });
+  expectEqual((await runRow(RUNNER)).qualified_days, before, 'progress unchanged');
+});
+
+await test('0048 a signed-in user cannot forge a day in the ledger', async () => {
+  await asUser(db, RUNNER, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.challenge_days (user_id, season_id, local_day, outcome)
+           values ($1, $2, $3::date - 9, 'qualified')`,
+          [RUNNER, SEASON, serverDay],
+        ),
+      'row-level security',
+    );
+  });
+});
+
+await test('0048 one account cannot read another account’s run', async () => {
+  await asUser(db, RUNNER2, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.challenge_enrollments where user_id = $1`, [
+        RUNNER,
+      ]),
+      0,
+      'somebody else’s enrolment is invisible',
+    );
+  });
+});
+
+await test('0048 the season and its ladder are readable by anyone, including signed out', async () => {
+  await asAnon(db, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.challenge_tiers where season_id = $1`, [
+        SEASON,
+      ]),
+      9,
+      'the ladder describes the program, not a person',
+    );
+  });
+});
+
+// --- the switch, and standing -----------------------------------------------
+
+await test('0050 the challenge ships switched off', async () => {
+  // `module_flags` treats an absent row as enabled, so "off by default" is only
+  // true if a row actually says so. Every comment in 0048 claimed this; nothing
+  // did it until 0050.
+  const row = await one(`select enabled from public.module_flags where module = 'rewards'`);
+  expectEqual(row?.enabled, false, 'rewards flag');
+});
+
+await test('0050 rank stays quiet until the cohort is big enough to mean anything', async () => {
+  await asUser(db, RUNNER, async () => {
+    const v = (await one(`select public.challenge_rank() as v`)).v;
+    expectEqual(v.ranked, false, 'two runners is not a leaderboard');
+  });
+});
+
+await test('0050 rank places somebody once there is a cohort', async () => {
+  // Five more runs, all behind RUNNER, so the answer is checkable rather than
+  // merely present.
+  for (let i = 0; i < 5; i++) {
+    const id = `bbbbbbbb-0000-4000-8000-00000000000${i}`;
+    await createUser(db, id, `pack${i}@example.com`);
+    await db.query(
+      `insert into public.challenge_enrollments
+         (user_id, season_id, enrolled_local_day, last_settled_day, tz_offset_minutes,
+          shield_earn_days, qualified_days)
+       values ($1::uuid, $2::uuid, current_date, current_date - 1, 0, 30, 1)`,
+      [id, SEASON],
+    );
+  }
+  await setRun(RUNNER, { qualified_days: 100 });
+
+  await asUser(db, RUNNER, async () => {
+    const v = (await one(`select public.challenge_rank() as v`)).v;
+    expectEqual(v.ranked, true, 'ranked');
+    expectEqual(v.cohort, 7, 'everybody in the season counts');
+    expectEqual(v.topPercent, 1, 'clear of the whole field, floored at 1%');
+  });
+});
+
+await test('0050 rank tells you nothing about anybody else', async () => {
+  // There is no argument to point it at another account, which is the whole
+  // reason it can read the cohort at all.
+  await expectRejection(
+    () => db.query(`select public.challenge_rank($1::uuid)`, [RUNNER]),
+    'does not exist',
+  );
+});
+
+// --- operator --------------------------------------------------------------
+
+await test('0048 granting a shield needs a reason, and still respects the cap', async () => {
+  await resetRun(RUNNER, { shields: 2 });
+  await asUser(db, ADMIN, async () => {
+    await expectRejection(
+      () => db.query(`select public.admin_grant_challenge_shield($1::uuid, 1, '  ')`, [RUNNER]),
+      'reason is required',
+    );
+    expectEqual(
+      (
+        await one(
+          `select public.admin_grant_challenge_shield($1::uuid, 5, 'outage on our side') as n`,
+          [RUNNER],
+        )
+      ).n,
+      3,
+      'clamped to the cap',
+    );
+  });
+});
+
+await test('0048 an ordinary account cannot grant itself anything', async () => {
+  await asUser(db, RUNNER, async () => {
+    await expectRejection(
+      () =>
+        db.query(`select public.admin_grant_challenge_shield($1::uuid, 3, 'because')`, [RUNNER]),
+      'not an administrator',
+    );
+  });
+});
+
+await test('0048 operator actions land in the shared audit log', async () => {
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.admin_audit_log
+        where action = 'challenge_grant_shield' and target_user = $1`,
+      [RUNNER],
+    ),
+    1,
+    'audited alongside every other operator action',
+  );
+});
+
+// ---------------------------------------------------------------------------
 console.log('\nowner bootstrap (0033, continued — destructive, kept last)');
 // ---------------------------------------------------------------------------
 //
