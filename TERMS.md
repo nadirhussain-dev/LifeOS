@@ -6,7 +6,7 @@ Daykeep is made and operated by **Nadir Hussain**, an individual developer
 ("we", "us"). These terms are the agreement between you and us for using the
 Daykeep app.
 
-Contact: **nh262464@gmail.com**
+Contact: **daykeepsupport@gmail.com**
 
 > **Placeholder to replace before launch:** the governing-law and dispute
 > sections below name no jurisdiction, because that depends on where you are
@@ -206,4 +206,4 @@ and nothing here takes those away.
 ## 14. Contact
 
 Questions, appeals, data-access requests and anything else:
-**nh262464@gmail.com**
+**daykeepsupport@gmail.com**

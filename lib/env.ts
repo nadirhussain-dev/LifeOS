@@ -60,9 +60,18 @@ export const env = {
     'https://nadirhussain786.github.io/Daykeep/privacy/',
   EXPO_PUBLIC_TERMS_URL:
     read(process.env.EXPO_PUBLIC_TERMS_URL) || 'https://nadirhussain786.github.io/Daykeep/terms/',
-  /** Where support and data-access requests go. Both stores require a working
-   *  contact address; a block screen's mailto was the only one the app had. */
-  EXPO_PUBLIC_SUPPORT_EMAIL: read(process.env.EXPO_PUBLIC_SUPPORT_EMAIL) || 'nh262464@gmail.com',
+  /**
+   * Where support and data-access requests go. Both stores require a working
+   * contact address; a block screen's mailto was the only one the app had.
+   *
+   * A role address, not a person's. Google Play publishes this on the store
+   * listing, so it is public and permanent the moment the app ships — and it is
+   * also the contact printed in PRIVACY.md and TERMS.md, which get archived.
+   * Both are reasons it must be an address that can be handed to somebody else
+   * without handing over a personal inbox.
+   */
+  EXPO_PUBLIC_SUPPORT_EMAIL:
+    read(process.env.EXPO_PUBLIC_SUPPORT_EMAIL) || 'daykeepsupport@gmail.com',
 
   /**
    * Real AdMob banner ad unit ids, one per platform (AdMob issues a separate

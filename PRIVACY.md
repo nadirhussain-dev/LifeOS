@@ -262,4 +262,4 @@ https://nadirhussain786.github.io/Daykeep/terms/
 ## Contact
 
 Questions about privacy or your data, and data-access requests:
-**nh262464@gmail.com**
+**daykeepsupport@gmail.com**
