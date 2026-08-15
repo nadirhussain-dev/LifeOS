@@ -57,12 +57,25 @@ export function listRecentNotes(limit: number): Note[] {
 }
 
 /** Notes whose reminder is still in the future — what a resync has to rebuild.
- *  Past reminders are left alone: they have already fired. */
+ *  Past reminders are left alone: they have already fired.
+ *
+ *  Archived notes are excluded. Archiving cancels the note's reminder
+ *  (`useNoteMutations.archive`), but this query fed the launch rebuild, so the
+ *  next time the app opened it scheduled the cancelled reminder straight back —
+ *  an archived note went on nudging forever, and nothing short of clearing the
+ *  reminder by hand stopped it. */
 export function listNotesWithReminders(now = Date.now()): Note[] {
   return getDb()
     .select()
     .from(notes)
-    .where(and(eq(notes.userId, LOCAL_USER_ID), isNull(notes.deletedAt), gt(notes.reminderAt, now)))
+    .where(
+      and(
+        eq(notes.userId, LOCAL_USER_ID),
+        isNull(notes.deletedAt),
+        eq(notes.isArchived, false),
+        gt(notes.reminderAt, now),
+      ),
+    )
     .all();
 }
 

@@ -2,6 +2,12 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Linking, Platform } from 'react-native';
 
 import {
+  channelSoundFor,
+  contentSoundFor,
+  notificationSound,
+  type NotificationSoundId,
+} from '@/features/notifications/config/notification-sounds';
+import {
   deleteLogByNotificationId,
   logScheduledNotification,
 } from '@/features/notifications/services/notification-log-repository';
@@ -112,38 +118,93 @@ export function configureNotificationHandler(): void {
  * split by urgency: time-critical reminders, everyday nudges, and the morning
  * digest each get their own. iOS ignores channels.
  *
- * IMPORTANT — the `-v2` suffix is load-bearing. `createNotificationChannel` is
+ * IMPORTANT — the version suffix is load-bearing. `createNotificationChannel` is
  * only a create: on a channel that already exists Android updates the name and
  * description and *silently discards* importance, sound, vibration and lights,
  * because those become user-owned settings the moment the channel appears. The
  * only way to ship a corrected importance is under a new channel id. The v1
- * channels below were created at IMPORTANCE_DEFAULT, which posts to the shade
+ * channels were created at IMPORTANCE_DEFAULT, which posts to the shade
  * with a sound but never peeks — reminders made their noise and appeared to not
- * show up at all. Bump the version (and add the old ids to LEGACY_CHANNEL_IDS)
- * whenever a channel's importance or sound has to change again. */
-const CHANNEL_VERSION = 2;
-const CHANNELS = {
-  timeSensitive: `lifeos-time-sensitive-v${CHANNEL_VERSION}`,
-  reminders: `lifeos-reminders-v${CHANNEL_VERSION}`,
-  digest: `lifeos-digest-v${CHANNEL_VERSION}`,
-} as const;
+ * show up at all. Bump the version whenever a channel's fixed properties have to
+ * change again; `pruneForeignChannels` below sweeps up whatever the bump orphans.
+ *
+ * v3 also folds the chosen tone into the id. Since a channel's sound cannot be
+ * changed after creation, "let me pick the notification sound" is necessarily
+ * "make a new channel and delete the old one" — see
+ * features/notifications/config/notification-sounds.ts. */
+const CHANNEL_VERSION = 3;
 
-/** Channel ids from previous versions, deleted on launch so the app's entry in
- * Android's notification settings doesn't accumulate dead duplicates. */
-const LEGACY_CHANNEL_IDS = ['lifeos-time-sensitive', 'lifeos-reminders', 'lifeos-digest'];
+const URGENCIES = ['time-sensitive', 'reminders', 'digest'] as const;
+type Urgency = (typeof URGENCIES)[number];
+
+function channelIdFor(urgency: Urgency, soundId: NotificationSoundId): string {
+  return `lifeos-${urgency}-v${CHANNEL_VERSION}-${soundId}`;
+}
+
+/**
+ * The one channel whose id never moves.
+ *
+ * A remote push (a shared-expense group update) is composed on a server that
+ * knows nothing about this device's tone, so it cannot name a tone-specific
+ * channel — and app.json's `defaultChannel`, which is where such a push lands,
+ * is a build-time constant that cannot track a runtime preference either. This
+ * channel exists to be that fixed target. It keeps the system default sound;
+ * the reminder tone applies to the reminders LifeOS schedules itself.
+ */
+const PUSH_CHANNEL_ID = `lifeos-general-v${CHANNEL_VERSION}`;
+
+/** Every channel this app should own right now. Anything else of ours that
+ *  Android is still holding is from an older version or an older tone. */
+function currentChannelIds(soundId: NotificationSoundId): string[] {
+  return [PUSH_CHANNEL_ID, ...URGENCIES.map((urgency) => channelIdFor(urgency, soundId))];
+}
+
+function selectedSoundId(): NotificationSoundId {
+  return notificationSound(useNotificationsStore.getState().soundId).id;
+}
 
 /** Maps a category to its channel: the digest to its own, time-critical
  * categories (bypassQuietHours) to the heads-up channel, everything else to the
  * default reminders channel. Untagged calls use the default channel. */
 function channelForCategory(category?: NotificationCategory): string {
-  if (!category) return CHANNELS.reminders;
-  if (category === 'digest') return CHANNELS.digest;
-  return CATEGORY_META[category].bypassQuietHours ? CHANNELS.timeSensitive : CHANNELS.reminders;
+  const soundId = selectedSoundId();
+  if (!category) return channelIdFor('reminders', soundId);
+  if (category === 'digest') return channelIdFor('digest', soundId);
+  return CATEGORY_META[category].bypassQuietHours
+    ? channelIdFor('time-sensitive', soundId)
+    : channelIdFor('reminders', soundId);
 }
 
 const ACCENT = '#6366f1';
 
-async function createAndroidChannels(): Promise<void> {
+/**
+ * Deletes every `lifeos-` channel that is not one of `keep`.
+ *
+ * Covers both jobs at once — retiring a bumped version, and clearing away the
+ * tone the user just switched off — because from Android's side they are the
+ * same thing: an id we no longer post to. Enumerating beats a hardcoded list of
+ * dead ids, which would have to grow by three entries for every tone ever
+ * shipped and would silently miss any it forgot.
+ *
+ * Best-effort throughout: a channel that will not delete is clutter in system
+ * settings, not a reason to leave the app without the channels it needs.
+ */
+async function pruneForeignChannels(keep: string[]): Promise<void> {
+  const Notifications = getNotifications();
+  if (!Notifications) return;
+  const existing = await Notifications.getNotificationChannelsAsync().catch(() => []);
+  const kept = new Set(keep);
+  await Promise.all(
+    (existing ?? [])
+      .filter((channel): channel is NonNullable<typeof channel> => !!channel)
+      .filter((channel) => channel.id.startsWith('lifeos-') && !kept.has(channel.id))
+      .map((channel) =>
+        Notifications.deleteNotificationChannelAsync(channel.id).catch(() => undefined),
+      ),
+  );
+}
+
+async function createAndroidChannels(soundId: NotificationSoundId): Promise<void> {
   if (Platform.OS !== 'android') return;
   const Notifications = getNotifications();
   if (!Notifications) return;
@@ -154,7 +215,6 @@ async function createAndroidChannels(): Promise<void> {
   // that one down in system settings without losing the others.
   const shared = {
     importance: Notifications.AndroidImportance.HIGH,
-    sound: 'default' as const,
     enableVibrate: true,
     enableLights: true,
     lightColor: ACCENT,
@@ -163,48 +223,63 @@ async function createAndroidChannels(): Promise<void> {
     // "contents hidden" on the lock screen makes it useless.
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
   };
+  // A bare filename, 'default', or null for a channel that posts silently.
+  const sound = channelSoundFor(soundId);
 
-  await Notifications.setNotificationChannelAsync(CHANNELS.timeSensitive, {
+  await Notifications.setNotificationChannelAsync(channelIdFor('time-sensitive', soundId), {
     ...shared,
+    sound,
     name: 'Time-sensitive',
     description: 'Task due times, calendar events, bill due dates, bedtime.',
     vibrationPattern: [0, 250, 250, 250],
   });
-  await Notifications.setNotificationChannelAsync(CHANNELS.reminders, {
+  await Notifications.setNotificationChannelAsync(channelIdFor('reminders', soundId), {
     ...shared,
+    sound,
     name: 'Reminders & nudges',
     description: 'Habits, hydration, journal and goal reminders.',
   });
-  await Notifications.setNotificationChannelAsync(CHANNELS.digest, {
+  await Notifications.setNotificationChannelAsync(channelIdFor('digest', soundId), {
     ...shared,
+    sound,
     name: 'Daily digest',
     description: 'The one morning summary of what today holds.',
   });
+  await Notifications.setNotificationChannelAsync(PUSH_CHANNEL_ID, {
+    ...shared,
+    sound: 'default',
+    name: 'Shared updates',
+    description: 'Activity in expense groups and albums you share with others.',
+  });
 
-  // Best-effort tidy-up of superseded channel ids.
-  await Promise.all(
-    LEGACY_CHANNEL_IDS.map((id) =>
-      Notifications.deleteNotificationChannelAsync(id).catch(() => undefined),
-    ),
-  );
+  await pruneForeignChannels(currentChannelIds(soundId));
 }
 
 let channelsReady: Promise<void> | null = null;
+let channelsReadyFor: NotificationSoundId | null = null;
 
-/** Creates the Android notification channels, once per process.
+/** Creates the Android notification channels, once per process *per tone*.
  *
  * Returns the same promise on every call so the schedulers can `await` it
  * instead of racing it: a notification posted to a channel that doesn't exist
  * yet falls back to expo-notifications' own generic channel, which is how a
  * reminder ends up filed under "Miscellaneous" with settings we never chose.
  *
+ * The cache is keyed on the selected tone rather than being a plain one-shot, so
+ * changing the sound rebuilds the channels on the very next schedule instead of
+ * needing the app to be restarted — the failure mode that would otherwise look
+ * like the picker not working at all.
+ *
  * Idempotent and safe on any platform (no-ops off Android / in Expo Go Android). */
 export function configureAndroidChannels(): Promise<void> {
-  if (!channelsReady) {
+  const soundId = selectedSoundId();
+  if (!channelsReady || channelsReadyFor !== soundId) {
+    channelsReadyFor = soundId;
     // A rejection must not poison the cached promise forever — reset so the next
     // caller retries rather than every future schedule inheriting the failure.
-    channelsReady = createAndroidChannels().catch((error) => {
+    channelsReady = createAndroidChannels(soundId).catch((error) => {
       channelsReady = null;
+      channelsReadyFor = null;
       throw error;
     });
   }
@@ -367,7 +442,12 @@ export async function scheduleOneTimeNotification(params: {
   const data = params.data ? { ...params.data, ...(logId ? { logId } : {}) } : {};
 
   const scheduleId = await Notifications.scheduleNotificationAsync({
-    content: { title: content.title, body: content.body, data, sound: 'default' },
+    content: {
+      title: content.title,
+      body: content.body,
+      data,
+      sound: contentSoundFor(selectedSoundId()),
+    },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: triggerAt,
@@ -427,7 +507,12 @@ export async function scheduleDailyNotification(params: {
   const data = params.data ? { ...params.data, ...(logId ? { logId } : {}) } : {};
 
   const scheduleId = await Notifications.scheduleNotificationAsync({
-    content: { title: content.title, body: content.body, data, sound: 'default' },
+    content: {
+      title: content.title,
+      body: content.body,
+      data,
+      sound: contentSoundFor(selectedSoundId()),
+    },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
       hour,
@@ -493,7 +578,12 @@ export async function scheduleWeeklyNotification(params: {
   const data = params.data ? { ...params.data, ...(logId ? { logId } : {}) } : {};
 
   const scheduleId = await Notifications.scheduleNotificationAsync({
-    content: { title: content.title, body: content.body, data, sound: 'default' },
+    content: {
+      title: content.title,
+      body: content.body,
+      data,
+      sound: contentSoundFor(selectedSoundId()),
+    },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
       weekday: ((params.weekday % 7) + 7) % 7 === 0 ? 1 : (((params.weekday % 7) + 7) % 7) + 1,
@@ -649,12 +739,17 @@ export async function sendTestNotification(params: {
     // passing test could sit alongside reminders that never appear, which
     // inverts the entire point of the button.
     await Notifications.scheduleNotificationAsync({
-      content: { title: params.title, body: params.body, sound: 'default', data: {} },
+      content: {
+        title: params.title,
+        body: params.body,
+        sound: contentSoundFor(selectedSoundId()),
+        data: {},
+      },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
         seconds: 2,
         repeats: false,
-        channelId: CHANNELS.reminders,
+        channelId: channelIdFor('reminders', selectedSoundId()),
       },
     });
     return { ok: true };
@@ -677,12 +772,17 @@ export async function announceHeldReminders(params: {
   await channelsSettled();
 
   await Notifications.scheduleNotificationAsync({
-    content: { title: params.title, body: params.body, sound: 'default', data: {} },
+    content: {
+      title: params.title,
+      body: params.body,
+      sound: contentSoundFor(selectedSoundId()),
+      data: {},
+    },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
       seconds: 1,
       repeats: false,
-      channelId: CHANNELS.reminders,
+      channelId: channelIdFor('reminders', selectedSoundId()),
     },
   }).catch(() => undefined);
 }

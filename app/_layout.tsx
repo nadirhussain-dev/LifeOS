@@ -390,6 +390,7 @@ export default function RootLayout() {
                 <Stack.Screen name="profile" />
                 <Stack.Screen name="settings/index" />
                 <Stack.Screen name="settings/notifications" />
+                <Stack.Screen name="settings/notification-sound" />
                 <Stack.Screen name="settings/sync" />
                 <Stack.Screen name="settings/sync-conflicts" />
                 <Stack.Screen name="settings/media" />

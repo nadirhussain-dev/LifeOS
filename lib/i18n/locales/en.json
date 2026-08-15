@@ -1385,6 +1385,44 @@
     "redactedTitle": "LifeOS",
     "redactedBody": "You have a reminder."
   },
+  "notifSound": {
+    "section": "Sound",
+    "title": "Reminder sound",
+    "eyebrow": "Notifications",
+    "previewNote": "Tap a tone to hear it and use it for every reminder.",
+    "androidNote": "If you have already changed a LifeOS channel’s sound in Android settings, that choice wins over this one.",
+    "systemLabel": "System default",
+    "systemDescription": "Whatever the rest of your phone uses",
+    "silentLabel": "Silent",
+    "silentDescription": "Still appears and vibrates — makes no sound",
+    "family": {
+      "bells": "Bells",
+      "mallets": "Mallets",
+      "glass": "Glass & air",
+      "keys": "Keys & strings",
+      "digital": "Digital",
+      "motion": "Motion",
+      "alerts": "Alerts",
+      "system": "System"
+    },
+    "trait": {
+      "bright": "Bright",
+      "warm": "Warm",
+      "soft": "Soft",
+      "dry": "Dry",
+      "deep": "Deep",
+      "airy": "Airy",
+      "quick": "Quick",
+      "lingering": "Lingering",
+      "metallic": "Metallic",
+      "wooden": "Wooden",
+      "glassy": "Glassy",
+      "plucked": "Plucked",
+      "digital": "Digital",
+      "sweeping": "Sweeping",
+      "insistent": "Insistent"
+    }
+  },
   "notifCategory": {
     "tasks": {
       "label": "Task reminders",

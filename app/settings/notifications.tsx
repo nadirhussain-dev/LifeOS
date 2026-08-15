@@ -1,7 +1,8 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format, set } from 'date-fns';
 import * as Haptics from 'expo-haptics';
-import { AlarmClock, BellRing, Send, Stethoscope } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { AlarmClock, BellRing, ChevronRight, Music4, Send, Stethoscope } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, Platform, Pressable, ScrollView, Switch, View } from 'react-native';
@@ -12,6 +13,7 @@ import { moduleTints } from '@/constants/design-tokens';
 import { Segmented } from '@/components/ui/segmented';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
+import { notificationSound } from '@/features/notifications/config/notification-sounds';
 import { applyDeliveryMode } from '@/features/notifications/services/delivery';
 import { resyncAllReminders } from '@/features/notifications/services/reminder-scheduler';
 import { formatQuietWindow } from '@/features/notifications/services/quiet-hours';
@@ -115,7 +117,9 @@ export default function NotificationSettingsScreen() {
   const { t } = useTranslation();
   const theme = colors[scheme];
 
+  const router = useRouter();
   const store = useNotificationsStore();
+  const selectedSound = notificationSound(store.soundId);
   const privateSetUp = usePrivateStore((s) => s.setUpComplete);
   const enabledPrivateModules = usePrivateStore((s) => s.enabledModules);
   // 'cycle' and 'together' are the private space's own categories (see
@@ -316,6 +320,39 @@ export default function NotificationSettingsScreen() {
               />
             </View>
           )}
+        </View>
+
+        {/* Sound — the library itself lives on its own screen (see the comment
+            in app/settings/notification-sound.tsx); this row states the current
+            choice and is the way in. */}
+        <View
+          className="gap-2"
+          style={{ opacity: disabled ? 0.5 : 1 }}
+          pointerEvents={disabled ? 'none' : 'auto'}
+        >
+          <SectionLabel>{t('notifSound.section')}</SectionLabel>
+          <View className={cardClass({ padding: 'none' }, 'px-4')}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${t('notifSound.title')}. ${selectedSound.labelKey ? t(selectedSound.labelKey) : selectedSound.name}`}
+              onPress={() => router.push('/settings/notification-sound')}
+              className="flex-row items-center gap-3 py-3.5"
+            >
+              <View
+                className="h-9 w-9 items-center justify-center rounded-xl"
+                style={{ backgroundColor: theme.muted }}
+              >
+                <Music4 size={18} color={theme.accent} />
+              </View>
+              <View className="flex-1">
+                <Text className="font-sora-medium text-foreground">{t('notifSound.title')}</Text>
+                <Text variant="caption">
+                  {selectedSound.labelKey ? t(selectedSound.labelKey) : selectedSound.name}
+                </Text>
+              </View>
+              <ChevronRight size={18} color={theme.mutedForeground} />
+            </Pressable>
+          </View>
         </View>
 
         {/* Quiet hours */}
