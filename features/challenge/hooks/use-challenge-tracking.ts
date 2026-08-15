@@ -8,7 +8,9 @@ import {
 import { flushChallenge } from '@/features/challenge/services/challenge-reporter';
 import { outstandingModules } from '@/features/challenge/services/challenge-math';
 import { startChallengeWriteTracking } from '@/features/challenge/services/challenge-tracking';
+import { REWARDS_MODULE_ID } from '@/features/challenge/config/rewards-flag';
 import { currentDay, useChallengeStore } from '@/features/challenge/store/challenge-store';
+import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 
 /**
  * How long a foreground stretch has to last before it is worth counting. Below
@@ -29,13 +31,33 @@ const MIN_SESSION_SECONDS = 3;
  * Flushing on `background` as well as `active` is deliberate: on the way out the
  * buffer is at its fullest and the request competes with nothing the user is
  * waiting for.
+ *
+ * ## The operator's switch reaches this too
+ *
+ * Hiding the Hub tile and blocking the route — which `module_flags` already does
+ * for every module — would leave the interesting half running: an enrolled
+ * account would go on observing writes, uploading days and scheduling reminders
+ * for a feature nobody can see. That is the worst version of a kill switch,
+ * because the operator believes it is off.
+ *
+ * So the flag is checked here as well, and `enabled === false` tears everything
+ * down: the observer is removed, nothing is reported, and any pending reminder
+ * is cancelled. Absence still means enabled — the same fail-open rule the rest
+ * of the flag system follows, so a network blip cannot silently stop somebody's
+ * streak being recorded.
  */
 export function useChallengeTracking(): void {
   const hydrated = useChallengeStore((s) => s.hydrated);
   const enrolled = useChallengeStore((s) => s.enrolled);
+  const disabled = useModuleFlagsStore((s) => s.flags[REWARDS_MODULE_ID]?.enabled === false);
 
   useEffect(() => {
-    if (!hydrated || !enrolled) return;
+    if (!hydrated || !enrolled || disabled) {
+      // Reached when the operator switches the programme off mid-session, not
+      // only on a cold start with it already off.
+      if (disabled) void cancelChallengeReminder();
+      return;
+    }
 
     const stopWriteTracking = startChallengeWriteTracking();
     let since: number | null = Date.now();
@@ -84,5 +106,5 @@ export function useChallengeTracking(): void {
       subscription.remove();
       void cancelChallengeReminder();
     };
-  }, [hydrated, enrolled]);
+  }, [hydrated, enrolled, disabled]);
 }

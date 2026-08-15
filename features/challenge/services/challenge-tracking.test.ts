@@ -1,5 +1,11 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { notifyWrite } from '@/database/write-observer';
+import { REWARDS_MODULE_ID } from '@/features/challenge/config/rewards-flag';
 import { attributableModules, moduleForTable } from '@/features/challenge/config/write-attribution';
+import { HUB_SECTIONS } from '@/features/hub/config/modules';
+import { moduleForPath } from '@/features/hub/config/route-modules';
 import { startChallengeWriteTracking } from '@/features/challenge/services/challenge-tracking';
 import { currentDay, useChallengeStore } from '@/features/challenge/store/challenge-store';
 
@@ -68,6 +74,49 @@ describe('attribution', () => {
     // evening, which is configuration and not use.
     expect(moduleForTable('sleep_settings')).toBeNull();
     expect(moduleForTable('study_settings')).toBeNull();
+  });
+});
+
+describe('the operator’s kill switch', () => {
+  /**
+   * The switch works only if four separate places agree on one string: the flag
+   * row seeded in 0050, the Hub tile's id, the route→module map, and the
+   * operator screen. Three of those are data rather than code, so nothing else
+   * would notice them drifting — the symptom would be a switch the operator
+   * flips that turns nothing off, which is the worst possible failure for a
+   * control whose entire job is to be trusted in a hurry.
+   */
+  it('names the same module id everywhere', () => {
+    expect(REWARDS_MODULE_ID).toBe('rewards');
+
+    const tile = HUB_SECTIONS.flatMap((section) => section.modules).find(
+      (module) => module.id === REWARDS_MODULE_ID,
+    );
+    expect(tile).toBeDefined();
+    expect(tile?.getRoute()).toBe('/challenge');
+
+    // Every route under /challenge resolves to the flag, so disabling it blocks
+    // the deep links as well as the tile.
+    expect(moduleForPath('/challenge')).toBe(REWARDS_MODULE_ID);
+    expect(moduleForPath('/challenge/join')).toBe(REWARDS_MODULE_ID);
+    expect(moduleForPath('/challenge/swap')).toBe(REWARDS_MODULE_ID);
+    expect(moduleForPath('/challenge/timeline')).toBe(REWARDS_MODULE_ID);
+  });
+
+  it('is seeded off, in the migration rather than in a comment', () => {
+    const sql = readFileSync(
+      join(
+        __dirname,
+        '..',
+        '..',
+        '..',
+        'supabase',
+        'migrations',
+        '0050_challenge_rank_and_seed.sql',
+      ),
+      'utf8',
+    );
+    expect(sql).toMatch(/insert into public\.module_flags[\s\S]*'rewards', false/);
   });
 });
 
