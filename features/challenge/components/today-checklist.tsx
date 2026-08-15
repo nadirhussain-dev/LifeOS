@@ -1,10 +1,19 @@
 import { useRouter } from 'expo-router';
 import { Check } from 'lucide-react-native';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
+import { useDayClosed } from '@/features/challenge/hooks/use-day-closed';
 import type { ChecklistItem } from '@/features/challenge/types/challenge.types';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -52,12 +61,41 @@ export function TodayChecklist({ items, qualified, awaitingServer, dayNumber }: 
   const router = useRouter();
 
   const remaining = items.filter((item) => !item.done).length;
-  const tint = qualified ? c.success : remaining === 0 ? c.accent : c.foreground;
+  const complete = items.length > 0 && remaining === 0;
+  const tint = qualified ? c.success : complete ? c.accent : c.foreground;
+
+  /**
+   * The moment. Fires once, on the transition, and never on a remount — see
+   * `useDayClosed`. It is what the haptic and the settle below are tied to.
+   */
+  const justClosed = useDayClosed(complete, items.length > 0);
+
+  /**
+   * The card settles rather than pops.
+   *
+   * A spring that overshoots slightly and comes to rest, not a bounce: the day
+   * has been *put away*, and the motion should read as something coming to
+   * rest against something else. Damping is high enough that it never wobbles
+   * — a wobble would make a considered moment look like a toy.
+   */
+  const settle = useSharedValue(1);
+  useEffect(() => {
+    if (!justClosed) return;
+    settle.value = withSequence(
+      withTiming(0.985, { duration: 90 }),
+      withSpring(1, { damping: 14, stiffness: 140 }),
+    );
+  }, [justClosed, settle]);
+
+  const settleStyle = useAnimatedStyle(() => ({ transform: [{ scale: settle.value }] }));
 
   return (
-    <View
+    <Animated.View
       className={cardClass({ padding: 'md' }, 'gap-3')}
-      style={qualified ? { backgroundColor: `${c.success}14` } : undefined}
+      style={[
+        qualified || justClosed ? { backgroundColor: `${c.success}14` } : undefined,
+        settleStyle,
+      ]}
     >
       <View className="flex-row items-baseline justify-between">
         <Text variant="micro" style={{ color: tint }}>
@@ -108,18 +146,23 @@ export function TodayChecklist({ items, qualified, awaitingServer, dayNumber }: 
         ))}
       </View>
 
+      {/* One line, and it changes with the state rather than stacking messages.
+          At the moment of closing it says the thing worth saying and nothing
+          about servers — the confirmation caption is for the seconds after. */}
       <Text variant="caption" style={{ color: tint }}>
-        {qualified
-          ? `${t('challenge.todaySafe', { day: dayNumber })} ${t('challenge.todayTomorrow')}`
-          : awaitingServer
-            ? t('challenge.todayConfirmingBody')
-            : t('challenge.reminderOne', {
-                modules: items
-                  .filter((item) => !item.done)
-                  .map((item) => t(`syncModule.${item.moduleId}`))
-                  .join(', '),
-              })}
+        {justClosed
+          ? `${t('challenge.dayKept')} ${t('challenge.dayKeptBody', { day: dayNumber + 1 })}`
+          : qualified
+            ? `${t('challenge.todaySafe', { day: dayNumber })} ${t('challenge.todayTomorrow')}`
+            : awaitingServer
+              ? t('challenge.todayConfirmingBody')
+              : t('challenge.reminderOne', {
+                  modules: items
+                    .filter((item) => !item.done)
+                    .map((item) => t(`syncModule.${item.moduleId}`))
+                    .join(', '),
+                })}
       </Text>
-    </View>
+    </Animated.View>
   );
 }

@@ -329,7 +329,11 @@
     "writeAFewWords": "Write a few words…",
     "reminderSettings": "Reminder settings",
     "reminderNotifTitle": "Journal 📖",
-    "reminderNotifBody": "Take a minute to write today’s entry."
+    "reminderNotifBody": "Take a minute to write today’s entry.",
+    "onThisDayTitle": "On this day",
+    "onThisDayYear": "1 year ago",
+    "onThisDayYears": "{{count}} years ago",
+    "onThisDayEmpty": "Nothing yet — next year, today will be here."
   },
   "mood": {
     "notSet": "Not set",
@@ -2490,6 +2494,8 @@
     "shareFooter": "Tracked with Daykeep",
     "shareFailed": "Could not share",
     "shareUnavailable": "Sharing is not available on this device",
-    "braidTitle": "The weave"
+    "braidTitle": "The weave",
+    "dayKept": "Kept.",
+    "dayKeptBody": "Day {{day}} is woven in."
   }
 }

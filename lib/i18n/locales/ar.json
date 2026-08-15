@@ -345,7 +345,11 @@
     "writeAFewWords": "اكتب بضع كلمات…",
     "reminderSettings": "إعدادات التذكير",
     "reminderNotifTitle": "اليوميات 📖",
-    "reminderNotifBody": "خذ دقيقة واكتب تدوينة اليوم."
+    "reminderNotifBody": "خذ دقيقة واكتب تدوينة اليوم.",
+    "onThisDayTitle": "في مثل هذا اليوم",
+    "onThisDayYear": "قبل عام",
+    "onThisDayYears": "قبل {{count}} أعوام",
+    "onThisDayEmpty": "لا شيء بعد — في العام القادم سيكون اليوم هنا."
   },
   "mood": {
     "notSet": "غير محدد",
@@ -2650,6 +2654,8 @@
     "shareFooter": "مع Daykeep",
     "shareFailed": "تعذّرت المشاركة",
     "shareUnavailable": "المشاركة غير متاحة على هذا الجهاز",
-    "braidTitle": "النسيج"
+    "braidTitle": "النسيج",
+    "dayKept": "محفوظ.",
+    "dayKeptBody": "اليوم {{day}} نُسج في السلسلة."
   }
 }

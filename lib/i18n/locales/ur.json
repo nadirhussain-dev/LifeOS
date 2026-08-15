@@ -329,7 +329,11 @@
     "writeAFewWords": "چند الفاظ لکھیں…",
     "reminderSettings": "یاد دہانی کی ترتیبات",
     "reminderNotifTitle": "جرنل 📖",
-    "reminderNotifBody": "ایک منٹ نکال کر آج کی بات لکھیں۔"
+    "reminderNotifBody": "ایک منٹ نکال کر آج کی بات لکھیں۔",
+    "onThisDayTitle": "اسی دن",
+    "onThisDayYear": "ایک سال پہلے",
+    "onThisDayYears": "{{count}} سال پہلے",
+    "onThisDayEmpty": "ابھی کچھ نہیں — اگلے سال آج کا دن یہاں ہوگا۔"
   },
   "mood": {
     "notSet": "مقرر نہیں",
@@ -2490,6 +2494,8 @@
     "shareFooter": "Daykeep کے ساتھ",
     "shareFailed": "شیئر نہیں ہو سکا",
     "shareUnavailable": "اس ڈیوائس پر شیئرنگ دستیاب نہیں",
-    "braidTitle": "بُنائی"
+    "braidTitle": "بُنائی",
+    "dayKept": "محفوظ۔",
+    "dayKeptBody": "دن {{day}} بُن دیا گیا۔"
   }
 }

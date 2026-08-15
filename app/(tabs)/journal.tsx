@@ -15,7 +15,12 @@ import { colors, streakColor } from '@/constants/theme';
 import { AdSlot } from '@/features/ads/components/ad-slot';
 import { DayCard } from '@/features/journal/components/day-card';
 import { MoodMonthStrip } from '@/features/journal/components/mood-month-strip';
-import { useJournalMonth, useJournalStreak } from '@/features/journal/hooks/use-journal';
+import { OnThisDayCard } from '@/features/journal/components/on-this-day-card';
+import {
+  useJournalMonth,
+  useJournalStreak,
+  useOnThisDay,
+} from '@/features/journal/hooks/use-journal';
 import { useJournalEntry } from '@/features/journal/hooks/use-journal-entry';
 import { toDateKey } from '@/lib/date';
 
@@ -29,6 +34,7 @@ export default function JournalScreen() {
   const flame = streakColor[scheme];
 
   const { data: entries = [], isLoading, isError, refetch } = useJournalMonth();
+  const { data: onThisDay = [] } = useOnThisDay();
   const { data: streak = 0 } = useJournalStreak();
   const { data: todayEntry } = useJournalEntry(todayKey);
 
@@ -81,7 +87,8 @@ export default function JournalScreen() {
           keyExtractor={(entry) => entry.id}
           contentContainerStyle={{ paddingTop: 4, paddingBottom: 40 }}
           ListHeaderComponent={
-            <View className="mx-5 mb-4">
+            <View className="mx-5 mb-4 gap-4">
+              <OnThisDayCard entries={onThisDay} />
               <MoodMonthStrip
                 monthAnchor={new Date()}
                 entries={entries}

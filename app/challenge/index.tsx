@@ -26,7 +26,7 @@ import {
   useOpenSeason,
 } from '@/features/challenge/hooks/use-challenge';
 import { nextTier } from '@/features/challenge/services/challenge-math';
-import { useChallengeStore } from '@/features/challenge/store/challenge-store';
+import { currentDay, useChallengeStore } from '@/features/challenge/store/challenge-store';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
@@ -60,6 +60,7 @@ export default function ChallengeScreen() {
   const events = useChallengeEvents(today.data?.seasonId);
 
   const lastSeenEventId = useChallengeStore((s) => s.lastSeenEventId);
+  const lastClosedDay = useChallengeStore((s) => s.lastClosedDay);
   const markEventsSeen = useChallengeStore((s) => s.markEventsSeen);
   const [dismissed, setDismissed] = useState(false);
 
@@ -174,7 +175,11 @@ export default function ChallengeScreen() {
 
         <ChallengeLadder tiers={tiers} qualifiedDays={qualifiedDays} />
 
-        <Braid days={chain.data ?? []} modules={today.data?.required ?? []} />
+        <Braid
+          days={chain.data ?? []}
+          modules={today.data?.required ?? []}
+          justClosed={lastClosedDay === currentDay() && checklist.outstanding.length === 0}
+        />
 
         <View className="flex-row gap-2">
           <View className="flex-1">

@@ -1,12 +1,15 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, View } from 'react-native';
+import { Animated as RNAnimated, ScrollView, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import type { ChainDay } from '@/features/challenge/types/challenge.types';
 import { useTheme } from '@/hooks/use-theme';
+
+/** `react-native-svg`'s Path accepts animated props through the RN driver. */
+const AnimatedPath = RNAnimated.createAnimatedComponent(Path);
 
 /**
  * The braid — one strand per committed module, woven a day at a time.
@@ -45,7 +48,13 @@ const PERIOD = 14;
 /** Points sampled per day. Six is smooth at this amplitude and cheap. */
 const STEPS = 6;
 
-type Segment = { d: string; kind: 'held' | 'shielded' | 'missed'; strand: number };
+type Segment = {
+  d: string;
+  kind: 'held' | 'shielded' | 'missed';
+  strand: number;
+  /** The run containing the most recent day — the only one allowed to move. */
+  isNewest: boolean;
+};
 
 /**
  * Turns the ledger into one path string per unbroken run.
@@ -66,7 +75,9 @@ function buildSegments(days: ChainDay[], modules: string[]): Segment[] {
     let runKind: Segment['kind'] = 'held';
 
     const flush = () => {
-      if (run.length > 1) segments.push({ d: run.join(' '), kind: runKind, strand });
+      if (run.length > 1) {
+        segments.push({ d: run.join(' '), kind: runKind, strand, isNewest: false });
+      }
       run = [];
     };
 
@@ -93,6 +104,17 @@ function buildSegments(days: ChainDay[], modules: string[]): Segment[] {
     });
 
     flush();
+
+    // The run holding the most recent day is the last one pushed for this
+    // strand — and the only one the closing moment is allowed to animate.
+    // Marked here rather than inside `flush`, which cannot know it is the last
+    // time it will be called.
+    for (let i = segments.length - 1; i >= 0; i--) {
+      if (segments[i].strand === strand) {
+        segments[i] = { ...segments[i], isNewest: true };
+        break;
+      }
+    }
   });
 
   return segments;
@@ -113,14 +135,42 @@ type Props = {
   days: ChainDay[];
   /** The committed modules, in the order they were committed to. */
   modules: string[];
+  /** True for the couple of seconds after the day closed — see `useDayClosed`. */
+  justClosed?: boolean;
 };
 
-export function Braid({ days, modules }: Props) {
+export function Braid({ days, modules, justClosed = false }: Props) {
   const { t } = useTranslation();
   const { c, tint } = useTheme();
+  const scroller = useRef<ScrollView>(null);
 
   const segments = useMemo(() => buildSegments(days, modules), [days, modules]);
   const width = Math.max(days.length * DAY_WIDTH, 1);
+
+  /**
+   * The newest end of the weave breathes once when the day closes.
+   *
+   * Deliberately the *only* thing that animates here. A braid where every
+   * strand moves is a screensaver; a braid where the end you just added
+   * brightens for a beat is the weave acknowledging the day and settling. The
+   * RN `Animated` driver is used rather than Reanimated because
+   * react-native-svg's props are animatable through it natively, and one opacity
+   * value does not justify a wrapper component.
+   */
+  const glow = useRef(new RNAnimated.Value(0)).current;
+  useEffect(() => {
+    if (!justClosed) return;
+    RNAnimated.sequence([
+      RNAnimated.timing(glow, { toValue: 1, duration: 260, useNativeDriver: true }),
+      RNAnimated.timing(glow, { toValue: 0, duration: 900, useNativeDriver: true }),
+    ]).start();
+  }, [justClosed, glow]);
+
+  // The end of the braid is what somebody is looking for, and after a day
+  // closes it is the only thing they are looking for.
+  useEffect(() => {
+    if (days.length > 0) scroller.current?.scrollToEnd({ animated: justClosed });
+  }, [days.length, justClosed]);
 
   if (days.length === 0 || modules.length === 0) return null;
 
@@ -147,6 +197,7 @@ export function Braid({ days, modules }: Props) {
       {/* Newest on the right, and scrolled there — the end of the braid is the
           part somebody is actually looking for. */}
       <ScrollView
+        ref={scroller}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingRight: 4 }}
@@ -163,7 +214,7 @@ export function Braid({ days, modules }: Props) {
           ))}
 
           {segments.map((segment, index) => (
-            <Path
+            <AnimatedPath
               key={`${segment.strand}-${index}`}
               d={segment.d}
               fill="none"
@@ -179,7 +230,13 @@ export function Braid({ days, modules }: Props) {
               strokeDasharray={
                 segment.kind === 'shielded' ? '2 3' : segment.kind === 'missed' ? '1 4' : undefined
               }
-              opacity={segment.kind === 'held' ? 1 : 0.55}
+              opacity={
+                segment.isNewest
+                  ? glow.interpolate({ inputRange: [0, 1], outputRange: [1, 0.35] })
+                  : segment.kind === 'held'
+                    ? 1
+                    : 0.55
+              }
             />
           ))}
         </Svg>

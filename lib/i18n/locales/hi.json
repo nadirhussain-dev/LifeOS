@@ -329,7 +329,11 @@
     "writeAFewWords": "कुछ शब्द लिखें…",
     "reminderSettings": "अनुस्मारक सेटिंग्स",
     "reminderNotifTitle": "जर्नल 📖",
-    "reminderNotifBody": "एक मिनट निकालकर आज की बात लिखें।"
+    "reminderNotifBody": "एक मिनट निकालकर आज की बात लिखें।",
+    "onThisDayTitle": "इसी दिन",
+    "onThisDayYear": "एक साल पहले",
+    "onThisDayYears": "{{count}} साल पहले",
+    "onThisDayEmpty": "अभी कुछ नहीं — अगले साल आज का दिन यहाँ होगा।"
   },
   "mood": {
     "notSet": "सेट नहीं",
@@ -2490,6 +2494,8 @@
     "shareFooter": "Daykeep के साथ",
     "shareFailed": "साझा नहीं कर सका",
     "shareUnavailable": "इस डिवाइस पर साझा करना उपलब्ध नहीं",
-    "braidTitle": "बुनाई"
+    "braidTitle": "बुनाई",
+    "dayKept": "सहेजा गया।",
+    "dayKeptBody": "दिन {{day}} बुन दिया गया।"
   }
 }
