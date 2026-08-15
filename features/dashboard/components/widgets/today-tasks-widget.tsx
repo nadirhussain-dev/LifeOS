@@ -71,16 +71,12 @@ export function TodayTasksWidget() {
                   <Text className="flex-1" numberOfLines={1}>
                     {task.title}
                   </Text>
-                  {task.dueLabel ? (
+                  {task.overdue || task.dueLabel ? (
                     <Text
                       variant="caption"
-                      style={
-                        task.dueLabel === 'Overdue'
-                          ? { color: colors[scheme].destructive }
-                          : undefined
-                      }
+                      style={task.overdue ? { color: colors[scheme].destructive } : undefined}
                     >
-                      {task.dueLabel}
+                      {task.overdue ? t('buckets.overdue') : task.dueLabel}
                     </Text>
                   ) : null}
                 </Pressable>

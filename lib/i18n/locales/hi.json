@@ -1387,6 +1387,44 @@
     "redactedTitle": "LifeOS",
     "redactedBody": "आपके लिए एक रिमाइंडर है।"
   },
+  "notifSound": {
+    "section": "ध्वनि",
+    "title": "रिमाइंडर ध्वनि",
+    "eyebrow": "सूचनाएँ",
+    "previewNote": "कोई टोन सुनने और उसे हर रिमाइंडर के लिए चुनने हेतु उस पर टैप करें।",
+    "androidNote": "अगर आपने Android सेटिंग्स में किसी LifeOS चैनल की ध्वनि पहले ही बदल दी है, तो वही चुनाव इस पर भारी पड़ेगा।",
+    "systemLabel": "सिस्टम डिफ़ॉल्ट",
+    "systemDescription": "वही जो आपका बाकी फ़ोन इस्तेमाल करता है",
+    "silentLabel": "मौन",
+    "silentDescription": "दिखेगा और वाइब्रेट होगा — आवाज़ नहीं करेगा",
+    "family": {
+      "bells": "घंटियाँ",
+      "mallets": "मैलेट",
+      "glass": "काँच और हवा",
+      "keys": "कुंजी और तार",
+      "digital": "डिजिटल",
+      "motion": "गति",
+      "alerts": "अलर्ट",
+      "system": "सिस्टम"
+    },
+    "trait": {
+      "bright": "चमकीला",
+      "warm": "गर्म",
+      "soft": "कोमल",
+      "dry": "सूखा",
+      "deep": "गहरा",
+      "airy": "हवादार",
+      "quick": "तेज़",
+      "lingering": "देर तक गूँजता",
+      "metallic": "धात्विक",
+      "wooden": "काष्ठीय",
+      "glassy": "काँच जैसा",
+      "plucked": "झंकृत",
+      "digital": "डिजिटल",
+      "sweeping": "सरकता",
+      "insistent": "आग्रही"
+    }
+  },
   "notifCategory": {
     "tasks": {
       "label": "कार्य याद",

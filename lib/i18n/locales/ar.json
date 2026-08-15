@@ -1519,6 +1519,44 @@
     "redactedTitle": "LifeOS",
     "redactedBody": "لديك تذكير."
   },
+  "notifSound": {
+    "section": "الصوت",
+    "title": "صوت التذكير",
+    "eyebrow": "الإشعارات",
+    "previewNote": "اضغط على نغمة لسماعها واعتمادها لكل التذكيرات.",
+    "androidNote": "إن كنت قد غيّرت صوت إحدى قنوات LifeOS من إعدادات أندرويد، فذلك الاختيار يتقدّم على هذا.",
+    "systemLabel": "افتراضي النظام",
+    "systemDescription": "الصوت الذي يستخدمه هاتفك عادةً",
+    "silentLabel": "صامت",
+    "silentDescription": "يظهر ويهتزّ — بلا صوت",
+    "family": {
+      "bells": "أجراس",
+      "mallets": "مطارق",
+      "glass": "زجاج وهواء",
+      "keys": "مفاتيح وأوتار",
+      "digital": "رقمي",
+      "motion": "حركة",
+      "alerts": "تنبيهات",
+      "system": "النظام"
+    },
+    "trait": {
+      "bright": "ساطع",
+      "warm": "دافئ",
+      "soft": "ناعم",
+      "dry": "جاف",
+      "deep": "عميق",
+      "airy": "أثيري",
+      "quick": "سريع",
+      "lingering": "ممتد",
+      "metallic": "معدني",
+      "wooden": "خشبي",
+      "glassy": "زجاجي",
+      "plucked": "منقور",
+      "digital": "رقمي",
+      "sweeping": "منزلق",
+      "insistent": "مُلِحّ"
+    }
+  },
   "notifCategory": {
     "tasks": {
       "label": "تذكيرات المهام",
