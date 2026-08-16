@@ -51,7 +51,7 @@ them are load-bearing:
 | `daykeep.db`                               | The SQLCipher database file. Renamed = the app opens an empty database                           |
 | `daykeep.db.key`                           | The encryption key in SecureStore. Renamed = **the existing database is permanently unreadable** |
 | `daykeep.vault.wrapped` / `.alt` / `.salt` | The private vault's wrapped keys. Renamed = **the vault is permanently unrecoverable**           |
-| `daykeep.device-id`, `daykeep.install.id`  | Identity resets; 0047 treats the device as new and demands a fresh OTP                           |
+| `daykeep.device-id`, `daykeep.install.id`  | Identity resets; 0048 treats the device as new and demands a fresh OTP                           |
 | `daykeep.widget.today.v1`, `.actions.v1`   | Widget snapshot and queued taps are lost                                                         |
 
 These are **not** brand surfaces. Nobody sees them. They stay as they are,

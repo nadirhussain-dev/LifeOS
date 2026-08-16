@@ -157,7 +157,7 @@ function AccountStandingBridge() {
 }
 
 /** Claims the account for this device and notices when another one takes it —
- *  see migration 0047 and use-device-session.ts. Renders nothing. */
+ *  see migration 0048 and use-device-session.ts. Renders nothing. */
 function DeviceSessionBridge() {
   useDeviceSessionSync();
   return null;

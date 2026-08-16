@@ -16,7 +16,7 @@ import { join } from 'node:path';
  *   - `daykeep.db` is the database filename; a new name is a new, empty
  *     database sitting next to the user's real one.
  *   - `daykeep.device-id` and `daykeep.install.id` are identity. Losing them
- *     makes 0047 treat a known phone as a stranger and demand a fresh OTP.
+ *     makes 0048 treat a known phone as a stranger and demand a fresh OTP.
  *   - The widget keys hold the snapshot and the queue of taps made while the
  *     app was closed.
  *

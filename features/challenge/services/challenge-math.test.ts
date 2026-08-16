@@ -13,7 +13,7 @@ import type { ChallengeTier } from '@/features/challenge/types/challenge.types';
 
 /**
  * The same ladder and the same fixtures as the SQL suite
- * (scripts/test-migrations.mjs, "streak challenge (0048)").
+ * (scripts/test-migrations.mjs, "streak challenge (0050)").
  *
  * That overlap is the point of this file. The server owns every decision, and
  * this module only draws the result — but two implementations of one rule drift
@@ -82,18 +82,18 @@ describe('what a miss would cost', () => {
   });
 
   it('falls to the rung below on the first unshielded miss', () => {
-    // Mirrors "0048 with no shield left, progress falls to the rung below".
+    // Mirrors "0050 with no shield left, progress falls to the rung below".
     expect(demotionTarget(LADDER, 93, 0, 45, 0)).toBe(90);
   });
 
   it('steps one rung further on a second miss inside the window', () => {
-    // Mirrors "0048 a second miss inside the window drops one rung further":
+    // Mirrors "0050 a second miss inside the window drops one rung further":
     // 60 is below 65, and the second miss steps past it to 30.
     expect(demotionTarget(LADDER, 65, 1, 45, 0)).toBe(30);
   });
 
   it('caps the fall at the top of the ladder, where the rungs are far apart', () => {
-    // Mirrors "0048 the demotion cap bites at the top of the ladder": the rung
+    // Mirrors "0050 the demotion cap bites at the top of the ladder": the rung
     // below 364 is 300, a fall of 64, held to 45.
     expect(demotionTarget(LADDER, 364, 0, 45, 0)).toBe(319);
   });
@@ -115,7 +115,7 @@ describe('the shield interval a selection earns', () => {
   });
 
   it('stacks with the annual plan, clamped at the floor', () => {
-    // Mirrors "0048 extras and the annual plan stack down to the shield floor".
+    // Mirrors "0050 extras and the annual plan stack down to the shield floor".
     expect(resolveShieldEarnDays(30, 20, 2, true)).toBe(20);
     expect(resolveShieldEarnDays(30, 20, 5, true)).toBe(20);
   });
@@ -139,7 +139,7 @@ describe("today's checklist", () => {
   });
 
   it('names what is outstanding, which is what the reminder quotes', () => {
-    // Mirrors "0048 two of three modules writes nothing and names what is
+    // Mirrors "0050 two of three modules writes nothing and names what is
     // outstanding".
     expect(outstandingModules(required, { habits: 2, water: 5 }, 1)).toEqual(['journal']);
   });

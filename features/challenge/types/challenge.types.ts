@@ -2,7 +2,7 @@
  * Types for the streak challenge.
  *
  * Field names mirror the JSON the server hands back (`challenge_today()`,
- * `record_challenge_day()` — supabase/migrations/0048_streak_challenge.sql)
+ * `record_challenge_day()` — supabase/migrations/0050_streak_challenge.sql)
  * rather than the snake_case column names, because that is what the client
  * actually receives.
  */
@@ -24,7 +24,7 @@ export type ChallengeTier = {
 
 /**
  * The four counters, kept apart because they answer different questions.
- * See the header of 0048 for why collapsing them makes the mechanic
+ * See the header of 0050 for why collapsing them makes the mechanic
  * unexplainable to the person living with it.
  */
 export type ChallengeRun = {

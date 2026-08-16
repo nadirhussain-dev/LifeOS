@@ -11,7 +11,7 @@ import type {
 import { isSupabaseConfigured } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
 
-/** What `challenge_today()` returns. Server-owned; see migration 0048. */
+/** What `challenge_today()` returns. Server-owned; see migration 0050. */
 export type ChallengeTodayResponse = {
   enrolled: boolean;
   seasonId?: string;

@@ -104,7 +104,7 @@ describe('claiming this device', () => {
   });
 
   /**
-   * The direction that matters most. If migration 0047 has not been applied,
+   * The direction that matters most. If migration 0048 has not been applied,
    * `claim_device` does not exist and the RPC 404s. Treating that as a refusal
    * would lock every user out of their own data over an operator's un-run
    * migration — and the account is unrestricted server-side in exactly that

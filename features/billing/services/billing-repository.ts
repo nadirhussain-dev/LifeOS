@@ -94,7 +94,7 @@ export async function adminSetPlanActive(id: string, active: boolean): Promise<v
   if (error) throw toSupabaseError(error);
 }
 
-// --- real billing (0047/0048/0049) ------------------------------------------
+// --- real billing (0047/0049/0052) ------------------------------------------
 //
 // Everything below replaces the mock `setMyPlan` write with the actual
 // Safepay flow: `safepay-checkout` starts a subscription, `safepay-webhook`

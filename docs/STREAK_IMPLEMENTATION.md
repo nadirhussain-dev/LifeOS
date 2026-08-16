@@ -27,7 +27,7 @@ finally gives it one, so no new category has to be invented.
 Nothing here needs a device, a Supabase project, or a design asset. All of it is
 verifiable in CI today, and it is where every expensive mistake lives.
 
-**A1. `supabase/migrations/0048_streak_challenge.sql` — tables and RLS.** ✅ done.
+**A1. `supabase/migrations/0050_streak_challenge.sql` — tables and RLS.** ✅ done.
 Seven tables, in this order, because `check-migrations.mjs` enforces that a
 `LANGUAGE SQL` body cannot reference a table defined below it. (The plan
 originally said eight: a `challenge_audit` table turned out to be redundant,
@@ -51,7 +51,7 @@ important line in it. Seasons, tiers and modules are world-readable like
 `module_flags`, because they describe the program rather than a person.
 _Verify:_ `npm run check:migrations`, `npm run test:sql`.
 
-**A2. `0048` — functions.** ✅ done. `enroll_in_challenge`,
+**A2. `0050` — functions.** ✅ done. `enroll_in_challenge`,
 `record_challenge_day`, `challenge_today`, `challenge_settle_missed_day` +
 `settle_stale_runs`, `swap_challenge_module`, and the admin set
 (`admin_upsert_challenge_season`, `admin_upsert_challenge_tier`,
@@ -216,7 +216,7 @@ said "seeded disabled" and nothing seeded it, so — because `module_flags` trea
 an absent row as _enabled_ (0011's rule 1) — the programme would have switched
 itself on for every account the moment these migrations were applied. That is
 precisely the failure the comments were warning about. Fixed by a row in
-`0050_challenge_rank_and_seed.sql` and a test that asserts it, rather than by a
+`0053_challenge_rank_and_seed.sql` and a test that asserts it, rather than by a
 fourth comment.
 _Verify (A9–A12):_ `npm run typecheck`, `npm run check:i18n`,
 `npm run check:tokens`, `npm run lint`, `npx expo export --platform ios`.
@@ -260,8 +260,8 @@ master switch plus four read-outs: runs split free vs paying, shield telemetry,
 **which module causes the most failed days** from `modules_hit`, and the Gate A
 retention comparison.
 
-All four read through new RPCs in **`0049_challenge_operator_views.sql`**, which
-the plan did not anticipate needing: 0048's tables are owner-read-only, quite
+All four read through new RPCs in **`0051_challenge_operator_views.sql`**, which
+the plan did not anticipate needing: 0050's tables are owner-read-only, quite
 correctly, so the console had no way to see anything at all. Every function
 there returns aggregates, none takes a user id, and none can be coaxed into
 naming anybody — the same line 0010 drew for usage.
@@ -279,7 +279,7 @@ _Verify (A13–A14):_ `npm run typecheck`, `npm test`, `npm run check:i18n`,
 ### Wave 5 — the measurement that Gate A turns on
 
 **A15. Cohort retention read-out.** ✅ done — as the cheap, biased version, which
-was the recommendation. `admin_challenge_retention` (0049) compares the two
+was the recommendation. `admin_challenge_retention` (0051) compares the two
 cohorts and returns `controlIsConsentingOnly: true` **in its own payload**, so
 the caveat travels with the number to wherever it ends up being quoted rather
 than living only in a comment nobody reads. The original framing of the problem
@@ -330,7 +330,7 @@ counter. My recommendation: start with the cheap one; if Gate A comes out near
 the 2× line rather than clearly over it, build the counter before betting on a
 prize.
 
-**B5. Apply 0048 and test on hardware.** `npm run migrate:staging`, then
+**B5. Apply 0050 and test on hardware.** `npm run migrate:staging`, then
 production. Then an EAS dev build — notifications and the widget have never been
 observed running on a device from this machine, and this box has no Android
 toolchain and no Mac.

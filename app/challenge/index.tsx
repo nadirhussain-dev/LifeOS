@@ -43,7 +43,7 @@ import { useTheme } from '@/hooks/use-theme';
  * module screens. An ad rendered beside a streak is what creates the appearance
  * that the reward is paid for by impressions, which is precisely the thing that
  * would put the ad account at risk — see the header of
- * supabase/migrations/0048_streak_challenge.sql.
+ * supabase/migrations/0050_streak_challenge.sql.
  */
 export default function ChallengeScreen() {
   const { t } = useTranslation();

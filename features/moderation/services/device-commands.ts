@@ -63,7 +63,7 @@ async function run(): Promise<void> {
 
   let commands: DeviceCommand[];
   try {
-    // Named, because a command can now be aimed at ONE device: migration 0047
+    // Named, because a command can now be aimed at ONE device: migration 0048
     // queues a wipe for the phone that just lost the account, and the phone
     // that just took it must not carry that order out on itself. Commands with
     // no target (a moderator blocking the whole account) still reach everyone.

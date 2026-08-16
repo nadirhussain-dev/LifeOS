@@ -25,7 +25,7 @@ import { Platform } from 'react-native';
  * ## Why it is not a secret
  *
  * It travels in a header on every request (see lib/supabase.ts) and the account
- * owner can read and forge their own. Migration 0047 says why that is
+ * owner can read and forge their own. Migration 0048 says why that is
  * acceptable: this enforces session hygiene for a cooperating client, and the
  * threat it addresses — an old phone still holding a live session and a full
  * local copy of the data — is not one the owner is motivated to mount against

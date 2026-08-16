@@ -36,7 +36,7 @@ export const supabase = createClient(url, anonKey, {
     headers: { 'x-client-info': 'daykeep-mobile' },
     /**
      * Stamps every request with this install's device id, which is what
-     * migration 0047's `may_access_own_data()` matches against the account's
+     * migration 0048's `may_access_own_data()` matches against the account's
      * device roster to enforce one-device-at-a-time.
      *
      * A wrapped fetch rather than a static entry in `headers` above, for two

@@ -27,7 +27,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
  *
  *  - **otp_required** — you just signed in here, and the account is open on
  *    another device. A code sent to your own email moves it. This is a hard
- *    gate: until the claim lands, migration 0047's RLS refuses every row, so
+ *    gate: until the claim lands, migration 0048's RLS refuses every row, so
  *    letting the app render behind it would show an empty dashboard and read
  *    as data loss.
  *  - **revoked** — you are the other device. The account moved on, this copy

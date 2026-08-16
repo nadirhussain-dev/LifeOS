@@ -18,7 +18,7 @@ import { toast } from '@/lib/toast-store';
 /**
  * The challenge, from the operator's side.
  *
- * A view over the RPCs in migration 0049 and nothing else — every one of them
+ * A view over the RPCs in migration 0051 and nothing else — every one of them
  * returns aggregates and none takes a user id, so this screen is structurally
  * incapable of showing whose streak is whose. That is the same line the rest of
  * the console draws: it needs to know how many, not who.

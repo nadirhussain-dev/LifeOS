@@ -4,7 +4,7 @@ Strategy and gates: [REWARDS_STRATEGY.md](REWARDS_STRATEGY.md). The build:
 [STREAK_IMPLEMENTATION.md](STREAK_IMPLEMENTATION.md).
 
 This is the specification the engine was built from. Everything in §0–§5 is
-implemented and shipped in migrations 0048–0050 unless marked otherwise; §6–§9
+implemented and shipped in migrations 0050–0053 unless marked otherwise; §6–§9
 describe the parts that arrive with a physical prize and are deliberately not
 built.
 
@@ -43,7 +43,7 @@ Three reasons, any one sufficient:
    that isn't scarce does no motivational work — the mechanic collapses into
    "watch three ads whenever you're lazy".
 
-**Enforcement is an absence:** there is no RPC in 0048 that grants a shield or a
+**Enforcement is an absence:** there is no RPC in 0050 that grants a shield or a
 day from an ad callback, and there must never be one.
 
 **The challenge screen carries no ads at all.** Not a banner, not a native unit.
@@ -268,7 +268,7 @@ starts, without making completion a race between participants.
 
 ---
 
-## 4. Server design (0048–0050)
+## 4. Server design (0050–0053)
 
 Seven tables, all with RLS, and **no client-side insert or update policy
 anywhere**. A streak the client can `UPDATE` is a streak anyone can `UPDATE` with
@@ -330,7 +330,7 @@ today), what the contract was _on that day_, and whether it was met.
    streak could be held by toggling a reminder switch each evening.
 6. **No ad-to-reward path at all**, which also closes the farm-shields-with-a-
    video-farm vector before it exists.
-7. One active run per device, on top of `single_device_sessions` (0047).
+7. One active run per device, on top of `single_device_sessions` (0048).
 8. One claim per postal address per season — Gate B.
 9. Manual verification of every physical winner before shipping — Gate B.
 
@@ -370,5 +370,5 @@ until the first season's shape has settled.
   shields hard-capped at three; the annual-subscriber perk restructured.
 - **rev 4** — a day requires **all** committed modules, minimum three, with
   extras buying faster shield regeneration.
-- **as built** — this document, reconciled against migrations 0048–0050 and the
+- **as built** — this document, reconciled against migrations 0050–0053 and the
   shipped client.

@@ -9,7 +9,7 @@ import { reportError } from '@/lib/error-reporting';
 import { supabase } from '@/lib/supabase';
 
 /**
- * This device's side of the one-account-one-device rule (migration 0047).
+ * This device's side of the one-account-one-device rule (migration 0048).
  *
  * The server owns the rule; this file only asks it questions and reports the
  * answers into `device-session-store`. It deliberately imports neither
@@ -67,7 +67,7 @@ export async function claimThisDevice(options?: { takeOver?: boolean }): Promise
     });
 
     if (error) {
-      // A missing function means migration 0047 has not been applied. That is
+      // A missing function means migration 0048 has not been applied. That is
       // an operator problem, not this user's, and refusing them access to
       // their own data over it would be the wrong trade — the account simply
       // stays unrestricted, exactly as it was before this feature existed.

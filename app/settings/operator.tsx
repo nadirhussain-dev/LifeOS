@@ -139,7 +139,7 @@ export default function OperatorConsoleScreen() {
                   </Text>
                 </Pressable>
               ) : null}
-              {/* Owner-only — coupons move real money (0048), same gate as
+              {/* Owner-only — coupons move real money (0049), same gate as
                   the roster row above. */}
               {owner ? (
                 <Pressable

@@ -20,7 +20,7 @@ import { join } from 'node:path';
 const ROOT = join(__dirname, '..', '..');
 const read = (path: string) => readFileSync(join(ROOT, path), 'utf8');
 
-const migration = read('supabase/migrations/0047_single_device_sessions.sql');
+const migration = read('supabase/migrations/0048_single_device_sessions.sql');
 
 describe('the server rule', () => {
   /**

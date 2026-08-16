@@ -187,7 +187,7 @@ Deno.serve(async (req: Request) => {
       // Insert first, increment only if the insert actually claimed the row
       // — the reverse order (increment, then insert) let a failed or racing
       // insert leave the counter incremented with no redemption row to show
-      // for it. `unique (coupon_id, user_id)` (migration 0048) is what makes
+      // for it. `unique (coupon_id, user_id)` (migration 0049) is what makes
       // the insert itself the guard: two payment_succeeded events for the
       // same coupon+user can both attempt it, but only one can succeed, so
       // `increment_coupon_redemption` — which has its own race-safe

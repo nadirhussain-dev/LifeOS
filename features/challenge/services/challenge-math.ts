@@ -4,14 +4,14 @@ import type { ChallengeTier, ChecklistItem } from '@/features/challenge/types/ch
  * The challenge arithmetic, mirrored on the client for display only.
  *
  * **The server is the authority.** Every function here has a counterpart in
- * `supabase/migrations/0048_streak_challenge.sql`, and where the two ever
+ * `supabase/migrations/0050_streak_challenge.sql`, and where the two ever
  * disagree the migration is right and this file is a bug. Nothing here decides
  * whether a day counts — it exists so the app can draw "next shield in 12 days"
  * and "48 to the next rung" without a round trip, and so the picker can show
  * what a selection costs before anybody commits to a year of it.
  *
  * `challenge-math.test.ts` runs the same fixtures the SQL tests use
- * (scripts/test-migrations.mjs, "streak challenge (0048)") for exactly that
+ * (scripts/test-migrations.mjs, "streak challenge (0050)") for exactly that
  * reason: two implementations of one rule drift silently unless something
  * checks them against the same numbers.
  */

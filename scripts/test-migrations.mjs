@@ -5036,7 +5036,7 @@ await test('0037 raising the free plan’s price live raises what a free account
 });
 
 // ---------------------------------------------------------------------------
-console.log('\nstreak challenge (0048)');
+console.log('\nstreak challenge (0050)');
 // ---------------------------------------------------------------------------
 //
 // The settlement state machine is the one place in this schema where a bug is
@@ -5046,7 +5046,7 @@ console.log('\nstreak challenge (0048)');
 // is 45" — they uninstall.
 //
 // So the whole machine is exercised here rather than sampled. It is testable at
-// all because 0048 keeps the arithmetic (`challenge_credit_day`,
+// all because 0050 keeps the arithmetic (`challenge_credit_day`,
 // `challenge_settle_missed_day`) separate from the clock: both take the day as
 // an argument, so a year can be played out in a few statements without any time
 // travel and without touching the entry points' window checks — which get their
@@ -5146,7 +5146,7 @@ const settle = (user, n) =>
 
 // --- enrolment -------------------------------------------------------------
 
-await test('0048 enrolling freezes the contract and resolves the shield interval', async () => {
+await test('0050 enrolling freezes the contract and resolves the shield interval', async () => {
   await asUser(db, RUNNER, async () => {
     await db.query(
       `select public.enroll_in_challenge($1::uuid, 0, $2::text[], $3::text[], 'dev-runner')`,
@@ -5168,7 +5168,7 @@ await test('0048 enrolling freezes the contract and resolves the shield interval
   );
 });
 
-await test('0048 enrolling twice is refused — one live run per account', async () => {
+await test('0050 enrolling twice is refused — one live run per account', async () => {
   await asUser(db, RUNNER, async () => {
     await expectRejection(
       () =>
@@ -5181,7 +5181,7 @@ await test('0048 enrolling twice is refused — one live run per account', async
   });
 });
 
-await test('0048 fewer than the required modules is refused', async () => {
+await test('0050 fewer than the required modules is refused', async () => {
   await asUser(db, RUNNER2, async () => {
     await expectRejection(
       () =>
@@ -5194,7 +5194,7 @@ await test('0048 fewer than the required modules is refused', async () => {
   });
 });
 
-await test('0048 a module that is not eligible this season is refused', async () => {
+await test('0050 a module that is not eligible this season is refused', async () => {
   await asUser(db, RUNNER2, async () => {
     await expectRejection(
       () =>
@@ -5207,7 +5207,7 @@ await test('0048 a module that is not eligible this season is refused', async ()
   });
 });
 
-await test('0048 extras and the annual plan stack down to the shield floor, never below', async () => {
+await test('0050 extras and the annual plan stack down to the shield floor, never below', async () => {
   await db.query(`update public.profiles set plan_id = 'plus_yearly' where id = $1`, [RUNNER2]);
   await asUser(db, RUNNER2, async () => {
     await db.query(
@@ -5224,7 +5224,7 @@ await test('0048 extras and the annual plan stack down to the shield floor, neve
 
 // --- crediting a day -------------------------------------------------------
 
-await test('0048 a credited day advances progress, and crediting it again does nothing', async () => {
+await test('0050 a credited day advances progress, and crediting it again does nothing', async () => {
   await resetRun(RUNNER);
   await credit(RUNNER, 1);
   let r = await runRow(RUNNER);
@@ -5237,7 +5237,7 @@ await test('0048 a credited day advances progress, and crediting it again does n
   expectEqual(r.qualified_days, 1, 'still one day, not two');
 });
 
-await test('0048 a shield arrives exactly on the interval, and rungs light as they pass', async () => {
+await test('0050 a shield arrives exactly on the interval, and rungs light as they pass', async () => {
   await resetRun(RUNNER);
   for (let n = 1; n <= 30; n++) await credit(RUNNER, n);
   const r = await runRow(RUNNER);
@@ -5256,7 +5256,7 @@ await test('0048 a shield arrives exactly on the interval, and rungs light as th
   );
 });
 
-await test('0048 a fourth shield is never granted, however clean the run', async () => {
+await test('0050 a fourth shield is never granted, however clean the run', async () => {
   await resetRun(RUNNER, { qualified_days: 60, perfect_run: 29, shields: 3, current_tier_day: 60 });
   await credit(RUNNER, 61);
   const r = await runRow(RUNNER);
@@ -5264,13 +5264,13 @@ await test('0048 a fourth shield is never granted, however clean the run', async
   expectEqual(r.shields, 3, 'and the cap held');
 });
 
-await test('0048 misses age out once a clean run is rebuilt', async () => {
+await test('0050 misses age out once a clean run is rebuilt', async () => {
   await resetRun(RUNNER, { qualified_days: 40, perfect_run: 29, recent_misses: 2 });
   await credit(RUNNER, 41);
   expectEqual((await runRow(RUNNER)).recent_misses, 0, 'escalation counter cleared');
 });
 
-await test('0048 reaching the final rung completes the run', async () => {
+await test('0050 reaching the final rung completes the run', async () => {
   await resetRun(RUNNER, { qualified_days: 364, perfect_run: 364, current_tier_day: 300 });
   const res = await credit(RUNNER, 365);
   expectEqual(res.v.completed, true, 'reported complete');
@@ -5281,7 +5281,7 @@ await test('0048 reaching the final rung completes the run', async () => {
 
 // --- settling a lost day ---------------------------------------------------
 
-await test('0048 a shield absorbs the miss: progress untouched, clean record gone', async () => {
+await test('0050 a shield absorbs the miss: progress untouched, clean record gone', async () => {
   await resetRun(RUNNER, {
     qualified_days: 50,
     perfect_run: 50,
@@ -5306,7 +5306,7 @@ await test('0048 a shield absorbs the miss: progress untouched, clean record gon
   );
 });
 
-await test('0048 with no shield left, progress falls to the rung below', async () => {
+await test('0050 with no shield left, progress falls to the rung below', async () => {
   await resetRun(RUNNER, {
     qualified_days: 93,
     perfect_run: 93,
@@ -5322,7 +5322,7 @@ await test('0048 with no shield left, progress falls to the rung below', async (
   expectEqual(r.highest_tier_day, 0, 'highest reached is never walked back by a fall');
 });
 
-await test('0048 a second miss inside the window drops one rung further', async () => {
+await test('0050 a second miss inside the window drops one rung further', async () => {
   await resetRun(RUNNER, {
     qualified_days: 65,
     perfect_run: 0,
@@ -5336,7 +5336,7 @@ await test('0048 a second miss inside the window drops one rung further', async 
   expectEqual((await runRow(RUNNER)).qualified_days, 30, 'two rungs down');
 });
 
-await test('0048 the demotion cap bites at the top of the ladder', async () => {
+await test('0050 the demotion cap bites at the top of the ladder', async () => {
   await resetRun(RUNNER, {
     qualified_days: 364,
     perfect_run: 364,
@@ -5350,7 +5350,7 @@ await test('0048 the demotion cap bites at the top of the ladder', async () => {
   expectEqual(r.current_tier_day, 300, 'which still stands on the 300 rung');
 });
 
-await test('0048 settling the same lost day twice changes nothing', async () => {
+await test('0050 settling the same lost day twice changes nothing', async () => {
   await resetRun(RUNNER, { qualified_days: 50, perfect_run: 50, shields: 2 });
   await settle(RUNNER, 51);
   const res = await settle(RUNNER, 51);
@@ -5360,7 +5360,7 @@ await test('0048 settling the same lost day twice changes nothing', async () => 
 
 // --- the nightly settler ---------------------------------------------------
 
-await test('0048 the settler closes every unaccounted day up to, but not including, today', async () => {
+await test('0050 the settler closes every unaccounted day up to, but not including, today', async () => {
   await resetRun(RUNNER, { qualified_days: 40, perfect_run: 40, shields: 1 });
   const today = (await one(`select public.challenge_local_day(now(), 0, 0) as d`)).d;
   await db.query(
@@ -5404,7 +5404,7 @@ await test('0048 the settler closes every unaccounted day up to, but not includi
 
 const serverDay = (await one(`select public.challenge_local_day(now(), 0, 0)::text as d`)).d;
 
-await test('0048 two of three modules writes nothing and names what is outstanding', async () => {
+await test('0050 two of three modules writes nothing and names what is outstanding', async () => {
   await resetRun(RUNNER);
   const res = await asUser(db, RUNNER, () =>
     one(`select public.record_challenge_day($1::date, $2::jsonb, 120, 'dev-runner') as v`, [
@@ -5421,7 +5421,7 @@ await test('0048 two of three modules writes nothing and names what is outstandi
   );
 });
 
-await test('0048 all three qualifies the day', async () => {
+await test('0050 all three qualifies the day', async () => {
   const res = await asUser(db, RUNNER, () =>
     one(`select public.record_challenge_day($1::date, $2::jsonb, 120, 'dev-runner') as v`, [
       serverDay,
@@ -5432,7 +5432,7 @@ await test('0048 all three qualifies the day', async () => {
   expectEqual((await runRow(RUNNER)).qualified_days, 1, 'progress advanced');
 });
 
-await test('0048 an extra module going untouched never costs the day', async () => {
+await test('0050 an extra module going untouched never costs the day', async () => {
   await resetRun(RUNNER);
   await db.query(
     `insert into public.challenge_enrollment_modules
@@ -5449,7 +5449,7 @@ await test('0048 an extra module going untouched never costs the day', async () 
   expectEqual(res.v.qualified, true, 'the contract is the required set, not everything');
 });
 
-await test('0048 a day outside the window is refused rather than quietly moved', async () => {
+await test('0050 a day outside the window is refused rather than quietly moved', async () => {
   await resetRun(RUNNER);
   const res = await asUser(db, RUNNER, () =>
     one(`select public.record_challenge_day($1::date - 5, $2::jsonb, 120, 'dev-runner') as v`, [
@@ -5461,7 +5461,7 @@ await test('0048 a day outside the window is refused rather than quietly moved',
   expectEqual(res.v.reason, 'day out of window', 'and says why');
 });
 
-await test('0048 a session below the floor does not qualify', async () => {
+await test('0050 a session below the floor does not qualify', async () => {
   const res = await asUser(db, RUNNER, () =>
     one(`select public.record_challenge_day($1::date, $2::jsonb, 5, 'dev-runner') as v`, [
       serverDay,
@@ -5474,7 +5474,7 @@ await test('0048 a session below the floor does not qualify', async () => {
 
 // --- swapping --------------------------------------------------------------
 
-await test('0048 the picker is locked for the first thirty days', async () => {
+await test('0050 the picker is locked for the first thirty days', async () => {
   await asUser(db, RUNNER, async () => {
     await expectRejection(
       () => db.query(`select public.swap_challenge_module('journal', 'sleep')`),
@@ -5483,7 +5483,7 @@ await test('0048 the picker is locked for the first thirty days', async () => {
   });
 });
 
-await test('0048 a swap takes effect tomorrow, and cannot rescue today', async () => {
+await test('0050 a swap takes effect tomorrow, and cannot rescue today', async () => {
   await db.query(
     `update public.challenge_enrollments
         set enrolled_local_day = public.challenge_local_day(now(), 0, 0) - 40
@@ -5516,7 +5516,7 @@ await test('0048 a swap takes effect tomorrow, and cannot rescue today', async (
 
 // --- the part that makes all of the above worth anything -------------------
 
-await test('0048 a signed-in user cannot write their own progress', async () => {
+await test('0050 a signed-in user cannot write their own progress', async () => {
   const before = (await runRow(RUNNER)).qualified_days;
   await asUser(db, RUNNER, async () => {
     // No update policy exists, so this matches no rows rather than raising —
@@ -5529,7 +5529,7 @@ await test('0048 a signed-in user cannot write their own progress', async () => 
   expectEqual((await runRow(RUNNER)).qualified_days, before, 'progress unchanged');
 });
 
-await test('0048 a signed-in user cannot forge a day in the ledger', async () => {
+await test('0050 a signed-in user cannot forge a day in the ledger', async () => {
   await asUser(db, RUNNER, async () => {
     await expectRejection(
       () =>
@@ -5543,7 +5543,7 @@ await test('0048 a signed-in user cannot forge a day in the ledger', async () =>
   });
 });
 
-await test('0048 one account cannot read another account’s run', async () => {
+await test('0050 one account cannot read another account’s run', async () => {
   await asUser(db, RUNNER2, async () => {
     expectEqual(
       await count(`select count(*)::int n from public.challenge_enrollments where user_id = $1`, [
@@ -5555,7 +5555,7 @@ await test('0048 one account cannot read another account’s run', async () => {
   });
 });
 
-await test('0048 the season and its ladder are readable by anyone, including signed out', async () => {
+await test('0050 the season and its ladder are readable by anyone, including signed out', async () => {
   await asAnon(db, async () => {
     expectEqual(
       await count(`select count(*)::int n from public.challenge_tiers where season_id = $1`, [
@@ -5569,22 +5569,22 @@ await test('0048 the season and its ladder are readable by anyone, including sig
 
 // --- the switch, and standing -----------------------------------------------
 
-await test('0050 the challenge ships switched off', async () => {
+await test('0053 the challenge ships switched off', async () => {
   // `module_flags` treats an absent row as enabled, so "off by default" is only
-  // true if a row actually says so. Every comment in 0048 claimed this; nothing
-  // did it until 0050.
+  // true if a row actually says so. Every comment in 0050 claimed this; nothing
+  // did it until 0053.
   const row = await one(`select enabled from public.module_flags where module = 'rewards'`);
   expectEqual(row?.enabled, false, 'rewards flag');
 });
 
-await test('0050 rank stays quiet until the cohort is big enough to mean anything', async () => {
+await test('0053 rank stays quiet until the cohort is big enough to mean anything', async () => {
   await asUser(db, RUNNER, async () => {
     const v = (await one(`select public.challenge_rank() as v`)).v;
     expectEqual(v.ranked, false, 'two runners is not a leaderboard');
   });
 });
 
-await test('0050 rank places somebody once there is a cohort', async () => {
+await test('0053 rank places somebody once there is a cohort', async () => {
   // Five more runs, all behind RUNNER, so the answer is checkable rather than
   // merely present.
   for (let i = 0; i < 5; i++) {
@@ -5608,7 +5608,7 @@ await test('0050 rank places somebody once there is a cohort', async () => {
   });
 });
 
-await test('0050 rank tells you nothing about anybody else', async () => {
+await test('0053 rank tells you nothing about anybody else', async () => {
   // There is no argument to point it at another account, which is the whole
   // reason it can read the cohort at all.
   await expectRejection(
@@ -5619,7 +5619,7 @@ await test('0050 rank tells you nothing about anybody else', async () => {
 
 // --- operator --------------------------------------------------------------
 
-await test('0048 granting a shield needs a reason, and still respects the cap', async () => {
+await test('0050 granting a shield needs a reason, and still respects the cap', async () => {
   await resetRun(RUNNER, { shields: 2 });
   await asUser(db, ADMIN, async () => {
     await expectRejection(
@@ -5639,7 +5639,7 @@ await test('0048 granting a shield needs a reason, and still respects the cap', 
   });
 });
 
-await test('0048 an ordinary account cannot grant itself anything', async () => {
+await test('0050 an ordinary account cannot grant itself anything', async () => {
   await asUser(db, RUNNER, async () => {
     await expectRejection(
       () =>
@@ -5649,7 +5649,7 @@ await test('0048 an ordinary account cannot grant itself anything', async () => 
   });
 });
 
-await test('0048 operator actions land in the shared audit log', async () => {
+await test('0050 operator actions land in the shared audit log', async () => {
   expectEqual(
     await count(
       `select count(*)::int n from public.admin_audit_log

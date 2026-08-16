@@ -85,7 +85,7 @@ async function pass(): Promise<void> {
  *
  *  1. **Run the queued wipe.** `processDeviceCommands` pushes whatever this
  *     device never synced before deleting it — which only works inside the
- *     evacuation window migration 0047 opens on the revoked row, and that
+ *     evacuation window migration 0048 opens on the revoked row, and that
  *     window is minutes wide, not days. Doing this after the sign-out in step 3
  *     would mean pushing with no session at all.
  *  2. **Restore the verdict.** The wipe clears the device-session store along

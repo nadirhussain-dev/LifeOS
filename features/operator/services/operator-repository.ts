@@ -335,7 +335,7 @@ export async function removeOperator(userId: string): Promise<OperatorResult<nul
   return error ? { ok: false, error: friendly(error.message) } : { ok: true, data: null };
 }
 
-// --- coupons (owner-only; 0048) ---------------------------------------------
+// --- coupons (owner-only; 0049) ---------------------------------------------
 //
 // Moves real money, so gated on `is_owner()` in the database, same as the
 // roster above — not merely `is_admin()`. This is a view over those RPCs,

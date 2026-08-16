@@ -80,7 +80,7 @@ describe('attribution', () => {
 describe('the operator’s kill switch', () => {
   /**
    * The switch works only if four separate places agree on one string: the flag
-   * row seeded in 0050, the Hub tile's id, the route→module map, and the
+   * row seeded in 0053, the Hub tile's id, the route→module map, and the
    * operator screen. Three of those are data rather than code, so nothing else
    * would notice them drifting — the symptom would be a switch the operator
    * flips that turns nothing off, which is the worst possible failure for a
@@ -112,7 +112,7 @@ describe('the operator’s kill switch', () => {
         '..',
         'supabase',
         'migrations',
-        '0050_challenge_rank_and_seed.sql',
+        '0053_challenge_rank_and_seed.sql',
       ),
       'utf8',
     );

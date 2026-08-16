@@ -284,7 +284,7 @@ export default function MediaSettingsScreen() {
         </View>
 
         {/*
-          Real billing (0047/0048): choosing a paid plan opens a Safepay
+          Real billing (0047/0049): choosing a paid plan opens a Safepay
           checkout, choosing Free while already on a paid plan cancels the
           live subscription. Neither branch of `choosePlan` changes `planId`
           directly — see its own header for why.

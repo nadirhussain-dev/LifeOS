@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 /**
- * Where this device stands in its account's one-device roster (migration 0047).
+ * Where this device stands in its account's one-device roster (migration 0048).
  *
  * Persisted for the same reason `moderation-store` persists standing: the two
  * screens that read it — the takeover prompt and the "signed out from here"
