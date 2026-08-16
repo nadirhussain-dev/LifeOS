@@ -93,3 +93,63 @@ export async function adminSetPlanActive(id: string, active: boolean): Promise<v
   const { error } = await supabase.rpc('admin_set_plan_active', { p_id: id, p_active: active });
   if (error) throw toSupabaseError(error);
 }
+
+// --- real billing (0047/0048/0049) ------------------------------------------
+//
+// Everything below replaces the mock `setMyPlan` write with the actual
+// Safepay flow: `safepay-checkout` starts a subscription, `safepay-webhook`
+// (never called from the client) is what actually confirms it, and
+// `my_subscription()` (0047) is the one-row read of where that landed.
+
+export type SubscriptionStatus =
+  'pending' | 'active' | 'past_due' | 'pending_renewal_confirmation' | 'cancelled';
+
+export type MySubscription = {
+  safepaySubscriptionId: string;
+  planId: string;
+  couponId: string | null;
+  cyclesRemaining: number | null;
+  status: SubscriptionStatus;
+  currentPeriodEnd: number | null;
+};
+
+export async function fetchMySubscription(): Promise<MySubscription | null> {
+  const { data, error } = await supabase.rpc('my_subscription');
+  if (error) throw toSupabaseError(error);
+  const row = (data ?? [])[0] as Record<string, unknown> | undefined;
+  if (!row) return null;
+  return {
+    safepaySubscriptionId: String(row.safepay_subscription_id ?? ''),
+    planId: String(row.plan_id ?? ''),
+    couponId: (row.coupon_id as string | null) ?? null,
+    cyclesRemaining: (row.cycles_remaining as number | null) ?? null,
+    status: (row.status as SubscriptionStatus) ?? 'pending',
+    currentPeriodEnd: (row.current_period_end as number | null) ?? null,
+  };
+}
+
+/**
+ * Starts a real Safepay subscription checkout. Returns the URL to open with
+ * `WebBrowser.openAuthSessionAsync` — the same pattern
+ * `features/auth/services/oauth.ts`'s `signInWithGoogle` already uses for
+ * Google sign-in, so no new native config is needed.
+ */
+export async function createCheckout(planId: string, couponCode?: string): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('safepay-checkout', {
+    body: { planId, couponCode: couponCode?.trim() || undefined },
+  });
+  if (error) throw toSupabaseError(error);
+  const url = (data as { checkoutUrl?: string } | null)?.checkoutUrl;
+  if (!url) throw new Error((data as { error?: string } | null)?.error ?? 'checkout failed');
+  return url;
+}
+
+/** Requests cancellation. Does not change local state — the subscription
+ *  stays as-is until the resulting webhook flips it (see fetchMySubscription
+ *  and useBillingSync). */
+export async function cancelMySubscription(): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('safepay-cancel-subscription');
+  if (error) throw toSupabaseError(error);
+  const err = (data as { error?: string } | null)?.error;
+  if (err) throw new Error(err);
+}
