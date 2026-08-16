@@ -126,10 +126,18 @@ export function opSqliteClient(db: OpDatabase) {
           };
         },
         /** Row values without column names, in select order — what drizzle maps
-         *  onto its field list for typed results. */
+         *  onto its field list for typed results.
+         *
+         *  The rows are under `rawRows`: `executeRawSync` returns a
+         *  `RawQueryResult` (`{ rowsAffected, insertId, rawRows, columnNames }`,
+         *  built in op-sqlite's cpp/utils.cpp), not the row array its name
+         *  suggests. Handing that object to drizzle satisfies every type here —
+         *  the client is passed `as never` — and then fails on the device for
+         *  every typed select at once, with `rows.map is not a function`, which
+         *  surfaces as an error state on literally every screen that reads data. */
         executeForRawResultSync(params: unknown[] = []) {
           return {
-            getAllSync: () => db.executeRawSync(sql, params as never[]) ?? [],
+            getAllSync: () => db.executeRawSync(sql, params as never[])?.rawRows ?? [],
           };
         },
         finalizeSync: () => undefined,

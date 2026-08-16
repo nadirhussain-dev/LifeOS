@@ -8,7 +8,7 @@
     "couldntLoad": "Couldn't load this",
     "clear": "Clear",
     "reload": "Reload",
-    "loadFailedBody": "Something went wrong. Check your connection and try again.",
+    "loadFailedBody": "Something went wrong while loading this. Please try again.",
     "errorBody": "The app hit an unexpected error. Your data is safe — try again.",
     "voiceNote": "Voice note",
     "stopRecording": "Stop recording",
