@@ -15,7 +15,7 @@
         "buildType": "apk"
       }
     },
-    "preview": {
+    "staging": {
       "distribution": "internal",
       "environment": "preview",
       "env": {
@@ -25,9 +25,15 @@
         "buildType": "apk"
       }
     },
+    "preview": {
+      "extends": "staging"
+    },
     "production": {
       "autoIncrement": true,
-      "environment": "production"
+      "environment": "production",
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      }
     },
     "production-apk": {
       "extends": "production",

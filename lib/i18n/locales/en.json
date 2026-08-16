@@ -2497,5 +2497,11 @@
     "braidTitle": "The weave",
     "dayKept": "Kept.",
     "dayKeptBody": "Day {{day}} is woven in."
+  },
+  "env": {
+    "staging": "Staging build",
+    "development": "Development build",
+    "body": "This build is connected to a test database. Nothing you do here affects the live app, and this data may be wiped at any time.",
+    "project": "Supabase project"
   }
 }

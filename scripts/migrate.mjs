@@ -38,12 +38,13 @@
  *   npm run migrate -- --env staging --to 0016_full_sync_coverage.sql
  *   npm run migrate:reset                     # staging only: drop it all, re-apply from 0001
  *
- * Connection strings come from the environment and are never read from .env
- * files that Expo inlines into the app bundle — a database URL carries the
- * password for a role that bypasses row-level security, and it must not end up
- * in a build:
+ * Connection strings come from the environment:
  *   SUPABASE_DB_URL_STAGING     postgres://...
  *   SUPABASE_DB_URL_PRODUCTION  postgres://...
+ *
+ * A shell export or a CI secret always wins; failing that they are read from
+ * the gitignored `.env.db` (see scripts/db-env.mjs for the precedence and for
+ * why these two names must never gain an `EXPO_PUBLIC_` prefix).
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
@@ -52,6 +53,7 @@ import { fileURLToPath } from 'node:url';
 
 import pg from 'pg';
 
+import { loadDbEnv } from './db-env.mjs';
 import { assertResettable, checksum, findOrphans, plan } from './migration-plan.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -189,7 +191,9 @@ function connectionString(environment) {
     throw new Error(
       `${target.variable} is not set.\n` +
         `  Supabase → Project Settings → Database → Connection string (URI).\n` +
-        `  Export it in your shell; do NOT put it in .env — Expo inlines that into the app bundle.`,
+        `  Use the session pooler (port 5432), not the transaction pooler (6543).\n` +
+        `  Put it in .env.db (gitignored, see .env.db.example), or export it in your shell.\n` +
+        `  Never rename it to EXPO_PUBLIC_* — that is what would inline it into the app bundle.`,
     );
   }
   return url;
@@ -454,6 +458,17 @@ async function run(args) {
 // ---------------------------------------------------------------------------
 
 try {
+  // Before anything reads a URL. Exported variables are left alone, so this is
+  // a no-op in CI; on a laptop it is what makes `npm run migrate:staging` work
+  // without re-exporting a connection string in every new shell.
+  //
+  // Announced rather than silent: "which database did that actually run
+  // against" is a question you only ask once a migration has gone somewhere
+  // unexpected, and at that point the answer needs to be in the scrollback.
+  for (const { key, file } of loadDbEnv(process.env, ROOT)) {
+    console.log(`${key} <- ${file}`);
+  }
+
   // Inside the try: a mistyped flag is the most likely error anybody will hit,
   // and it should print the reason rather than a Node stack trace.
   const args = parseArgs(process.argv.slice(2));

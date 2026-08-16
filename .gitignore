@@ -34,6 +34,12 @@ yarn-error.*
 .env
 .env*.local
 
+# Database connection strings for `npm run migrate` — a Postgres URL carries the
+# password for a role that bypasses row level security, so this is the one file
+# here whose leak is total rather than partial. `.env.db.example` is the
+# committed template and is deliberately NOT matched by this line.
+.env.db
+
 # EAS submit credentials (Google Play service account) — never commit
 google-play-service-account.json
 
@@ -46,6 +52,13 @@ google-play-service-account.json
 
 # Supabase CLI local state (per-machine project link, not for source control)
 supabase/.temp/
+
+# Edge function secrets pushed by `npm run secrets:push` — the Resend key sends
+# mail as our domain, and the Expo token pushes to our users. Already covered by
+# the bare `.env` rule above (it matches at any depth); named explicitly because
+# these are server-side secrets, a different class to the app's build-time env,
+# and `supabase/.env.example` is the committed template.
+supabase/.env
 
 # Claude Code personal overrides (permission mode, local allowlists). The
 # shared settings.json is checked in; this one must not be — it is per-machine,

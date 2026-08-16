@@ -1,0 +1,126 @@
+name: Preview
+
+# Builds an installable staging APK for every branch that is not main.
+#
+# The counterpart to release.yml, and the division between them is the whole
+# point: a branch produces a build that talks to the STAGING database, and only
+# a merge into main produces one that can touch real users' data. Neither
+# workflow chooses those credentials itself — the profile does, through
+# eas.json, and eas.json points at an EAS environment:
+#
+#   this workflow  -> profile "staging"        -> EAS environment "preview"
+#   release.yml    -> profile "production-apk" -> EAS environment "production"
+#
+# So the branch you push to is what selects the database, and there is no step
+# anywhere that could pass the wrong one. Credentials are deliberately NOT set
+# here: putting them in a workflow file is how you end up with a staging build
+# holding production keys, and app.config.js fails the build outright if the EAS
+# environment is missing them.
+#
+# A staging build installs as com.daykeep.app.staging, named "Daykeep
+# (Staging)", so a tester can hold it alongside the real app without either
+# one's data touching the other's (scripts/build-env.js).
+
+on:
+  push:
+    branches-ignore: [main]
+  # So a preview can be produced for a branch on demand without an empty commit.
+  workflow_dispatch:
+
+# One preview per branch. A second push supersedes the first rather than racing
+# it — otherwise a burst of commits queues a build for each and the later APK
+# might finish before the earlier one.
+#
+# Worth knowing: this cancels the GitHub job, which is not the same as
+# cancelling the EAS build. Once `eas build` has queued work, killing the runner
+# leaves that build running on Expo's side; it just stops us waiting for it.
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # An EAS build waits in a queue before it runs. Same ceiling as release.yml:
+    # high enough not to fire on a slow queue, finite so a wedged build does not
+    # hold a runner all day.
+    timeout-minutes: 90
+    steps:
+      # Fail here, with instructions, rather than several minutes later inside
+      # `eas build` with an authentication error that does not say what to do.
+      # Checked through `env` rather than `if: !secrets.EXPO_TOKEN`, because the
+      # `secrets` context is not available to an `if:` expression — that form
+      # parses and then silently evaluates to false, so the guard never fires.
+      - name: Require an Expo token
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "${EXPO_TOKEN}" ]; then
+            echo "::error::EXPO_TOKEN is not set."
+            echo "Create a token at https://expo.dev/settings/access-tokens, then add it as"
+            echo "a repository secret named EXPO_TOKEN under"
+            echo "Settings -> Secrets and variables -> Actions -> New repository secret."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          packager: npm
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      # Deliberately does not call ci.yml first. A pull request already runs
+      # every check on this same commit, so gating here would run all of them
+      # twice on most pushes — and the reason to build a preview is to get an
+      # APK onto a phone quickly. Correctness is the PR's job; this job's job is
+      # the artefact.
+      #
+      # Android only, matching release.yml: an APK is an Android artefact, and
+      # the iOS half of eas.json's submit config is still REPLACE_WITH_*
+      # placeholders.
+      - name: EAS build
+        run: |
+          set -euo pipefail
+          eas build --platform android --profile staging --non-interactive --json \
+            | tee eas-build.json
+
+      # Separate, and tolerant: the APK exists whether or not this can parse the
+      # JSON, so a shape change in the CLI output must not fail a green build.
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Staging APK · \`${GITHUB_REF_NAME}\`"
+            echo ""
+            echo "Installs as \`com.daykeep.app.staging\` — sits alongside the real app."
+            echo ""
+            node -e '
+              const fs = require("fs");
+              try {
+                const raw = JSON.parse(fs.readFileSync("eas-build.json", "utf8"));
+                const build = Array.isArray(raw) ? raw[0] : raw;
+                const url = build?.artifacts?.buildUrl ?? build?.artifacts?.applicationArchiveUrl;
+                console.log(url ? `[Download the APK](${url})` : "Build finished; no artefact URL in the CLI output.");
+                if (build?.id) console.log(`\nBuild \`${build.id}\` — https://expo.dev/accounts/_/builds/${build.id}`);
+              } catch {
+                console.log("Build output could not be read — see the EAS build step above, or expo.dev.");
+              }
+            '
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload build metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eas-build-preview-${{ github.run_id }}
+          path: eas-build.json
+          if-no-files-found: ignore

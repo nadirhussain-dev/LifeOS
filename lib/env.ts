@@ -19,6 +19,17 @@
 const read = (v: string | undefined) => (v ?? '').trim();
 
 export const env = {
+  /**
+   * Which backend this build talks to: `development` | `staging` |
+   * `production`. Set per EAS environment; see scripts/build-env.js for the
+   * profile mapping and docs/ENVIRONMENTS.md for the setup.
+   *
+   * A release build cannot omit it — app.config.js fails the build — because it
+   * also decides the app id, the app name and the deep-link scheme, and a
+   * staging install that looks exactly like the real app is how somebody ends
+   * up reporting a bug against the wrong database.
+   */
+  EXPO_PUBLIC_APP_ENV: read(process.env.EXPO_PUBLIC_APP_ENV),
   EXPO_PUBLIC_SUPABASE_URL: read(process.env.EXPO_PUBLIC_SUPABASE_URL),
   EXPO_PUBLIC_SUPABASE_ANON_KEY: read(process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY),
   /** Where the password-reset email links back to. Optional — falls back to the
@@ -91,6 +102,43 @@ export const env = {
   EXPO_PUBLIC_ADMOB_BANNER_UNIT_ID_IOS: read(process.env.EXPO_PUBLIC_ADMOB_BANNER_UNIT_ID_IOS),
 };
 
+export type AppEnvironment = 'development' | 'staging' | 'production';
+
+const ENVIRONMENTS: AppEnvironment[] = ['development', 'staging', 'production'];
+
+/**
+ * The environment this build was made for.
+ *
+ * Defaults to `development` rather than `production` when unset or unrecognised.
+ * That direction is deliberate: everything keyed off this makes a
+ * non-production build *more* visible (a badge, a project ref on the sync
+ * screen), so guessing "development" degrades to showing a badge on a build
+ * that did not need one. Guessing "production" would hide the badge on a
+ * staging build, which is the failure this whole mechanism exists to prevent.
+ */
+export const appEnv: AppEnvironment = ENVIRONMENTS.includes(
+  env.EXPO_PUBLIC_APP_ENV as AppEnvironment,
+)
+  ? (env.EXPO_PUBLIC_APP_ENV as AppEnvironment)
+  : 'development';
+
+/** True only for a build made against the real, user-facing backend. Anything
+ * that must not run against real accounts — seeding, destructive debug tools —
+ * should gate on this rather than on `__DEV__`, which is false in a staging
+ * release build too. */
+export const isProductionEnv = appEnv === 'production';
+
+/**
+ * The Supabase project this build points at (`abcdefgh` from
+ * `https://abcdefgh.supabase.co`), or null.
+ *
+ * The ref is public — it is half of every request the app makes — so it is safe
+ * on screen, and it is the only way to tell from a phone whether an install is
+ * talking to staging or production when both are configured and working.
+ */
+export const supabaseProjectRef: string | null =
+  /^https?:\/\/([^.]+)\./.exec(env.EXPO_PUBLIC_SUPABASE_URL)?.[1] ?? null;
+
 /** True only when both a real-looking URL and a plausible anon key are present.
  * Auth/sync gate on this so a build without creds runs cleanly in guest mode. */
 export const isSupabaseConfigured =
@@ -106,6 +154,9 @@ function preview(value: string): string {
 
 export type EnvDiagnostics = {
   supabaseConfigured: boolean;
+  environment: AppEnvironment;
+  /** Which Supabase project the build is pointed at, or null. */
+  projectRef: string | null;
   /** Which values survived into this build. Shown on the sync screen so an EAS
    * credential problem can be identified from the phone — the alternative is
    * rebuilding blind, because a missing variable leaves no other trace. */
@@ -121,7 +172,10 @@ export function envDiagnostics(): EnvDiagnostics {
 
   return {
     supabaseConfigured: isSupabaseConfigured,
+    environment: appEnv,
+    projectRef: supabaseProjectRef,
     entries: [
+      describe('EXPO_PUBLIC_APP_ENV'),
       describe('EXPO_PUBLIC_SUPABASE_URL'),
       describe('EXPO_PUBLIC_SUPABASE_ANON_KEY'),
       describe('EXPO_PUBLIC_SENTRY_DSN'),

@@ -20,10 +20,15 @@ that a mistake there costs nothing — and that is only true when the mistake
 cannot reach production's tables through a search-path slip or a
 `security definer` function that forgot to pin one.
 
-Both URLs come from **the shell or a CI secret store, never `.env`**. Expo
-inlines `.env` into the app bundle, and these carry the password for a role that
-bypasses row-level security. `.env.example` explains this where you would
-otherwise be tempted to fill them in.
+Both URLs live in **`.env.db`** (gitignored — `cp .env.db.example .env.db`), and
+a shell export or a CI secret always beats the file. They are kept out of `.env`
+so the file Expo reads and the file holding a database password are not the same
+file; the rule that actually keeps them out of the bundle is that neither name
+has an `EXPO_PUBLIC_` prefix, since Metro inlines only prefixed names. Never add
+one. `scripts/db-env.mjs` has the precedence in full.
+
+The app's own environment — which Supabase project a _build_ talks to — is a
+separate mechanism. See [ENVIRONMENTS.md](ENVIRONMENTS.md).
 
 Use the **session pooler (port 5432)**, not the transaction pooler (6543): the
 runner holds an advisory lock across statements and wraps each migration in an
@@ -227,7 +232,65 @@ with the ability to reverse a mistake.
 
 ---
 
-## 5. Limits worth knowing
+## 5. Outbound email
+
+Two separate senders, which is the thing most likely to confuse:
+
+| Email                               | Sent by                   | Configured in                      |
+| ----------------------------------- | ------------------------- | ---------------------------------- |
+| Signup code, reset code, magic link | Supabase Auth             | Dashboard → Auth → Email Templates |
+| Group invitation                    | Resend, via `send-invite` | `supabase secrets`                 |
+
+**Auth emails do not go through Resend** unless custom SMTP is set under Auth →
+SMTP Settings. Out of the box they use Supabase's shared sender, which is rate
+limited and not suitable for production volume. The three templates in
+`supabase/templates/` are pasted into the dashboard by hand — they are not
+deployed by anything, so editing the file changes nothing until it is pasted.
+
+### Turning invitations on
+
+```bash
+cp supabase/.env.example supabase/.env   # paste the Resend key in, then:
+npm run secrets:push                     # supabase secrets set --env-file supabase/.env
+supabase functions deploy send-invite
+```
+
+`supabase/.env` is gitignored and holds every secret an edge function needs
+that Supabase does not inject for you — the Resend key and the Expo push token.
+Committed template: `supabase/.env.example`.
+
+**These do not go in `.env` or in EAS.** EAS variables are for an app build, and
+no build can reach a function's environment, so a key set there is never read by
+anything. Worse, a name given an `EXPO_PUBLIC_` prefix is inlined into the APK,
+where anyone who installs the app can unzip it out — and the Resend key sends
+mail as our domain.
+
+Secrets and code deploy separately: pushing a secret does not redeploy a
+function, and deploying a function does not carry secrets with it. A function
+picks up a changed secret on its next cold start.
+
+The sending domain must be verified in Resend with SPF and DKIM published, or
+invitations land in spam. Nothing in the app can detect this — delivery looks
+identical to the app whether the mail arrives or is filtered.
+
+### Verifying it, in the order that isolates the fault
+
+1. `npm run secrets:list` — if `RESEND_API_KEY` is absent, or still holds the
+   `re_REPLACE_WITH_...` placeholder from the template, the function returns
+   `emailed: false` and the members screen quietly opens the share sheet
+   instead. That is the designed fallback, and it looks like success.
+2. Send an invitation and read the response. `{emailed: true}` means Resend
+   accepted it; `{emailed: false, reason: ...}` carries the provider's own error
+   text, which is usually `domain not verified` or an invalid key.
+3. Resend dashboard → Emails. Accepted-but-bounced only shows here.
+
+Note the deliberate design: **the invitation is created and redeemable whether or
+not the email sends**. A provider outage degrades to sharing a link by hand, it
+does not block anyone from joining a group.
+
+---
+
+## 6. Limits worth knowing
 
 - **The local wipe needs a cooperating client.** A modified build can decline to
   run it. The server-side denial cannot be declined; the wipe can. No amount of

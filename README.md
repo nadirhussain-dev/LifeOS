@@ -188,18 +188,40 @@ Every variable is documented in [.env.example](.env.example). The short version:
 
 | Variable                              | Required | Purpose                                       |
 | ------------------------------------- | -------- | --------------------------------------------- |
+| `EXPO_PUBLIC_APP_ENV`                 | Releases | `development` \| `staging` \| `production`    |
 | `EXPO_PUBLIC_SUPABASE_URL`            | For auth | Supabase project URL                          |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY`       | For auth | Anon key — safe client-side; RLS is the guard |
 | `EXPO_PUBLIC_SUPABASE_REDIRECT_URL`   | No       | Password-reset deep link override             |
 | `EXPO_PUBLIC_SENTRY_DSN`              | No       | Crash reporting; blank keeps errors local     |
 | `EXPO_PUBLIC_VAULT_ESCROW_PUBLIC_KEY` | No       | **Enables operator access to private spaces** |
-| `SUPABASE_DB_URL_STAGING`             | Migrate  | **Shell only — never `.env`**                 |
-| `SUPABASE_DB_URL_PRODUCTION`          | Migrate  | **Shell only — never `.env`**                 |
+| `SUPABASE_DB_URL_STAGING`             | Migrate  | Staging Postgres — **`.env.db`, not `.env`**  |
+| `SUPABASE_DB_URL_PRODUCTION`          | Migrate  | Prod Postgres — **`.env.db`, not `.env`**     |
 
-The two database URLs are the one pair that must never go in `.env`: Expo inlines
-that file into the app bundle, and a Postgres URL carries the password for a role
-that bypasses Row Level Security entirely. Export them in your shell or a CI
-secret store.
+The two database URLs live in `.env.db` (`cp .env.db.example .env.db`), which is
+gitignored; a shell export or a CI secret beats the file. They are kept out of
+`.env` so the file Expo reads and the file holding a database password are not
+the same file — a Postgres URL carries the password for a role that bypasses Row
+Level Security entirely. Neither name has an `EXPO_PUBLIC_` prefix, which is what
+actually keeps Metro from inlining them into the bundle. Never add one.
+
+### Staging vs production
+
+Two Supabase projects, and a build for either. A staging build installs as
+`com.daykeep.app.staging` / "Daykeep (Staging)" so it sits _beside_ the real app
+instead of replacing it, and shows an in-app badge naming the project it is
+talking to.
+
+```bash
+npm run build:staging          # staging Supabase project
+npm run build:production       # production
+npm run migrate:staging        # schema -> staging DB
+npm run migrate:production     # schema -> production DB, after confirming
+```
+
+**[docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) is the setup guide** — the EAS
+environment variables, the second OAuth/AdMob/Sentry registrations that a
+distinct package id requires, and the four build-time guards that stop a
+production build shipping against the staging database.
 
 ---
 
@@ -300,7 +322,7 @@ eas build -p android --profile development
 ```
 
 A local `.env` is **not** uploaded to EAS — each profile pulls variables from the
-EAS environment it links to (`eas env:create --environment production ...`).
+EAS environment it links to (`eas env:set --environment production ...`).
 [app.config.js](app.config.js) fails a preview or production build outright when
 the Supabase credentials are missing, because the bundler treats an unset
 `EXPO_PUBLIC_` variable as an empty string: the build would otherwise succeed and
@@ -325,7 +347,7 @@ Two things this needs from you, both one-off:
 | What                                          | Where                                                                                                                                    | Without it                                                                                          |
 | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `EXPO_TOKEN` secret                           | Repo → Settings → Secrets and variables → Actions. Token from [expo.dev/settings/access-tokens](https://expo.dev/settings/access-tokens) | The build job fails immediately, with instructions                                                  |
-| `EXPO_PUBLIC_SUPABASE_URL` and `..._ANON_KEY` | The EAS **production** environment (`eas env:create --environment production …`)                                                         | `app.config.js` fails the build on purpose, rather than shipping an APK that cannot sign anybody in |
+| `EXPO_PUBLIC_SUPABASE_URL` and `..._ANON_KEY` | The EAS **production** environment (`eas env:set --environment production …`)                                                            | `app.config.js` fails the build on purpose, rather than shipping an APK that cannot sign anybody in |
 
 Opting out of a release: put `[skip version]` in the merge commit message. No
 version is cut, and no build runs — the build job needs the version job.

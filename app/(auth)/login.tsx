@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
+import { EnvironmentPill } from '@/components/ui/environment-badge';
 import { Text } from '@/components/ui/text';
 import { AuthField } from '@/features/auth/components/auth-field';
 import { SocialAuthButtons } from '@/features/auth/components/social-auth-buttons';
@@ -49,6 +50,10 @@ export default function LoginScreen() {
         contentContainerClassName="flex-grow justify-center gap-6 px-6 py-10"
         keyboardShouldPersistTaps="handled"
       >
+        {/* Which database this account is about to be created in. Nothing in
+            production; see components/ui/environment-badge.tsx. */}
+        <EnvironmentPill />
+
         <View className="gap-2">
           <Text variant="heading">{t('auth.welcomeBack')}</Text>
           <Text variant="muted">{t('auth.signInSubtitle')}</Text>
