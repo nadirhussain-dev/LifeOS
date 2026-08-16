@@ -8,10 +8,10 @@
 // Membership is verified through the caller's own JWT, so the RLS policies in
 // 0003 decide whether this person may invite anybody to this group.
 //
-// Deploy:
+// Deploy (both — the link in this email is served by the `join` function):
 //   supabase functions deploy send-invite
-//   supabase secrets set RESEND_API_KEY=...  INVITE_FROM="Daykeep <invites@yourdomain.com>"
-//   supabase secrets set APP_INVITE_BASE_URL="https://yourdomain.com/join"
+//   supabase functions deploy join --no-verify-jwt
+//   npm run configure:auth -- --env staging
 //
 // The sending domain must have SPF and DKIM configured or invitations land in
 // spam. Without RESEND_API_KEY the function still creates the invitation and
@@ -21,6 +21,8 @@
 // This file is Deno (URL imports) and is excluded from the app's tsconfig.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+import { optionalSecret } from '../_shared/env.ts';
 
 const INVITE_TTL_MS = 14 * 24 * 60 * 60 * 1000; // two weeks
 
@@ -99,10 +101,20 @@ Deno.serve(async (req: Request) => {
   });
   if (insertError) return json({ error: 'forbidden', detail: insertError.message }, 403);
 
-  const base = Deno.env.get('APP_INVITE_BASE_URL') ?? 'https://daykeep.app/join';
-  const link = `${base}/${token}`;
+  // Defaults to this project's own `join` function, which is always deployed
+  // beside this one and is always correct for whichever project is running
+  // this code. The value must be an **https** URL: a `daykeep://` link is
+  // stripped to unclickable text by Gmail, and resolves to nothing at all on
+  // the phone of somebody who does not have the app — which is most of the
+  // people an invitation is sent to. See supabase/functions/join/index.ts.
+  //
+  // `??` would not do here. `supabase secrets set --env-file` happily pushes a
+  // key with an empty value, and an empty string is not null — so the fallback
+  // would be skipped and every invitation would link to "/<token>".
+  const base = optionalSecret('APP_INVITE_BASE_URL') ?? `${url}/functions/v1/join`;
+  const link = `${base.replace(/\/+$/, '')}/${token}`;
 
-  const resendKey = Deno.env.get('RESEND_API_KEY');
+  const resendKey = optionalSecret('RESEND_API_KEY');
   if (!resendKey) {
     // Email not configured yet: the invitation is real and redeemable, so hand
     // the link back and let the inviter deliver it themselves.
@@ -140,7 +152,7 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: Deno.env.get('INVITE_FROM') ?? 'Daykeep <invites@daykeep.app>',
+        from: optionalSecret('INVITE_FROM') ?? 'Daykeep <invites@daykeep.app>',
         to: [payload.email],
         subject: `${rawInviterName} added you to ${rawGroupName}`,
         text: textBody,

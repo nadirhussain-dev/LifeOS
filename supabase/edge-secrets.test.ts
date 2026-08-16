@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
@@ -23,7 +23,72 @@ const read = (path: string) => readFileSync(join(ROOT, path), 'utf8');
 const assignedNames = (file: string) =>
   [...file.matchAll(/^\s*([A-Z0-9_]+)\s*=/gm)].map((m) => m[1]);
 
-const EDGE_ONLY = ['RESEND_API_KEY', 'INVITE_FROM', 'APP_INVITE_BASE_URL', 'EXPO_ACCESS_TOKEN'];
+/**
+ * Every `Deno.env.get('X')` across the functions, minus the `SUPABASE_*` names
+ * the runtime injects for free.
+ *
+ * Derived rather than listed. A hand-written list only covers the secrets
+ * somebody remembered to add to it, and the failure it misses is the expensive
+ * one: a function reads a secret nobody documented, so nobody sets it, and it
+ * throws on a cold start in production rather than here.
+ */
+const secretsReadByFunctions = (): string[] => {
+  const sources: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (entry.name.endsWith('.ts')) sources.push(readFileSync(path, 'utf8'));
+    }
+  };
+  walk(join(ROOT, 'supabase', 'functions'));
+
+  const names = new Set<string>();
+  for (const source of sources) {
+    // `optionalSecret` as well as the raw call: it is the wrapper in
+    // functions/_shared/env.ts that treats "" as absent, and a secret read
+    // through it is every bit as undocumented as one read directly. Matching
+    // only `Deno.env.get` would mean the derivation quietly stopped covering a
+    // function the moment it started using the safer accessor — the exact kind
+    // of hole this whole file exists to prevent.
+    const reads = /(?:Deno\.env\.get|optionalSecret)\(\s*['"]([A-Z0-9_]+)['"]\s*\)/g;
+    for (const match of withoutComments(source).matchAll(reads)) {
+      if (!match[1].startsWith('SUPABASE_')) names.add(match[1]);
+    }
+  }
+  return [...names].sort();
+};
+
+/**
+ * Source with its comments removed, because this file greps for code and a
+ * comment is not code.
+ *
+ * These functions are heavily commented, and the comments talk about the very
+ * thing being matched — `_shared/env.ts` explains itself with a literal
+ * `Deno.env.get('X')`. Scanned naively, that made "X" a secret the template
+ * was required to document, and the only way to satisfy it would have been to
+ * put a fake name in `.env.example`.
+ *
+ * Line comments are only stripped where `//` opens the line. A URL inside a
+ * string contains `//` too, and eating from there to the end of the line would
+ * delete real code on any line that holds both a URL and an env read.
+ */
+const withoutComments = (source: string): string =>
+  source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n')
+    .filter((line) => !/^\s*(\/\/|\*)/.test(line))
+    .join('\n');
+
+/** Names read only by Deno. Defaults that a function falls back to are still
+ *  listed in the template, so the derived set is the whole set. */
+const EDGE_ONLY = secretsReadByFunctions();
+
+/** Every deployable function — derived, so a new one is covered on the day it
+ *  is added rather than whenever somebody remembers this file. */
+const FUNCTION_DIRS = readdirSync(join(ROOT, 'supabase', 'functions'), { withFileTypes: true })
+  .filter((e) => e.isDirectory() && e.name !== '_shared')
+  .map((e) => e.name);
 
 describe('supabase/.env.example', () => {
   const template = read('supabase/.env.example');
@@ -60,11 +125,15 @@ describe('the app env template', () => {
 });
 
 describe('the functions themselves', () => {
-  it.each(['send-invite', 'notify-group', 'notify-album'])(
-    '%s reads no EXPO_PUBLIC_ name',
-    (fn) => {
-      const source = read(join('supabase', 'functions', fn, 'index.ts'));
-      expect(source).not.toContain('EXPO_PUBLIC_');
-    },
-  );
+  it.each(FUNCTION_DIRS)('%s reads no EXPO_PUBLIC_ name', (fn) => {
+    const source = read(join('supabase', 'functions', fn, 'index.ts'));
+    expect(source).not.toContain('EXPO_PUBLIC_');
+  });
+
+  it('_shared reads no EXPO_PUBLIC_ name either', () => {
+    for (const file of readdirSync(join(ROOT, 'supabase', 'functions', '_shared'))) {
+      if (!file.endsWith('.ts')) continue;
+      expect(read(join('supabase', 'functions', '_shared', file))).not.toContain('EXPO_PUBLIC_');
+    }
+  });
 });

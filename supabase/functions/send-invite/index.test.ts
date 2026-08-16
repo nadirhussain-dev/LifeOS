@@ -207,6 +207,37 @@ describe('the email itself', () => {
     expect((await res.json()).link).toContain('https://example.com/join/');
   });
 
+  /**
+   * Both ways secrets reach this function push the whole of `supabase/.env`
+   * with `supabase secrets set --env-file`, and that sets every key in the
+   * file — including the ones deliberately left blank. They arrive as empty
+   * strings, and `??` would hand one straight through, building every
+   * invitation link as "/<token>". Nothing errors; the email just goes out
+   * with a link to nowhere.
+   */
+  it.each(['', '   '])('treats a blank APP_INVITE_BASE_URL (%p) as unset', async (blank) => {
+    env.APP_INVITE_BASE_URL = blank;
+    const res = await handler(post(VALID));
+
+    expect((await res.json()).link).toContain('https://project.supabase.co/functions/v1/join/');
+  });
+
+  it('treats a blank INVITE_FROM as unset', async () => {
+    env.INVITE_FROM = '';
+    await handler(post(VALID));
+
+    expect(lastEmail().from).toBe('Daykeep <invites@daykeep.app>');
+  });
+
+  /** A trailing slash on the base is the natural way to write a URL and would
+   *  otherwise produce a double slash the router does not match. */
+  it('does not double the slash before the token', async () => {
+    env.APP_INVITE_BASE_URL = 'https://example.com/join/';
+    const res = await handler(post(VALID));
+
+    expect((await res.json()).link).not.toContain('//join//');
+  });
+
   it('falls back to the inviter email when they have no display name', async () => {
     globalThis.__supabaseStub.getUser = async () => ({
       data: { user: { email: 'inviter@example.com', user_metadata: {} } },
@@ -230,7 +261,9 @@ describe('degradation — the invitation must survive email failing', () => {
 
     expect(fetchCalls).toHaveLength(0);
     expect(body).toMatchObject({ ok: true, emailed: false, reason: 'email_not_configured' });
-    expect(body.link).toContain('https://daykeep.app/join/');
+    // Defaults to this project's own `join` function rather than a marketing
+    // domain nobody has bought — correct for every project, unconfigured.
+    expect(body.link).toContain('https://project.supabase.co/functions/v1/join/');
     // The invitation was still written — the members screen shares this link.
     expect(globalThis.__supabaseStub.rpcCalls).toHaveLength(1);
   });
