@@ -7,7 +7,7 @@ import { captureRef } from 'react-native-view-shot';
 
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
-import type { ChainDay } from '@/features/challenge/components/day-chain';
+import type { ChainDay } from '@/features/challenge/types/challenge.types';
 import { toast } from '@/lib/toast-store';
 
 /**

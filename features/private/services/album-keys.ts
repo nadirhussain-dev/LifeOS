@@ -34,7 +34,7 @@ import {
  */
 
 function keyItem(albumId: string): string {
-  return `lifeos.album.${albumId}.key`;
+  return `daykeep.album.${albumId}.key`;
 }
 
 /** Wraps and stores this device's copy of `albumId`'s key. Called once, right

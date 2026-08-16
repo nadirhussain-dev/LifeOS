@@ -1,4 +1,4 @@
-# LifeOS — Implementation Plan
+# Daykeep — Implementation Plan
 
 Derived from `TODO.md` on 2026-08-07. Two parts, and the split is the point:
 
@@ -218,7 +218,7 @@ against a real provider.
   URL, not the app's.
 - Supabase → Providers → Google: client id + secret.
 - Supabase → URL Configuration → Redirect URLs: add **both**
-  `lifeos://auth/callback` and `lifeos:///auth/callback`. An unlisted redirect is
+  `daykeep://auth/callback` and `daykeep:///auth/callback`. An unlisted redirect is
   refused before the user sees anything.
 
 **B7. Paid Apple Developer account.** Gates three things: Apple sign-in (App ID
@@ -233,7 +233,7 @@ go live together. Android can ship Google alone.
 
 - Notification status-bar icon: 96×96 white-on-transparent PNG in `assets/`,
   then I wire `"icon"` into the `expo-notifications` plugin.
-- Real bundle identifier: replace the `com.lifeos.app` placeholder.
+- Real bundle identifier: replace the `com.daykeep.app` placeholder.
 
 **B9. Decide where the operator console lives** — blocks A7 and A8.
 An in-app admin route, a separate internal web page, or Metabase pointed at
@@ -256,7 +256,7 @@ does nothing — the escrow row goes with the account. Either wire
 that it does not.
 
 **B13. Prepare the store-review answers.** Cycle and intimacy data is GDPR
-Art. 9 special-category, and App Store 5.1.3 governs the health parts. **LifeOS
+Art. 9 special-category, and App Store 5.1.3 governs the health parts. **Daykeep
 is no longer end-to-end encrypted** — the vault master key is sealed to an
 operator key and uploaded, deliberately. Expect to justify that in the review
 notes and the data-safety form. `PRIVACY.md` and the in-app copy already say so.

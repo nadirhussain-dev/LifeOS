@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Synthesises LifeOS's notification tones into `assets/sounds/`.
+ * Synthesises Daykeep's notification tones into `assets/sounds/`.
  *
  * ## Why the sounds are generated rather than sourced
  *
@@ -307,8 +307,8 @@ const hit = (at, pitch, gain, partials, seconds, extra = {}) => ({
 
 const SOUNDS = {
   // --- Bells: struck metal, the register most "notification" tones live in ---
-  lifeos_chime: [1.45, [hit(0, 'E6', 1.0, BELL, 1.45), hit(0.15, 'G6', 0.85, BELL, 1.3)]],
-  lifeos_beacon: [
+  daykeep_chime: [1.45, [hit(0, 'E6', 1.0, BELL, 1.45), hit(0.15, 'G6', 0.85, BELL, 1.3)]],
+  daykeep_beacon: [
     1.9,
     [
       hit(0, 'G4', 1.0, BELL, 1.9),
@@ -316,9 +316,9 @@ const SOUNDS = {
       hit(0.3, 'D6', 0.22, BELL, 1.5),
     ],
   ],
-  lifeos_halo: [1.6, [hit(0, 'B5', 1.0, BELL, 1.6), hit(0.02, 'F#6', 0.6, BELL, 1.5)]],
-  lifeos_vesper: [1.8, [hit(0, 'C5', 1.0, BELL, 1.8)]],
-  lifeos_carillon: [
+  daykeep_halo: [1.6, [hit(0, 'B5', 1.0, BELL, 1.6), hit(0.02, 'F#6', 0.6, BELL, 1.5)]],
+  daykeep_vesper: [1.8, [hit(0, 'C5', 1.0, BELL, 1.8)]],
+  daykeep_carillon: [
     1.7,
     [
       hit(0, 'E6', 1.0, BELL, 1.7),
@@ -327,14 +327,14 @@ const SOUNDS = {
       hit(0.39, 'G5', 0.75, BELL, 1.3),
     ],
   ],
-  lifeos_ember: [1.35, [hit(0, 'A5', 1.0, BELL, 1.35), hit(0.19, 'E6', 0.5, BELL, 1.1)]],
-  lifeos_filament: [
+  daykeep_ember: [1.35, [hit(0, 'A5', 1.0, BELL, 1.35), hit(0.19, 'E6', 0.5, BELL, 1.1)]],
+  daykeep_filament: [
     1.2,
     [hit(0, 'D6', 1.0, BELL_SMALL, 1.2), hit(0.1, 'A6', 0.55, BELL_SMALL, 1.05)],
   ],
 
   // --- Mallets: tuned bars. Fast, dry, the least intrusive family ---
-  lifeos_ripple: [
+  daykeep_ripple: [
     0.95,
     [
       hit(0, 'A5', 1.0, WOOD, 0.95),
@@ -342,7 +342,7 @@ const SOUNDS = {
       hit(0.17, 'E6', 0.8, WOOD, 0.78),
     ],
   ],
-  lifeos_tumble: [
+  daykeep_tumble: [
     0.9,
     [
       hit(0, 'D6', 1.0, WOOD, 0.9),
@@ -350,8 +350,8 @@ const SOUNDS = {
       hit(0.18, 'G5', 0.85, WOOD, 0.72),
     ],
   ],
-  lifeos_pebble: [0.5, [hit(0, 'C6', 1.0, WOOD, 0.5)]],
-  lifeos_lattice: [
+  daykeep_pebble: [0.5, [hit(0, 'C6', 1.0, WOOD, 0.5)]],
+  daykeep_lattice: [
     0.95,
     [
       hit(0, 'G5', 1.0, WOOD, 0.6),
@@ -360,14 +360,14 @@ const SOUNDS = {
       hit(0.21, 'E6', 0.75, WOOD, 0.74),
     ],
   ],
-  lifeos_bamboo: [
+  daykeep_bamboo: [
     0.85,
     [hit(0, 'G4', 1.0, WOOD_HOLLOW, 0.85), hit(0.11, 'D5', 0.7, WOOD_HOLLOW, 0.7)],
   ],
-  lifeos_thimble: [0.45, [hit(0, 'E6', 1.0, WOOD, 0.28), hit(0.1, 'E6', 0.7, WOOD, 0.35)]],
+  daykeep_thimble: [0.45, [hit(0, 'E6', 1.0, WOOD, 0.28), hit(0.1, 'E6', 0.7, WOOD, 0.35)]],
 
   // --- Glass & air: slow, pure, the softest family ---
-  lifeos_bloom: [
+  daykeep_bloom: [
     1.7,
     [
       hit(0, 'D6', 1.0, GLASS, 1.7),
@@ -375,17 +375,17 @@ const SOUNDS = {
       hit(0.24, 'D7', 0.3, GLASS, 1.4),
     ],
   ],
-  lifeos_prism: [1.3, [hit(0, 'B6', 1.0, CRYSTAL, 1.3)]],
-  lifeos_frost: [1.15, [hit(0, 'C7', 1.0, CRYSTAL, 1.15), hit(0.08, 'G6', 0.5, CRYSTAL, 1.0)]],
-  lifeos_lantern: [1.5, [hit(0, 'E5', 1.0, GLASS, 1.5, { attackSeconds: 0.05 })]],
-  lifeos_aurora: [
+  daykeep_prism: [1.3, [hit(0, 'B6', 1.0, CRYSTAL, 1.3)]],
+  daykeep_frost: [1.15, [hit(0, 'C7', 1.0, CRYSTAL, 1.15), hit(0.08, 'G6', 0.5, CRYSTAL, 1.0)]],
+  daykeep_lantern: [1.5, [hit(0, 'E5', 1.0, GLASS, 1.5, { attackSeconds: 0.05 })]],
+  daykeep_aurora: [
     1.95,
     [
       hit(0, 'F4', 1.0, BOWL, 1.95, { attackSeconds: 0.12 }),
       hit(0.1, 'C5', 0.35, BOWL, 1.7, { attackSeconds: 0.15 }),
     ],
   ],
-  lifeos_nimbus: [
+  daykeep_nimbus: [
     1.85,
     [
       hit(0, 'A4', 1.0, GLASS, 1.85, { attackSeconds: 0.16 }),
@@ -394,8 +394,8 @@ const SOUNDS = {
   ],
 
   // --- Keys & strings: plucked and struck, warmer and more human ---
-  lifeos_amber: [1.15, [hit(0, 'C5', 1.0, TINE, 1.15), hit(0.14, 'G5', 0.55, TINE, 1.0)]],
-  lifeos_thread: [
+  daykeep_amber: [1.15, [hit(0, 'C5', 1.0, TINE, 1.15), hit(0.14, 'G5', 0.55, TINE, 1.0)]],
+  daykeep_thread: [
     1.2,
     [
       hit(0, 'G5', 1.0, PLUCK, 1.2),
@@ -403,10 +403,10 @@ const SOUNDS = {
       hit(0.16, 'D6', 0.8, PLUCK, 1.0),
     ],
   ],
-  lifeos_quill: [1.0, [hit(0, 'D5', 1.0, PLUCK, 1.0, { glideTo: note('D5') * 1.06 })]],
-  lifeos_wool: [0.95, [hit(0, 'F5', 1.0, FELT, 0.95, { attackSeconds: 0.02 })]],
-  lifeos_reed: [1.05, [hit(0, 'A4', 1.0, HOLLOW, 1.05, { attackSeconds: 0.03 })]],
-  lifeos_lyre: [
+  daykeep_quill: [1.0, [hit(0, 'D5', 1.0, PLUCK, 1.0, { glideTo: note('D5') * 1.06 })]],
+  daykeep_wool: [0.95, [hit(0, 'F5', 1.0, FELT, 0.95, { attackSeconds: 0.02 })]],
+  daykeep_reed: [1.05, [hit(0, 'A4', 1.0, HOLLOW, 1.05, { attackSeconds: 0.03 })]],
+  daykeep_lyre: [
     1.25,
     [
       hit(0, 'E5', 1.0, PLUCK, 1.25),
@@ -417,9 +417,9 @@ const SOUNDS = {
   ],
 
   // --- Digital: dry, deliberate, no pretence of being an instrument ---
-  lifeos_pulse: [0.42, [hit(0, 'C6', 1.0, BLIP, 0.2), hit(0.13, 'C6', 0.95, BLIP, 0.29)]],
-  lifeos_ping: [0.3, [hit(0, 'A6', 1.0, BLIP, 0.3)]],
-  lifeos_relay: [
+  daykeep_pulse: [0.42, [hit(0, 'C6', 1.0, BLIP, 0.2), hit(0.13, 'C6', 0.95, BLIP, 0.29)]],
+  daykeep_ping: [0.3, [hit(0, 'A6', 1.0, BLIP, 0.3)]],
+  daykeep_relay: [
     0.55,
     [
       hit(0, 'E5', 1.0, BEEP, 0.2),
@@ -427,9 +427,9 @@ const SOUNDS = {
       hit(0.22, 'E6', 0.9, BEEP, 0.33),
     ],
   ],
-  lifeos_console: [0.62, [hit(0, 'F5', 1.0, BEEP, 0.26), hit(0.16, 'C6', 0.95, BEEP, 0.46)]],
-  lifeos_ledger: [0.5, [hit(0, 'G4', 1.0, BEEP, 0.22), hit(0.12, 'G4', 0.9, BEEP, 0.38)]],
-  lifeos_telegraph: [
+  daykeep_console: [0.62, [hit(0, 'F5', 1.0, BEEP, 0.26), hit(0.16, 'C6', 0.95, BEEP, 0.46)]],
+  daykeep_ledger: [0.5, [hit(0, 'G4', 1.0, BEEP, 0.22), hit(0.12, 'G4', 0.9, BEEP, 0.38)]],
+  daykeep_telegraph: [
     0.72,
     [
       hit(0, 'C6', 1.0, BLIP, 0.12),
@@ -439,16 +439,16 @@ const SOUNDS = {
   ],
 
   // --- Motion: pitch that moves. The only family that sweeps ---
-  lifeos_droplet: [0.8, [hit(0, 'A6', 1.0, SINE, 0.8, { glideTo: note('A5') })]],
-  lifeos_skyward: [0.7, [hit(0, 'C5', 1.0, SINE, 0.7, { glideTo: note('C6') })]],
-  lifeos_swoop: [
+  daykeep_droplet: [0.8, [hit(0, 'A6', 1.0, SINE, 0.8, { glideTo: note('A5') })]],
+  daykeep_skyward: [0.7, [hit(0, 'C5', 1.0, SINE, 0.7, { glideTo: note('C6') })]],
+  daykeep_swoop: [
     0.95,
     [
       hit(0, 'E6', 1.0, SINE, 0.42, { glideTo: note('E5') }),
       hit(0.4, 'E5', 0.9, SINE, 0.55, { glideTo: note('B5') }),
     ],
   ],
-  lifeos_bubble: [
+  daykeep_bubble: [
     0.85,
     [
       hit(0, 'D5', 1.0, SINE, 0.3, { glideTo: note('A5') }),
@@ -456,10 +456,10 @@ const SOUNDS = {
       hit(0.32, 'A5', 0.85, SINE, 0.5, { glideTo: note('E6') }),
     ],
   ],
-  lifeos_kite: [1.0, [hit(0, 'G5', 1.0, SINE, 1.0, { glideTo: note('D6'), attackSeconds: 0.04 })]],
+  daykeep_kite: [1.0, [hit(0, 'G5', 1.0, SINE, 1.0, { glideTo: note('D6'), attackSeconds: 0.04 })]],
 
   // --- Alerts: for people who need the phone to insist ---
-  lifeos_sentry: [
+  daykeep_sentry: [
     0.95,
     [
       hit(0, 'B5', 1.0, BEEP, 0.16),
@@ -468,7 +468,7 @@ const SOUNDS = {
       hit(0.45, 'F#6', 0.95, BEEP, 0.5),
     ],
   ],
-  lifeos_cascade: [
+  daykeep_cascade: [
     1.3,
     [
       hit(0, 'E6', 1.0, BELL_SMALL, 0.5),
@@ -478,7 +478,7 @@ const SOUNDS = {
       hit(0.36, 'D5', 0.85, BELL_SMALL, 0.94),
     ],
   ],
-  lifeos_summit: [
+  daykeep_summit: [
     1.45,
     [
       hit(0, 'D5', 1.0, BELL, 1.45),

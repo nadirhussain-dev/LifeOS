@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daykeep — the plan</title>
+<style>
+/* Fonts intentionally not embedded — see the note in the repo copy. */
+
+:root {
+  --paper: #f5f4f9;
+  --card: #ffffff;
+  --card-2: #fbfaff;
+  --ink: #17152a;
+  --ink-2: #3d3956;
+  --muted: #66627f;
+  --line: #e2e0ec;
+  --line-2: #ceccdd;
+  --indigo: #4f46c9;
+  --indigo-ink: #3a32a3;
+  --indigo-soft: #eceafb;
+  --gold: #96681a;
+  --gold-soft: #f6efe1;
+  --rose: #b8305a;
+  --rose-soft: #fbeaf0;
+  --teal: #0d7a68;
+  --teal-soft: #e4f4f0;
+  --dot-empty: #dedbec;
+  --shadow: 0 1px 2px rgba(23, 21, 42, .05), 0 8px 24px -16px rgba(23, 21, 42, .22);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #101020;
+    --card: #191828;
+    --card-2: #1e1c30;
+    --ink: #eceaf6;
+    --ink-2: #c4c0d8;
+    --muted: #9b97b3;
+    --line: #2b2942;
+    --line-2: #3b3856;
+    --indigo: #9c92ff;
+    --indigo-ink: #b7afff;
+    --indigo-soft: #221f3d;
+    --gold: #d9a94a;
+    --gold-soft: #2c2415;
+    --rose: #f4809c;
+    --rose-soft: #2e1725;
+    --teal: #4fd1b5;
+    --teal-soft: #12302b;
+    --dot-empty: #2f2d48;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px -20px rgba(0, 0, 0, .8);
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #101020;
+  --card: #191828;
+  --card-2: #1e1c30;
+  --ink: #eceaf6;
+  --ink-2: #c4c0d8;
+  --muted: #9b97b3;
+  --line: #2b2942;
+  --line-2: #3b3856;
+  --indigo: #9c92ff;
+  --indigo-ink: #b7afff;
+  --indigo-soft: #221f3d;
+  --gold: #d9a94a;
+  --gold-soft: #2c2415;
+  --rose: #f4809c;
+  --rose-soft: #2e1725;
+  --teal: #4fd1b5;
+  --teal-soft: #12302b;
+  --dot-empty: #2f2d48;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px -20px rgba(0, 0, 0, .8);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font-family: Literata, Georgia, serif; font-size: 17px; line-height: 1.68;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px 120px; }
+.col { max-width: 68ch; margin-inline: auto; }
+
+h1, h2, h3, h4 { font-family: Sora, "Segoe UI", system-ui, sans-serif; }
+h1 { font-size: clamp(2.4rem, 5.6vw, 3.9rem); font-weight: 600; line-height: 1.03; letter-spacing: -.035em; text-wrap: balance; margin: 0; }
+h2 { font-size: clamp(1.5rem, 3vw, 1.95rem); font-weight: 600; letter-spacing: -.022em; line-height: 1.15; text-wrap: balance; margin: 0; }
+h3 { font-size: 1.12rem; font-weight: 600; letter-spacing: -.012em; line-height: 1.3; text-wrap: balance; margin: 0; }
+
+p { margin: 0; }
+strong { font-weight: 700; color: var(--ink); }
+em { font-style: italic; }
+
+a { color: var(--indigo-ink); text-decoration-color: color-mix(in srgb, var(--indigo) 40%, transparent); text-underline-offset: 2px; }
+a:hover { text-decoration-color: var(--indigo); }
+:focus-visible { outline: 2px solid var(--indigo); outline-offset: 3px; border-radius: 2px; }
+
+code { font-family: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, monospace; font-size: .84em; background: var(--indigo-soft); color: var(--indigo-ink); padding: .1em .38em; border-radius: 3px; }
+
+.eyebrow {
+  font-family: Sora, system-ui, sans-serif; font-size: .68rem; font-weight: 600;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
+}
+
+section { padding-top: 76px; }
+.stack { display: flex; flex-direction: column; gap: 20px; }
+.sec-head { display: flex; flex-direction: column; gap: 10px; padding-bottom: 22px; }
+.sec-head .rule { height: 1px; background: var(--line-2); margin-top: 6px; }
+.lede { color: var(--ink-2); font-size: 1.06rem; }
+.note { color: var(--muted); font-size: .9rem; }
+
+.hero { padding: 84px 0 8px; display: flex; flex-direction: column; gap: 26px; }
+.hero .kicker { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.hero h1 { max-width: 17ch; }
+.hero .standfirst { max-width: 60ch; font-size: 1.2rem; color: var(--ink-2); }
+
+.tag {
+  font-family: Sora, system-ui, sans-serif; font-size: .66rem; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase; padding: .34em .7em;
+  border-radius: 3px; border: 1px solid var(--line-2); color: var(--muted); white-space: nowrap;
+}
+.tag.on { background: var(--indigo-soft); border-color: transparent; color: var(--indigo-ink); }
+.tag.call { background: var(--rose-soft); border-color: transparent; color: var(--rose); }
+.tag.free { background: var(--teal-soft); border-color: transparent; color: var(--teal); }
+.tag.prize { background: var(--gold-soft); border-color: transparent; color: var(--gold); }
+
+/* ---------- the three layers ---------- */
+.layers { display: flex; flex-direction: column; gap: 12px; }
+.layer {
+  display: grid; grid-template-columns: 54px 1fr; gap: 20px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  padding: 22px 24px; box-shadow: var(--shadow);
+}
+@media (max-width: 620px) { .layer { grid-template-columns: 1fr; gap: 10px; } }
+.layer .num {
+  font-family: Sora, system-ui, sans-serif; font-size: 2rem; font-weight: 600;
+  letter-spacing: -.04em; line-height: 1; color: var(--indigo);
+  font-variant-numeric: tabular-nums;
+}
+.layer .body { display: flex; flex-direction: column; gap: 8px; }
+.layer .meta { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 4px; }
+.layer.two .num { color: var(--gold); }
+.layer.three .num { color: var(--teal); }
+
+/* ---------- year band ---------- */
+.band-wrap {
+  background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  padding: 24px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px;
+}
+.band { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; }
+.season {
+  grid-column: span 3; border-radius: 5px; padding: 12px 12px 13px;
+  background: var(--indigo-soft); display: flex; flex-direction: column; gap: 2px;
+  min-width: 0;
+}
+.season .s-name { font-family: Sora, system-ui, sans-serif; font-weight: 600; font-size: .85rem; color: var(--indigo-ink); }
+.season .s-sub { font-size: .76rem; color: var(--muted); }
+.season.finale { background: var(--gold-soft); }
+.season.finale .s-name { color: var(--gold); }
+.months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; }
+.months span {
+  font-family: Sora, system-ui, sans-serif; font-size: .66rem; letter-spacing: .06em;
+  color: var(--muted); text-align: center;
+}
+
+/* ---------- gates ---------- */
+.gates { display: flex; flex-direction: column; }
+.gate { display: grid; grid-template-columns: 46px 1fr; gap: 20px; padding: 22px 0; border-top: 1px solid var(--line); }
+.gate:first-child { border-top: none; padding-top: 4px; }
+.gate:last-child { border-bottom: 1px solid var(--line); }
+@media (max-width: 620px) { .gate { grid-template-columns: 1fr; gap: 10px; } }
+.gate .letter {
+  font-family: Sora, system-ui, sans-serif; font-size: .8rem; font-weight: 600;
+  letter-spacing: .04em; color: var(--indigo-ink); background: var(--indigo-soft);
+  border-radius: 5px; height: 30px; display: grid; place-items: center;
+}
+.gate .body { display: flex; flex-direction: column; gap: 8px; }
+.gate h3 { font-size: 1.02rem; }
+.gate p { font-size: .97rem; color: var(--ink-2); }
+.gonogo {
+  margin-top: 4px; border-left: 2px solid var(--teal); padding: 3px 0 3px 16px;
+  font-size: .94rem; color: var(--ink-2);
+}
+.gonogo b {
+  font-family: Sora, system-ui, sans-serif; font-size: .66rem; letter-spacing: .13em;
+  text-transform: uppercase; color: var(--teal); display: block;
+}
+
+/* ---------- generic ---------- */
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+.card.tint { background: var(--card-2); }
+.card-head { display: flex; gap: 12px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.rows { display: flex; flex-direction: column; }
+.row { display: grid; grid-template-columns: 200px 1fr; gap: 8px 26px; padding: 15px 0; border-top: 1px solid var(--line); align-items: baseline; }
+.row:last-child { border-bottom: 1px solid var(--line); }
+@media (max-width: 700px) { .row { grid-template-columns: 1fr; gap: 4px; } }
+.row .k { font-family: Sora, system-ui, sans-serif; font-size: .88rem; font-weight: 600; line-height: 1.4; }
+.row .v { color: var(--ink-2); font-size: .97rem; }
+
+.scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: .94rem; }
+th, td { text-align: left; padding: 12px 16px 12px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+th {
+  font-family: Sora, system-ui, sans-serif; font-size: .68rem; font-weight: 600;
+  letter-spacing: .13em; text-transform: uppercase; color: var(--muted);
+  border-bottom-color: var(--line-2); white-space: nowrap;
+}
+td.num { font-variant-numeric: tabular-nums; font-family: Sora, system-ui, sans-serif; font-weight: 600; white-space: nowrap; }
+tr:last-child td { border-bottom: none; }
+tr.total td { border-top: 1px solid var(--line-2); }
+
+.chip {
+  font-family: Sora, system-ui, sans-serif; font-size: .74rem; font-weight: 600;
+  padding: .18em .55em; border-radius: 3px; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.chip.g { background: var(--teal-soft); color: var(--teal); }
+.chip.a { background: var(--gold-soft); color: var(--gold); }
+.chip.r { background: var(--rose-soft); color: var(--rose); }
+
+ul.plain { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+ul.plain li {
+  padding: 13px 0; border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: 26px 1fr; gap: 16px;
+  align-items: baseline; font-size: .98rem; color: var(--ink-2);
+}
+ul.plain li:last-child { border-bottom: 1px solid var(--line); }
+ul.plain .marker { font-family: Sora, system-ui, sans-serif; font-size: .8rem; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.marker.star { color: var(--gold); }
+.marker.no { color: var(--rose); }
+
+.callout { border-left: 2px solid var(--indigo); padding: 4px 0 4px 20px; color: var(--ink-2); font-size: 1.02rem; }
+.callout.warn { border-left-color: var(--rose); }
+.callout.good { border-left-color: var(--teal); }
+
+.pull {
+  font-family: Sora, system-ui, sans-serif; font-size: clamp(1.15rem, 2.4vw, 1.5rem);
+  font-weight: 600; letter-spacing: -.02em; line-height: 1.32; text-wrap: balance;
+  color: var(--ink); border-top: 1px solid var(--line-2); border-bottom: 1px solid var(--line-2);
+  padding: 26px 0; margin: 0;
+}
+
+.foot {
+  margin-top: 90px; padding-top: 24px; border-top: 1px solid var(--line-2);
+  color: var(--muted); font-size: .88rem;
+  display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+
+.braid-wrap { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 22px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 14px; }
+.braid-wrap svg { width: 100%; height: auto; display: block; }
+.braid-keys { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.bk { display: flex; align-items: center; gap: 8px; font-size: .84rem; color: var(--muted); }
+.bk i { width: 22px; height: 3px; border-radius: 2px; display: block; font-style: normal; }
+.danger td:last-child { color: var(--rose); }
+.count { font-variant-numeric: tabular-nums; font-family: Sora, system-ui, sans-serif; font-weight: 600; }
+.ok { color: var(--teal); } .over { color: var(--rose); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero col">
+    <div class="kicker">
+      <span class="tag on">Daykeep</span>
+      <span class="tag">Rename · listing · braid · module bar</span>
+      <span class="tag">Plan for review</span>
+    </div>
+    <h1>Stop competing on features. Own one idea.</h1>
+    <p class="standfirst">Four pieces of work in dependency order. The first three are days and produce a launch package. The fourth is the real work, and it is sequenced rather than attempted all at once.</p>
+  </header>
+
+  <!-- ============ THE BAR ============ -->
+  <section class="col">
+    <div class="sec-head">
+      <div class="eyebrow">The standard</div>
+      <h2>What “best in market” has to mean</h2>
+      <p class="lede">The competitor is good, has a head start on polish, and owns a strong visual idea. Matching its feature list produces parity — and parity loses to the incumbent every time.</p>
+      <div class="rule"></div>
+    </div>
+
+    <div class="layers">
+      <div class="layer">
+        <div class="num">1</div>
+        <div class="body">
+          <h3>Win a market they are not contesting</h3>
+          <p style="font-size:.97rem;color:var(--ink-2)">Urdu, Hindi and Arabic with real RTL is work Western indie developers don't do — and you have already done it. #1 for “habit tracker” in Pakistan is reachable. #5 globally is not, and is worth less.</p>
+        </div>
+      </div>
+      <div class="layer two">
+        <div class="num">2</div>
+        <div class="body">
+          <h3>Be famous for one thing</h3>
+          <p style="font-size:.97rem;color:var(--ink-2)">Fourteen modules is a positioning problem, not an asset. <strong>Three streaks, one year, something real in the post</strong> is the hook. Everything else is depth you reveal later.</p>
+        </div>
+      </div>
+      <div class="layer three">
+        <div class="num">3</div>
+        <div class="body">
+          <h3>Compete on trust</h3>
+          <p style="font-size:.97rem;color:var(--ink-2)">Encrypted at rest, a private vault, offline-first. A cloud-first competitor would have to rebuild to match it — and you are currently not claiming any of it.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warn" style="margin-top:26px">
+      <strong>Explicitly not doing:</strong> an AI coach (they have one; it is table stakes), social feeds, or a mortality calendar. The last is theirs, and copying it would read as exactly what it was.
+    </div>
+    <div class="callout good" style="margin-top:18px">
+      <strong>And a standard worth saying out loud in the listing:</strong> the app does not manipulate. Streaks show missed days honestly instead of hiding them. Notifications name what is outstanding rather than manufacturing anxiety. No social comparison, no engagement bait. It is the right thing, and it is very hard for a competitor to adopt after the fact.
+    </div>
+  </section>
+
+  <!-- ============ RENAME ============ -->
+  <section class="col">
+    <div class="sec-head">
+      <div class="eyebrow">Work 1</div>
+      <h2>The rename, and the one edit that must never happen</h2>
+      <div class="rule"></div>
+    </div>
+
+    <article class="card">
+      <div class="card-head"><h3>A global find-and-replace of <code>lifeos</code> → <code>daykeep</code> would permanently destroy every user's data</h3><span class="tag call">Read first</span></div>
+      <p>Twelve storage keys carry the old name. Four of them are load-bearing, and two are unrecoverable.</p>
+      <div class="scroll">
+        <table class="danger">
+          <thead><tr><th>Key</th><th>What happens if it changes</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">daykeep.db</td><td>The app opens an empty database</td></tr>
+            <tr><td class="mono">daykeep.db.key</td><td><strong>The existing database becomes permanently unreadable</strong></td></tr>
+            <tr><td class="mono">daykeep.vault.wrapped / .alt / .salt</td><td><strong>The private vault becomes permanently unrecoverable</strong></td></tr>
+            <tr><td class="mono">daykeep.device-id · daykeep.install.id</td><td>Identity resets; 0047 demands a fresh OTP</td></tr>
+            <tr><td class="mono">daykeep.widget.today.v1 · .actions.v1</td><td>Widget snapshot and queued taps lost</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="verdict no"><b>So</b><span>These are not brand surfaces — nobody ever sees them. They stay exactly as they are, and a new test asserts all twelve verbatim, because this is precisely the kind of edit that looks like tidying up.</span></div>
+    </article>
+
+    <div class="stack" style="padding-top:26px">
+      <h3>What actually changes</h3>
+      <div class="rows">
+        <div class="row"><div class="k">Identity</div><div class="v"><code>name</code>, <code>slug</code>, and the <code>lifeos</code> → <code>daykeep</code> URL scheme, which moves every deep link with it.</div></div>
+        <div class="row"><div class="k">Bundle id</div><div class="v"><code>com.daykeep.app</code> → <code>com.daykeep.app</code>. <strong>Last chance</strong> — permanent after the first store publish.</div></div>
+        <div class="row"><div class="k">Android widgets</div><div class="v"><code>DaykeepToday</code> / <code>DaykeepHabits</code>. The name must match the plugin config <em>and</em> the task-handler map, or widgets silently stop rendering.</div></div>
+        <div class="row"><div class="k">Copy</div><div class="v"><strong>43 occurrences × 4 locales = 172 strings</strong>, plus ~25 source files. Includes the share card's “Tracked with Daykeep”.</div></div>
+        <div class="row"><div class="k">Outside the repo</div><div class="v">Brand assets, EAS project, Sentry project, Supabase redirect URL.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LISTING ============ -->
+  <section class="col">
+    <div class="sec-head">
+      <div class="eyebrow">Work 2</div>
+      <h2>The listing, led by the challenge</h2>
+      <div class="rule"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Your title is three characters too long</h3><span class="tag call">Needs a decision</span></div>
+      <p><code>Daykeep — Habits, Journal &amp; Money</code> is <strong class="over">33 characters</strong>. Google Play allows 30.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Title</th><th style="text-align:right">Chars</th><th>Comment</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">Daykeep: Habits &amp; Journal</td><td class="count ok" style="text-align:right">25</td><td>Cleanest. Money is discoverable inside</td></tr>
+            <tr><td class="mono">Daykeep — Habit &amp; Life Tracker</td><td class="count ok" style="text-align:right">30</td><td><strong>Recommended.</strong> Strongest keywords, exactly at the limit</td></tr>
+            <tr><td class="mono">Daykeep: Habits, Notes &amp; Money</td><td class="count ok" style="text-align:right">30</td><td>Keeps money, drops journal</td></tr>
+            <tr><td class="mono">Daykeep — Keep Your Days</td><td class="count ok" style="text-align:right">24</td><td>Brand-led; weakest for search</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="verdict"><b>Why</b><span>“Habit tracker” is what people type; “life tracker” catches the broader intent. The brand does the remembering, the keywords do the finding.</span></div>
+    </div>
+
+    <div class="stack" style="padding-top:26px">
+      <h3>The 80 characters that matter most</h3>
+      <p class="note">The short description appears in search results and above the fold. It is the highest-leverage text in the whole listing.</p>
+      <p class="pull">“Three daily habits. One year. A real gift in the post if you never miss.”</p>
+      <p class="note">71 characters. The whole product in one line, unlike anything else in the category.</p>
+    </div>
+
+    <div class="grid-2" style="margin-top:30px">
+      <div class="card tint">
+        <h3>Description order</h3>
+        <p style="font-size:.94rem;color:var(--ink-2)">The promise → how it works → why it's different → <em>then</em> the module list → private by design → languages. The rules of the challenge <strong>are</strong> the marketing; state them plainly rather than describing features.</p>
+      </div>
+      <div class="card tint">
+        <h3>Screenshots — the first two decide the install</h3>
+        <p style="font-size:.94rem;color:var(--ink-2)">1. The braid mid-run. 2. Today's checklist with one item left — the daily reality. 3. The ladder with the prize visible. 4. The vault. 5. Money. 6. A shot in Urdu or Arabic, invisible to competitors and decisive locally.</p>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:24px">
+      <strong>Write all four listings properly, not machine-translated.</strong> The Urdu, Hindi and Arabic listings are close to uncontested. It is the cheapest ranking available to you, and the competitor is not going to do it.
+    </div>
+  </section>
+
+  <!-- ============ BRAID ============ -->
+  <section class="col">
+    <div class="sec-head">
+      <div class="eyebrow">Work 3</div>
+      <h2>The braid</h2>
+      <p class="lede">One strand per committed module, woven day by day. The picture and the mechanic are the same object — and nobody else has the three-module contract, so nobody else can have this image.</p>
+      <div class="rule"></div>
+    </div>
+
+    <div class="braid-wrap">
+      <svg id="braid" viewBox="0 0 900 120" role="img" aria-label="Three strands woven day by day, with one missed day and one shielded day"></svg>
+      <div class="braid-keys">
+        <span class="bk"><i style="background:var(--indigo)"></i> a strand held</span>
+        <span class="bk"><i style="background:var(--rose)"></i> a module missed — the strand breaks</span>
+        <span class="bk"><i style="background:var(--muted);opacity:.5"></i> a shield spliced the gap</span>
+      </div>
+    </div>
+
+    <div class="rows" style="padding-top:26px">
+      <div class="row"><div class="k">What it encodes</div><div class="v">A clean weave is a day everything held. A gap in one strand is <em>that module</em> missed. A shield shows as a splice — spliced, not broken. A fall is where the braid thins.</div></div>
+      <div class="row"><div class="k">How it's drawn</div><div class="v"><code>react-native-svg</code> only. The repo has no chart library and should not gain one. Phase-shifted sine paths, stroked in each module's tint, newest on the right.</div></div>
+      <div class="row"><div class="k">Motion</div><div class="v">Only today's segment animates — a slow draw-on. Everything else is static: motion everywhere is what makes an app feel cheap. Disabled under reduced-motion.</div></div>
+      <div class="row"><div class="k">It replaces</div><div class="v"><code>day-chain.tsx</code> and <code>module-chains.tsx</code>, which currently read as a version of the competitor's grid.</div></div>
+    </div>
+  </section>
+
+  <!-- ============ MODULES ============ -->
+  <section class="col">
+    <div class="sec-head">
+      <div class="eyebrow">Work 4</div>
+      <h2>Making the seven modules iconic</h2>
+      <p class="lede">You cannot make seven modules excellent at once. A bar that applies to all of them, one signature moment each, and an order.</p>
+      <div class="rule"></div>
+    </div>
+
+    <div class="stack">
+      <h3>The bar — six tests, per module</h3>
+      <ul class="plain">
+        <li><span class="marker">1</span><span><strong>Ten seconds.</strong> Cold start to a logged item, one hand, no typing where a tap will do.</span></li>
+        <li><span class="marker">2</span><span><strong>One signature moment.</strong> The thing that gets screenshotted.</span></li>
+        <li><span class="marker">3</span><span><strong>Empty states teach.</strong> Never a blank screen with an icon — show what it looks like in use.</span></li>
+        <li><span class="marker">4</span><span><strong>Motion where it means something.</strong> The tick landing, the rung unlocking. Nowhere else.</span></li>
+        <li><span class="marker">5</span><span><strong>It survives the plane.</strong> Fully usable offline — you have this architecturally and are not claiming it.</span></li>
+        <li><span class="marker">6</span><span><strong>It leaves the app.</strong> A widget entry, a share card, or a notification action.</span></li>
+      </ul>
+    </div>
+
+    <div class="stack" style="padding-top:30px">
+      <h3>The signature moment, module by module</h3>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Module</th><th>Remembered for</th><th>Already built</th><th>Missing</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Habits</strong></td><td>The braid, and the streak wall</td><td>Streaks, heatmap, routines</td><td>The braid; the celebration</td></tr>
+            <tr><td><strong>Journal</strong></td><td><strong>“On this day”</strong> — your entry from a year ago, surfaced today</td><td>Entries, prompts, reflections, streak</td><td class="over">The resurfacing loop. The strongest emotional hook in the app, and it does not exist</td></tr>
+            <tr><td><strong>Tasks</strong></td><td>Capture in under three seconds, from anywhere</td><td>Tasks, categories, due dates, widget</td><td>Quick capture; natural-language dates</td></tr>
+            <tr><td><strong>Notes</strong></td><td><strong>Backlinks</strong> — every note that mentions this one</td><td><code>entry_links</code> wiki-links exist</td><td class="ok">Just the panel. The data is already there</td></tr>
+            <tr><td><strong>Goals</strong></td><td>The pace verdict: ahead / on track / behind</td><td>Timeline, expected-pace line</td><td class="ok">Almost nothing — needs surfacing, not building</td></tr>
+            <tr><td><strong>Study</strong></td><td><strong>“Your best hour”</strong> — and scheduling into it</td><td>Insights, best time of day</td><td>Acting on the insight rather than displaying it</td></tr>
+            <tr><td><strong>Sleep</strong></td><td>Time in bed vs actually asleep, and the week's debt</td><td>Fell-asleep minutes, asleep minutes</td><td>The debt number; the link to next-day focus</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="callout good" style="margin-top:26px">
+      <strong>Two things stand out from that table.</strong> Journal and Notes have the highest ratio of impact to work — the backlink panel is a view over data that already exists, and “On this day” is a query plus a card. And Goals, Study and Sleep are mostly surfacing work that was already done and then buried.
+    </div>
+
+    <div class="stack" style="padding-top:30px">
+      <h3>The order</h3>
+      <ul class="plain">
+        <li><span class="marker">1</span><span><strong>Habits</strong> — the braid ships with the rebrand; it is the signature image.</span></li>
+        <li><span class="marker">2</span><span><strong>Journal</strong> — “On this day” is why people return daily rather than dutifully.</span></li>
+        <li><span class="marker">3</span><span><strong>Notes</strong> — backlinks, the cheapest real differentiator on the list.</span></li>
+        <li><span class="marker">4</span><span><strong>Tasks</strong> — quick capture; the most-used module, so the ten-second test bites hardest here.</span></li>
+        <li><span class="marker">5</span><span><strong>Goals, Study, Sleep</strong> — surface what exists; smallest gaps.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ DECISIONS ============ -->
+  <section class="col">
+    <div class="sec-head">
+      <div class="eyebrow">Blocking</div>
+      <h2>Three decisions I need from you</h2>
+      <div class="rule"></div>
+    </div>
+    <div class="rows">
+      <div class="row"><div class="k">The title</div><div class="v">Recommended: <code>Daykeep — Habit &amp; Life Tracker</code>. Yours is three characters over Play's limit.</div></div>
+      <div class="row"><div class="k">The bundle id</div><div class="v"><code>com.daykeep.app</code> unless you want something else. This is the last moment it can change.</div></div>
+      <div class="row"><div class="k">The gift</div><div class="v">The listing's strongest line promises something real in the post. That has to be true before it goes live — and it is Gate B work that is not built.</div></div>
+    </div>
+  </section>
+
+  <footer class="foot col">
+    <span>Daykeep — rename, positioning and the road to best-in-class</span>
+    <span><code>docs/DAYKEEP_PLAN.md</code></span>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  const svg = document.getElementById('braid');
+  if (!svg) return;
+
+  const W = 900, H = 120, MID = H / 2, AMP = 26, PERIOD = 120;
+  const DAY = 30;                 // px per day
+  const DAYS = Math.floor(W / DAY);
+  const MISSED = 18;              // a strand breaks here
+  const SHIELDED = 23;            // and a shield splices here
+
+  const css = getComputedStyle(document.documentElement);
+  const tone = (name) => css.getPropertyValue(name).trim();
+  const STRAND = [tone('--indigo'), tone('--teal'), tone('--gold')];
+
+  const y = (x, phase) => MID + AMP * Math.sin((x / PERIOD) * Math.PI * 2 + phase);
+
+  /** One strand as a run of path segments, broken where a day was lost. */
+  function strand(index) {
+    const phase = (index * Math.PI * 2) / 3;
+    const parts = [];
+    let current = [];
+
+    for (let d = 0; d < DAYS; d++) {
+      // Only the first strand is the one that was missed — a gap belongs to a
+      // module, not to the day.
+      const broken = index === 0 && (d === MISSED || d === SHIELDED);
+      if (broken) {
+        if (current.length > 1) parts.push({ points: current, kind: 'held' });
+        parts.push({ points: [[d * DAY, y(d * DAY, phase)], [(d + 1) * DAY, y((d + 1) * DAY, phase)]],
+                     kind: d === SHIELDED ? 'shield' : 'miss' });
+        current = [];
+        continue;
+      }
+      for (let s = 0; s <= 6; s++) {
+        const x = d * DAY + (s / 6) * DAY;
+        current.push([x, y(x, phase)]);
+      }
+    }
+    if (current.length > 1) parts.push({ points: current, kind: 'held' });
+    return parts;
+  }
+
+  const d = (points) =>
+    points.map(([x, yy], i) => (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + yy.toFixed(1)).join(' ');
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const frag = document.createDocumentFragment();
+
+  // A hairline ghost under everything, so a gap reads as absence rather than as
+  // nothing having been drawn.
+  for (let i = 0; i < 3; i++) {
+    const phase = (i * Math.PI * 2) / 3;
+    const pts = [];
+    for (let x = 0; x <= W; x += 5) pts.push([x, y(x, phase)]);
+    const ghost = document.createElementNS(ns, 'path');
+    ghost.setAttribute('d', d(pts));
+    ghost.setAttribute('fill', 'none');
+    ghost.setAttribute('stroke', tone('--line'));
+    ghost.setAttribute('stroke-width', '1');
+    frag.appendChild(ghost);
+  }
+
+  for (let i = 0; i < 3; i++) {
+    for (const part of strand(i)) {
+      const path = document.createElementNS(ns, 'path');
+      path.setAttribute('d', d(part.points));
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-linecap', 'round');
+      if (part.kind === 'held') {
+        path.setAttribute('stroke', STRAND[i]);
+        path.setAttribute('stroke-width', '4');
+      } else if (part.kind === 'shield') {
+        path.setAttribute('stroke', tone('--muted'));
+        path.setAttribute('stroke-width', '3');
+        path.setAttribute('stroke-dasharray', '3 4');
+        path.setAttribute('opacity', '0.7');
+      } else {
+        path.setAttribute('stroke', tone('--rose'));
+        path.setAttribute('stroke-width', '4');
+        path.setAttribute('opacity', '0.35');
+        path.setAttribute('stroke-dasharray', '2 6');
+      }
+      frag.appendChild(path);
+    }
+  }
+
+  svg.appendChild(frag);
+})();
+</script>
+
+</body>
+</html>

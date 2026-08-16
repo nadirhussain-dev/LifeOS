@@ -92,7 +92,7 @@ export const useProfileStore = create<ProfileState>()(
         }),
     }),
     {
-      name: 'lifeos-profile',
+      name: 'daykeep-profile',
       storage: createJSONStorage(() => AsyncStorage),
       // Don't persist the runtime hydration flag.
       partialize: ({ hydrated: _hydrated, ...rest }) => rest,

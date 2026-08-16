@@ -1,5 +1,5 @@
 /**
- * What LifeOS will accept as a password.
+ * What Daykeep will accept as a password.
  *
  * Supabase's default floor is six characters of anything, which in practice
  * means `123456` guards a journal, a cycle tracker and a private space. This is
@@ -56,7 +56,9 @@ const COMMON = new Set([
   'p@ssw0rd',
   'p@ssword1',
   'lifeos1234',
+  'daykeep1234',
   'lifeospassword',
+  'daykeeppassword',
   'changeme123',
   'trustno1234',
 ]);

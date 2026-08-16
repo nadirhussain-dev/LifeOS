@@ -15,8 +15,19 @@ import { exportOwnServerData } from '@/features/moderation/services/self-data-ex
 import { useModerationStore } from '@/features/moderation/store/moderation-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { notify } from '@/lib/dialog-store';
+import { env } from '@/lib/env';
 
-const APPEAL_EMAIL = 'nh262464@gmail.com';
+/**
+ * The appeal address, read from config rather than pinned here.
+ *
+ * It was a second hardcoded copy of the support address, which is the shape of
+ * bug that only surfaces at the worst moment: change the contact everywhere
+ * else, ship, and the one screen belonging to people who have been locked out
+ * of their account keeps pointing at an inbox nobody reads. An appeal route
+ * that silently goes nowhere is worse than no appeal route, because the person
+ * on the other end believes they have appealed.
+ */
+const APPEAL_EMAIL = env.EXPO_PUBLIC_SUPPORT_EMAIL;
 
 /**
  * Shown when the account is blocked. Covers the whole app, and there is no way

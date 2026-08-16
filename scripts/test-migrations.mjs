@@ -944,7 +944,7 @@ await test('0010 recording usage requires a session', async () => {
 });
 
 await test('0010 a signed-out install can be counted, once per day', async () => {
-  // Guest mode is a supported way to use LifeOS, so actives measured only from
+  // Guest mode is a supported way to use Daykeep, so actives measured only from
   // usage_daily would silently under-report by everyone without an account.
   const install = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
   await asAnon(db, async () => {

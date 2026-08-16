@@ -85,7 +85,7 @@ describe('the client half', () => {
    *  in the shared fetch rather than in each call site. */
   it('stamps the device id on every Supabase request', () => {
     const client = read('lib/supabase.ts');
-    expect(client).toContain('x-lifeos-device');
+    expect(client).toContain('x-daykeep-device');
     expect(client).toContain('getDeviceId');
     expect(client).toMatch(/global:\s*\{[\s\S]*fetch:/);
   });

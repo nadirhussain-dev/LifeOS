@@ -1,10 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { useAuthStore } from '@/features/auth/services/auth-store';
-import type { ChainDay } from '@/features/challenge/components/day-chain';
 import { buildChecklist } from '@/features/challenge/services/challenge-math';
 import { currentDay, useChallengeStore } from '@/features/challenge/store/challenge-store';
-import type { ChallengeTier, ChecklistItem } from '@/features/challenge/types/challenge.types';
+import type {
+  ChainDay,
+  ChallengeTier,
+  ChecklistItem,
+} from '@/features/challenge/types/challenge.types';
 import { isSupabaseConfigured } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
 

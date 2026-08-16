@@ -119,7 +119,7 @@ describe('key derivation', () => {
     'gives a different key for the same PIN under a different salt',
     async () => {
       // Without a per-install salt, one precomputed table would open every
-      // LifeOS vault whose owner picked the same PIN.
+      // Daykeep vault whose owner picked the same PIN.
       const a = await deriveKek('482193', randomBytes(16));
       const b = await deriveKek('482193', randomBytes(16));
       expect(Array.from(a)).not.toEqual(Array.from(b));

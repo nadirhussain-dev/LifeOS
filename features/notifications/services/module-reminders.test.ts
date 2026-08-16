@@ -294,7 +294,7 @@ describe('the chosen reminder tone', () => {
     await syncTaskReminder(taskDueIn(2 * HOUR));
 
     expect(mockQueue[0].channelId).toContain('beacon');
-    expect(mockQueue[0].sound).toBe('lifeos_beacon.wav');
+    expect(mockQueue[0].sound).toBe('daykeep_beacon.wav');
   });
 
   it('moves the reminders of every category to the new tone together', async () => {
@@ -335,7 +335,7 @@ describe('the chosen reminder tone', () => {
     await syncTaskReminder(taskDueIn(2 * HOUR));
 
     expect(mockQueue[0].channelId).toContain('chime');
-    expect(mockQueue[0].sound).toBe('lifeos_chime.wav');
+    expect(mockQueue[0].sound).toBe('daykeep_chime.wav');
   });
 });
 

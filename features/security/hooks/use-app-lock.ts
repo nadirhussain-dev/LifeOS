@@ -6,7 +6,7 @@ import { useAppLockStore } from '@/features/security/store/app-lock-store';
 
 /**
  * Drives the app lock: raises the shield on cold start (if enabled) and again
- * whenever the app returns from the background, so LifeOS is private the moment
+ * whenever the app returns from the background, so Daykeep is private the moment
  * it's reopened. Mounted once from the root layout. Renders nothing.
  */
 export function useAppLock() {

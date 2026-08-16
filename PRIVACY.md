@@ -1,13 +1,13 @@
-# LifeOS — Privacy Policy
+# Daykeep — Privacy Policy
 
 _Last updated: 2026-08-10_
 
-LifeOS ("the app", "we") is a personal life-organization app. Your privacy is
-central to how it's built: **LifeOS is local-first — your data lives on your
+Daykeep ("the app", "we") is a personal life-organization app. Your privacy is
+central to how it's built: **Daykeep is local-first — your data lives on your
 device by default**, and only leaves it if you choose to create an account and
 enable cloud sync.
 
-## What data LifeOS handles
+## What data Daykeep handles
 
 **On your device (always local):**
 
@@ -37,7 +37,7 @@ We ask once, in the app, and collect nothing unless you say yes. If you decline
 or simply never answer, no usage data is collected at all. You can change your
 mind either way in **Settings → Sync & Account → Usage statistics**.
 
-If you do say yes, so we can tell how many people use LifeOS and which parts of
+If you do say yes, so we can tell how many people use Daykeep and which parts of
 it are worth building on, the app reports a small daily count:
 
 - **If you have an account:** for each day, which modules you opened and how
@@ -61,7 +61,7 @@ or write your data. Data is transmitted over HTTPS.
 
 ## Permissions
 
-LifeOS requests device permissions only for features you use:
+Daykeep requests device permissions only for features you use:
 
 - **Notifications** — to deliver reminders you set.
 - **Camera / Photos** — to add media to the gallery, notes, and journal.
@@ -97,7 +97,7 @@ LifeOS requests device permissions only for features you use:
 
 ## The private space
 
-LifeOS has an optional, separately locked area — a vault for photos and files,
+Daykeep has an optional, separately locked area — a vault for photos and files,
 and modules for things people generally don't keep in a shared app (cycle
 tracking, recovery, a relationship diary). It works differently from the rest of
 the app on purpose:
@@ -105,7 +105,7 @@ the app on purpose:
 - **It is encrypted, and locked behind a separate PIN.** Everything in the
   private space — including which modules you use and the dates on your entries
   — is stored as encrypted data. Nobody with your phone but not your PIN can
-  read it. See "What LifeOS staff can access" below for whether we can.
+  read it. See "What Daykeep staff can access" below for whether we can.
 - **There is no PIN recovery.** If you forget it, you lose access to your
   private space and we cannot restore it for you. You are told this before you
   choose a PIN.
@@ -151,7 +151,7 @@ that damages data, or a feature depends on a service that is down. If we do:
 - If your device can't reach us, nothing is switched off. Modules are only ever
   disabled by an explicit instruction, never by a failed connection.
 
-## What LifeOS staff can access
+## What Daykeep staff can access
 
 Please read this section carefully — it is the most important thing on this
 page.
@@ -172,8 +172,8 @@ respond to legal requests, and operate the service.
   who, when, from where, and why.
 
 **Your private space, including the Vault, Cycle, Recovery and Us modules.**
-LifeOS is built with the _capability_ to support staff access here — a copy of
-its encryption key sealed so that only LifeOS staff could open it, for abuse
+Daykeep is built with the _capability_ to support staff access here — a copy of
+its encryption key sealed so that only Daykeep staff could open it, for abuse
 investigation and legal compliance. **We are not switching this on.** No key is
 generated or uploaded, on this account or any other, so nobody but you can
 decrypt your private space — including us.
@@ -193,7 +193,7 @@ exist in the code today; there is simply nothing for them to gate here yet.
   on your device.
 - Your PIN. We cannot recover it or tell you what it is.
 
-If this is not acceptable to you, use LifeOS in guest mode, or keep sensitive
+If this is not acceptable to you, use Daykeep in guest mode, or keep sensitive
 material out of the app. That is a legitimate choice and the app works fully
 offline.
 
@@ -203,12 +203,12 @@ you reported is attached to that report so we can review it.
 ## Profile picture
 
 Your profile picture and display name are visible to people you share expense
-groups with. They are the only things in LifeOS that other users can see. Photo
+groups with. They are the only things in Daykeep that other users can see. Photo
 location data (EXIF) is stripped before upload.
 
 ## Account restrictions
 
-LifeOS has one feature where you interact with other people: shared expense
+Daykeep has one feature where you interact with other people: shared expense
 groups and the invitations that create them. To keep that from being used for
 spam, we apply automatic limits (for example, on how many invitations one
 account can send in an hour) and can restrict or block an account manually.
@@ -230,7 +230,7 @@ Builds without it configured send nothing.
 
 ## Children
 
-LifeOS is not directed to children under 13, and we do not knowingly collect
+Daykeep is not directed to children under 13, and we do not knowingly collect
 data from them.
 
 ## Changes
@@ -243,7 +243,7 @@ updated" date above.
 Depending on where you live you have the right to access your data, correct it,
 delete it, take it elsewhere, and object to or restrict some processing.
 
-In LifeOS most of these are buttons rather than requests: **Export data** gives
+In Daykeep most of these are buttons rather than requests: **Export data** gives
 you a machine-readable copy, **Delete account** erases the cloud side, and
 **Clear all data** erases the device. For anything those do not cover — including
 a data-access request from an account that has been blocked, which cannot read
@@ -257,9 +257,9 @@ usage statistics at any time without losing any functionality.
 
 These terms govern use of the app, including the rules for shared expense groups
 and what happens when content is reported:
-https://nadirhussain786.github.io/LifeOS/terms/
+https://nadirhussain786.github.io/Daykeep/terms/
 
 ## Contact
 
 Questions about privacy or your data, and data-access requests:
-**nh262464@gmail.com**
+**daykeepsupport@gmail.com**

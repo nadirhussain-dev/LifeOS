@@ -50,7 +50,7 @@ export function localDateKey(at: number): string {
   return `${d.getFullYear()}-${month}-${day}`;
 }
 
-const QUEUE_KEY = 'lifeos.widget.actions.v1';
+const QUEUE_KEY = 'daykeep.widget.actions.v1';
 
 /**
  * Bounded, and it drops the *oldest* on overflow.

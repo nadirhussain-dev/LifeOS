@@ -54,3 +54,16 @@ export type ChecklistItem = {
   writes: number;
   done: boolean;
 };
+
+/**
+ * One day of the ledger, as the braid draws it.
+ *
+ * `modulesHit` is what makes a per-module strand possible at all: the outcome
+ * alone says whether the day held, and only the array says *which* commitment
+ * was the one that didn't.
+ */
+export type ChainDay = {
+  localDay: string;
+  outcome: 'qualified' | 'shielded' | 'missed';
+  modulesHit: string[];
+};

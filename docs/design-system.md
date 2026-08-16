@@ -1,4 +1,4 @@
-# LifeOS Design System
+# Daykeep Design System
 
 > A calm, spatial operating system for a whole life. Not a trendy UI — a
 > premium, trustworthy environment people reach for every day because it lowers
@@ -84,7 +84,7 @@ Behavioral science applied to make good habits **easier**, not usage
 **compulsive**. We reduce friction toward the user's own goals rather than
 engineering cravings.
 
-| Principle                    | How LifeOS uses it                                                                                      |
+| Principle                    | How Daykeep uses it                                                                                     |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------- |
 | **Progress principle**       | Small visible wins are the strongest daily motivator. Rings fill, streaks tick, the day's bar advances. |
 | **Goal-gradient effect**     | Near-complete rings brighten with a subtle glow, nudging the last step without pressure.                |
@@ -409,7 +409,7 @@ t.typography.stat; // { size: 34, family: Sora ExtraBold, tracking: -1 }
 
 ---
 
-_This system extends LifeOS's existing language (emerald accent, Sora/Literata,
+_This system extends Daykeep's existing language (emerald accent, Sora/Literata,
 gradient rings) rather than replacing it. Keep `global.css`,
 `tailwind.config.js`, and `constants/design-tokens.ts` in sync when values
 change._

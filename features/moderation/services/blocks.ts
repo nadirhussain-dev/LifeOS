@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
  * Blocking another user.
  *
  * The operator-side moderation built in 0010–0019 all routes through somebody
- * at LifeOS deciding something, which is the right shape for adjudication and
+ * at Daykeep deciding something, which is the right shape for adjudication and
  * the wrong shape for the moment you actually want it. This is the part a user
  * can do themselves, immediately, without explaining themselves to anybody.
  *

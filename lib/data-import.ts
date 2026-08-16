@@ -6,7 +6,7 @@ import { getDb, getRawDb } from '@/database/client';
 import * as schema from '@/database/schema';
 
 /**
- * Restores a `lifeos-export-*.json` file produced by data-export.ts.
+ * Restores a `daykeep-export-*.json` file produced by data-export.ts.
  *
  * The export existed without a counterpart, which made it a file you could
  * generate and then do nothing with. That is not a backup — it only becomes one

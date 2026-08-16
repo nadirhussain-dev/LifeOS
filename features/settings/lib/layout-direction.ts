@@ -3,7 +3,7 @@ import { DevSettings, I18nManager, Platform } from 'react-native';
 
 import type { Language } from '@/features/settings/store/language-store';
 
-/** Languages LifeOS supports that are written right-to-left. */
+/** Languages Daykeep supports that are written right-to-left. */
 export const RTL_LANGUAGES: readonly Language[] = ['ur', 'ar'];
 
 export function isRTL(language: Language): boolean {

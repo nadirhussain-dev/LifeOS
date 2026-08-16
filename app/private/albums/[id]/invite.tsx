@@ -70,7 +70,7 @@ export default function AlbumInviteScreen() {
           albumKey,
         });
         setBundle(b);
-        // Best-effort awareness nudge — no-op if the invitee has no LifeOS
+        // Best-effort awareness nudge — no-op if the invitee has no Daykeep
         // account yet or no device registered; the actual invite still
         // travels via the link/share sheet below either way.
         if (member.email) {

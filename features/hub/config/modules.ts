@@ -20,7 +20,7 @@ import { moduleTints, type TintPair } from '@/constants/design-tokens';
 import type { SearchResultKind } from '@/features/search/services/global-search';
 
 /**
- * The Hub is LifeOS's "app drawer" — the bottom tab bar holds only the four
+ * The Hub is Daykeep's "app drawer" — the bottom tab bar holds only the four
  * daily drivers (Dashboard, Tasks, Habits, Journal) plus this launcher, and
  * everything else lives here as a grid. Each entry is the single source of
  * truth for a module's identity: its accent tint, icon, and route. A module

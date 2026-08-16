@@ -2,9 +2,14 @@
  * Dynamic layer over app.json.
  *
  * Everything static still lives in app.json — Expo reads it first and hands it
- * to the function below as `config`. This file exists for one job: making a
- * release EAS build FAIL, loudly and with instructions, when the Supabase
- * credentials aren't present in the build environment.
+ * to the function below as `config`. This file has two jobs:
+ *
+ *  1. Making a release EAS build FAIL, loudly and with instructions, when the
+ *     Supabase credentials aren't present in the build environment.
+ *  2. Giving a staging build its own identity — `com.daykeep.app.staging`,
+ *     "Daykeep (Staging)", `daykeep-staging://` — so it installs alongside the
+ *     real app instead of replacing it, and can never be mistaken for it. The
+ *     rules live in scripts/build-env.js; docs/ENVIRONMENTS.md is the guide.
  *
  * Why that's the fix. `process.env.EXPO_PUBLIC_*` is inlined by Metro at bundle
  * time, so it depends entirely on those variables existing in the EAS build
@@ -25,20 +30,22 @@
  * variable being absent, and `extra` reads from the same absent variable.
  */
 
-/** The two credentials without which auth and sync cannot work at all. */
-const REQUIRED_VARS = ['EXPO_PUBLIC_SUPABASE_URL', 'EXPO_PUBLIC_SUPABASE_ANON_KEY'];
-
-/** Build profiles that must not ship without working credentials. `development`
- * is exempt: a dev client is routinely built before a backend exists, and guest
- * mode is a legitimate way to run the app. */
-const CREDENTIALED_PROFILES = ['preview', 'production', 'production-apk'];
+const {
+  CREDENTIALED_PROFILES,
+  PROFILE_ENVIRONMENT,
+  REQUIRED_VARS,
+  assertEnvironmentAgrees,
+  projectRef,
+  resolveEnvironment,
+  withIdentity,
+} = require('./scripts/build-env');
 
 function credentialsHelp(missing) {
   const profile = process.env.EAS_BUILD_PROFILE ?? 'production';
   // eas.json maps production-apk onto the production environment via `extends`.
   const environment = profile === 'production-apk' ? 'production' : profile;
   const commands = missing
-    .map((name) => `  eas env:create --environment ${environment} --name ${name} --value "..."`)
+    .map((name) => `  eas env:set --environment ${environment} --name ${name} --value "..."`)
     .join('\n');
 
   return [
@@ -93,20 +100,105 @@ function withAdmobAppIds(config) {
 }
 
 module.exports = ({ config }) => {
+  const environment = resolveEnvironment();
+  const profile = process.env.EAS_BUILD_PROFILE;
+  const onBuildServer = !!process.env.EAS_BUILD && !!profile;
+  const credentialed = onBuildServer && CREDENTIALED_PROFILES.includes(profile);
+
+  /**
+   * Profile and declared environment must agree before anything else is
+   * checked. A build reading the wrong environment's variables would otherwise
+   * pass every check below — its credentials are present and valid, they just
+   * belong to the other database.
+   */
+  const disagreement = assertEnvironmentAgrees();
+  if (disagreement && credentialed) {
+    throw new Error(`\n\n${disagreement}\n`);
+  } else if (disagreement) {
+    console.warn(`[daykeep] ${disagreement}`);
+  }
+
   const missing = REQUIRED_VARS.filter((name) => !(process.env[name] ?? '').trim());
 
   if (missing.length > 0) {
-    const profile = process.env.EAS_BUILD_PROFILE;
     // Only on the build server: EAS also evaluates this config locally to compute
     // the fingerprint, where the variables are legitimately absent.
-    if (process.env.EAS_BUILD && profile && CREDENTIALED_PROFILES.includes(profile)) {
+    if (credentialed) {
       // Fail here, where the message can still be read, rather than on a phone.
       throw new Error(`\n\n${credentialsHelp(missing)}\n`);
     }
     console.warn(
-      `[lifeos] ${missing.join(', ')} not set — auth and cloud sync will be disabled ` +
+      `[daykeep] ${missing.join(', ')} not set — auth and cloud sync will be disabled ` +
         '(guest mode still works). See .env.example.',
     );
+  }
+
+  /**
+   * A release build must say which environment it is, rather than inheriting
+   * the fallback. Without this, forgetting the variable in the production EAS
+   * environment produces an app that silently calls itself development —
+   * meaning the in-app badge that distinguishes a staging install from a real
+   * one is missing from precisely the build where being wrong costs the most.
+   */
+  if (credentialed && !(process.env.EXPO_PUBLIC_APP_ENV ?? '').trim()) {
+    const easEnvironment = profile === 'production-apk' ? 'production' : profile;
+    throw new Error(
+      `\n\nEXPO_PUBLIC_APP_ENV is not set for the "${profile}" build.\n\n` +
+        'It decides the app id, the app name, the deep-link scheme and the\n' +
+        'in-app environment badge, so a build without it is not identifiable\n' +
+        'once it is installed. Set it next to the Supabase credentials:\n\n' +
+        `  eas env:set --environment ${easEnvironment} --name EXPO_PUBLIC_APP_ENV ` +
+        `--value "${PROFILE_ENVIRONMENT[profile]}"\n\n` +
+        'See docs/ENVIRONMENTS.md.\n',
+    );
+  }
+
+  /**
+   * Printed on every build, including local ones. The project ref is public and
+   * is the only part of the credentials safe to log — and "which Supabase
+   * project did this APK get" is otherwise a question with no answer short of
+   * unzipping the bundle.
+   */
+  const ref = projectRef(process.env.EXPO_PUBLIC_SUPABASE_URL);
+  console.log(
+    `[daykeep] environment=${environment}` +
+      (profile ? ` profile=${profile}` : '') +
+      ` supabase=${ref ?? '(none)'}`,
+  );
+
+  /**
+   * Sentry is optional, and eas.json disables the source-map upload on every
+   * profile so a build can never fail for want of a Sentry token. The cost is
+   * real but silent — production stack traces arrive minified, which is the
+   * difference between a stack trace and a wall of `a.b.c(d)` — so it is said
+   * out loud here rather than discovered during an incident.
+   *
+   * Same shape as the AdMob warning below: a soft default that still ships,
+   * with the consequence stated. Contrast the Supabase checks above, which
+   * throw, because those produce an app that cannot work at all.
+   */
+  if (environment === 'production' && onBuildServer) {
+    const uploadDisabled = (process.env.SENTRY_DISABLE_AUTO_UPLOAD ?? '').trim() === 'true';
+    const hasSentryCreds = ['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN'].every((name) =>
+      (process.env[name] ?? '').trim(),
+    );
+
+    if (!(process.env.EXPO_PUBLIC_SENTRY_DSN ?? '').trim()) {
+      console.warn(
+        '[daykeep] EXPO_PUBLIC_SENTRY_DSN not set for the "production" build — crash and ' +
+          'error reporting is OFF. Nothing will be reported from real devices. See .env.example.',
+      );
+    } else if (uploadDisabled) {
+      console.warn(
+        '[daykeep] Sentry source-map upload is disabled — production stack traces will be ' +
+          'MINIFIED and largely unreadable. To enable it: set SENTRY_ORG, SENTRY_PROJECT and ' +
+          'SENTRY_AUTH_TOKEN in the production EAS environment, then remove ' +
+          'SENTRY_DISABLE_AUTO_UPLOAD from the "production" profile in eas.json.' +
+          (hasSentryCreds
+            ? ' (The three variables are already set — only eas.json is holding it back.)'
+            : ''),
+      );
+    }
   }
 
   if (
@@ -115,12 +207,12 @@ module.exports = ({ config }) => {
     !ADMOB_IOS_APP_ID
   ) {
     console.warn(
-      '[lifeos] ADMOB_ANDROID_APP_ID/ADMOB_IOS_APP_ID not set for the "production" build — ' +
+      '[daykeep] ADMOB_ANDROID_APP_ID/ADMOB_IOS_APP_ID not set for the "production" build — ' +
         "shipping Google's universal TEST AdMob App IDs. Fine for internal testing, but Google " +
         'policy prohibits serving test ads to real users once this reaches the store. ' +
         'See .env.example.',
     );
   }
 
-  return withAdmobAppIds(config);
+  return withIdentity(withAdmobAppIds(config), environment);
 };

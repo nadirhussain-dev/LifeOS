@@ -1,7 +1,7 @@
 /**
  * Shared expense groups. Mirrors supabase/migrations/0003_expense_groups.sql.
  *
- * Unlike the rest of LifeOS these rows are not mirrored into SQLite: a group is
+ * Unlike the rest of Daykeep these rows are not mirrored into SQLite: a group is
  * shared, so it has many writers, and there is no honest automatic merge for
  * two people editing the same amount offline. Supabase is the source of truth
  * and react-query holds the cache.

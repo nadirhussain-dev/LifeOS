@@ -1,7 +1,7 @@
 import Svg, { G, Rect } from 'react-native-svg';
 
 /**
- * The LifeOS mark.
+ * The Daykeep mark.
  *
  * Six blades leaving a hexagonal opening — a shutter mid-turn. It is the only
  * mark in the set whose negative space does the work, which is what keeps it
@@ -24,7 +24,7 @@ import Svg, { G, Rect } from 'react-native-svg';
 const BLADE = { x: 46, y: 11, width: 35, height: 14.5, rx: 5.5 };
 const ANGLES = [0, 60, 120, 180, 240, 300];
 
-export function LifeOSMark({
+export function DaykeepMark({
   size = 40,
   color = '#ffffff',
   /** Kept for call-site compatibility. Aperture has no receded layer — every

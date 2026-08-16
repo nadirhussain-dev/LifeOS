@@ -79,7 +79,7 @@ export function ReadyStep({
         </View>
       }
       footer={
-        <Button variant="accent" size="lg" label={t('onboarding.openLifeOS')} onPress={onFinish} />
+        <Button variant="accent" size="lg" label={t('onboarding.openDaykeep')} onPress={onFinish} />
       }
     >
       {lines.length > 0 ? (

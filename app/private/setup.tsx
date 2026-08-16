@@ -31,7 +31,7 @@ import { alpha } from '@/lib/color';
  * First run of the private space: choose what goes in it, choose a PIN, and be
  * told plainly that a forgotten PIN means the data is gone.
  *
- * The warning is not boilerplate. This is the one place in LifeOS where losing
+ * The warning is not boilerplate. This is the one place in Daykeep where losing
  * a credential destroys data with no recovery path, and burying that would be
  * the single worst thing this feature could do to somebody.
  */

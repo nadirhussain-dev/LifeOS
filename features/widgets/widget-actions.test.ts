@@ -67,7 +67,7 @@ describe('the queue', () => {
   it('survives a corrupted queue rather than throwing', async () => {
     // This is read on launch, ahead of the first frame. A half-written value
     // from an older build must cost the queue, not the app.
-    await AsyncStorage.setItem('lifeos.widget.actions.v1', '{not json');
+    await AsyncStorage.setItem('daykeep.widget.actions.v1', '{not json');
 
     expect(await readWidgetActions()).toEqual([]);
   });

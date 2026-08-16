@@ -37,6 +37,14 @@ module.exports = {
    */
   moduleNameMapper: {
     '^lucide-react-native$': '<rootDir>/test/lucide-stub.js',
+    /**
+     * The Deno edge functions import supabase-js by URL, which Jest cannot
+     * resolve — so until this mapping existed they could not be tested at all,
+     * and they are excluded from both tsconfig and eslint besides. That blind
+     * spot is why the invite email survived the Daykeep rename still saying
+     * "LifeOS". See test/supabase-js-stub.js.
+     */
+    '^https://esm\\.sh/@supabase/supabase-js@2$': '<rootDir>/test/supabase-js-stub.js',
   },
   /**
    * See test/async-storage-setup.js — without it, every test that touches a

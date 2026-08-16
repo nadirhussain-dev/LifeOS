@@ -108,7 +108,7 @@ describe('the tone library', () => {
 
   it('derives every filename from its id, so the two cannot drift', () => {
     for (const sound of custom) {
-      expect(sound.file).toBe(`lifeos_${sound.id}.wav`);
+      expect(sound.file).toBe(`daykeep_${sound.id}.wav`);
     }
   });
 
@@ -159,8 +159,8 @@ describe('the tone library', () => {
 
 describe('the two platform shapes of a tone', () => {
   it('gives Android channels a filename and iOS content the same filename', () => {
-    expect(channelSoundFor('chime')).toBe('lifeos_chime.wav');
-    expect(contentSoundFor('chime')).toBe('lifeos_chime.wav');
+    expect(channelSoundFor('chime')).toBe('daykeep_chime.wav');
+    expect(contentSoundFor('chime')).toBe('daykeep_chime.wav');
   });
 
   it('spells the system tone the same way in both', () => {

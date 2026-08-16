@@ -16,6 +16,7 @@ import { Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { EnvironmentNotice } from '@/components/ui/environment-badge';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { moduleTints } from '@/constants/design-tokens';
 import { Text } from '@/components/ui/text';
@@ -73,6 +74,11 @@ export default function SyncSettingsScreen() {
           contentContainerClassName="gap-6 px-5 py-4 pb-12"
           showsVerticalScrollIndicator={false}
         >
+          {/* Nothing in production. This is the screen somebody opens to ask
+              why their data isn't where they left it, so it is the screen that
+              has to be able to answer "because this build is staging". */}
+          <EnvironmentNotice />
+
           <View className={cardClass({ padding: 'none' }, 'items-center gap-3 p-6')}>
             <View
               className="h-14 w-14 items-center justify-center rounded-2xl"
@@ -187,6 +193,8 @@ export default function SyncSettingsScreen() {
         contentContainerClassName="gap-6 px-5 py-4 pb-12"
         showsVerticalScrollIndicator={false}
       >
+        <EnvironmentNotice />
+
         {/* Account */}
         <View className="gap-2">
           <SectionLabel>{t('sync.account')}</SectionLabel>

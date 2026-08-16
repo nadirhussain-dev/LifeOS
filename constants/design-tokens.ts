@@ -1,5 +1,5 @@
 /**
- * LifeOS Design Tokens — the single source of truth for the native side.
+ * Daykeep Design Tokens — the single source of truth for the native side.
  *
  * Philosophy: a Spatial Design System. Calm, spacious, premium. Depth comes
  * from layered surfaces + soft elevation, never from neomorphic bevels or

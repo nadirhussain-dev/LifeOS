@@ -144,7 +144,7 @@ export function updatePrivateRecord(
 /**
  * Deletes for real, not a tombstone.
  *
- * Everywhere else in LifeOS a delete is soft, so it can propagate to another
+ * Everywhere else in Daykeep a delete is soft, so it can propagate to another
  * device. Here the row is removed outright: a tombstone in a private table is a
  * record that something existed and was deleted, which is its own disclosure —
  * and the encrypted payload would still be sitting on disk. Sync for these

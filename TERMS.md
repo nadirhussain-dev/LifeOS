@@ -1,12 +1,12 @@
-# LifeOS — Terms of Service
+# Daykeep — Terms of Service
 
 _Last updated: 2026-08-06_
 
-LifeOS is made and operated by **Nadir Hussain**, an individual developer
+Daykeep is made and operated by **Nadir Hussain**, an individual developer
 ("we", "us"). These terms are the agreement between you and us for using the
-LifeOS app.
+Daykeep app.
 
-Contact: **nh262464@gmail.com**
+Contact: **daykeepsupport@gmail.com**
 
 > **Placeholder to replace before launch:** the governing-law and dispute
 > sections below name no jurisdiction, because that depends on where you are
@@ -16,32 +16,32 @@ Contact: **nh262464@gmail.com**
 
 ## 1. Accepting these terms
 
-By installing or using LifeOS you accept these terms. If you do not accept
+By installing or using Daykeep you accept these terms. If you do not accept
 them, do not use the app.
 
 We may change these terms — for example when a feature changes what the app
 does with your data. If a change materially affects you, we will say so in the
-app before it takes effect. Continuing to use LifeOS after that means you accept
+app before it takes effect. Continuing to use Daykeep after that means you accept
 the new version. Every version is dated, and the current one is always at the
 URL the app links to in Settings.
 
-## 2. Who may use LifeOS
+## 2. Who may use Daykeep
 
 You must be **13 or older**. If the law where you live sets a higher age for
 consenting to data processing without a parent or guardian, you must meet that
 age instead.
 
-LifeOS is not directed at children under 13 and we do not knowingly collect
+Daykeep is not directed at children under 13 and we do not knowingly collect
 their data. If you believe a child under 13 has an account, email us and we will
 delete it.
 
-## 3. What LifeOS is
+## 3. What Daykeep is
 
 A personal life-organization app: tasks, habits, journal, budget, health notes,
 media and shared expense groups. **It works on your device without an account.**
 Signing in and switching on cloud sync is optional and is chosen per module.
 
-LifeOS is **not** a medical device, a medical service, or financial advice.
+Daykeep is **not** a medical device, a medical service, or financial advice.
 Cycle, recovery, sleep and budget features are records you keep for yourself.
 Do not rely on them for a diagnosis, a treatment decision, or an investment
 decision.
@@ -61,7 +61,7 @@ owed.
 ## 5. Your content
 
 **Your content stays yours.** We claim no ownership of anything you write, log,
-photograph or record in LifeOS.
+photograph or record in Daykeep.
 
 You grant us only the narrow permission we need to run the service you asked
 for: to store, transmit and display your content for the modules whose sync you
@@ -73,13 +73,13 @@ You are responsible for having the right to upload what you upload.
 
 ## 6. Shared expense groups, and the rules for them
 
-Expense groups are the one part of LifeOS where other people can see what you
+Expense groups are the one part of Daykeep where other people can see what you
 write and you can see what they write. Everything in this section applies there,
 and to any shared surface we add later.
 
 ### 6.1 What you must not post or do
 
-Do not use LifeOS to:
+Do not use Daykeep to:
 
 - **Harass, bully, threaten or intimidate** anybody.
 - Post **sexual content involving minors**, or any sexual content sent to
@@ -95,7 +95,7 @@ Do not use LifeOS to:
 - Post somebody else's **private information** without their permission.
 - Attempt to **break, overload, or gain unauthorised access to** the service,
   other people's accounts, or the systems behind it.
-- Use LifeOS to **evade a block or a suspension**, including by creating another
+- Use Daykeep to **evade a block or a suspension**, including by creating another
   account.
 
 ### 6.2 Reporting and blocking
@@ -137,8 +137,8 @@ for a data-access request, say so in your appeal and we will produce it by hand.
 
 ## 7. Operator access to your data
 
-Read this and section "What LifeOS staff can access" in the
-[Privacy Policy](PRIVACY.md) together. In short: **if a build of LifeOS is
+Read this and section "What Daykeep staff can access" in the
+[Privacy Policy](PRIVACY.md) together. In short: **if a build of Daykeep is
 configured with an operator escrow key, we can open your private space** —
 including the Vault, Cycle, Recovery and Us modules — because a copy of its
 encryption key is sealed to us and uploaded when you create it on an account.
@@ -149,7 +149,7 @@ create a private space on an account.
 
 ## 8. Availability
 
-LifeOS is offered as-is and we do not promise it will always be available. The
+Daykeep is offered as-is and we do not promise it will always be available. The
 on-device half keeps working without us; cloud sync depends on services we do
 not control.
 
@@ -159,13 +159,13 @@ comes back exactly as it was.
 
 ## 9. Price
 
-LifeOS is currently free. If we introduce paid features we will say so before
+Daykeep is currently free. If we introduce paid features we will say so before
 they apply to you, and we will not start charging for something you already
 have without telling you.
 
 ## 10. Ending this agreement
 
-You may stop using LifeOS and delete your account at any time.
+You may stop using Daykeep and delete your account at any time.
 
 We may suspend or end your access if you materially breach these terms — in
 particular section 6.1 — or if we are required to by law. Where it is reasonable
@@ -173,7 +173,7 @@ to do so, we will warn you first.
 
 ## 11. Disclaimers
 
-To the extent the law allows, LifeOS is provided **"as is" and "as available"**,
+To the extent the law allows, Daykeep is provided **"as is" and "as available"**,
 without warranties of any kind, express or implied, including fitness for a
 particular purpose and non-infringement.
 
@@ -185,7 +185,7 @@ lose** — Settings → Data → Export data produces a full copy.
 
 To the extent the law allows, we are not liable for indirect, incidental,
 special or consequential damages, or for lost profits, lost data, or loss of
-goodwill, arising out of your use of LifeOS.
+goodwill, arising out of your use of Daykeep.
 
 Nothing in these terms limits liability that cannot be limited by law —
 including for death or personal injury caused by negligence, or for fraud.
@@ -206,4 +206,4 @@ and nothing here takes those away.
 ## 14. Contact
 
 Questions, appeals, data-access requests and anything else:
-**nh262464@gmail.com**
+**daykeepsupport@gmail.com**

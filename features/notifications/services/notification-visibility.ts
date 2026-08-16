@@ -85,7 +85,7 @@ export function moduleMayBeNamed(moduleId: string): boolean {
 /**
  * The text a redacted reminder carries.
  *
- * It says "LifeOS" and "You have a reminder", and specifically not "a reminder
+ * It says "Daykeep" and "You have a reminder", and specifically not "a reminder
  * from your private space" — the second version is still a leak. It tells
  * anyone glancing at the lock screen that this phone has a private space and
  * that there is something in it, which is most of what they wanted to know.

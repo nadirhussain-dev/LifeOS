@@ -33,7 +33,7 @@ export const supabase = createClient(url, anonKey, {
     flowType: 'pkce',
   },
   global: {
-    headers: { 'x-client-info': 'lifeos-mobile' },
+    headers: { 'x-client-info': 'daykeep-mobile' },
     /**
      * Stamps every request with this install's device id, which is what
      * migration 0047's `may_access_own_data()` matches against the account's
@@ -55,7 +55,7 @@ export const supabase = createClient(url, anonKey, {
     fetch: async (input, init) => {
       const headers = new Headers(init?.headers);
       try {
-        headers.set('x-lifeos-device', await getDeviceId());
+        headers.set('x-daykeep-device', await getDeviceId());
       } catch {
         // No keystore, no id. Sending the request without the header is right:
         // the server treats an unidentified device as unknown, which is the

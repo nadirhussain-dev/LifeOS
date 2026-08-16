@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNull, lte, or } from 'drizzle-orm';
+import { and, desc, eq, gte, isNull, lte, or, sql } from 'drizzle-orm';
 
 import { getDb } from '@/database/client';
 import {
@@ -84,6 +84,35 @@ export function listEntriesBetween(startDate: string, endDate: string): JournalE
         isNull(journalEntries.deletedAt),
         gte(journalEntries.entryDate, startDate),
         lte(journalEntries.entryDate, endDate),
+      ),
+    )
+    .orderBy(desc(journalEntries.entryDate))
+    .all()
+    .map(toEntry);
+}
+
+/**
+ * Entries sharing a month and day, in earlier years — the "on this day" source.
+ *
+ * Matched in SQL on the last five characters of `entry_date` rather than
+ * loading a year and filtering in JS: a journal kept for a decade is thousands
+ * of rows, and this runs on every visit to the Journal tab.
+ *
+ * There is no index for a suffix match, so this is a scan — bounded by the size
+ * of one person's journal, on a local database, which is the one place a scan
+ * is genuinely fine. If it ever stops being fine the fix is a generated
+ * `month_day` column, not a cleverer query.
+ */
+export function listEntriesOnMonthDay(monthDay: string, beforeYear: number): JournalEntry[] {
+  return getDb()
+    .select()
+    .from(journalEntries)
+    .where(
+      and(
+        eq(journalEntries.userId, LOCAL_USER_ID),
+        isNull(journalEntries.deletedAt),
+        sql`substr(${journalEntries.entryDate}, 6) = ${monthDay}`,
+        sql`cast(substr(${journalEntries.entryDate}, 1, 4) as integer) < ${beforeYear}`,
       ),
     )
     .orderBy(desc(journalEntries.entryDate))

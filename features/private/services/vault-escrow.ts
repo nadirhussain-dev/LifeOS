@@ -16,7 +16,7 @@ import { supabase } from '@/lib/supabase';
  * Sealing the vault master key to the operator, so the operator can open a
  * user's private space.
  *
- * ⚠️  This is the mechanism that ends end-to-end encryption in LifeOS. It is a
+ * ⚠️  This is the mechanism that ends end-to-end encryption in Daykeep. It is a
  * deliberate product decision (abuse handling), not an accident, and the app's
  * copy and privacy policy have been changed to say so. If you are here because
  * you assumed the vault was E2E: it is not, and has not been since 0015.

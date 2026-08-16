@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "LifeOS",
-    "slug": "LifeOS",
+    "name": "Daykeep",
+    "slug": "Daykeep",
     "version": "1.18.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "lifeos",
+    "scheme": "daykeep",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "runtimeVersion": {
@@ -13,7 +13,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.lifeos.app",
+      "bundleIdentifier": "com.daykeep.app",
       "usesAppleSignIn": true,
       "infoPlist": {
         "UIBackgroundModes": ["audio"]
@@ -106,7 +106,7 @@
       }
     },
     "android": {
-      "package": "com.lifeos.app",
+      "package": "com.daykeep.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundImage": "./assets/adaptive-icon-background.png",
@@ -135,7 +135,7 @@
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "LifeOS uses Face ID to unlock the app so only you can open it."
+          "faceIDPermission": "Daykeep uses Face ID to unlock the app so only you can open it."
         }
       ],
       [
@@ -157,20 +157,20 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "LifeOS uses your microphone to record voice notes and journal recordings."
+          "microphonePermission": "Daykeep uses your microphone to record voice notes and journal recordings."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "LifeOS accesses your photos so you can attach them to notes and journal entries.",
-          "cameraPermission": "LifeOS uses your camera so you can capture photos for notes and journal entries."
+          "photosPermission": "Daykeep accesses your photos so you can attach them to notes and journal entries.",
+          "cameraPermission": "Daykeep uses your camera so you can capture photos for notes and journal entries."
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "LifeOS uses your location to tag where a journal entry was written.",
+          "locationWhenInUsePermission": "Daykeep uses your location to tag where a journal entry was written.",
           "isIosBackgroundLocationEnabled": false,
           "isAndroidBackgroundLocationEnabled": false
         }
@@ -181,47 +181,47 @@
           "icon": "./assets/notification-icon.png",
           "color": "#6366f1",
           "//": "defaultChannel is the channel a REMOTE push lands on when the server names none — the only notifications the app cannot pick a channel for. It is deliberately the fixed 'general' channel rather than one of the tone-specific ones, which come and go as the user changes their reminder sound (see features/notifications/config/notification-sounds.ts). The `sounds` files are copied into res/raw on Android and the app bundle on iOS; they only exist in a NATIVE BUILD made after this entry was added, so a JS-only OTA update ships the picker without the tones and every choice falls back to the system sound.",
-          "defaultChannel": "lifeos-general-v3",
+          "defaultChannel": "daykeep-general-v3",
           "sounds": [
-            "./assets/sounds/lifeos_amber.wav",
-            "./assets/sounds/lifeos_aurora.wav",
-            "./assets/sounds/lifeos_bamboo.wav",
-            "./assets/sounds/lifeos_beacon.wav",
-            "./assets/sounds/lifeos_bloom.wav",
-            "./assets/sounds/lifeos_bubble.wav",
-            "./assets/sounds/lifeos_carillon.wav",
-            "./assets/sounds/lifeos_cascade.wav",
-            "./assets/sounds/lifeos_chime.wav",
-            "./assets/sounds/lifeos_console.wav",
-            "./assets/sounds/lifeos_droplet.wav",
-            "./assets/sounds/lifeos_ember.wav",
-            "./assets/sounds/lifeos_filament.wav",
-            "./assets/sounds/lifeos_frost.wav",
-            "./assets/sounds/lifeos_halo.wav",
-            "./assets/sounds/lifeos_kite.wav",
-            "./assets/sounds/lifeos_lantern.wav",
-            "./assets/sounds/lifeos_lattice.wav",
-            "./assets/sounds/lifeos_ledger.wav",
-            "./assets/sounds/lifeos_lyre.wav",
-            "./assets/sounds/lifeos_nimbus.wav",
-            "./assets/sounds/lifeos_pebble.wav",
-            "./assets/sounds/lifeos_ping.wav",
-            "./assets/sounds/lifeos_prism.wav",
-            "./assets/sounds/lifeos_pulse.wav",
-            "./assets/sounds/lifeos_quill.wav",
-            "./assets/sounds/lifeos_reed.wav",
-            "./assets/sounds/lifeos_relay.wav",
-            "./assets/sounds/lifeos_ripple.wav",
-            "./assets/sounds/lifeos_sentry.wav",
-            "./assets/sounds/lifeos_skyward.wav",
-            "./assets/sounds/lifeos_summit.wav",
-            "./assets/sounds/lifeos_swoop.wav",
-            "./assets/sounds/lifeos_telegraph.wav",
-            "./assets/sounds/lifeos_thimble.wav",
-            "./assets/sounds/lifeos_thread.wav",
-            "./assets/sounds/lifeos_tumble.wav",
-            "./assets/sounds/lifeos_vesper.wav",
-            "./assets/sounds/lifeos_wool.wav"
+            "./assets/sounds/daykeep_amber.wav",
+            "./assets/sounds/daykeep_aurora.wav",
+            "./assets/sounds/daykeep_bamboo.wav",
+            "./assets/sounds/daykeep_beacon.wav",
+            "./assets/sounds/daykeep_bloom.wav",
+            "./assets/sounds/daykeep_bubble.wav",
+            "./assets/sounds/daykeep_carillon.wav",
+            "./assets/sounds/daykeep_cascade.wav",
+            "./assets/sounds/daykeep_chime.wav",
+            "./assets/sounds/daykeep_console.wav",
+            "./assets/sounds/daykeep_droplet.wav",
+            "./assets/sounds/daykeep_ember.wav",
+            "./assets/sounds/daykeep_filament.wav",
+            "./assets/sounds/daykeep_frost.wav",
+            "./assets/sounds/daykeep_halo.wav",
+            "./assets/sounds/daykeep_kite.wav",
+            "./assets/sounds/daykeep_lantern.wav",
+            "./assets/sounds/daykeep_lattice.wav",
+            "./assets/sounds/daykeep_ledger.wav",
+            "./assets/sounds/daykeep_lyre.wav",
+            "./assets/sounds/daykeep_nimbus.wav",
+            "./assets/sounds/daykeep_pebble.wav",
+            "./assets/sounds/daykeep_ping.wav",
+            "./assets/sounds/daykeep_prism.wav",
+            "./assets/sounds/daykeep_pulse.wav",
+            "./assets/sounds/daykeep_quill.wav",
+            "./assets/sounds/daykeep_reed.wav",
+            "./assets/sounds/daykeep_relay.wav",
+            "./assets/sounds/daykeep_ripple.wav",
+            "./assets/sounds/daykeep_sentry.wav",
+            "./assets/sounds/daykeep_skyward.wav",
+            "./assets/sounds/daykeep_summit.wav",
+            "./assets/sounds/daykeep_swoop.wav",
+            "./assets/sounds/daykeep_telegraph.wav",
+            "./assets/sounds/daykeep_thimble.wav",
+            "./assets/sounds/daykeep_thread.wav",
+            "./assets/sounds/daykeep_tumble.wav",
+            "./assets/sounds/daykeep_vesper.wav",
+            "./assets/sounds/daykeep_wool.wav"
           ]
         }
       ],
@@ -231,8 +231,8 @@
         {
           "widgets": [
             {
-              "name": "LifeOSToday",
-              "label": "LifeOS · Today",
+              "name": "DaykeepToday",
+              "label": "Daykeep · Today",
               "minWidth": "180dp",
               "minHeight": "110dp",
               "targetCellWidth": 3,
@@ -241,8 +241,8 @@
               "updatePeriodMillis": 1800000
             },
             {
-              "name": "LifeOSHabits",
-              "label": "LifeOS · Habits",
+              "name": "DaykeepHabits",
+              "label": "Daykeep · Habits",
               "minWidth": "180dp",
               "minHeight": "180dp",
               "targetCellWidth": 3,
@@ -262,16 +262,16 @@
           "//": "Google's official UNIVERSAL TEST IDs — always serve a self-labeled 'Test Ad', never real inventory, safe to ship in a dev build. Overridden at build time by ADMOB_ANDROID_APP_ID/ADMOB_IOS_APP_ID when set (see app.config.js) — the literal values below are only the fallback for a build with neither set. features/ads/config.ts documents the rest of the swap. See https://developers.google.com/admob/android/test-ads for the current test-id list if these ever change.",
           "androidAppId": "ca-app-pub-3940256099942544~3347511713",
           "iosAppId": "ca-app-pub-3940256099942544~1458002511",
-          "userTrackingUsageDescription": "LifeOS uses this to show fewer, more relevant ads on the free plan. Denying it still shows ads — Plus removes them either way."
+          "userTrackingUsageDescription": "Daykeep uses this to show fewer, more relevant ads on the free plan. Denying it still shows ads — Plus removes them either way."
         }
       ]
     ],
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "09e67cd7-58a6-4a88-ad76-93463d25dc51"
+        "projectId": "c285766e-6443-4209-a24c-621f377080af"
       }
     },
-    "owner": "nadirhusaain"
+    "owner": "daykeep.app"
   }
 }

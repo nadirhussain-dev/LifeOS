@@ -19,7 +19,7 @@
 --
 -- How a device identifies itself
 -- ------------------------------
--- An `x-lifeos-device` header, generated once per install and held in the OS
+-- An `x-daykeep-device` header, generated once per install and held in the OS
 -- keystore (lib/device-id.ts). It is a bearer value and the account owner can
 -- obviously forge their own, which is worth stating plainly: this is session
 -- hygiene for honest clients — "your account is open on your old phone, here is
@@ -119,7 +119,7 @@ create policy "user_devices_read_own" on public.user_devices
  * phone" and "this laptop may use admin powers" would mean any user's phone id
  * could be presented as an admin origin, so the two stay distinct.
  */
-create or replace function public.request_lifeos_device()
+create or replace function public.request_daykeep_device()
 returns text
 language plpgsql
 stable
@@ -127,7 +127,7 @@ security definer
 set search_path = public
 as $$
 begin
-  return nullif(trim(current_setting('request.headers', true)::json ->> 'x-lifeos-device'), '');
+  return nullif(trim(current_setting('request.headers', true)::json ->> 'x-daykeep-device'), '');
 exception
   when others then
     -- No request context at all (a psql session, a cron job). Not an error;
@@ -214,7 +214,7 @@ as $$
     or exists (
       select 1 from public.user_devices d
        where d.user_id = auth.uid()
-         and d.device_id = public.request_lifeos_device()
+         and d.device_id = public.request_daykeep_device()
          and (
            d.revoked_at is null
            or (d.evacuation_until is not null and d.evacuation_until > now())
@@ -598,7 +598,7 @@ $$;
 -- 6. PRIVILEGES
 -- ===========================================================================
 
-revoke all on function public.request_lifeos_device() from public, anon;
+revoke all on function public.request_daykeep_device() from public, anon;
 revoke all on function public.otp_proof_age(interval) from public, anon;
 revoke all on function public.claim_device(text, text, text, boolean) from public, anon;
 revoke all on function public.device_status(text) from public, anon;

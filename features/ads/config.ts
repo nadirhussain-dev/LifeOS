@@ -18,7 +18,7 @@
  *     override `TestIds.BANNER` in `ad-slot.tsx`.
  * Unset on either side keeps the test defaults — a build with none of these
  * set still runs and still shows real (test) ad UI. Set them once via
- * `eas env:create` per environment and rebuild; no call site below
+ * `eas env:set` per environment and rebuild; no call site below
  * (`<AdSlot placement="..." />`) changes either way.
  *
  * Never placed inside `/private/*`. That surface holds cycle, recovery,

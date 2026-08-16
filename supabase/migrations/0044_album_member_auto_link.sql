@@ -1,6 +1,6 @@
 -- 0044_album_member_auto_link.sql
 --
--- Adding somebody by email who already has a LifeOS account used to leave
+-- Adding somebody by email who already has a Daykeep account used to leave
 -- `user_id` null on their member row regardless — the same placeholder shape
 -- as a total stranger, forcing the full invite-link-plus-code exchange even
 -- between two people who already both use the app. `user_id_for_email()`
@@ -8,7 +8,7 @@
 -- locked down (`revoke execute ... from public, anon, authenticated`, with a
 -- comment calling it "an email-to-account oracle") — the client must never
 -- be able to call it as a free-standing lookup, or "add a member" becomes a
--- way to probe arbitrary emails for a LifeOS account.
+-- way to probe arbitrary emails for a Daykeep account.
 --
 -- This function is the one sanctioned caller of that lookup from client code:
 -- it only runs it as a side effect of an already-authorized "add a member to

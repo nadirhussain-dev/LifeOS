@@ -1,7 +1,7 @@
 -- ---------------------------------------------------------------------------
 -- 0013 — Profile pictures, and reporting shared content.
 --
--- Two halves of the same decision: LifeOS keeps end-to-end encryption, and gets
+-- Two halves of the same decision: Daykeep keeps end-to-end encryption, and gets
 -- its abuse handling from reports rather than from operator access.
 --
 -- Why reporting instead of reading everything

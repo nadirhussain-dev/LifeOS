@@ -74,9 +74,9 @@ jobs:
           {
             echo '---'
             echo 'layout: default'
-            echo 'title: LifeOS'
+            echo 'title: Daykeep'
             echo '---'
-            echo '# LifeOS'
+            echo '# Daykeep'
             echo
             echo 'A local-first personal life operating system.'
             echo
@@ -87,10 +87,10 @@ jobs:
           # `baseurl` matters: the site is served from /<repo>/, and without it
           # every internal link resolves to the domain root and 404s.
           cat > site/_config.yml <<'YAML'
-          title: LifeOS
+          title: Daykeep
           description: Privacy policy and terms of service
           theme: jekyll-theme-primer
-          baseurl: /LifeOS
+          baseurl: /Daykeep
           YAML
 
       # `enablement: true` turns Pages on for the repository if it is off,

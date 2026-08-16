@@ -180,7 +180,7 @@ export async function initDatabase(): Promise<void> {
   }
 
   const encryptionKey = await getOrCreateDbKey();
-  const db = opsqlite.open({ name: 'lifeos.db', encryptionKey });
+  const db = opsqlite.open({ name: 'daykeep.db', encryptionKey });
 
   // Write-ahead logging, for the same reason as before: sync writes a page of
   // pulled rows in one transaction while the UI reads the same tables, and
@@ -203,7 +203,7 @@ export async function initDatabase(): Promise<void> {
 }
 
 /**
- * Deletes the pre-encryption `lifeos.db` that expo-sqlite wrote.
+ * Deletes the pre-encryption `daykeep.db` that expo-sqlite wrote.
  *
  * op-sqlite stores its file in a different directory, so the plaintext one is
  * not overwritten or migrated — it is simply orphaned. Leaving it there would
@@ -224,7 +224,7 @@ function discardLegacyPlaintextDatabase(): void {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { File, Paths } = require('expo-file-system') as typeof import('expo-file-system');
-    for (const name of ['lifeos.db', 'lifeos.db-wal', 'lifeos.db-shm']) {
+    for (const name of ['daykeep.db', 'daykeep.db-wal', 'daykeep.db-shm']) {
       const file = new File(Paths.document, 'SQLite', name);
       if (file.exists) file.delete();
     }

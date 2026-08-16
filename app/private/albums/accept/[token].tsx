@@ -21,7 +21,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { toast } from '@/lib/toast-store';
 
 /**
- * The target of `lifeos://private/albums/accept/<token>` — the Postgres
+ * The target of `daykeep://private/albums/accept/<token>` — the Postgres
  * half of an album invite. The link is membership-only, deliberately: the
  * out-of-band code+payload that actually decrypt the album must travel
  * through a separate channel (spoken code, a second message, in person),

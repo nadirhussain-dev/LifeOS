@@ -24,7 +24,7 @@ function allCategoriesEnabled(): Record<NotificationCategory, boolean> {
 }
 
 export type NotificationsState = {
-  /** Kill-switch for every LifeOS reminder. When false, nothing schedules. */
+  /** Kill-switch for every Daykeep reminder. When false, nothing schedules. */
   masterEnabled: boolean;
   /** Per-category on/off. A category toggled off stops new scheduling; existing
    * queued reminders are cleared when the owning item next syncs. */
@@ -35,7 +35,7 @@ export type NotificationsState = {
   quietStartMinutes: number;
   quietEndMinutes: number;
   /**
-   * The tone every LifeOS reminder arrives with.
+   * The tone every Daykeep reminder arrives with.
    *
    * One app-wide choice rather than one per category, because on Android the
    * sound belongs to the notification *channel* and each tone therefore costs a

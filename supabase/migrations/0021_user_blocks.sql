@@ -5,7 +5,7 @@
 -- ## Why this exists
 --
 -- 0010 through 0019 built the operator side of moderation: reports, staff
--- tiers, account blocks, audit. All of it runs through somebody at LifeOS
+-- tiers, account blocks, audit. All of it runs through somebody at Daykeep
 -- deciding something. There was nothing a user could do about another user in
 -- the moment, which is both the thing that actually helps and the thing Google
 -- Play's user-generated-content policy and App Store 1.2 require: an app whose

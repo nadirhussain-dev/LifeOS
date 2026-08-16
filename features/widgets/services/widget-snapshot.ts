@@ -66,7 +66,7 @@ export type TodaySnapshot = {
   updatedAt: number;
 };
 
-const STORAGE_KEY = 'lifeos.widget.today.v1';
+const STORAGE_KEY = 'daykeep.widget.today.v1';
 
 /**
  * Also the fallback for a snapshot written before `show` and `text` existed,
@@ -74,7 +74,7 @@ const STORAGE_KEY = 'lifeos.widget.today.v1';
  * defaults to hidden, which is the safe direction for the upgrade: a user who
  * had already privatised a module stops leaking it the moment this build runs,
  * rather than on their next app launch. The cost is a widget that says "open
- * LifeOS" until then, which is honest — it genuinely does not know today's
+ * Daykeep" until then, which is honest — it genuinely does not know today's
  * numbers yet.
  *
  * The English in here is the only English left, and it is only ever seen before
@@ -90,7 +90,7 @@ export const EMPTY_SNAPSHOT: TodaySnapshot = {
   show: { tasks: false, habits: false, water: false },
   habits: [],
   waterGlassMl: 250,
-  text: { heading: 'TODAY', tasks: '', habits: '', water: '', empty: 'Open LifeOS' },
+  text: { heading: 'TODAY', tasks: '', habits: '', water: '', empty: 'Open Daykeep' },
   updatedAt: 0,
 };
 

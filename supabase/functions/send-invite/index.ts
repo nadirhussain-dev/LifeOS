@@ -10,7 +10,7 @@
 //
 // Deploy:
 //   supabase functions deploy send-invite
-//   supabase secrets set RESEND_API_KEY=...  INVITE_FROM="LifeOS <invites@yourdomain.com>"
+//   supabase secrets set RESEND_API_KEY=...  INVITE_FROM="Daykeep <invites@yourdomain.com>"
 //   supabase secrets set APP_INVITE_BASE_URL="https://yourdomain.com/join"
 //
 // The sending domain must have SPF and DKIM configured or invitations land in
@@ -24,12 +24,21 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const INVITE_TTL_MS = 14 * 24 * 60 * 60 * 1000; // two weeks
 
+// Same shape as ban-account and delete-account. Native builds never send a
+// preflight, so this costs nothing today — it is here so that the first web
+// build doesn't discover the invite flow is the one function that 405s on
+// OPTIONS.
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 type Payload = { groupId: string; memberId: string; email: string; groupName: string };
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 
 /** URL-safe, unguessable. 32 bytes of CSPRNG, base64url, no padding. */
@@ -49,6 +58,7 @@ const escapeHtml = (s: string) =>
   );
 
 Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
 
   const authHeader = req.headers.get('Authorization');
@@ -89,7 +99,7 @@ Deno.serve(async (req: Request) => {
   });
   if (insertError) return json({ error: 'forbidden', detail: insertError.message }, 403);
 
-  const base = Deno.env.get('APP_INVITE_BASE_URL') ?? 'https://lifeos.app/join';
+  const base = Deno.env.get('APP_INVITE_BASE_URL') ?? 'https://daykeep.app/join';
   const link = `${base}/${token}`;
 
   const resendKey = Deno.env.get('RESEND_API_KEY');
@@ -99,10 +109,28 @@ Deno.serve(async (req: Request) => {
     return json({ ok: true, link, emailed: false, reason: 'email_not_configured' });
   }
 
-  const groupName = escapeHtml(payload.groupName || 'a group');
-  const inviterName = escapeHtml(
-    (inviter.user_metadata?.display_name as string | undefined) ?? inviter.email ?? 'Someone',
-  );
+  // Kept in both forms deliberately. The escaped pair is only safe to drop into
+  // markup; the subject line and the plain-text part are not HTML, and putting
+  // the escaped values there would show a group called "Mum & Dad" as
+  // "Mum &amp; Dad" in the inbox list.
+  const rawGroupName = payload.groupName || 'a group';
+  const rawInviterName =
+    (inviter.user_metadata?.display_name as string | undefined) ?? inviter.email ?? 'Someone';
+  const groupName = escapeHtml(rawGroupName);
+  const inviterName = escapeHtml(rawInviterName);
+
+  // Sent alongside the HTML, not instead of it: a message with no text/plain
+  // part is a long-standing spam signal, and this mail has to reach people who
+  // have never heard of us. It also covers plain-text clients and screen
+  // readers that prefer the text part.
+  const textBody = [
+    `${rawInviterName} added you to “${rawGroupName}” on Daykeep.`,
+    '',
+    'You are sharing expenses in this group. Open this link to join and see what you owe or are owed:',
+    link,
+    '',
+    "This invitation expires in 14 days. If you weren't expecting it you can ignore this email.",
+  ].join('\n');
 
   try {
     const res = await fetch('https://api.resend.com/emails', {
@@ -112,9 +140,10 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: Deno.env.get('INVITE_FROM') ?? 'LifeOS <invites@lifeos.app>',
+        from: Deno.env.get('INVITE_FROM') ?? 'Daykeep <invites@daykeep.app>',
         to: [payload.email],
-        subject: `${inviterName} added you to ${groupName}`,
+        subject: `${rawInviterName} added you to ${rawGroupName}`,
+        text: textBody,
         // Brand colors match constants/design-tokens.ts's light palette
         // (accent #188b61, foreground #161c19, mutedForeground #6d7a74,
         // border #e2e9e5) — this used to carry a leftover teal (#0d9488)
@@ -124,11 +153,11 @@ Deno.serve(async (req: Request) => {
         html: `
           <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px">
             <div style="font-family:'Sora','Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:18px;font-weight:700;letter-spacing:-0.2px;color:#161c19;margin:0 0 20px">
-              Life<span style="color:#188b61">OS</span>
+              Daykeep
             </div>
             <h2 style="margin:0 0 12px;color:#161c19">${inviterName} added you to “${groupName}”</h2>
             <p style="color:#6d7a74;line-height:1.5;margin:0 0 20px">
-              You are sharing expenses in this group on LifeOS. Open the link below
+              You are sharing expenses in this group on Daykeep. Open the link below
               to join and see what you owe or are owed.
             </p>
             <a href="${link}"

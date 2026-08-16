@@ -28,7 +28,7 @@ export async function notifyAlbumMessage(input: {
   }
 }
 
-/** Nudges an invitee who already has a LifeOS account that an invite is
+/** Nudges an invitee who already has a Daykeep account that an invite is
  *  waiting — never carries the token/code/payload itself, which still only
  *  travels through the existing share-sheet/clipboard link. */
 export async function notifyAlbumInvite(input: {

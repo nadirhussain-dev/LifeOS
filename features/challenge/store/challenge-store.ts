@@ -59,10 +59,21 @@ type ChallengeState = {
    * smaller problem than either of those.
    */
   lastSeenEventId: number;
+  /**
+   * The last local day whose closing moment has been played.
+   *
+   * Without it the moment fires again on every remount — navigating away and
+   * back would replay the haptic and the line, which turns the one moment the
+   * day has into a glitch. Persisted rather than kept in memory because a cold
+   * start is the most likely way back to the screen.
+   */
+  lastClosedDay: string | null;
   hydrated: boolean;
 
   setEnrolment: (enrolment: { seasonId: string; required: string[]; minWrites: number }) => void;
   markEventsSeen: (eventId: number) => void;
+  /** Records that today's closing moment has been played. */
+  markDayClosed: (day: string) => void;
   clearEnrolment: () => void;
   /** One row changed in one module. Called from the database write observer. */
   recordWrite: (module: string, day?: string) => void;
@@ -96,6 +107,7 @@ export const useChallengeStore = create<ChallengeState>()(
       minWrites: 1,
       days: {},
       lastSeenEventId: 0,
+      lastClosedDay: null,
       hydrated: false,
 
       setEnrolment: ({ seasonId, required, minWrites }) =>
@@ -104,11 +116,20 @@ export const useChallengeStore = create<ChallengeState>()(
       markEventsSeen: (eventId) =>
         set((s) => ({ lastSeenEventId: Math.max(s.lastSeenEventId, eventId) })),
 
+      markDayClosed: (day) => set({ lastClosedDay: day }),
+
       // Leaving a run drops the buffer with it. Counters for a season somebody
       // is no longer in have nowhere to go, and keeping them means they would
       // flush into whatever season they joined next.
       clearEnrolment: () =>
-        set({ enrolled: false, seasonId: null, required: [], days: {}, lastSeenEventId: 0 }),
+        set({
+          enrolled: false,
+          seasonId: null,
+          required: [],
+          days: {},
+          lastSeenEventId: 0,
+          lastClosedDay: null,
+        }),
 
       recordWrite: (module, day = currentDay()) => {
         if (!get().enrolled) return;
