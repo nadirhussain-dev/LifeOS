@@ -94,6 +94,37 @@ const LEDGER = `
     applied_at  timestamptz not null default now(),
     applied_by  text
   );
+
+  -- Supabase grants every new table in \`public\` to \`anon\` and \`authenticated\`,
+  -- and PostgREST exposes that schema — so without the two statements below the
+  -- ledger is readable *and writable* by anyone holding the publishable key,
+  -- which ships inside the app bundle and is not a secret.
+  --
+  -- Reading it leaks only filenames. Writing it is the problem: truncate the
+  -- table and the runner believes nothing has ever been applied, so the next
+  -- deploy re-applies all of them against a populated database; edit one
+  -- checksum and the drift guard refuses to run at all. The integrity this whole
+  -- script is built on would rest on a table any anonymous caller could edit.
+  --
+  -- Every migration file avoids this by enabling RLS, which check-migrations.mjs
+  -- enforces — but this table is created here rather than by a migration and so
+  -- never passes that check. RLS with no policies denies everything, and the
+  -- runner connects as \`postgres\`, which owns the table and is exempt.
+  --
+  -- Roles are revoked only if they exist, matching RESET below, so this still
+  -- works against a plain Postgres that has never heard of Supabase.
+  do $ledger$
+  declare
+    role_name text;
+  begin
+    foreach role_name in array array['anon', 'authenticated'] loop
+      if exists (select 1 from pg_roles where rolname = role_name) then
+        execute format('revoke all on public.schema_migrations from %I', role_name);
+      end if;
+    end loop;
+  end $ledger$;
+
+  alter table public.schema_migrations enable row level security;
 `;
 
 /**
