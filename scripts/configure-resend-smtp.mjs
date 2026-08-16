@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Points this Supabase project's Auth emails (and the send-invite edge
- * function) at Resend, and re-applies the LifeOS-branded OTP templates that
+ * function) at Resend, and re-applies the Daykeep-branded OTP templates that
  * were blocked until now.
  *
  * Free-tier Supabase projects refuse custom email templates while they're
@@ -25,13 +25,20 @@
  *      to the Confirm signup / Reset Password / Magic Link templates, now
  *      that they're no longer gated.
  *
- * Requires, in `.env` (gitignored) or already exported in your shell:
+ * Requires, in `supabase/.env` (both gitignored) or exported in your shell:
+ *   RESEND_API_KEY          From Resend → API Keys. "Sending access" scope is enough.
+ *   INVITE_FROM             e.g. "Daykeep <invites@mail.yourdomain.com>" — must be an
+ *                            address on a domain verified in Resend, or every send
+ *                            bounces at Resend, not at Supabase. The sandbox sender
+ *                            "Daykeep <onboarding@resend.dev>" needs no domain but
+ *                            delivers ONLY to the Resend account's own address.
+ * and in `.env`, or exported:
  *   SUPABASE_ACCESS_TOKEN   Account-level PAT — https://supabase.com/dashboard/account/tokens
  *   EXPO_PUBLIC_SUPABASE_URL   Used only to read the project ref out of its hostname.
- *   RESEND_API_KEY          From Resend → API Keys. "Sending access" scope is enough.
- *   INVITE_FROM             e.g. "LifeOS <invites@mail.lifeos.app>" — must be an
- *                            address on a domain verified in Resend, or every send
- *                            bounces at Resend, not at Supabase.
+ *
+ * ⚠️  EXPO_PUBLIC_SUPABASE_URL decides WHICH PROJECT this writes to, and it is
+ * whatever your local `.env` points at. Staging and production are separate
+ * projects; run --dry-run first and read the project ref it prints.
  * Optional:
  *   AUTH_SMTP_FROM           Sender identity for Auth emails specifically, if you
  *                            want it different from INVITE_FROM (e.g. a
@@ -52,9 +59,15 @@ const TEMPLATES = join(ROOT, 'supabase', 'templates');
 const API = 'https://api.supabase.com/v1';
 
 /** Only fills vars nothing has already set — a real exported env var always
- *  wins over `.env`, same precedence every dotenv-shaped tool uses. */
-function loadDotEnv() {
-  const path = join(ROOT, '.env');
+ *  wins over a file, same precedence every dotenv-shaped tool uses.
+ *
+ *  Two files, because the values come from two different places and only one of
+ *  them may ever sit next to an EXPO_PUBLIC_ name: `supabase/.env` holds the
+ *  edge-function secrets (RESEND_API_KEY, INVITE_FROM — see
+ *  supabase/.env.example for why they live apart from the app's env), and `.env`
+ *  holds the operator credential this script needs to reach the Management API.
+ *  Read in that order so the secrets file wins on any name they share. */
+function loadEnvFile(path) {
   if (!existsSync(path)) return;
   for (const line of readFileSync(path, 'utf8').split('\n')) {
     const trimmed = line.trim();
@@ -77,7 +90,7 @@ function loadDotEnv() {
 function parseSender(raw, varName) {
   const match = raw.match(/^(.*)<(.+)>$/);
   if (!match) {
-    throw new Error(`${varName} must look like "LifeOS <address@yourdomain.com>" — got: ${raw}`);
+    throw new Error(`${varName} must look like "Daykeep <address@yourdomain.com>" — got: ${raw}`);
   }
   return { name: match[1].trim().replace(/^"|"$/g, ''), email: match[2].trim() };
 }
@@ -113,7 +126,8 @@ function loadTemplate(file) {
 }
 
 async function main() {
-  loadDotEnv();
+  loadEnvFile(join(ROOT, 'supabase', '.env'));
+  loadEnvFile(join(ROOT, '.env'));
   const dryRun = process.argv.includes('--dry-run');
 
   const required = [
@@ -182,11 +196,11 @@ async function main() {
     ref,
     token,
     {
-      mailer_subjects_confirmation: 'Your LifeOS verification code',
+      mailer_subjects_confirmation: 'Your Daykeep verification code',
       mailer_templates_confirmation_content: loadTemplate('confirm-signup.html'),
-      mailer_subjects_recovery: 'Your LifeOS password reset code',
+      mailer_subjects_recovery: 'Your Daykeep password reset code',
       mailer_templates_recovery_content: loadTemplate('reset-password.html'),
-      mailer_subjects_magic_link: 'Your LifeOS sign-in code',
+      mailer_subjects_magic_link: 'Your Daykeep sign-in code',
       mailer_templates_magic_link_content: loadTemplate('magic-link.html'),
       mailer_otp_length: 6,
     },
