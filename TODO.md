@@ -421,21 +421,21 @@ the UI:
       account that has never seen the flow.
 
       **The obvious fix is a worse bug**, which is why this is still open.
-          Distrusting the flag whenever the loaded profile has no
-          `onboardingCompletedAt` strands anyone who finished onboarding offline:
-          `markOnboardingComplete` writes the local stamp only *after* a successful
-          server update and returns silently on failure, with no retry — so they
-          would be bounced into the wizard on every launch, permanently. An
-          optimistic local write does not save it either, because `loadProfile`
-          re-reads the row and overwrites it.
+              Distrusting the flag whenever the loaded profile has no
+              `onboardingCompletedAt` strands anyone who finished onboarding offline:
+              `markOnboardingComplete` writes the local stamp only *after* a successful
+              server update and returns silently on failure, with no retry — so they
+              would be bounced into the wizard on every launch, permanently. An
+              optimistic local write does not save it either, because `loadProfile`
+              re-reads the row and overwrites it.
 
-          The flag has to become **account-scoped** first: record *which* user id
-          completed onboarding on this device, and treat "some other account
-          finished it" as not-onboarded while keeping "this account did, we just
-          cannot reach the server" as onboarded. Then the gate can stop trusting a
-          bare boolean. `app/auth/callback.tsx` and `app/(auth)/create-password.tsx`
-          make the same `deviceOnboarded || accountOnboarded` call and want the same
-          treatment.
+              The flag has to become **account-scoped** first: record *which* user id
+              completed onboarding on this device, and treat "some other account
+              finished it" as not-onboarded while keeping "this account did, we just
+              cannot reach the server" as onboarded. Then the gate can stop trusting a
+              bare boolean. `app/auth/callback.tsx` and `app/(auth)/create-password.tsx`
+              make the same `deviceOnboarded || accountOnboarded` call and want the same
+              treatment.
 
 ---
 

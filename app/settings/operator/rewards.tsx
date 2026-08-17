@@ -58,6 +58,43 @@ type Retention = {
 const percent = (part: number, whole: number): string =>
   whole === 0 ? '—' : `${Math.round((part / whole) * 100)}%`;
 
+export type SeasonRow = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  starts_at: string | null;
+  ends_at: string | null;
+};
+
+/** Whether the season's own gate is open right now — the same three conditions
+ *  `challenge_enroll` checks in 0048 before it will let anybody in. */
+export function isSeasonLive(season: SeasonRow, now = Date.now()): boolean {
+  if (!season.enabled) return false;
+  if (season.starts_at && Date.parse(season.starts_at) > now) return false;
+  if (season.ends_at && Date.parse(season.ends_at) < now) return false;
+  return true;
+}
+
+/**
+ * Which season these figures describe.
+ *
+ * The screen used to take `order(created_at desc).limit(1)`, which answers a
+ * question nobody asked. A season is created before it runs and outlives its
+ * end date, so "newest row" silently reports on a season that has not started
+ * — all zeros, correctly, for a season nobody could have enrolled in yet, next
+ * to a switch reading "Challenge enabled". That is indistinguishable from the
+ * programme being broken, and it is the reading that gets acted on.
+ *
+ * So: a live season wins; failing that the most recently created one, which is
+ * the best guess at "the one you are working on". The caller renders which it
+ * got either way, because the numbers mean different things.
+ *
+ * @param rows newest-created first
+ */
+export function pickSeason(rows: SeasonRow[], now = Date.now()): SeasonRow | null {
+  return rows.find((row) => isSeasonLive(row, now)) ?? rows[0] ?? null;
+}
+
 export default function OperatorRewardsScreen() {
   const { t } = useTranslation();
   const { c } = useTheme();
@@ -65,13 +102,17 @@ export default function OperatorRewardsScreen() {
   const season = useQuery({
     queryKey: ['operator', 'challenge', 'season'],
     queryFn: async () => {
+      // Every season, newest first, rather than `limit(1)`. Which one these
+      // numbers describe is a judgement (see `pickSeason`) and it cannot be made
+      // in the ORDER BY: "most recently created" is not "currently running", and
+      // reporting on a season created for next month is how a live season's
+      // figures get replaced by a row of zeros nobody can account for.
       const { data, error } = await supabase
         .from('challenge_seasons')
-        .select('id, name')
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .select('id, name, enabled, starts_at, ends_at')
+        .order('created_at', { ascending: false });
       if (error) throw new Error(error.message);
-      return data?.[0] ?? null;
+      return pickSeason((data ?? []) as SeasonRow[]);
     },
   });
 
@@ -122,8 +163,9 @@ export default function OperatorRewardsScreen() {
           />
         ) : season.data === null ? (
           <Text variant="muted">{t('operator.rewardsNoSeason')}</Text>
-        ) : stats.data ? (
+        ) : stats.data && season.data ? (
           <>
+            <SeasonCard season={season.data} />
             <Section title={t('operator.rewardsRuns')}>
               <Row label={t('operator.rewardsEnrolled')} value={stats.data.overview.enrolled} />
               <Row label={t('operator.rewardsActive')} value={stats.data.overview.active} />
@@ -200,6 +242,54 @@ function Row({ label, value }: { label: string; value: number | string }) {
     <View className="flex-row items-center gap-3 py-3">
       <Text className="flex-1 font-sora-medium text-foreground">{label}</Text>
       <Text className="font-sora-semibold text-foreground">{value}</Text>
+    </View>
+  );
+}
+
+/**
+ * Which season the figures below belong to, and whether it is actually running.
+ *
+ * The screen fetched the season's name and then rendered neither it nor its
+ * state, which left every number underneath unattributable: a column of zeros
+ * says "nobody enrolled" and "nobody *could* enrol" in exactly the same voice,
+ * and those two call for opposite responses.
+ *
+ * The distinction this card exists to draw is the one that costs the most time:
+ * the switch at the top of this screen is the `rewards` **module flag** — it
+ * decides whether users see the challenge at all — while `challenge_seasons`
+ * has its own `enabled` column, defaulted to false, which is what
+ * `challenge_enroll` checks. Both can legitimately be called "enabled", only
+ * one is on this screen, and with the module flag on and the season off the
+ * programme looks live and admits nobody.
+ */
+function SeasonCard({ season }: { season: SeasonRow }) {
+  const { t } = useTranslation();
+  const { c } = useTheme();
+  const live = isSeasonLive(season);
+
+  const window = [season.starts_at, season.ends_at]
+    .map((value) => (value ? new Date(value).toISOString().slice(0, 10) : '—'))
+    .join(' → ');
+
+  return (
+    <View className={cardClass({ padding: 'md' }, 'gap-2')}>
+      <View className="flex-row items-center gap-3">
+        <Text className="flex-1 font-sora-semibold text-foreground" numberOfLines={2}>
+          {season.name}
+        </Text>
+        <View
+          className="rounded-full px-2.5 py-1"
+          style={{ backgroundColor: `${live ? c.success : c.error}1f` }}
+        >
+          <Text variant="caption" style={{ color: live ? c.success : c.error }}>
+            {t(live ? 'operator.rewardsSeasonLive' : 'operator.rewardsSeasonClosed')}
+          </Text>
+        </View>
+      </View>
+      <Text variant="caption">{window}</Text>
+      {/* Only when it matters. With the season open this would be noise; with it
+          shut it is the whole explanation for everything below. */}
+      {live ? null : <Text variant="caption">{t('operator.rewardsSeasonClosedWhy')}</Text>}
     </View>
   );
 }
