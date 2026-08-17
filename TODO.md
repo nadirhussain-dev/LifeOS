@@ -412,30 +412,28 @@ the UI:
       another language does not. Its first run found six of the former — four of
       which predated the onboarding rewrite, including a gender step that had
       been rendering `onboarding.genderQuestion` on screen as literal text.
-- [ ] **The onboarding flag is per device, not per account.** A brand-new account
-      signing in on a phone somebody else already onboarded lands straight in the
-      tabs — no name, no focus areas, no starter data. `onboardingComplete` lives
-      in `useProfileStore` and an account switch keeps it deliberately
-      (`wipeLocalData` calls `resetAnswers()`, not `reset()`), so
-      `useAuthGate`'s `onboardingComplete || accountOnboarded` reads true for an
-      account that has never seen the flow.
-
-      **The obvious fix is a worse bug**, which is why this is still open.
-              Distrusting the flag whenever the loaded profile has no
-              `onboardingCompletedAt` strands anyone who finished onboarding offline:
-              `markOnboardingComplete` writes the local stamp only *after* a successful
-              server update and returns silently on failure, with no retry — so they
-              would be bounced into the wizard on every launch, permanently. An
-              optimistic local write does not save it either, because `loadProfile`
-              re-reads the row and overwrites it.
-
-              The flag has to become **account-scoped** first: record *which* user id
-              completed onboarding on this device, and treat "some other account
-              finished it" as not-onboarded while keeping "this account did, we just
-              cannot reach the server" as onboarded. Then the gate can stop trusting a
-              bare boolean. `app/auth/callback.tsx` and `app/(auth)/create-password.tsx`
-              make the same `deviceOnboarded || accountOnboarded` call and want the same
-              treatment.
+- [ ] **The onboarding flag is per device, not per account.** A brand-new
+      account signing in on a phone somebody else already onboarded lands
+      straight in the tabs — no name, no focus areas, no starter data.
+      `onboardingComplete` lives in `useProfileStore`, and an account switch
+      keeps it deliberately (`wipeLocalData` calls `resetAnswers()`, not
+      `reset()`), so `useAuthGate`'s `onboardingComplete || accountOnboarded`
+      reads true for an account that has never seen the flow. Confirmed on a
+      device: a Google sign-up landed on the profile screen with an empty
+      display name and no username.
+- [ ] **...and the obvious fix is a worse bug**, which is why the above is still
+      open. Distrusting the flag whenever the loaded profile has no
+      `onboardingCompletedAt` strands anyone who finished onboarding offline:
+      `markOnboardingComplete` writes the local stamp only _after_ a successful
+      server update and returns silently on failure, with no retry, so they
+      would be bounced into the wizard on every launch, permanently. An
+      optimistic local write does not save it either, because `loadProfile`
+      re-reads the row and overwrites it. The flag has to become
+      **account-scoped** first — record _which_ user id completed onboarding on
+      this device, treat "some other account finished it" as not-onboarded, and
+      keep "this account did, we just cannot reach the server" as onboarded.
+      `app/auth/callback.tsx` and `app/(auth)/create-password.tsx` make the same
+      `deviceOnboarded || accountOnboarded` call and want the same treatment.
 
 ---
 
