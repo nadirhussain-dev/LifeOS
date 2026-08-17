@@ -74,6 +74,15 @@ export function useAuthGate() {
     // blocking navigation until the network round-trip finishes.
     const accountOnboarded = !!session && profile?.onboardingCompletedAt != null;
     if (accountOnboarded && !onboardingComplete) setOnboardingComplete(true);
+    // KNOWN BUG, and the fix is not a one-liner — see TODO.md
+    // "onboarding flag is per device, not per account". A brand-new account
+    // signing in on a device somebody else already onboarded inherits this
+    // flag and skips onboarding entirely. Distrusting the flag whenever the
+    // loaded profile carries no stamp looks like the fix and is a worse bug:
+    // `markOnboardingComplete` only writes the local stamp *after* a
+    // successful server update, so anybody who finishes onboarding offline
+    // would be bounced back into the wizard on every launch, permanently.
+    // The flag has to become account-scoped first.
     const effectivelyOnboarded = onboardingComplete || accountOnboarded;
 
     if (!effectivelyOnboarded) {

@@ -211,4 +211,18 @@ describe('leaving a device', () => {
     expect(wipe).toContain('cancelScheduledReminders()');
     expect(reconcile).toContain('cancelAllScheduled');
   });
+
+  /** The onboarding draft holds the same personal answers the profile does —
+   *  a name, a gender, the chosen focus areas — and it is persisted. Both
+   *  wipes have to clear it: sign-out returns the device to first-run, so the
+   *  screen immediately after is the one that reads the draft back. */
+  it('clears the onboarding draft in both wipes', () => {
+    const reconcile = read('features/sync/services/account-reconcile.ts');
+    for (const fn of ['export function wipeLocalData', 'export function wipeDeviceData']) {
+      const start = reconcile.indexOf(fn);
+      expect(start).toBeGreaterThan(-1);
+      const body = reconcile.slice(start, reconcile.indexOf('\n}', start));
+      expect(body).toContain('useOnboardingDraftStore.getState().reset()');
+    }
+  });
 });
