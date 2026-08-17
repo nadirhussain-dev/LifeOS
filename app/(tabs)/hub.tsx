@@ -1,15 +1,13 @@
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useRouter } from 'expo-router';
-import { useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Search, SlidersHorizontal, UserCircle } from 'lucide-react-native';
+import { Search, UserCircle } from 'lucide-react-native';
 
 import { cardClass } from '@/components/ui/card';
-import { Fab } from '@/components/ui/fab';
 import { Text } from '@/components/ui/text';
 import { resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
@@ -17,7 +15,6 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AdSlot } from '@/features/ads/components/ad-slot';
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { ModuleCard } from '@/features/hub/components/module-card';
-import { ModuleManagerSheet } from '@/features/hub/components/module-manager-sheet';
 import { HUB_SECTIONS, type HubModule } from '@/features/hub/config/modules';
 import { hiddenReason, type VisibilityContext } from '@/features/hub/services/module-visibility';
 import { useModuleCurationStore } from '@/features/hub/store/module-curation-store';
@@ -63,7 +60,6 @@ export default function HubScreen() {
   const overrides = useModuleCurationStore((s) => s.overrides);
 
   const profile = useAuthStore((s) => s.profile);
-  const managerRef = useRef<BottomSheetModal>(null);
 
   /**
    * Everything that can hide a module, in one object.
@@ -331,17 +327,6 @@ export default function HubScreen() {
 
         <AdSlot placement="hub-bottom" />
       </ScrollView>
-
-      {/* Labelled rather than a bare glyph. Every other FAB in the app is a
-          plus, and a plus here would promise to create something; this one
-          curates the grid it sits on, which no icon says on its own. */}
-      <Fab
-        icon={SlidersHorizontal}
-        label={t('hub.manageModules')}
-        onPress={() => managerRef.current?.present()}
-        accessibilityLabel={t('hub.manageTitle')}
-      />
-      <ModuleManagerSheet ref={managerRef} context={context} />
     </View>
   );
 }

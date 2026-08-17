@@ -91,6 +91,30 @@ export function isModuleVisible(moduleId: string, context: VisibilityContext): b
 }
 
 /**
+ * Whether the user has explicitly closed this module.
+ *
+ * Separate from `hiddenReason` because it answers a different question, for
+ * callers that have no `VisibilityContext` and should not gain one. Hiding a
+ * tile and *disabling a module* are not the same act, and only one of the four
+ * hidden reasons means the second:
+ *
+ *   - 'operator' already disables everything, everywhere, by its own path.
+ *   - 'private' means "reachable through the vault", not "off".
+ *   - 'curated' is a guess the user never confirmed. Its modules must keep
+ *     working: their reminders, deep links and dashboard cards are how somebody
+ *     discovers a module onboarding dropped on their behalf, and silencing those
+ *     would turn a suggestion into a decision nobody made.
+ *   - 'closed' is the one the user said out loud. That one turns the module off.
+ *
+ * `ALWAYS_VISIBLE_MODULES` is honoured here too, so no override that reached the
+ * store by any route can switch off the app's own controls.
+ */
+export function isClosedByUser(moduleId: string, overrides: Record<string, boolean>): boolean {
+  if (ALWAYS_VISIBLE_MODULES.includes(moduleId)) return false;
+  return overrides[moduleId] === false;
+}
+
+/**
  * Whether the module manager should offer a switch for this module.
  *
  * A module the operator pulled has no switch to offer — turning it "on" would

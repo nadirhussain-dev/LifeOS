@@ -1,3 +1,5 @@
+import { isClosedByUser } from '@/features/hub/services/module-visibility';
+import { useModuleCurationStore } from '@/features/hub/store/module-curation-store';
 import { isModuleEnabled } from '@/features/module-flags/store/module-flags-store';
 import { privatisedModules } from '@/features/private/store/private-store';
 import type { NotificationCategory } from '@/features/notifications/types/notification.types';
@@ -71,15 +73,30 @@ export function categoryVisibility(category: NotificationCategory): CategoryVisi
   const moduleId = MODULE_FOR_CATEGORY[category];
   if (!moduleId) return 'ok';
   if (!isModuleEnabled(moduleId)) return 'suppressed';
+  // Switched off by the user, which reads exactly like the operator case from
+  // here: the route guard now sends them to the Hub, so a reminder would be a
+  // nudge towards a screen that bounces. Suppressed rather than redacted —
+  // redaction is for a module that is working and private, not one that is off.
+  if (isClosedByUser(moduleId, closedOverrides())) return 'suppressed';
   if (privatisedModules().includes(moduleId)) return 'redacted';
   return 'ok';
+}
+
+/** Read outside React, like `privatisedModules()` above it — this file is
+ *  called from the scheduler as well as from screens. */
+function closedOverrides(): Record<string, boolean> {
+  return useModuleCurationStore.getState().overrides;
 }
 
 /** Whether this module's content may be named in something the OS will render
  *  outside the app. Used by the digest, which has to drop lines rather than
  *  redact the whole sentence. */
 export function moduleMayBeNamed(moduleId: string): boolean {
-  return isModuleEnabled(moduleId) && !privatisedModules().includes(moduleId);
+  return (
+    isModuleEnabled(moduleId) &&
+    !isClosedByUser(moduleId, closedOverrides()) &&
+    !privatisedModules().includes(moduleId)
+  );
 }
 
 /**

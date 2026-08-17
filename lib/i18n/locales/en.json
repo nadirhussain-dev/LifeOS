@@ -577,8 +577,8 @@
   "settings": {
     "title": "Settings",
     "hub": "More",
-    "showAllModules": "Show all modules",
-    "showAllModulesSubtitle": "Skip the curated view and show every module, regardless of your onboarding focus areas",
+    "manageModules": "Your modules",
+    "manageModulesSubtitle": "Choose which modules you use. Closing one switches it off — its tile, its reminders and its screens.",
     "appearance": "Appearance",
     "system": "System",
     "light": "Light",
@@ -1320,12 +1320,11 @@
     "openHint": "Open {{title}}",
     "showMoreModules_one": "Show {{count}} more module",
     "showMoreModules_other": "Show {{count}} more modules",
-    "manageModules": "Modules",
     "manageTitle": "Your modules",
-    "manageBody": "Turn on what you use. Closing one only hides its tile — nothing is deleted, and the switch brings it straight back.",
+    "manageBody": "Choose what you use. Closing a module switches it off — its tile, its reminders and its screens — but deletes nothing, and the switch brings it all straight back.",
     "manageCount": "{{on}} of {{total}} in use",
-    "manageHintOpen": "Double tap to show this module on the Hub",
-    "manageHintClose": "Double tap to hide this module from the Hub",
+    "manageHintOpen": "Double tap to switch this module on",
+    "manageHintClose": "Double tap to switch this module off",
     "manageReset": "Follow my focus areas again"
   },
   "notif": {

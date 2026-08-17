@@ -1,6 +1,7 @@
 import {
   ALWAYS_VISIBLE_MODULES,
   hiddenReason,
+  isClosedByUser,
   isCurationActive,
   isManageable,
   isModuleVisible,
@@ -139,6 +140,34 @@ describe('isManageable', () => {
   it('offers no switch for the modules that must stay', () => {
     for (const id of ALWAYS_VISIBLE_MODULES) {
       expect(isManageable(id, base)).toBe(false);
+    }
+  });
+});
+
+/**
+ * `isClosedByUser` is the gate that turns a module OFF rather than merely
+ * hiding its tile — routes stop opening, reminders stop firing. So the thing
+ * worth testing is what it declines to cover: three of the four hidden reasons
+ * must not reach it, and the reason each one is excluded is different.
+ */
+describe('isClosedByUser', () => {
+  it('is true only for a module the user actually switched off', () => {
+    expect(isClosedByUser('budget', { budget: false })).toBe(true);
+    expect(isClosedByUser('budget', { budget: true })).toBe(false);
+    expect(isClosedByUser('budget', {})).toBe(false);
+  });
+
+  it('never disables a module the guess merely dropped', () => {
+    // The whole point: a curated-out module keeps working, because its
+    // reminders and deep links are how somebody finds a module onboarding
+    // hid on their behalf. Only an explicit `false` counts.
+    expect(isClosedByUser('budget', curating.overrides)).toBe(false);
+    expect(hiddenReason('budget', curating)).toBe('curated');
+  });
+
+  it('cannot switch off the modules that must stay, whatever the store says', () => {
+    for (const id of ALWAYS_VISIBLE_MODULES) {
+      expect(isClosedByUser(id, { [id]: false })).toBe(false);
     }
   });
 });

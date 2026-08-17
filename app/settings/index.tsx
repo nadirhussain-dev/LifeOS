@@ -1,3 +1,4 @@
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -28,7 +29,7 @@ import {
   Trash2,
   UserX,
 } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, Pressable, ScrollView, Switch, View } from 'react-native';
 
@@ -49,7 +50,10 @@ import {
   hasOwner,
   isOperator as checkOperator,
 } from '@/features/operator/services/operator-repository';
+import { ModuleManagerSheet } from '@/features/hub/components/module-manager-sheet';
+import type { VisibilityContext } from '@/features/hub/services/module-visibility';
 import { useModuleCurationStore } from '@/features/hub/store/module-curation-store';
+import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 import { isVaultSetUp } from '@/features/private/services/vault-keys';
 import { usePrivateStore } from '@/features/private/store/private-store';
 import { useProfileStore } from '@/features/profile/store/profile-store';
@@ -90,8 +94,20 @@ export default function SettingsScreen() {
   const setLanguage = useLanguageStore((state) => state.setLanguage);
   const themePreference = useAppearanceStore((state) => state.themePreference);
   const setThemePreference = useAppearanceStore((state) => state.setThemePreference);
+  /** The module manager, hosted here now rather than behind a FAB on the Hub —
+   *  see the Hub section below for why it moved. Built from the same four stores
+   *  the Hub grid reads, through the same context type, so the sheet and the
+   *  grid cannot disagree about what is on. */
+  const managerRef = useRef<BottomSheetModal>(null);
+  const moduleFlags = useModuleFlagsStore((state) => state.flags);
+  const overrides = useModuleCurationStore((state) => state.overrides);
   const showAllModules = useModuleCurationStore((state) => state.showAllModules);
-  const setShowAllModules = useModuleCurationStore((state) => state.setShowAllModules);
+  const privatised = usePrivateStore((state) => state.privatised);
+  const focusAreas = useProfileStore((state) => state.focusAreas);
+  const moduleContext = useMemo<VisibilityContext>(
+    () => ({ flags: moduleFlags, privatised, overrides, focusAreas, showAllModules }),
+    [moduleFlags, privatised, overrides, focusAreas, showAllModules],
+  );
 
   const appLockEnabled = useProfileStore((state) => state.appLockEnabled);
   const setAppLockEnabled = useProfileStore((state) => state.setAppLockEnabled);
@@ -328,22 +344,26 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* One row where there were two controls in two places.
+
+            "Show all modules" was a switch whose label described the mechanism
+            rather than the choice: what it actually meant was "ignore the guess
+            made from my onboarding answers", which nobody could tell from those
+            three words, and it could only be answered all-or-nothing. The
+            manager answers the same question per module, so the switch is gone
+            rather than sitting beside it saying something subtly different.
+            Revealing everything at once still exists where it reads plainly —
+            the Hub's own "Show N more modules" prompt, in front of the grid it
+            changes. */}
         <View className="gap-2">
           <SectionLabel>{t('settings.hub')}</SectionLabel>
           <View className={cardClass({ padding: 'none' }, 'px-4')}>
             <SettingsRow
               icon={LayoutGrid}
-              label={t('settings.showAllModules')}
-              subtitle={t('settings.showAllModulesSubtitle')}
+              label={t('settings.manageModules')}
+              subtitle={t('settings.manageModulesSubtitle')}
               isFirst
-              right={
-                <Switch
-                  value={showAllModules}
-                  onValueChange={setShowAllModules}
-                  trackColor={{ true: colors[scheme].accent, false: colors[scheme].border }}
-                  thumbColor="#ffffff"
-                />
-              }
+              onPress={() => managerRef.current?.present()}
             />
           </View>
         </View>
@@ -563,6 +583,7 @@ export default function SettingsScreen() {
         onClose={() => setLanguageSheetOpen(false)}
         onSelect={(next) => void chooseLanguage(next)}
       />
+      <ModuleManagerSheet ref={managerRef} context={moduleContext} />
     </View>
   );
 }

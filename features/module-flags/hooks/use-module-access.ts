@@ -3,6 +3,8 @@ import { useEffect } from 'react';
 import { AppState } from 'react-native';
 
 import { moduleForPath, privateModuleForPath } from '@/features/hub/config/route-modules';
+import { isClosedByUser } from '@/features/hub/services/module-visibility';
+import { useModuleCurationStore } from '@/features/hub/store/module-curation-store';
 import { refreshModuleFlags } from '@/features/module-flags/services/module-flags';
 import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 import { usePrivateStore } from '@/features/private/store/private-store';
@@ -21,23 +23,30 @@ export function useModuleFlagsSync(): void {
 export type ModuleAccess =
   | { allowed: true }
   | { allowed: false; reason: 'disabled'; message: string | null }
+  | { allowed: false; reason: 'closed' }
   | { allowed: false; reason: 'locked' };
 
 /**
  * Whether this module may be opened right now, and why not.
  *
- * Two independent gates, and the order matters. The operator's switch is
+ * Three independent gates, and the order matters. The operator's switch is
  * checked first: a module pulled because it corrupts data should not be
- * reachable by unlocking the private space. The user's own "keep this private"
- * choice is second.
+ * reachable by unlocking the private space. The user's own "I don't use this"
+ * is second — closing a module in the manager switches it off rather than
+ * merely untidying the Hub, so its routes stop opening too. Their "keep this
+ * private" choice is last.
  */
 export function useModuleAccess(moduleId: string): ModuleAccess {
   const flag = useModuleFlagsStore((s) => s.flags[moduleId]);
+  const overrides = useModuleCurationStore((s) => s.overrides);
   const privatised = usePrivateStore((s) => s.privatised);
   const key = usePrivateStore((s) => s.key);
 
   if (flag && !flag.enabled) {
     return { allowed: false, reason: 'disabled', message: flag.message };
+  }
+  if (isClosedByUser(moduleId, overrides)) {
+    return { allowed: false, reason: 'closed' };
   }
   if (privatised.includes(moduleId) && !key) {
     return { allowed: false, reason: 'locked' };
@@ -72,6 +81,7 @@ export function useModuleRouteGuard(): void {
   const router = useRouter();
   const pathname = usePathname();
   const flags = useModuleFlagsStore((s) => s.flags);
+  const overrides = useModuleCurationStore((s) => s.overrides);
   const privatised = usePrivateStore((s) => s.privatised);
   const key = usePrivateStore((s) => s.key);
   const hydrated = usePrivateStore((s) => s.hydrated);
@@ -88,6 +98,14 @@ export function useModuleRouteGuard(): void {
         router.replace('/(tabs)/hub');
         return;
       }
+      // A module the user switched off. Same destination as the operator's
+      // switch, and for the same reason: the Hub is where the way back is —
+      // there the manager can turn it on again. Nothing here explains itself,
+      // because unlike the operator case the user is the one who did this.
+      if (isClosedByUser(moduleId, overrides)) {
+        router.replace('/(tabs)/hub');
+        return;
+      }
       if (privatised.includes(moduleId) && key === null) {
         router.replace('/private/unlock');
       }
@@ -98,5 +116,5 @@ export function useModuleRouteGuard(): void {
     if (privateModuleId && flags[privateModuleId]?.enabled === false) {
       router.replace(key ? '/private' : '/private/unlock');
     }
-  }, [pathname, flags, privatised, key, hydrated, router]);
+  }, [pathname, flags, overrides, privatised, key, hydrated, router]);
 }
