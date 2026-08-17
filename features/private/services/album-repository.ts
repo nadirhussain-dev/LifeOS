@@ -116,6 +116,14 @@ const toMessage = (r: Row): AlbumMessage => ({
   createdAt: num(r.created_at),
   updatedAt: num(r.updated_at),
   deletedAt: typeof r.deleted_at === 'number' ? r.deleted_at : null,
+  replyToId: str(r.reply_to_id),
+  editedAt: typeof r.edited_at === 'number' ? r.edited_at : null,
+  expiresAt: typeof r.expires_at === 'number' ? r.expires_at : null,
+  disappearedAt: typeof r.disappeared_at === 'number' ? r.disappeared_at : null,
+  kind: r.kind === 'voice' ? 'voice' : 'text',
+  voicePath: str(r.voice_path),
+  voiceDurationMs: typeof r.voice_duration_ms === 'number' ? r.voice_duration_ms : null,
+  voiceByteLength: typeof r.voice_byte_length === 'number' ? r.voice_byte_length : null,
 });
 
 const toEvent = (r: Row): AlbumEvent => ({
@@ -487,6 +495,11 @@ export async function listMessages(
     .select('*')
     .eq('album_id', albumId)
     .is('deleted_at', null)
+    // A disappeared message is soft-deleted (0053) — the row survives on
+    // purpose, so filtering it out here is the whole of what makes the timer
+    // visible to anybody. Without this the sweep runs, stamps every due row,
+    // and the chat goes on showing them.
+    .is('disappeared_at', null)
     .order('created_at', { ascending: false })
     .limit(options?.limit ?? MESSAGES_PAGE_SIZE);
   if (options?.before !== undefined) query = query.lt('created_at', options.before);
@@ -501,6 +514,7 @@ export async function sendMessage(input: {
   authorId: string;
   authorName: string | null;
   bodyCiphertext: string;
+  replyToId?: string | null;
 }): Promise<string> {
   const id = generateId();
   const now = Date.now();
@@ -510,11 +524,64 @@ export async function sendMessage(input: {
     author_id: input.authorId,
     author_name: input.authorName,
     body_ciphertext: input.bodyCiphertext,
+    reply_to_id: input.replyToId ?? null,
     created_at: now,
     updated_at: now,
   });
   assertOk(error);
   return id;
+}
+
+/**
+ * Writes the row for a voice message before its recording exists.
+ *
+ * Same ordering as `createPhotoRow` and for the same reason: the object path
+ * is built from the row's own id, so the row has to exist first. The visible
+ * consequence is better than the alternative — the bubble appears immediately,
+ * in a sending state, instead of after the upload finishes.
+ *
+ * `voice_path` stays null until `markVoiceUploaded`, which is what makes an
+ * interrupted send findable rather than lost.
+ */
+export async function createVoiceMessageRow(input: {
+  albumId: string;
+  authorId: string;
+  authorName: string | null;
+  bodyCiphertext: string;
+  durationMs: number;
+  byteLength: number;
+  replyToId?: string | null;
+}): Promise<string> {
+  const id = generateId();
+  const now = Date.now();
+  const { error } = await supabase.from('shared_album_messages').insert({
+    id,
+    album_id: input.albumId,
+    author_id: input.authorId,
+    author_name: input.authorName,
+    // A voice message still carries a body: the caption/transcript slot, empty
+    // in practice today. The column is `not null`, and sending '' unencrypted
+    // would be the one plaintext body in the table.
+    body_ciphertext: input.bodyCiphertext,
+    reply_to_id: input.replyToId ?? null,
+    kind: 'voice',
+    voice_duration_ms: input.durationMs,
+    voice_byte_length: input.byteLength,
+    created_at: now,
+    updated_at: now,
+  });
+  assertOk(error);
+  return id;
+}
+
+/** Records that the recording landed. Until this runs the message renders as
+ *  still sending — see `createVoiceMessageRow`. */
+export async function markVoiceUploaded(messageId: string, path: string): Promise<void> {
+  const { error } = await supabase
+    .from('shared_album_messages')
+    .update({ voice_path: path, updated_at: Date.now() })
+    .eq('id', messageId);
+  assertOk(error);
 }
 
 export async function removeMessage(messageId: string): Promise<void> {
@@ -614,11 +681,41 @@ export async function listReadMarks(albumId: string): Promise<AlbumReadMark[]> {
 
 /** Moves this member's marker forward. Never backwards — the server takes the
  *  greater of the two, so an out-of-order report from a second device cannot
- *  un-read anything. */
+ *  un-read anything. Also stamps delivery, since reading implies it (0054). */
 export async function markRead(albumId: string, readThrough: number): Promise<void> {
   const { error } = await supabase.rpc('mark_album_read', {
     p_album_id: albumId,
     p_through: readThrough,
+  });
+  assertOk(error);
+}
+
+/** How far each member's device has *received*, as opposed to looked at. The
+ *  grey second tick. Migration 0054. */
+export type AlbumDeliveryMark = { userId: string; deliveredThrough: number };
+
+export async function listDeliveryMarks(albumId: string): Promise<AlbumDeliveryMark[]> {
+  const res = await supabase
+    .from('shared_album_deliveries')
+    .select('user_id, delivered_through')
+    .eq('album_id', albumId);
+  return unwrap<Row[]>(res).map((r) => ({
+    userId: String(r.user_id),
+    deliveredThrough: Number(r.delivered_through),
+  }));
+}
+
+/**
+ * Reports that this device now holds everything up to `deliveredThrough`.
+ *
+ * Called after a fetch rather than after a render — "delivered" is a statement
+ * about bytes arriving, and tying it to the screen being on would make it a
+ * second, worse read receipt.
+ */
+export async function markDelivered(albumId: string, deliveredThrough: number): Promise<void> {
+  const { error } = await supabase.rpc('mark_album_delivered', {
+    p_album_id: albumId,
+    p_through: deliveredThrough,
   });
   assertOk(error);
 }

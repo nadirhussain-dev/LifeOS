@@ -112,6 +112,11 @@ export type AlbumComment = {
   deletedAt: number | null;
 };
 
+/** What a message's body actually is. `text` is every row written before
+ *  migration 0054, which is why it is the default server-side rather than
+ *  nullable — see that migration. */
+export type AlbumMessageKind = 'text' | 'voice';
+
 /** One message in the album's chat. Same ciphertext discipline as
  *  AlbumComment. */
 export type AlbumMessage = {
@@ -123,6 +128,29 @@ export type AlbumMessage = {
   createdAt: number;
   updatedAt: number;
   deletedAt: number | null;
+  /** The message this one answers, or null. Migration 0053. */
+  replyToId: string | null;
+  /** Stamped when the author rewrites the body — distinct from `updatedAt`,
+   *  which a reaction also touches. Clients show "edited" from this one.
+   *  Migration 0053. */
+  editedAt: number | null;
+  /** When this message is due to disappear, copied from the album's timer at
+   *  insert so a later change to that timer is never retroactive. Null means
+   *  it stays forever. Migration 0053. */
+  expiresAt: number | null;
+  /** Set once the sweep has passed this message's timer. A **soft** delete —
+   *  the row remains; see 0053's header before ever making it a hard one.
+   *  Anything non-null here must not be rendered. Migration 0053. */
+  disappearedAt: number | null;
+  kind: AlbumMessageKind;
+  /** Object path in the shared-albums bucket, holding ciphertext under the
+   *  album key. Null while a voice message's upload is still in flight —
+   *  which is what makes an interrupted send resumable. Migration 0054. */
+  voicePath: string | null;
+  /** Recording length in ms, in the clear so the bubble can be drawn before
+   *  the object is downloaded. Migration 0054. */
+  voiceDurationMs: number | null;
+  voiceByteLength: number | null;
 };
 
 /** A shared plan: something the two of you mean to do, on a date. Migration
