@@ -1319,7 +1319,14 @@
     "soon": "جلد",
     "openHint": "{{title}} کھولیں",
     "showMoreModules_one": "{{count}} مزید ماڈیول دکھائیں",
-    "showMoreModules_other": "{{count}} مزید ماڈیولز دکھائیں"
+    "showMoreModules_other": "{{count}} مزید ماڈیولز دکھائیں",
+    "manageModules": "ماڈیولز",
+    "manageTitle": "آپ کے ماڈیولز",
+    "manageBody": "جو استعمال کرتے ہیں اسے آن رکھیں۔ بند کرنے سے صرف ٹائل چھپتی ہے — کچھ حذف نہیں ہوتا، اور سوئچ سے فوراً واپس آ جاتا ہے۔",
+    "manageCount": "{{total}} میں سے {{on}} زیرِ استعمال",
+    "manageHintOpen": "اس ماڈیول کو ہب پر دکھانے کے لیے دو بار ٹیپ کریں",
+    "manageHintClose": "اس ماڈیول کو ہب سے چھپانے کے لیے دو بار ٹیپ کریں",
+    "manageReset": "دوبارہ میرے فوکس ایریاز کے مطابق چلائیں"
   },
   "notif": {
     "title": "نوٹیفکیشنز",

@@ -1,25 +1,31 @@
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Search, UserCircle } from 'lucide-react-native';
+import { Search, SlidersHorizontal, UserCircle } from 'lucide-react-native';
 
 import { cardClass } from '@/components/ui/card';
+import { Fab } from '@/components/ui/fab';
 import { Text } from '@/components/ui/text';
 import { resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AdSlot } from '@/features/ads/components/ad-slot';
+import { useAuthStore } from '@/features/auth/services/auth-store';
 import { ModuleCard } from '@/features/hub/components/module-card';
-import { MODULE_FOCUS_MAP } from '@/features/hub/config/module-focus-map';
+import { ModuleManagerSheet } from '@/features/hub/components/module-manager-sheet';
 import { HUB_SECTIONS, type HubModule } from '@/features/hub/config/modules';
+import { hiddenReason, type VisibilityContext } from '@/features/hub/services/module-visibility';
 import { useModuleCurationStore } from '@/features/hub/store/module-curation-store';
 import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 import { PRIVATE_MODULES } from '@/features/private/config/private-modules';
 import { usePrivateStore } from '@/features/private/store/private-store';
+import { Avatar } from '@/features/profile/components/avatar';
+import { initialsFor } from '@/features/profile/services/avatar';
 import { useProfileStore } from '@/features/profile/store/profile-store';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { alpha } from '@/lib/color';
@@ -54,48 +60,49 @@ export default function HubScreen() {
   const focusAreas = useProfileStore((s) => s.focusAreas);
   const showAllModules = useModuleCurationStore((s) => s.showAllModules);
   const setShowAllModules = useModuleCurationStore((s) => s.setShowAllModules);
-  // Nobody answering the focus question isn't the same as answering "none of
-  // these" — curating down to zero signal would hide half the app from
-  // someone who simply skipped a screen, so an empty answer curates nothing.
-  const curationActive = !showAllModules && focusAreas.length > 0;
-  const isCurated = (moduleId: string) => {
-    const area = MODULE_FOCUS_MAP[moduleId];
-    return !!area && !focusAreas.includes(area);
-  };
+  const overrides = useModuleCurationStore((s) => s.overrides);
+
+  const profile = useAuthStore((s) => s.profile);
+  const managerRef = useRef<BottomSheetModal>(null);
 
   /**
-   * Three independent filters, and they hide for different reasons.
+   * Everything that can hide a module, in one object.
    *
-   * The operator's switch removes a module the app itself has pulled — broken,
-   * or its backend is down. The user's own "keep this private" choice moves a
-   * module into the section below, where it appears only while the vault is
-   * open. Curation is the one *offered* filter — a module outside the user's
-   * onboarding focus areas — and it's the one with a way back on this very
-   * screen (the "N more modules" prompt below), unlike the other two.
+   * Four filters now, hiding for four different reasons — the operator's kill
+   * switch, the private space, the user's own choice, and the guess made from
+   * onboarding — and the module manager sheet has to agree with this grid about
+   * every one of them. So the rules moved to
+   * features/hub/services/module-visibility.ts, where the precedence between
+   * them is written down and tested, and both screens read them from this one
+   * context instead of each re-deriving a chain of conditions that has to match.
    */
+  const context = useMemo<VisibilityContext>(
+    () => ({ flags, privatised, overrides, focusAreas, showAllModules }),
+    [flags, privatised, overrides, focusAreas, showAllModules],
+  );
+
   const sections = useMemo(
     () =>
       HUB_SECTIONS.map((section) => {
         const visible = section.modules.filter(
-          (module) =>
-            flags[module.id]?.enabled !== false &&
-            !privatised.includes(module.id) &&
-            !(curationActive && isCurated(module.id)),
+          (module) => hiddenReason(module.id, context) === null,
         );
         return { ...section, modules: visible, rows: toRows(visible) };
       }).filter((section) => section.modules.length > 0),
-    [flags, privatised, curationActive, focusAreas], // eslint-disable-line react-hooks/exhaustive-deps
+    [context],
   );
 
-  const curatedOutCount = useMemo(() => {
-    if (!curationActive) return 0;
-    return HUB_SECTIONS.flatMap((section) => section.modules).filter(
-      (module) =>
-        flags[module.id]?.enabled !== false &&
-        !privatised.includes(module.id) &&
-        isCurated(module.id),
-    ).length;
-  }, [flags, privatised, curationActive, focusAreas]); // eslint-disable-line react-hooks/exhaustive-deps
+  /** Modules the onboarding guess dropped and the user has never spoken about.
+   *  Deliberately excludes the ones they closed themselves in the manager: a
+   *  prompt offering those back is the app arguing with a decision it has just
+   *  been given. */
+  const curatedOutCount = useMemo(
+    () =>
+      HUB_SECTIONS.flatMap((section) => section.modules).filter(
+        (module) => hiddenReason(module.id, context) === 'curated',
+      ).length,
+    [context],
+  );
 
   /** Disabled modules, with whatever the operator said about them. Shown rather
    * than silently vanished: a module that disappears without explanation
@@ -167,18 +174,35 @@ export default function HubScreen() {
           <View className="flex-1 gap-1">
             <Text variant="heading">{t('hub.title')}</Text>
           </View>
-          {/* The screen listing every module is exactly where "I know I wrote
-              it down somewhere" happens. */}
           {/* The profile lives here rather than as a sixth tab — see
-              app/profile.tsx for why the tab bar stays at five. */}
+              app/profile.tsx for why the tab bar stays at five. Your own face
+              once you have uploaded one, through the same component the profile
+              screen uses, so a picture that fails to load falls back to initials
+              here too rather than to an empty circle. */}
           <Pressable
             onPress={() => router.push('/profile')}
             accessibilityRole="button"
             accessibilityLabel={t('profile.title')}
-            className="h-11 w-11 items-center justify-center rounded-full border border-border bg-surface"
+            className="h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-border bg-surface"
           >
-            <UserCircle size={20} color={colors[scheme].foreground} />
+            {profile ? (
+              <Avatar
+                path={profile.avatarPath}
+                updatedAt={profile.avatarUpdatedAt}
+                initials={initialsFor(profile.displayName, profile.email)}
+                // 42, not 44: the chip's own 1px border eats a pixel each side,
+                // and a 44 child would be clipped by it rather than sitting
+                // inside it.
+                size={42}
+              />
+            ) : (
+              // No account (or none loaded yet): there is no picture and no name
+              // to take initials from, so the generic mark is the honest answer.
+              <UserCircle size={20} color={colors[scheme].foreground} />
+            )}
           </Pressable>
+          {/* The screen listing every module is exactly where "I know I wrote
+              it down somewhere" happens. */}
           <Pressable
             onPress={() => router.push('/search')}
             accessibilityRole="button"
@@ -307,6 +331,17 @@ export default function HubScreen() {
 
         <AdSlot placement="hub-bottom" />
       </ScrollView>
+
+      {/* Labelled rather than a bare glyph. Every other FAB in the app is a
+          plus, and a plus here would promise to create something; this one
+          curates the grid it sits on, which no icon says on its own. */}
+      <Fab
+        icon={SlidersHorizontal}
+        label={t('hub.manageModules')}
+        onPress={() => managerRef.current?.present()}
+        accessibilityLabel={t('hub.manageTitle')}
+      />
+      <ModuleManagerSheet ref={managerRef} context={context} />
     </View>
   );
 }

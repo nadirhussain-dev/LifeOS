@@ -1423,7 +1423,14 @@
     "soon": "قريبًا",
     "openHint": "فتح {{title}}",
     "showMoreModules_one": "إظهار وحدة واحدة إضافية",
-    "showMoreModules_other": "إظهار {{count}} وحدات إضافية"
+    "showMoreModules_other": "إظهار {{count}} وحدات إضافية",
+    "manageModules": "الوحدات",
+    "manageTitle": "وحداتك",
+    "manageBody": "شغّل ما تستخدمه. إغلاق وحدة يخفي بطاقتها فقط — لا يُحذف شيء، ويعيدها المفتاح فورًا.",
+    "manageCount": "{{on}} من {{total}} قيد الاستخدام",
+    "manageHintOpen": "انقر مرتين لإظهار هذه الوحدة في المركز",
+    "manageHintClose": "انقر مرتين لإخفاء هذه الوحدة من المركز",
+    "manageReset": "العودة إلى مجالات تركيزي"
   },
   "notif": {
     "title": "الإشعارات",
