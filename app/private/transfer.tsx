@@ -1,16 +1,19 @@
 import * as Clipboard from 'expo-clipboard';
 import { Copy, KeyRound, Share2 } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { PrivateScreen } from '@/features/private/components/private-screen';
-import { createTransfer, type TransferBundle } from '@/features/private/services/key-transfer';
+import { collectAlbumKeys } from '@/features/private/services/album-keys';
+import { listAlbums } from '@/features/private/services/album-repository';
+import { createVaultTransfer, type TransferBundle } from '@/features/private/services/key-transfer';
 import { usePrivateStore } from '@/features/private/store/private-store';
 import { useTheme } from '@/hooks/use-theme';
 import { Text } from '@/components/ui/text';
+import { reportError } from '@/lib/error-reporting';
 import { toast } from '@/lib/toast-store';
 
 /**
@@ -33,14 +36,45 @@ export default function VaultTransferScreen() {
   const space = usePrivateStore((s) => s.space);
 
   const [bundle, setBundle] = useState<TransferBundle | null>(null);
+  const [albumCount, setAlbumCount] = useState(0);
+
+  /**
+   * The vault key plus every shared-album key this device holds.
+   *
+   * Both, in one sealed payload, because moving only the vault is what left
+   * somebody on a new phone with their shared albums synced and permanently
+   * shut — see key-transfer.ts's note on the v2 format. The album list comes
+   * from the server (it is the membership list, not a secret); the keys
+   * themselves never leave the keystore except into this payload.
+   *
+   * A failure to read the album list is not allowed to block the transfer. The
+   * vault key is the part somebody is standing here to move, and an offline
+   * moment must not cost them that — the albums can be re-shared by a
+   * co-member, a lost vault cannot be re-anything.
+   */
+  const build = useCallback(async () => {
+    if (!key) return;
+    let albumKeys: Record<string, Uint8Array> = {};
+    try {
+      const albums = await listAlbums();
+      albumKeys = await collectAlbumKeys(
+        key,
+        albums.map((album) => album.id),
+      );
+    } catch (error) {
+      reportError(error, { scope: 'vault-transfer-album-keys' });
+    }
+    setBundle(await createVaultTransfer(key, albumKeys));
+    setAlbumCount(Object.keys(albumKeys).length);
+  }, [key]);
 
   useEffect(() => {
     // Only ever the real space. Transferring a decoy would move a key that
     // opens nothing anybody wants, and doing it from inside the decoy would
     // reveal that the decoy is a decoy.
     if (!key || space !== 'real') return;
-    void createTransfer(key).then(setBundle);
-  }, [key, space]);
+    void build();
+  }, [key, space, build]);
 
   if (!key || space !== 'real') {
     return (
@@ -54,6 +88,14 @@ export default function VaultTransferScreen() {
     <PrivateScreen title={t('transfer.title')} tint={c.accent}>
       <ScrollView contentContainerClassName="gap-6 pb-10" showsVerticalScrollIndicator={false}>
         <Text variant="muted">{t('transfer.intro')}</Text>
+
+        {/* Said out loud, because it is the difference between this transfer
+            and the one that used to happen: shared albums come too. Somebody
+            who does not know that has no reason to expect their albums to open
+            on the other phone, and every reason to re-share them needlessly. */}
+        {albumCount > 0 ? (
+          <Text variant="caption">{t('transfer.includesAlbums', { count: albumCount })}</Text>
+        ) : null}
 
         {/* Step one: the code. Shown large and on its own, because it is meant
             to be read aloud rather than copied. */}
@@ -124,7 +166,7 @@ export default function VaultTransferScreen() {
           variant="secondary"
           size="lg"
           label={t('transfer.newCode')}
-          onPress={() => void createTransfer(key).then(setBundle)}
+          onPress={() => void build()}
         />
       </ScrollView>
     </PrivateScreen>

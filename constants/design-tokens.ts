@@ -85,6 +85,13 @@ export const colors = {
     // text
     foreground: '#161c19',
     mutedForeground: '#6d7a74',
+    /**
+     * NOT a text colour. Inactive indicators, unfilled slots, spent rungs —
+     * the states WCAG exempts because they read as "off" rather than as
+     * something to be read. It is 2.4:1 on this theme's ground and 4.2:1 on
+     * dark's, so any prose wearing it fails AA in both. Prose that wants to
+     * recede uses `mutedForeground`.
+     */
     subtleForeground: '#9aa8a1',
 
     // brand

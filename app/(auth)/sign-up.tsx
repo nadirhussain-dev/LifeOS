@@ -17,6 +17,7 @@ export default function SignUpScreen() {
   const { t } = useTranslation();
   const { c } = useTheme();
   const sendSignupOtp = useAuthStore((s) => s.sendSignupOtp);
+  const sendSignInOtp = useAuthStore((s) => s.sendSignInOtp);
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
@@ -41,6 +42,35 @@ export default function SignUpScreen() {
     }
     setBusy(true);
     setError(null);
+
+    // Ask for a SIGN-IN code first, which the server refuses (`otp_disabled`)
+    // when no account has this address — and refuses without sending anything,
+    // so this costs an unregistered address nothing but a round trip.
+    //
+    // The point is what happens when it succeeds. Signing up with an address
+    // that already has an account used to run the whole sign-up flow against
+    // it: the code signed the user in, and `create-password` then overwrote the
+    // password of the account they already had, from a form that says "Create
+    // your account". Nothing warned them, and nothing could be undone. Now that
+    // case is what it actually is — a sign-in — and it says so.
+    const existing = await sendSignInOtp(email);
+    if (existing.ok) {
+      setBusy(false);
+      router.push({
+        pathname: '/(auth)/verify-signin',
+        params: { email: email.trim(), existing: '1' },
+      });
+      return;
+    }
+    // Anything other than "no account here" is a real failure — the relay being
+    // down, a rate limit, a malformed address — and pressing on to the sign-up
+    // send would just hit it again and report it a step later.
+    if (existing.key !== 'noAccountForEmail') {
+      setBusy(false);
+      setError(existing.error);
+      return;
+    }
+
     const result = await sendSignupOtp(email, name);
     setBusy(false);
     if (!result.ok) {

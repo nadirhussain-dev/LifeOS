@@ -148,8 +148,40 @@ ${script}
 </html>`;
 }
 
-function invitationPage(token: string): string {
-  const deepLink = `${SCHEME}://join/${token}`;
+/**
+ * The two things that get invited to, and where each one lands in the app.
+ *
+ * A shared album was built to hand its link over through the OS share sheet as
+ * `daykeep://private/albums/accept/<token>` — which fails for both of the
+ * reasons in this file's header, and fails hardest in the place it is most
+ * used: pasted into WhatsApp or Gmail, a custom scheme is either not linkified
+ * at all or stripped outright, so the recipient gets a line of grey text. The
+ * album invite therefore travels the same https path the group invite already
+ * does, and only the destination differs.
+ */
+const DESTINATIONS = {
+  group: {
+    path: (token: string) => `join/${token}`,
+    title: 'Join a group on Daykeep',
+    heading: "You've been invited",
+    lead: 'Open this invitation in Daykeep to join the group and see what you owe or are owed.',
+  },
+  album: {
+    path: (token: string) => `private/albums/accept/${token}`,
+    title: 'Join a shared album on Daykeep',
+    heading: "You've been invited to a shared album",
+    lead:
+      'Open this invitation in Daykeep to join the album. ' +
+      'The photos themselves are end-to-end encrypted, so you will also need the ' +
+      'separate key the sender gives you — this link on its own cannot open them.',
+  },
+} as const;
+
+type Destination = keyof typeof DESTINATIONS;
+
+function invitationPage(token: string, kind: Destination): string {
+  const destination = DESTINATIONS[kind];
+  const deepLink = `${SCHEME}://${destination.path(token)}`;
   const escaped = escapeHtml(deepLink);
 
   const storeButtons = [
@@ -162,9 +194,9 @@ function invitationPage(token: string): string {
   ].join('\n    ');
 
   return shell(
-    'Join a group on Daykeep',
-    `<h1>You've been invited</h1>
-    <p>Open this invitation in Daykeep to join the group and see what you owe or are owed.</p>
+    destination.title,
+    `<h1>${destination.heading}</h1>
+    <p>${destination.lead}</p>
     <a class="btn" href="${escaped}">Open in Daykeep</a>
     ${storeButtons}
     <p class="fine">If nothing happens, Daykeep isn't installed on this device yet. Install it,
@@ -182,11 +214,16 @@ Deno.serve((req: Request) => {
   const url = new URL(req.url);
 
   // Supabase routes the whole path to the function, so the request arrives as
-  // /join/<token> — the last non-empty segment is the token.
+  // /join/<token> — the last non-empty segment is the token. An album invite
+  // adds one segment in front of it: /join/album/<token>. Read that way round
+  // rather than by counting from the left, because the prefix Supabase puts in
+  // front (`/functions/v1/…` in some deployments, nothing in others) is not
+  // something this should have an opinion about.
   const segments = url.pathname.split('/').filter(Boolean);
   const token = segments[segments.length - 1] ?? '';
+  const kind: Destination = segments[segments.length - 2] === 'album' ? 'album' : 'group';
 
-  if (token === 'join' || !isWellFormedToken(token)) {
+  if (token === 'join' || token === 'album' || !isWellFormedToken(token)) {
     return page(
       shell(
         'Invitation link not recognised',
@@ -199,5 +236,5 @@ Deno.serve((req: Request) => {
     );
   }
 
-  return page(invitationPage(token));
+  return page(invitationPage(token, kind));
 });

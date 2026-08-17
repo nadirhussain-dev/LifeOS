@@ -106,7 +106,15 @@ async function performLocalWipe(command: DeviceCommand): Promise<void> {
 
   try {
     const evacuation = await evacuateBeforeWipe();
-    outcome = { at: Date.now(), unsaved: evacuation.unsaved, pushed: evacuation.pushed };
+    // Both lists, joined. The sign-out dialog keeps them apart because it is
+    // asking a question — one half is fixable and the other is a setting. This
+    // is a receipt for something that has already happened, where the only fact
+    // left is that these modules were on the device and are not in the account.
+    outcome = {
+      at: Date.now(),
+      unsaved: [...evacuation.unsaved, ...evacuation.deviceOnly],
+      pushed: evacuation.pushed,
+    };
   } catch (error) {
     // The push failing does not cancel the wipe — the instruction stands, and
     // the account is blocked either way. It does mean nothing was saved, and

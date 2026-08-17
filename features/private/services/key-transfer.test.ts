@@ -1,5 +1,6 @@
 import {
   createTransfer,
+  createVaultTransfer,
   generateTransferCode,
   normaliseTransferCode,
   redeemTransfer,
@@ -99,7 +100,9 @@ describe('a transfer', () => {
 
   it('names an unsupported version instead of failing as a bad decrypt', async () => {
     const { code, payload } = await createTransfer(generateMasterKey());
-    const future = payload.replace(/^1\./, '2.');
+    // 3, not 2: version 2 is the album-carrying format and is understood. A
+    // version this build has never heard of is the case under test.
+    const future = payload.replace(/^1\./, '3.');
     expect(await redeemTransfer(future, code)).toEqual({
       ok: false,
       reason: 'unsupported-version',
@@ -114,5 +117,88 @@ describe('a transfer', () => {
     const { code, payload } = await createTransfer(key.subarray(0, 16));
     const result = await redeemTransfer(payload, code);
     expect(result).toEqual({ ok: false, reason: 'wrong-code' });
+  });
+
+  /** A v1 payload carries no albums, and must keep working forever: it is what
+   *  `album-invite.ts` mints to hand one album key to a co-member. */
+  it('reports no albums for a plain key transfer', async () => {
+    const { code, payload } = await createTransfer(generateMasterKey());
+    const result = await redeemTransfer(payload, code);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.albumKeys).toEqual({});
+  });
+});
+
+/**
+ * Moving the vault used to move the vault alone, which left somebody on a new
+ * phone with every shared album synced down from the server and permanently
+ * shut — the ciphertext arrived and the key to it did not. These cover the
+ * format that carries both.
+ */
+describe('a transfer that carries shared albums', () => {
+  const albumKey = (byte: number) => new Uint8Array(32).fill(byte);
+
+  it('round-trips the vault key and every album key', async () => {
+    const key = generateMasterKey();
+    const albums = { 'album-a': albumKey(7), 'album-b': albumKey(9) };
+
+    const { code, payload } = await createVaultTransfer(key, albums);
+    const result = await redeemTransfer(payload, code);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(Array.from(result.masterKey)).toEqual(Array.from(key));
+    expect(Object.keys(result.albumKeys).sort()).toEqual(['album-a', 'album-b']);
+    expect(Array.from(result.albumKeys['album-a'])).toEqual(Array.from(albums['album-a']));
+    expect(Array.from(result.albumKeys['album-b'])).toEqual(Array.from(albums['album-b']));
+  });
+
+  it('carries a vault with no albums at all', async () => {
+    const key = generateMasterKey();
+    const { code, payload } = await createVaultTransfer(key, {});
+    const result = await redeemTransfer(payload, code);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.albumKeys).toEqual({});
+  });
+
+  /** The album keys are inside the same sealed blob, under the same code — so
+   *  a captured payload gives up the albums exactly as readily as it gives up
+   *  the vault, which is to say not at all. */
+  it('gives a captured payload nothing, albums included', async () => {
+    const { payload } = await createVaultTransfer(generateMasterKey(), {
+      'album-a': albumKey(3),
+    });
+    expect(payload).not.toContain('album-a');
+    expect((await redeemTransfer(payload, generateTransferCode())).ok).toBe(false);
+  });
+
+  /**
+   * One unreadable album must not cost somebody the vault and the other nine.
+   * A device that arrives without one album key is in exactly the position of a
+   * device that never had it — a co-member can re-share.
+   */
+  it('drops a malformed album entry rather than failing the transfer', async () => {
+    const key = generateMasterKey();
+    const albums = {
+      good: albumKey(1),
+      short: new Uint8Array(16).fill(2),
+    };
+    const { code, payload } = await createVaultTransfer(key, albums);
+    const result = await redeemTransfer(payload, code);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(Array.from(result.masterKey)).toEqual(Array.from(key));
+    expect(Object.keys(result.albumKeys)).toEqual(['good']);
+  });
+
+  it('still refuses the wrong code', async () => {
+    const { payload } = await createVaultTransfer(generateMasterKey(), {
+      'album-a': albumKey(5),
+    });
+    expect(await redeemTransfer(payload, generateTransferCode())).toEqual({
+      ok: false,
+      reason: 'wrong-code',
+    });
   });
 });

@@ -1,5 +1,4 @@
 import * as Clipboard from 'expo-clipboard';
-import * as Linking from 'expo-linking';
 import { useLocalSearchParams } from 'expo-router';
 import { Copy, KeyRound, Link as LinkIcon, Share2 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -16,7 +15,7 @@ import {
   useSharedAlbumMutations,
 } from '@/features/private/hooks/use-shared-albums';
 import { PrivateScreen } from '@/features/private/components/private-screen';
-import { resendAlbumKey } from '@/features/private/services/album-invite';
+import { albumInviteUrl, resendAlbumKey } from '@/features/private/services/album-invite';
 import { notifyAlbumInvite } from '@/features/private/services/album-notify';
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { useTheme } from '@/hooks/use-theme';
@@ -116,7 +115,11 @@ export default function AlbumInviteScreen() {
   // custom scheme) hand over full decryption capability, not just
   // membership — see transfer.tsx's near-identical warning for why the two
   // halves of vault-transfer are kept apart the same way.
-  const link = bundle?.token ? Linking.createURL(`/private/albums/accept/${bundle.token}`) : null;
+  //
+  // An https URL, not a `daykeep://` one — see `albumInviteUrl`. The scheme
+  // version is what made this invite unusable everywhere except the sending
+  // device.
+  const link = bundle?.token ? albumInviteUrl(bundle.token) : null;
 
   return (
     <PrivateScreen moduleId="shared-albums" title={t('private.invite')} tint={c.accent}>

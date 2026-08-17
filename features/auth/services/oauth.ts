@@ -39,9 +39,46 @@ export type OAuthProvider = 'google' | 'apple';
  *  in Supabase → Authentication → URL Configuration → Redirect URLs, or the
  *  provider refuses the request before the user sees anything. In a build this
  *  resolves via the `daykeep` scheme; under Expo Go it is an `exp://` URL, which
- *  is why the development entry has to be allowlisted separately. */
+ *  is why the development entry has to be allowlisted separately.
+ *
+ *  There is a screen at this path — `app/auth/callback.tsx` — and it is not
+ *  optional. See its own header: when Android delivers the redirect to the app
+ *  as a deep link rather than resolving it inside the browser session, the
+ *  router navigates here, and without a route the sign-in ends on "Unmatched
+ *  Route" with the code sitting in the URL. */
 export function oauthRedirectUrl(): string {
   return Linking.createURL('/auth/callback');
+}
+
+/**
+ * Turns an OAuth `code` into a session, from whichever path got hold of it.
+ *
+ * There are two, and both are real: `openAuthSessionAsync` below returns the
+ * redirect URL in-process, and the OS separately delivers it to the app as a
+ * deep link. Either can arrive first, and on Android both often do — so this is
+ * written to be safe when it runs twice with the same code.
+ *
+ * A code can only be exchanged once; the second attempt fails. That failure is
+ * not a failed sign-in, and reporting it as one would put an error over a
+ * session that exists and works. So the session is what is checked, before and
+ * after — `getSession()` rather than the store, because the store is populated
+ * by `onAuthStateChange` and may not have caught up within the same tick.
+ */
+export async function exchangeOAuthCode(code: string): Promise<AuthResult> {
+  const before = await supabase.auth.getSession();
+  if (before.data.session) return { ok: true };
+
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) {
+    const after = await supabase.auth.getSession();
+    if (after.data.session) return { ok: true };
+    return { ok: false, error: friendlyOAuthError(error.message) };
+  }
+
+  // onAuthStateChange clears this too; setting it here as well means the gate
+  // cannot briefly treat a freshly signed-in user as a guest.
+  useAuthStore.setState({ isGuest: false });
+  return { ok: true };
 }
 
 const NOT_CONFIGURED: AuthResult = {
@@ -125,13 +162,7 @@ export async function signInWithGoogle(): Promise<AuthResult> {
       return { ok: false, error: 'Google sent us back without a sign-in code. Please try again.' };
     }
 
-    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-    if (exchangeError) return { ok: false, error: friendlyOAuthError(exchangeError.message) };
-
-    // onAuthStateChange clears this too; setting it here as well means the gate
-    // cannot briefly treat a freshly signed-in user as a guest.
-    useAuthStore.setState({ isGuest: false });
-    return { ok: true };
+    return await exchangeOAuthCode(code);
   } catch (error) {
     reportError(error, { scope: 'oauth:google' });
     return { ok: false, error: 'Could not reach Google. Check your connection and try again.' };

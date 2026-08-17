@@ -69,6 +69,19 @@ describe('the server rule', () => {
     expect(proof).not.toMatch(/'oauth'/);
   });
 
+  /**
+   * A device that released the account on its own sign-out must be able to
+   * sign back in. 0047 answered 'revoked' for it, which met the returning user
+   * with a takeover notice and a wipe; 0051 answers 'unknown' so the client
+   * simply claims.
+   */
+  it('does not report a self-released device as revoked', () => {
+    const fix = read('supabase/migrations/0051_signed_out_device_reclaim.sql');
+    const status = fix.slice(fix.indexOf('function public.device_status'));
+    expect(status).toContain("v_self.revoked_reason = 'signed_out'");
+    expect(status).toMatch(/revoked_reason = 'signed_out'[\s\S]{0,300}'status', 'unknown'/);
+  });
+
   /** The revoked device keeps write access briefly so its final push can save
    *  what it never synced — otherwise the wipe destroys exactly the rows it is
    *  supposed to preserve first. */
@@ -110,6 +123,28 @@ describe('the client half', () => {
     expect(body.indexOf('refreshDeviceSession')).toBeLessThan(body.indexOf('claimThisDevice'));
     expect(body).toContain("standing === 'revoked'");
     expect(body).toContain("standing === 'unregistered'");
+  });
+
+  /**
+   * A phone that lost the account wipes and signs out once. If it did so again
+   * every time a session appeared, the user could never sign back in on it —
+   * each sign-in would be undone by the notice screen, which has no way
+   * forward. Claiming instead reaches the takeover screen, which does.
+   */
+  it('surrenders once per revocation, then offers the way back', () => {
+    const hook = read('features/auth/hooks/use-device-session.ts');
+    expect(hook).toContain('surrenderedFor === revokedAt');
+    expect(hook.indexOf('surrenderedFor === revokedAt')).toBeLessThan(hook.indexOf('surrender()'));
+    expect(hook).toContain('markSurrendered()');
+
+    // And the mark has to outlive the wipe that follows it, or it records
+    // nothing — `wipeDeviceData()` clears this store.
+    const store = read('features/auth/store/device-session-store.ts');
+    const clear = store.slice(
+      store.lastIndexOf('clear: () =>'),
+      store.indexOf("name: 'device-session-store'"),
+    );
+    expect(clear).not.toContain('surrenderedFor');
   });
 
   /** The takeover screen is the only way past `otp_required`, and the notice

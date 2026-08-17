@@ -35,6 +35,19 @@ type DeviceSessionState = {
   /** Why this device lost the account — 'signed_in_elsewhere', 'signed_out',
    *  'account_deleted'. Drives which message the notice screen shows. */
   revokedReason: string | null;
+  /** When the revocation in force happened, as the server timestamps it — the
+   *  identity of *which* revocation, not merely that there was one. */
+  revokedAt: string | null;
+  /**
+   * The revocation this device has already wiped and signed out for, if any.
+   *
+   * Deliberately survives `clear()`: it is not part of the verdict but a record
+   * of something this device DID, and the moment it is needed is precisely the
+   * moment the verdict has been cleared — the user signing in again on the
+   * phone that lost the account. Compared by timestamp rather than kept as a
+   * boolean so a *second*, genuine takeover is still acted on.
+   */
+  surrenderedFor: string | null;
   checkedAt: number | null;
   /**
    * Set while a takeover is being carried out, so the auth gate does not
@@ -43,8 +56,15 @@ type DeviceSessionState = {
    */
   claiming: boolean;
 
-  setVerdict: (verdict: DeviceVerdict, other?: OtherDevice | null, reason?: string | null) => void;
+  setVerdict: (
+    verdict: DeviceVerdict,
+    other?: OtherDevice | null,
+    reason?: string | null,
+    revokedAt?: string | null,
+  ) => void;
   setClaiming: (claiming: boolean) => void;
+  /** Records that this device has carried out the revocation now in force. */
+  markSurrendered: () => void;
   clear: () => void;
 };
 
@@ -54,10 +74,12 @@ export const useDeviceSessionStore = create<DeviceSessionState>()(
       verdict: 'unknown',
       otherDevice: null,
       revokedReason: null,
+      revokedAt: null,
+      surrenderedFor: null,
       checkedAt: null,
       claiming: false,
 
-      setVerdict: (verdict, otherDevice, revokedReason) =>
+      setVerdict: (verdict, otherDevice, revokedReason, revokedAt) =>
         set((s) => ({
           verdict,
           checkedAt: Date.now(),
@@ -66,13 +88,18 @@ export const useDeviceSessionStore = create<DeviceSessionState>()(
           // without dropping the label the takeover screen is showing.
           otherDevice: otherDevice === undefined ? s.otherDevice : otherDevice,
           revokedReason: revokedReason === undefined ? s.revokedReason : revokedReason,
+          revokedAt: revokedAt === undefined ? s.revokedAt : revokedAt,
         })),
       setClaiming: (claiming) => set({ claiming }),
+      markSurrendered: () => set((s) => ({ surrenderedFor: s.revokedAt })),
+      // `surrenderedFor` is not listed, and that is the point of it — see the
+      // note on the field.
       clear: () =>
         set({
           verdict: 'unknown',
           otherDevice: null,
           revokedReason: null,
+          revokedAt: null,
           checkedAt: null,
           claiming: false,
         }),
@@ -84,6 +111,8 @@ export const useDeviceSessionStore = create<DeviceSessionState>()(
         verdict: state.verdict,
         otherDevice: state.otherDevice,
         revokedReason: state.revokedReason,
+        revokedAt: state.revokedAt,
+        surrenderedFor: state.surrenderedFor,
         checkedAt: state.checkedAt,
       }),
     },

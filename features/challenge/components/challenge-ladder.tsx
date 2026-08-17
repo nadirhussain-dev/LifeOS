@@ -45,7 +45,10 @@ export function ChallengeLadder({ tiers, qualifiedDays }: Props) {
           <View key={tier.dayThreshold} className="flex-row gap-3">
             <Text
               className="w-10 pt-1 text-right font-sora-semibold"
-              style={{ color: climbed ? c.accent : c.subtleForeground }}
+              // Muted rather than subtle for the unclimbed rungs: a ladder
+              // exists to show what is still ahead, so those numbers are meant
+              // to be read, not merely to look switched off.
+              style={{ color: climbed ? c.accent : c.mutedForeground }}
             >
               {tier.dayThreshold}
             </Text>

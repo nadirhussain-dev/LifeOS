@@ -380,15 +380,30 @@ export function syncNow(options: { force?: boolean } = {}): Promise<void> {
  * of a window the server opened deliberately, so that a wipe does not destroy
  * data the cloud never received.
  *
- * Returns the modules it could not save. Those are the ones the user had sync
- * switched OFF for: an evacuation does not override that choice, because
- * consent to upload is not something a block should be able to revoke
- * retroactively — and the person is owed an accurate list of what is about to
- * be lost rather than a reassuring one.
+ * Reports what it could not save in TWO lists, because they are two different
+ * facts about the user's data and merging them produces a sentence that is
+ * false about half of it:
+ *
+ *  - `unsaved` — sync is ON for this module and the push failed anyway. The
+ *    window closed, the network dropped. Data that was meant to be in the
+ *    account is not, and waiting or reconnecting is a real remedy.
+ *  - `deviceOnly` — sync is OFF for this module, by the user's own choice, so
+ *    nothing of it has ever been in the account and nothing ever will be. An
+ *    evacuation does not override that choice: consent to upload is not
+ *    something a block, or a sign-out, gets to revoke retroactively.
+ *
+ * Both are lost to a wipe, which is why the older single list was tempting. But
+ * only one of them is a malfunction, and telling somebody their device-only
+ * module "hasn't reached your account yet" describes a delay that is never
+ * going to end.
  */
-export async function evacuateBeforeWipe(): Promise<{ pushed: number; unsaved: SyncModule[] }> {
+export async function evacuateBeforeWipe(): Promise<{
+  pushed: number;
+  unsaved: SyncModule[];
+  deviceOnly: SyncModule[];
+}> {
   const uid = useAuthStore.getState().user?.id;
-  if (!uid) return { pushed: 0, unsaved: [] };
+  if (!uid) return { pushed: 0, unsaved: [], deviceOnly: [] };
 
   const store = useSyncStore.getState();
   const cursors: CursorBatch = new Map();
@@ -398,10 +413,11 @@ export async function evacuateBeforeWipe(): Promise<{ pushed: number; unsaved: S
 
   let pushed = 0;
   const unsaved: SyncModule[] = [];
+  const deviceOnly: SyncModule[] = [];
 
   for (const mod of SYNC_MODULES) {
     if (!(store.modules[mod.key] ?? false)) {
-      if (moduleHasRows(mod)) unsaved.push(mod.key);
+      if (moduleHasRows(mod)) deviceOnly.push(mod.key);
       continue;
     }
     try {
@@ -419,7 +435,7 @@ export async function evacuateBeforeWipe(): Promise<{ pushed: number; unsaved: S
   }
 
   useSyncStore.getState().commitCursors(cursors);
-  return { pushed, unsaved };
+  return { pushed, unsaved, deviceOnly };
 }
 
 /** Whether this module has anything on the device worth mentioning as lost. */

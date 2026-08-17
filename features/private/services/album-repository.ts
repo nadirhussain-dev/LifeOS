@@ -525,6 +525,129 @@ export async function removeMessage(messageId: string): Promise<void> {
   assertOk(error);
 }
 
+// --- replies, edits, reactions, receipts, disappearing (0053) -----------------
+
+/**
+ * Rewrites a message, through an RPC rather than a direct update.
+ *
+ * 0029's update policy lets any member of the album update any row in it — it
+ * has to, because that is what a soft delete uses. Editing through the same
+ * door would let a member rewrite somebody else's words with that person's
+ * name still on them, which is the one thing in a chat worse than deleting
+ * them. `edit_album_message` checks authorship server-side.
+ */
+export async function editMessage(messageId: string, bodyCiphertext: string): Promise<void> {
+  const { error } = await supabase.rpc('edit_album_message', {
+    p_message_id: messageId,
+    p_body_ciphertext: bodyCiphertext,
+  });
+  assertOk(error);
+}
+
+/** Adds a reaction. Idempotent by primary key — reacting twice with the same
+ *  emoji is the same fact, so a repeat is not an error. */
+export async function addReaction(input: {
+  messageId: string;
+  albumId: string;
+  userId: string;
+  emoji: string;
+}): Promise<void> {
+  const { error } = await supabase.from('shared_album_message_reactions').upsert(
+    {
+      message_id: input.messageId,
+      album_id: input.albumId,
+      user_id: input.userId,
+      emoji: input.emoji,
+      created_at: Date.now(),
+    },
+    { onConflict: 'message_id,user_id,emoji' },
+  );
+  assertOk(error);
+}
+
+export async function removeReaction(input: {
+  messageId: string;
+  userId: string;
+  emoji: string;
+}): Promise<void> {
+  const { error } = await supabase
+    .from('shared_album_message_reactions')
+    .delete()
+    .eq('message_id', input.messageId)
+    .eq('user_id', input.userId)
+    .eq('emoji', input.emoji);
+  assertOk(error);
+}
+
+export type MessageReaction = {
+  messageId: string;
+  userId: string;
+  emoji: string;
+};
+
+export async function listReactions(albumId: string): Promise<MessageReaction[]> {
+  const res = await supabase
+    .from('shared_album_message_reactions')
+    .select('message_id, user_id, emoji')
+    .eq('album_id', albumId);
+  return unwrap<Row[]>(res).map((r) => ({
+    messageId: String(r.message_id),
+    userId: String(r.user_id),
+    emoji: String(r.emoji),
+  }));
+}
+
+/** How far each member has read. One row per member — see 0053 for why this is
+ *  a high-water mark rather than a row per message read. */
+export type AlbumReadMark = { userId: string; readThrough: number };
+
+export async function listReadMarks(albumId: string): Promise<AlbumReadMark[]> {
+  const res = await supabase
+    .from('shared_album_reads')
+    .select('user_id, read_through')
+    .eq('album_id', albumId);
+  return unwrap<Row[]>(res).map((r) => ({
+    userId: String(r.user_id),
+    readThrough: Number(r.read_through),
+  }));
+}
+
+/** Moves this member's marker forward. Never backwards — the server takes the
+ *  greater of the two, so an out-of-order report from a second device cannot
+ *  un-read anything. */
+export async function markRead(albumId: string, readThrough: number): Promise<void> {
+  const { error } = await supabase.rpc('mark_album_read', {
+    p_album_id: albumId,
+    p_through: readThrough,
+  });
+  assertOk(error);
+}
+
+/**
+ * Soft-deletes whatever is due in this album, and reports how many.
+ *
+ * Called on opening a chat so expiry does not depend on a scheduler existing.
+ * Idempotent and cheap: a swept message no longer matches the query, and a
+ * message that is not due cannot be touched by it.
+ */
+export async function expireMessages(albumId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('expire_album_messages', {
+    p_album_id: albumId,
+  });
+  assertOk(error);
+  return Number(data ?? 0);
+}
+
+/** Sets the album's disappearing timer in seconds, or clears it with null.
+ *  Owner only, enforced server-side. Only affects messages sent after it. */
+export async function setDisappearing(albumId: string, seconds: number | null): Promise<void> {
+  const { error } = await supabase.rpc('set_album_disappearing', {
+    p_album_id: albumId,
+    p_seconds: seconds,
+  });
+  assertOk(error);
+}
+
 // --- shared plans (0038) ------------------------------------------------------
 
 export async function listEvents(albumId: string): Promise<AlbumEvent[]> {

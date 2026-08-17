@@ -2,7 +2,7 @@ import i18n from '@/lib/i18n';
 
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { evacuateBeforeWipe } from '@/features/sync/services/sync-engine';
-import { confirm } from '@/lib/dialog-store';
+import { confirm, type ConfirmRequest } from '@/lib/dialog-store';
 import { reportError } from '@/lib/error-reporting';
 
 /**
@@ -37,18 +37,9 @@ export async function confirmAndSignOut(): Promise<boolean> {
   });
   if (!agreed) return false;
 
-  const unsaved = await unsavedModules();
-  if (unsaved.length > 0) {
-    const anyway = await confirm({
-      title: t('sync.signOutUnsyncedTitle'),
-      message:
-        unsaved[0] === '*'
-          ? t('sync.signOutUnsyncedOffline')
-          : t('sync.signOutUnsyncedBody', { modules: nameModules(unsaved) }),
-      confirmLabel: t('sync.signOutAnyway'),
-      cancelLabel: t('common.cancel'),
-      destructive: true,
-    });
+  const warning = await whatWouldBeLost();
+  if (warning) {
+    const anyway = await confirm({ ...warning, cancelLabel: t('common.cancel'), destructive: true });
     if (!anyway) return false;
   }
 
@@ -56,23 +47,76 @@ export async function confirmAndSignOut(): Promise<boolean> {
   return true;
 }
 
+/** The second dialog, minus the parts every version of it shares. */
+type Warning = Omit<ConfirmRequest, 'cancelLabel' | 'destructive'>;
+
 /**
- * Pushes everything it can and reports what it could not.
+ * Pushes everything it can, then describes what a wipe would still cost — in
+ * the words that fit the actual reason.
  *
- * A thrown evacuation means the push never ran — offline, most often — and is
- * reported as the wildcard `'*'` rather than an empty list. An empty list means
- * "everything is safely on the server", and answering that after a request that
- * never happened is exactly the reassurance that would cost somebody their data.
+ * The screen this is raised from is the one with the per-module sync switches
+ * on it, so a module that is switched off is not a fault the user needs
+ * alarming about; it is the setting they are looking at, doing what it says.
+ * What they need is the consequence they may not have connected to it — that
+ * device-only means this device, and this device is about to be cleared — and
+ * the one action that would save it, which is a switch and a wait away.
+ *
+ * A push that FAILED is the opposite: unexpected, and worth alarm, because data
+ * they believed was in their account is not. Cancelling and retrying is a real
+ * fix there, and it is worth saying so.
+ *
+ * Returns null when there is nothing to warn about, so the common case — the
+ * overwhelming majority of sign-outs — costs no second dialog at all.
  */
-async function unsavedModules(): Promise<string[]> {
-  if (!useAuthStore.getState().session) return [];
+async function whatWouldBeLost(): Promise<Warning | null> {
+  const t = i18n.t.bind(i18n);
+  if (!useAuthStore.getState().session) return null;
+
+  let unsaved: string[] = [];
+  let deviceOnly: string[] = [];
   try {
     const evacuation = await evacuateBeforeWipe();
-    return evacuation.unsaved;
+    unsaved = evacuation.unsaved;
+    deviceOnly = evacuation.deviceOnly;
   } catch (error) {
+    // The push never ran at all — offline, most often. Reported as the whole
+    // account being at risk rather than an empty list: "everything is safely in
+    // your account" is exactly the reassurance that would cost somebody their
+    // data after a request that never happened.
     reportError(error, { scope: 'sign-out-evacuation' });
-    return ['*'];
+    return {
+      title: t('sync.signOutUnsyncedTitle'),
+      message: t('sync.signOutUnsyncedOffline'),
+      confirmLabel: t('sync.signOutAnyway'),
+    };
   }
+
+  if (unsaved.length === 0 && deviceOnly.length === 0) return null;
+
+  const parts: string[] = [];
+  if (unsaved.length > 0) {
+    parts.push(t('sync.signOutUnsyncedBody', { modules: nameModules(unsaved) }));
+  }
+  if (deviceOnly.length > 0) {
+    parts.push(t('sync.signOutDeviceOnlyBody', { modules: nameModules(deviceOnly) }));
+  }
+
+  // A genuine failure sets the tone when both are present: it is the half the
+  // user did not choose, and the half that is still fixable.
+  return unsaved.length > 0
+    ? {
+        title: t('sync.signOutUnsyncedTitle'),
+        message: parts.join('\n\n'),
+        confirmLabel: t('sync.signOutAnyway'),
+      }
+    : {
+        title: t('sync.signOutDeviceOnlyTitle'),
+        message: parts.join('\n\n'),
+        // Named after what it does. "Anyway" asks somebody to overrule a
+        // warning; this asks them to confirm a deletion, which is the actual
+        // decision in front of them.
+        confirmLabel: t('sync.signOutAndDelete'),
+      };
 }
 
 /** Module keys as the names the user knows them by, e.g. "Budget, Journal". */

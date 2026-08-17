@@ -18,6 +18,7 @@ export default function LoginScreen() {
   const { t } = useTranslation();
   const { c } = useTheme();
   const signIn = useAuthStore((s) => s.signIn);
+  const sendSignInOtp = useAuthStore((s) => s.sendSignInOtp);
   const continueAsGuest = useAuthStore((s) => s.continueAsGuest);
   // Don't autofocus while the cold-start splash is still up — it would raise
   // the keyboard behind the splash.
@@ -27,6 +28,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [sendingCode, setSendingCode] = useState(false);
 
   const handleSignIn = async () => {
     if (!email.trim() || !password) {
@@ -39,6 +41,29 @@ export default function LoginScreen() {
     setBusy(false);
     if (!result.ok) setError(result.error);
     // On success the auth gate redirects automatically.
+  };
+
+  /**
+   * The passwordless way in. Needs only the email field, so it is reachable
+   * without typing a password the user may not have — an account created with
+   * a code and abandoned before `create-password` has none at all, and until
+   * this existed the only route back into one was "reset your password",
+   * which is a strange thing to ask of somebody who never set one.
+   */
+  const handleEmailCode = async () => {
+    if (!email.trim()) {
+      setError(t('auth.enterEmail'));
+      return;
+    }
+    setSendingCode(true);
+    setError(null);
+    const result = await sendSignInOtp(email);
+    setSendingCode(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    router.push({ pathname: '/(auth)/verify-signin', params: { email: email.trim() } });
   };
 
   return (
@@ -115,9 +140,23 @@ export default function LoginScreen() {
             label={busy ? t('auth.signingIn') : t('auth.signIn')}
             variant="accent"
             size="lg"
-            disabled={busy}
+            disabled={busy || sendingCode}
             onPress={handleSignIn}
           />
+
+          {/* Below the password button rather than beside it: this is the
+              fallback, and a form with two equally weighted submit buttons
+              makes the ordinary case ambiguous. Only visible when there is a
+              server to send a code from. */}
+          {isSupabaseConfigured && (
+            <Button
+              label={sendingCode ? t('auth.sendingCode') : t('auth.emailMeACode')}
+              variant="secondary"
+              size="lg"
+              disabled={busy || sendingCode}
+              onPress={() => void handleEmailCode()}
+            />
+          )}
         </View>
 
         <View className="flex-row items-center justify-center gap-1">
