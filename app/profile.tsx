@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Camera, LogOut, ShieldCheck, Trash2, UserCircle } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -15,14 +14,9 @@ import { colors } from '@/constants/theme';
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { UsernameField, type UsernameStatus } from '@/features/auth/components/username-field';
 import { useAccountStanding } from '@/features/moderation/hooks/use-account-standing';
-import {
-  avatarUrl,
-  initialsFor,
-  pickAndUploadAvatar,
-  removeAvatar,
-} from '@/features/profile/services/avatar';
+import { Avatar } from '@/features/profile/components/avatar';
+import { initialsFor, pickAndUploadAvatar, removeAvatar } from '@/features/profile/services/avatar';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { alpha } from '@/lib/color';
 import { confirmAndSignOut } from '@/features/auth/services/sign-out-flow';
 import { confirm } from '@/lib/dialog-store';
 import { toast } from '@/lib/toast-store';
@@ -73,7 +67,6 @@ export default function ProfileScreen() {
     if (profile?.displayName) setName(profile.displayName);
   }, [profile?.displayName]);
 
-  const url = avatarUrl(profile?.avatarPath ?? null, profile?.avatarUpdatedAt ?? null);
   const initials = initialsFor(profile?.displayName ?? null, profile?.email ?? null);
 
   const changeAvatar = async () => {
@@ -197,22 +190,14 @@ export default function ProfileScreen() {
             accessibilityLabel={t('profile.changePhoto')}
             onPress={() => void changeAvatar()}
             disabled={busy}
-            className="h-28 w-28 items-center justify-center overflow-hidden rounded-full"
-            style={{ backgroundColor: alpha(theme.accent, 0.14), opacity: busy ? 0.6 : 1 }}
+            style={{ opacity: busy ? 0.6 : 1 }}
           >
-            {url ? (
-              <Image
-                source={{ uri: url }}
-                style={{ width: '100%', height: '100%' }}
-                contentFit="cover"
-              />
-            ) : (
-              // Initials rather than a generic silhouette: a profile without a
-              // picture should still read as a person.
-              <Text className="font-sora-extrabold text-3xl" style={{ color: theme.accent }}>
-                {initials}
-              </Text>
-            )}
+            <Avatar
+              path={profile?.avatarPath ?? null}
+              updatedAt={profile?.avatarUpdatedAt ?? null}
+              initials={initials}
+              size={112}
+            />
           </Pressable>
 
           <View className="flex-row items-center gap-3">
