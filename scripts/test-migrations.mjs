@@ -4014,6 +4014,19 @@ const putAlbumObject = (albumId, path, size, metadata = {}) =>
     [`${albumId}/${path}`, size, JSON.stringify(metadata)],
   );
 
+// Both uploaders in this section hold premium, because since 0052 a
+// shared-album upload without it is refused by `enforce_album_media_premium`
+// before anything here gets a chance to be tested. That matters most for the
+// non-member case below: a BEFORE ROW trigger fires ahead of the WITH CHECK
+// policy, so an unpaid outsider would be turned away by the paywall and the
+// test would pass while proving nothing about album isolation. Granted
+// directly rather than through `admin_grant_premium`, which is owner-only and
+// whose bootstrap is deliberately kept until the end of this file.
+await db.query(`update public.profiles set premium_until = $1 where id = any($2::uuid[])`, [
+  Date.now() + 365 * 86400000,
+  [ALBUM_PEST, ALBUM_OUTSIDER],
+]);
+
 await test('0028 a member can store and read an object in their album’s folder', async () => {
   await asUser(db, ALBUM_PEST, async () => {
     await putAlbumObject('alb-pest', 'photo-a.bin', 1024);
@@ -4929,14 +4942,41 @@ await test('0035 a free-plan account cannot back up media at all', async () => {
   });
 });
 
-await test('0035 the same free-plan account can still add photos to a shared album', async () => {
-  // Proves the two buckets are gated independently — 0032's own album/member
-  // limits are the shared-albums lever, not this migration.
+await test('0052 a free-plan account can make a shared album but not put photos in it', async () => {
+  // 0035 exempted shared-album media so the couple case worked free, and this
+  // test asserted exactly that. 0052 reverses the exemption deliberately — see
+  // its header, which reverses the promise where the promise was made — so the
+  // assertion is inverted here rather than deleted: the reversal is the thing
+  // worth holding onto, and a deleted test would let it drift back silently.
+  //
+  // The album itself is still free to create. Only the upload is gated, and
+  // only at upload — nothing already stored is touched.
   await asUser(db, MEDIA_PLAN_FREE, async () => {
     await db.query(
       `select public.create_shared_album('alb-media-free','cipher:x','m-media-free-owner',null,'act-media-free',$1)`,
       [Date.now()],
     );
+    await expectRejection(
+      () => putAlbumObject('alb-media-free', 'photo-a.bin', 1024),
+      'adding photos to a shared album requires a paid plan',
+    );
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from storage.objects
+        where bucket_id = 'shared-albums' and name = 'alb-media-free/photo-a.bin'`,
+    ),
+    0,
+    'nothing was stored on the free plan',
+  );
+});
+
+await test('0052 upgrading the same account lets the photo through', async () => {
+  // The other half of the gate: it refuses a plan, not a person. Paired with
+  // the test above so a regression that refuses everybody cannot pass as one
+  // that merely charges for it.
+  await asUser(db, MEDIA_PLAN_FREE, async () => {
+    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
     await putAlbumObject('alb-media-free', 'photo-a.bin', 1024);
   });
   expectEqual(
@@ -4945,7 +4985,7 @@ await test('0035 the same free-plan account can still add photos to a shared alb
         where bucket_id = 'shared-albums' and name = 'alb-media-free/photo-a.bin'`,
     ),
     1,
-    'shared-album upload succeeded on the free plan',
+    'the same upload succeeds once the account is paid',
   );
 });
 
