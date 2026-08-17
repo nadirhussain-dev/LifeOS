@@ -114,7 +114,23 @@ export function Avatar({ path, updatedAt, initials, size, icon: Icon }: Props) {
       ) : (
         <Text
           className="font-sora-extrabold"
-          style={{ color: c.accent, fontSize: Math.round(size * 0.32) }}
+          style={{
+            color: c.accent,
+            fontSize: Math.round(size * 0.32),
+            // Both, always. `Text`'s default variant carries Tailwind's
+            // `text-base`, which sets a line height of 24 as well as a size of
+            // 16 — and overriding only the size leaves that 24 in place. At the
+            // profile screen's 112pt the glyphs are 36pt tall inside a 24pt
+            // line box, so the initials were clipped top and bottom; the small
+            // Hub chip escaped it only because 13 happens to fit under 24.
+            // 1.12 is the ratio the display/stat steps of the type scale use
+            // (constants/design-tokens.ts).
+            lineHeight: Math.round(size * 0.32 * 1.12),
+            // Android adds font-metric padding on top of that line box and
+            // centres the text within the padded result, which reintroduces a
+            // vertical shift at large sizes. iOS ignores this.
+            includeFontPadding: false,
+          }}
         >
           {initials}
         </Text>
