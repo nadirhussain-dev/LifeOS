@@ -26,11 +26,22 @@ import {
  * "helpfully back this up" change. The album's whole end-to-end promise is
  * stronger than the vault's own (the vault carries an operator-escrow
  * exception; the album does not, by product decision) and it stays that way
- * only because this wrapped blob exists on-device and nowhere else. If you are
- * reading this because you want album keys to survive a reinstall: they
- * cannot, without reintroducing exactly the asterisk this was built to avoid.
- * Recovery is re-running the out-of-band transfer with a co-member, the same
- * as if the vault's own key-transfer had never happened for this device.
+ * only because this wrapped blob exists on-device and nowhere else.
+ *
+ * ## Moving to a new phone
+ *
+ * That rule is about *servers*, and it still holds without leaving somebody
+ * stranded. Album keys now travel inside the device-to-device key transfer
+ * (key-transfer.ts's v2 payload), sealed under the same one-time code as the
+ * vault master key and over the same two channels. Nothing is stored anywhere
+ * new; the payload that already moved one key moves the rest with it.
+ *
+ * What that does NOT cover, deliberately, is a phone that is lost, broken or
+ * wiped — a transfer needs the old device to still exist. There is no
+ * server-side path back into an album, and adding one would reintroduce exactly
+ * the asterisk this was built to avoid. In that case recovery is re-running the
+ * out-of-band transfer with a co-member, the same as if this device had never
+ * held the key at all.
  */
 
 function keyItem(albumId: string): string {
@@ -86,6 +97,49 @@ export async function hasAlbumKey(albumId: string): Promise<boolean> {
     return (await SecureStore.getItemAsync(keyItem(albumId))) !== null;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Every album key this device holds, unwrapped, for a device-to-device
+ * transfer.
+ *
+ * Takes the album ids from the caller because SecureStore cannot be listed —
+ * there is no "what is in here" call, by design. The caller passes the albums
+ * the account is a member of (album-repository's `listAlbums`), and albums this
+ * device never redeemed a key for simply come back absent, which is the truth
+ * about them.
+ *
+ * The ONLY caller is the transfer screen. Anything else asking for every album
+ * key at once should be looked at very hard: this is the one operation in the
+ * file that assembles the whole set in memory.
+ */
+export async function collectAlbumKeys(
+  vaultKey: Uint8Array,
+  albumIds: string[],
+): Promise<Record<string, Uint8Array>> {
+  const keys: Record<string, Uint8Array> = {};
+  for (const albumId of albumIds) {
+    const key = await unwrapAlbumKey(vaultKey, albumId);
+    if (key) keys[albumId] = key;
+  }
+  return keys;
+}
+
+/** Stores a batch of album keys arriving with an adopted vault. Failures are
+ *  per-album for the same reason `parseVaultBundle` skips a bad entry: nine
+ *  albums out of ten beats none. */
+export async function storeAlbumKeys(
+  vaultKey: Uint8Array,
+  albumKeys: Record<string, Uint8Array>,
+): Promise<void> {
+  for (const [albumId, key] of Object.entries(albumKeys)) {
+    try {
+      await storeAlbumKey(albumId, vaultKey, key);
+    } catch {
+      // The album stays locked on this device and can be re-shared by a
+      // co-member — the same position as an album whose key never arrived.
+    }
   }
 }
 

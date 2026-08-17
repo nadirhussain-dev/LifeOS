@@ -1,4 +1,5 @@
-import { Image, StyleSheet, View } from 'react-native';
+import { useMemo } from 'react';
+import { Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -19,8 +20,33 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
  * Opacity is per-theme and very low. Grain you can consciously see is too much
  * grain — at these values it is only obvious in the A/B. Dark gets more
  * because it has more banding to hide and a darker ground to lift.
+ *
+ * ## Why the tiling is laid out by hand
+ *
+ * This used to be one `<Image resizeMode="repeat">` across `absoluteFill`, which
+ * is the obvious way to write it and does not work here: `repeat` is not
+ * implemented by Android's New Architecture renderer (app.json sets
+ * `newArchEnabled`), and it silently degrades to drawing the tile **once, at its
+ * natural size, in the top-left corner**.
+ *
+ * That failure is invisible in code review and unmistakable on a device: a
+ * 128dp square of texture in the corner of every screen, with hard edges, over
+ * an app that has none anywhere else — most obvious in dark mode, where the
+ * grain is strongest and the ground it sits on is flattest. Everything below
+ * that square got no dithering at all, so the banding this component exists to
+ * hide was left in place across 98% of the screen while the component itself
+ * became the most visible artifact on it.
+ *
+ * Positioning the tiles explicitly is duller and cannot degrade: every tile is
+ * an ordinary `<Image>` at a fixed size and offset. It costs one image view per
+ * tile — around thirty on a phone — and this component is mounted exactly once,
+ * by the root layout, for the whole app.
  */
 const OPACITY = { light: 0.035, dark: 0.055 } as const;
+
+/** Matches the source PNG's pixel size, so tiles meet edge to edge with no
+ *  seam and no resampling. Changing one without the other shows as a grid. */
+const TILE = 128;
 
 type Props = {
   /** Override the per-theme default, for a surface that wants more or less. */
@@ -29,26 +55,51 @@ type Props = {
 
 export function Grain({ opacity }: Props) {
   const scheme = useColorScheme() ?? 'light';
+  const { width, height } = useWindowDimensions();
+
+  const offsets = useMemo(() => {
+    // One tile of overscan in each direction. `useWindowDimensions` reports the
+    // window, which on Android can exclude a system bar the app is drawing
+    // behind — a short measurement would leave an untextured strip along the
+    // edge, which is exactly the kind of seam the eye finds instantly.
+    const columns = Math.ceil(width / TILE) + 1;
+    const rows = Math.ceil(height / TILE) + 1;
+    const tiles: { key: string; left: number; top: number }[] = [];
+    for (let row = 0; row < rows; row += 1) {
+      for (let column = 0; column < columns; column += 1) {
+        tiles.push({ key: `${row}:${column}`, left: column * TILE, top: row * TILE });
+      }
+    }
+    return tiles;
+  }, [width, height]);
 
   return (
     <View
       // Never intercepts touches: it covers the entire app, so a single missed
       // `pointerEvents` here would make the whole UI untappable.
       pointerEvents="none"
-      style={[StyleSheet.absoluteFill, { opacity: opacity ?? OPACITY[scheme] }]}
+      style={[StyleSheet.absoluteFill, { opacity: opacity ?? OPACITY[scheme], overflow: 'hidden' }]}
       // Purely decorative, and announcing it would be noise in every screen's
       // accessibility tree.
       accessible={false}
       importantForAccessibility="no-hide-descendants"
     >
-      <Image
-        source={require('@/assets/grain.png')}
-        // `repeat` tiles the 128px square rather than stretching it, which is
-        // the whole point — a stretched noise tile is just a blurry smudge.
-        resizeMode="repeat"
-        style={StyleSheet.absoluteFill}
-        fadeDuration={0}
-      />
+      {offsets.map((tile) => (
+        <Image
+          key={tile.key}
+          source={require('@/assets/grain.png')}
+          // Every tile is the same cached bitmap — one texture upload, however
+          // many times it is drawn.
+          style={{
+            position: 'absolute',
+            left: tile.left,
+            top: tile.top,
+            width: TILE,
+            height: TILE,
+          }}
+          fadeDuration={0}
+        />
+      ))}
     </View>
   );
 }

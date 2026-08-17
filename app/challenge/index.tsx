@@ -111,10 +111,37 @@ export default function ChallengeScreen() {
         <View className={cardClass({ padding: 'md' }, 'gap-3')}>
           <Text variant="subheading">{t('challenge.notEnrolledTitle')}</Text>
           <Text variant="muted">{t('challenge.notEnrolledBody')}</Text>
+          {/*
+            Each of the three states ends in something to press. This screen
+            used to explain the requirement and then stop: a signed-out visitor
+            read "joining a run needs an account" under a heading that says
+            they are not in one, with no account to be made anywhere on the
+            screen and no other control on it either. The requirement was
+            correct and the screen was still a dead end, which is the worse of
+            the two failures — being told what you need is only useful next to
+            the way to get it.
+          */}
           {!session ? (
-            <Text variant="caption">{t('challenge.signInBody')}</Text>
+            <>
+              <Text variant="caption">{t('challenge.signInBody')}</Text>
+              <Button label={t('sync.signInCreate')} onPress={() => router.push('/(auth)/login')} />
+            </>
           ) : season.data === null ? (
-            <Text variant="caption">{t('challenge.noSeasonBody')}</Text>
+            <>
+              <Text variant="caption">{t('challenge.noSeasonBody')}</Text>
+              {/* Nothing here is the user's to fix, so the action is the only
+                  honest one: ask again. Without it the screen is frozen on an
+                  answer that was true when it loaded and cannot update. */}
+              <Button
+                label={season.isFetching ? t('common.loadingEllipsis') : t('challenge.checkAgain')}
+                variant="secondary"
+                disabled={season.isFetching}
+                onPress={() => {
+                  void season.refetch();
+                  void today.refetch();
+                }}
+              />
+            </>
           ) : (
             <Button
               label={t('challenge.startRun')}
@@ -200,7 +227,10 @@ export default function ChallengeScreen() {
           </Text>
         </Pressable>
 
-        <Text variant="caption" style={{ color: c.subtleForeground }}>
+        {/* `mutedForeground`, not `subtleForeground`: this is prose, and the
+            subtle token is sized for inactive indicators — 4.2:1 in dark and
+            2.4:1 in light, both under the 4.5:1 that body text needs. */}
+        <Text variant="caption" style={{ color: c.mutedForeground }}>
           {t('challenge.shieldsBody')}
         </Text>
 

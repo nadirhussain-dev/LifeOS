@@ -21,6 +21,13 @@ import { supabase } from '@/lib/supabase';
  * `hooks/use-device-session.ts`, which is allowed to know about both.
  */
 
+/**
+ * `revoked_reason` for a device that handed the account back itself, on an
+ * ordinary sign-out (`release_device`). The one revocation reason that is not a
+ * lockout — see `refreshDeviceSession`.
+ */
+export const RELEASED_BY_THIS_DEVICE = 'signed_out';
+
 export type ClaimResult =
   | { status: 'claimed'; tookOver: boolean }
   | { status: 'otp_required'; otherDevice: OtherDevice | null }
@@ -38,6 +45,7 @@ type ClaimPayload = {
 type StatusPayload = {
   status?: string;
   revokedReason?: string | null;
+  revokedAt?: string | null;
   evacuationUntil?: string | null;
   activeDevice?: OtherDevice | null;
 };
@@ -82,7 +90,7 @@ export async function claimThisDevice(options?: { takeOver?: boolean }): Promise
       return { status: 'otp_required', otherDevice: other };
     }
 
-    setVerdict('active', null, null);
+    setVerdict('active', null, null, null);
     return { status: 'claimed', tookOver: payload.takeOver === true };
   } catch (error) {
     return { status: 'unavailable', error: messageOf(error) };
@@ -125,11 +133,30 @@ export async function refreshDeviceSession(): Promise<DeviceStanding> {
     const payload = (data ?? {}) as StatusPayload;
 
     if (payload.status === 'revoked') {
-      setVerdict('revoked', payload.activeDevice ?? null, payload.revokedReason ?? null);
+      // Losing the account and letting go of it are not the same event, and
+      // 0047's `device_status` reported both as 'revoked'. Migration 0051 fixes
+      // that server-side, but this app also runs against databases that only
+      // have 0047 — including every already-deployed one — so the distinction
+      // is drawn here too.
+      //
+      // Treating a self-release as a revocation is what turned the most
+      // ordinary sequence there is — sign in, sign out, sign in again on the
+      // same phone — into a wipe, a "your account was opened on another device"
+      // notice, and a second forced sign-out. Answered as 'unregistered', which
+      // is what it is: the caller claims, and the server decides whether that
+      // claim needs a code.
+      if (payload.revokedReason === RELEASED_BY_THIS_DEVICE) return 'unregistered';
+
+      setVerdict(
+        'revoked',
+        payload.activeDevice ?? null,
+        payload.revokedReason ?? null,
+        payload.revokedAt ?? null,
+      );
       return 'revoked';
     }
     if (payload.status === 'active') {
-      setVerdict('active', null, null);
+      setVerdict('active', null, null, null);
       return 'active';
     }
     return 'unregistered';
@@ -224,8 +251,9 @@ function setVerdict(
   verdict: DeviceVerdict,
   other: OtherDevice | null | undefined,
   reason: string | null | undefined,
+  revokedAt?: string | null,
 ): void {
-  useDeviceSessionStore.getState().setVerdict(verdict, other, reason);
+  useDeviceSessionStore.getState().setVerdict(verdict, other, reason, revokedAt);
 }
 
 function messageOf(error: unknown): string {

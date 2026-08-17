@@ -130,37 +130,76 @@ export function DialogHost() {
                   </View>
                 ) : null}
 
-                {/* Cancel first in the reading order, so the destructive button
-                    is never the one under a thumb travelling to dismiss. It is
-                    absent for a one-button notice (see `notify`), where there
-                    is nothing to decline. */}
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  {pending.request.cancelLabel ? (
-                    <View style={{ flex: 1 }}>
-                      <Button
-                        label={pending.request.cancelLabel}
-                        variant="secondary"
-                        onPress={() => settle(pending.kind === 'confirm' ? false : null)}
-                      />
+                {/*
+                  Side by side while the labels fit; stacked when they don't.
+
+                  Half a dialog is around a dozen characters at this weight, and
+                  past that the label wraps to two lines — which leaves one
+                  button visibly taller than the other, since each sizes to its
+                  own content. A button that says "Sign out\nanyway" next to a
+                  single-line "Cancel" reads as a rendering fault, and it is the
+                  destructive one it happens to: its label is always the longest,
+                  in every locale, because it has to name what it does.
+
+                  Measured on the longest label rather than the total: one long
+                  label is enough to wrap, and two short ones never do.
+                */}
+                {(() => {
+                  const cancelLabel = pending.request.cancelLabel;
+                  const confirmLabel =
+                    pending.kind === 'confirm' ? pending.request.confirmLabel : null;
+                  const stacked = [cancelLabel, confirmLabel].some(
+                    (label) => (label?.length ?? 0) > 12,
+                  );
+
+                  const cancelButton = cancelLabel ? (
+                    <Button
+                      key="cancel"
+                      label={cancelLabel}
+                      variant="secondary"
+                      onPress={() => settle(pending.kind === 'confirm' ? false : null)}
+                    />
+                  ) : null;
+
+                  const confirmButton = confirmLabel ? (
+                    <Button
+                      key="confirm"
+                      label={confirmLabel}
+                      variant={destructive ? 'destructive' : 'primary'}
+                      onPress={() => {
+                        void Haptics.impactAsync(
+                          destructive
+                            ? Haptics.ImpactFeedbackStyle.Medium
+                            : Haptics.ImpactFeedbackStyle.Light,
+                        );
+                        settle(true);
+                      }}
+                    />
+                  ) : null;
+
+                  // Stacked, the bottom button is the one nearest the thumb, so
+                  // the order inverts to keep the same promise the row makes:
+                  // the destructive action is never what a dismissing thumb
+                  // lands on. Full width, so neither can wrap.
+                  if (stacked) {
+                    return (
+                      <View style={{ gap: 10 }}>
+                        {confirmButton}
+                        {cancelButton}
+                      </View>
+                    );
+                  }
+
+                  // Cancel first in the reading order, for the same reason. It
+                  // is absent for a one-button notice (see `notify`), where
+                  // there is nothing to decline.
+                  return (
+                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                      {cancelButton ? <View style={{ flex: 1 }}>{cancelButton}</View> : null}
+                      {confirmButton ? <View style={{ flex: 1 }}>{confirmButton}</View> : null}
                     </View>
-                  ) : null}
-                  {pending.kind === 'confirm' ? (
-                    <View style={{ flex: 1 }}>
-                      <Button
-                        label={pending.request.confirmLabel}
-                        variant={destructive ? 'destructive' : 'primary'}
-                        onPress={() => {
-                          void Haptics.impactAsync(
-                            destructive
-                              ? Haptics.ImpactFeedbackStyle.Medium
-                              : Haptics.ImpactFeedbackStyle.Light,
-                          );
-                          settle(true);
-                        }}
-                      />
-                    </View>
-                  ) : null}
-                </View>
+                  );
+                })()}
               </Animated.View>
             </Pressable>
           </Pressable>

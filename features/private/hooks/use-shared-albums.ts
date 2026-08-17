@@ -27,6 +27,7 @@ import {
 } from '@/features/private/services/album-uploader';
 import { usePrivateStore } from '@/features/private/store/private-store';
 import { syncTogetherReminders } from '@/features/private/services/together-reminders';
+import { sendVoiceNote, type SendVoiceNoteResult } from '@/features/private/services/voice-notes';
 import type { AlbumComment, AlbumMessage } from '@/features/private/types/shared-album.types';
 import { generateMasterKey } from '@/features/private/services/vault-crypto';
 import { supabase } from '@/lib/supabase';
@@ -54,6 +55,7 @@ export const albumKeys = {
   events: (albumId: string) => ['private', 'albums', 'events', albumId] as const,
   milestones: (albumId: string) => ['private', 'albums', 'milestones', albumId] as const,
   notes: (albumId: string) => ['private', 'albums', 'notes', albumId] as const,
+  receipts: (albumId: string) => ['private', 'albums', 'receipts', albumId] as const,
 };
 
 /** Unwraps `albumId`'s key with whichever vault key is currently unlocked.
@@ -194,7 +196,93 @@ export function useAlbumMessages(albumId: string | undefined, albumKey: Uint8Arr
   // touching each page's own already-correct internal order.
   const messages = useMemo(() => [...(query.data?.pages ?? [])].reverse().flat(), [query.data]);
 
+  // Reporting delivery belongs here rather than in the screen: "delivered" is
+  // a claim about bytes having arrived, and this is the place they arrive.
+  // Keying the effect off the newest timestamp — not the array — means a
+  // re-render that produced the same messages does not re-report.
+  const newest = messages.length > 0 ? messages[messages.length - 1].createdAt : 0;
+  useEffect(() => {
+    if (!albumId || !newest) return;
+    void repo.markDelivered(albumId, newest).catch(() => {
+      // A receipt is the least important write in the app. Failing to report
+      // one must never surface as an error over a chat that loaded fine.
+    });
+  }, [albumId, newest]);
+
   return { ...query, data: messages };
+}
+
+/**
+ * Everyone's read and delivery markers for this album.
+ *
+ * One query for both, because every consumer wants both — a tick is decided by
+ * comparing them, and two independently-refetching queries would let the pair
+ * disagree mid-flight and render a read message as undelivered for a frame.
+ */
+export function useAlbumReceipts(albumId: string | undefined) {
+  return useQuery({
+    queryKey: albumKeys.receipts(albumId ?? ''),
+    enabled: !!albumId,
+    queryFn: async () => {
+      const [reads, deliveries] = await Promise.all([
+        repo.listReadMarks(albumId!),
+        repo.listDeliveryMarks(albumId!),
+      ]);
+      return { reads, deliveries };
+    },
+  });
+}
+
+/** What tick to draw beside one of your own messages. */
+export type MessageReceipt = 'sending' | 'sent' | 'delivered' | 'read';
+
+/**
+ * Decides a message's tick from the markers of everyone who is not its author.
+ *
+ * "Everyone else", not "anyone else": in a three-person album a message is not
+ * read until the third person has read it, and showing read on the first would
+ * make the strongest claim the UI can make on the weakest evidence.
+ *
+ * ## Why the membership list is a parameter and not derived from the markers
+ *
+ * The obvious implementation asks "does every read marker reach this message",
+ * and it is wrong in a way that only shows up with three people. A member who
+ * has never opened the album has **no marker row at all**, so they are absent
+ * from the array rather than present-and-behind — and `every` over an array
+ * they are missing from is trivially satisfied. The message goes blue on one
+ * person's read while the other has not seen it.
+ *
+ * Passing the roster makes the absent case the loud one: no marker is a
+ * failure to match, which is what "has not read it" should mean.
+ *
+ * An album nobody else has joined stops at `sent` — there is no one to deliver
+ * to, so waiting for a marker that will never be written would leave every
+ * message on one tick forever.
+ */
+export function messageReceipt(
+  message: { createdAt: number; authorId: string | null; kind?: string; voicePath?: string | null },
+  reads: { userId: string; readThrough: number }[],
+  deliveries: { userId: string; deliveredThrough: number }[],
+  /** Every member of the album except the message's author. */
+  otherMemberIds: string[],
+): MessageReceipt {
+  // A voice note whose object has not landed yet is still on its way up, and
+  // is the one case where "sending" is true of a row that already exists.
+  if (message.kind === 'voice' && !message.voicePath) return 'sending';
+
+  if (otherMemberIds.length === 0) return 'sent';
+
+  const reached = (marks: { userId: string; at: number }[]) =>
+    otherMemberIds.every((memberId) => {
+      const mark = marks.find((m) => m.userId === memberId);
+      return mark !== undefined && mark.at >= message.createdAt;
+    });
+
+  if (reached(reads.map((m) => ({ userId: m.userId, at: m.readThrough })))) return 'read';
+  if (reached(deliveries.map((m) => ({ userId: m.userId, at: m.deliveredThrough })))) {
+    return 'delivered';
+  }
+  return 'sent';
 }
 
 /**
@@ -477,6 +565,52 @@ export function useSharedAlbumMutations(albumId?: string) {
     },
   });
 
+  /**
+   * Sends a recording. Separate mutation rather than a branch inside
+   * `sendMessage`, because the failure modes have nothing in common: a text
+   * message can only fail to insert, while this one can be too long, too
+   * large, unreadable, or over quota, and the composer says something
+   * different for each.
+   */
+  const sendVoice = useMutation<
+    SendVoiceNoteResult,
+    unknown,
+    { uri: string; durationMs: number; albumKey: Uint8Array }
+  >({
+    mutationFn: (input) =>
+      sendVoiceNote({
+        albumId: albumId!,
+        albumKey: input.albumKey,
+        authorId: userId ?? '',
+        authorName: profile?.displayName || profile?.username || null,
+        uri: input.uri,
+        durationMs: input.durationMs,
+      }),
+    onSuccess: (result) => {
+      // The row exists even when the upload failed — that is the resumability
+      // design — so the list is refetched either way, and the bubble shows as
+      // still sending rather than vanishing.
+      void queryClient.invalidateQueries({ queryKey: albumKeys.messages(albumId ?? '') });
+      if (!result.ok) return;
+      const name = profile?.displayName || profile?.username || t('private.someone');
+      void notifyAlbumMessage({
+        albumId: albumId ?? '',
+        title: t('private.pushNewMessage'),
+        body: t('private.pushNewVoiceBody', { name }),
+        route: `/private/albums/${albumId}/chat`,
+      });
+    },
+  });
+
+  /** Moves this member's read marker. Fire-and-forget by design — see
+   *  `useAlbumMessages`'s delivery effect for the same reasoning. */
+  const markRead = useMutation({
+    mutationFn: (through: number) => repo.markRead(albumId!, through),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: albumKeys.receipts(albumId ?? '') });
+    },
+  });
+
   const removeMessage = useMutation({
     mutationFn: (messageId: string) => repo.removeMessage(messageId),
     onSuccess: () =>
@@ -541,6 +675,8 @@ export function useSharedAlbumMutations(albumId?: string) {
     addComment,
     removeComment,
     sendMessage,
+    sendVoice,
+    markRead,
     removeMessage,
     setTogetherHub,
     clearTogetherHub,

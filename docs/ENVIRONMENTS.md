@@ -133,10 +133,22 @@ Because staging has its own package id, anything registered _against_ a package
 id needs a second registration. Skipping these does not break the build; it
 breaks the feature, at runtime, only in staging:
 
-- **Google OAuth** — a second Android OAuth client for
-  `com.daykeep.app.staging` with the staging build's SHA-1
-  (`eas credentials`), plus `daykeep-staging://` in the staging Supabase
-  project's Auth → Redirect URLs allow-list.
+- **Google OAuth** — the `daykeep-staging://` redirect allow-list on the
+  staging Supabase project, applied by
+  `npm run configure:auth -- --env staging`, which takes the scheme from
+  `scripts/build-env.js` so it cannot disagree with the build. The Google
+  **client** itself is not per-package: `oauth.ts` uses the browser flow, so
+  Google only ever sees Supabase's callback URL and one Web client can carry
+  both projects' callbacks. No Android client and no SHA-1 are involved unless
+  the app moves to `@react-native-google-signin` — see docs/AUTH_PROVIDERS.md §1b.
+- **Auth email** — each project has its own SMTP settings, templates and rate
+  limits, and none of it is copied between them. One command per project:
+  `npm run configure:auth -- --env staging`, then `--env production --yes`.
+  See docs/AUTH_PROVIDERS.md §0.
+- **Invitation links** — `APP_LINK_SCHEME` on the staging project must be
+  `daykeep-staging`, or a staging invitation opens the production app and is
+  rejected against a database that has never seen the token. The same command
+  sets it.
 - **Apple Sign In** — a second App ID / Service ID for the staging bundle id.
 - **AdMob** — a second app and ad units, or leave `ADMOB_*` unset in the preview
   environment so staging keeps serving Google's self-labeled test ads. Unset is

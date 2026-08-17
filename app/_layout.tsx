@@ -23,7 +23,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Text as RNText, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AnimatedSplash } from '@/components/animated-splash';
 import { initDatabase } from '@/database/client';
@@ -56,6 +56,7 @@ import { useChallengeTracking } from '@/features/challenge/hooks/use-challenge-t
 import { AmbientBackground } from '@/components/ui/ambient-background';
 import { DialogHost } from '@/components/ui/dialog-host';
 import { Grain } from '@/components/ui/grain';
+import { SystemBarsBridge } from '@/components/ui/system-bars';
 import { UsageConsentCard } from '@/features/analytics/components/usage-consent-card';
 import { BlockedOverlay } from '@/features/moderation/components/blocked-overlay';
 import { useBillingSync } from '@/features/billing/hooks/use-billing';
@@ -121,6 +122,37 @@ function NotificationCenterBridge() {
 function AuthGate() {
   useAuthGate();
   return null;
+}
+
+/**
+ * Keeps every screen's content clear of the Android navigation bar.
+ *
+ * `edgeToEdgeEnabled` (app.json) means the system bars are drawn *over* the
+ * app, so the bottom ~48dp of every scene is behind the navigation bar unless
+ * something accounts for it. `ScreenHeader` has always handled the top inset;
+ * nothing handled the bottom one, and the result was the last line of content
+ * on a scrolled screen sliced in half by the bar — on Settings, the paragraph
+ * explaining where per-item reminders live.
+ *
+ * Applied to the navigator rather than to each screen, because the alternative
+ * was fifty separate `pb-*` values that all had to be right and stay right:
+ * exactly six screens in the app read `insets.bottom` today, and every one of
+ * the other fifty was wrong the same way. A rule here cannot be forgotten by
+ * the next screen somebody adds.
+ *
+ * The existing `pb-10`-style padding inside each ScrollView is left alone. It
+ * was never nav-bar clearance — it is breathing room under the last card, and
+ * it still reads as that once the bar is no longer on top of it.
+ *
+ * Two exclusions, both deliberate:
+ *  - `(tabs)`, because `TabBar` already insets itself (`Math.max(insets.bottom,
+ *    10)`) and padding the scene as well would lift the bar off the edge.
+ *  - the full-screen photo story, which is meant to run edge to edge; letterboxing
+ *    an immersive viewer is a regression, not a fix.
+ */
+function useSceneBottomInset() {
+  const insets = useSafeAreaInsets();
+  return insets.bottom;
 }
 
 /** Drives automatic local↔cloud sync while signed in. Renders nothing. */
@@ -260,6 +292,107 @@ function DatabaseUnavailable({ message, background }: { message: string; backgro
   );
 }
 
+/** Every route in the app, with the scene padding that keeps content clear of
+ *  the Android navigation bar — see useSceneBottomInset. */
+function AppNavigator({ background }: { background: string }) {
+  const bottom = useSceneBottomInset();
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: background, paddingBottom: bottom },
+      }}
+    >
+      <Stack.Screen name="(auth)" />
+      {/* Where a provider sign-in lands when the OS delivers the
+            redirect to the app rather than to the browser session that
+            opened it. Outside `(auth)` because the path is fixed by
+            `oauthRedirectUrl()` and allow-listed on the Supabase
+            project — see app/auth/callback.tsx. */}
+      <Stack.Screen name="auth/callback" />
+      <Stack.Screen name="(onboarding)" />
+      {/* The tab bar insets itself; padding the scene too would lift it off the edge. */}
+      <Stack.Screen name="(tabs)" options={{ contentStyle: { backgroundColor: background } }} />
+      <Stack.Screen name="notes" />
+      <Stack.Screen name="music" />
+      <Stack.Screen name="insights/index" />
+      <Stack.Screen name="challenge/index" />
+      <Stack.Screen name="challenge/join" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="challenge/swap" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="challenge/timeline" />
+      <Stack.Screen name="goals/index" />
+      <Stack.Screen name="goals/[id]" />
+      <Stack.Screen name="goals/[id]/edit" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="goals/[id]/log" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="goals/reminder-settings" />
+      <Stack.Screen name="sleep/index" />
+      <Stack.Screen name="sleep/settings" />
+      <Stack.Screen name="sleep/insights" />
+      <Stack.Screen name="study/index" />
+      <Stack.Screen name="study/settings" />
+      <Stack.Screen name="study/reminder-settings" />
+      <Stack.Screen name="study/insights" />
+      <Stack.Screen name="study/timer" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="budget/index" />
+      <Stack.Screen name="budget/transactions" />
+      <Stack.Screen name="budget/reports" />
+      <Stack.Screen name="budget/settings" />
+      <Stack.Screen name="budget/savings/[id]" />
+      <Stack.Screen name="budget/debts/index" />
+      <Stack.Screen name="budget/debts/[id]" />
+      <Stack.Screen name="join/[token]" />
+      <Stack.Screen name="split/index" />
+      <Stack.Screen name="split/[id]" />
+      <Stack.Screen name="split/new" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="split/[id]/expense" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="split/[id]/settle" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="split/[id]/members" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="gallery/index" />
+      <Stack.Screen name="gallery/all" />
+      <Stack.Screen name="gallery/compare" />
+      <Stack.Screen name="gallery/album/[id]" />
+      <Stack.Screen name="gallery/photo/[id]" />
+      {/* Immersive by design — letterboxing it would be a regression, not a fix. */}
+      <Stack.Screen
+        name="gallery/story/[period]"
+        options={{
+          presentation: 'fullScreenModal',
+          animation: 'fade',
+          contentStyle: { backgroundColor: background },
+        }}
+      />
+      <Stack.Screen name="profile" />
+      <Stack.Screen name="settings/index" />
+      <Stack.Screen name="settings/notifications" />
+      <Stack.Screen name="settings/notification-sound" />
+      <Stack.Screen name="settings/sync" />
+      <Stack.Screen name="settings/sync-conflicts" />
+      <Stack.Screen name="settings/media" />
+      <Stack.Screen name="settings/operator" />
+      <Stack.Screen name="settings/blocked" />
+      {/* The private space brings its own layout (screenshot block,
+            no swipe-back), so it is registered as one route here. */}
+      <Stack.Screen name="private" />
+      <Stack.Screen name="notifications" />
+      <Stack.Screen name="search" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="task/new" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="note/new" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="habit/new" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="routine/new" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="timeline/event/new" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="music/playlist/new" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="music/now-playing" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="goals/new" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="sleep/log" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="study/log" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="budget/transaction" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="budget/savings/new" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="budget/debts/new" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="gallery/album/new" options={{ presentation: 'modal' }} />
+    </Stack>
+  );
+}
+
 export default function RootLayout() {
   const init = useAuthStore((state) => state.init);
   const isInitialized = useAuthStore((state) => state.isInitialized);
@@ -343,91 +476,15 @@ export default function RootLayout() {
           way the device theme leaned. Tied to the same `scheme` every screen
           already reads, so it always has 4.5:1+ against whatever's under it. */}
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      {/* The same job for the bottom of the screen — see system-bars.tsx for
+          why the navigation bar needs its own call rather than following the
+          status bar's. */}
+      <SystemBarsBridge />
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <BottomSheetModalProvider>
             <ErrorBoundary>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: c.background },
-                }}
-              >
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(onboarding)" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="notes" />
-                <Stack.Screen name="music" />
-                <Stack.Screen name="insights/index" />
-                <Stack.Screen name="challenge/index" />
-                <Stack.Screen name="challenge/join" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="challenge/swap" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="challenge/timeline" />
-                <Stack.Screen name="goals/index" />
-                <Stack.Screen name="goals/[id]" />
-                <Stack.Screen name="goals/[id]/edit" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="goals/[id]/log" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="goals/reminder-settings" />
-                <Stack.Screen name="sleep/index" />
-                <Stack.Screen name="sleep/settings" />
-                <Stack.Screen name="sleep/insights" />
-                <Stack.Screen name="study/index" />
-                <Stack.Screen name="study/settings" />
-                <Stack.Screen name="study/reminder-settings" />
-                <Stack.Screen name="study/insights" />
-                <Stack.Screen name="study/timer" options={{ gestureEnabled: false }} />
-                <Stack.Screen name="budget/index" />
-                <Stack.Screen name="budget/transactions" />
-                <Stack.Screen name="budget/reports" />
-                <Stack.Screen name="budget/settings" />
-                <Stack.Screen name="budget/savings/[id]" />
-                <Stack.Screen name="budget/debts/index" />
-                <Stack.Screen name="budget/debts/[id]" />
-                <Stack.Screen name="join/[token]" />
-                <Stack.Screen name="split/index" />
-                <Stack.Screen name="split/[id]" />
-                <Stack.Screen name="split/new" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="split/[id]/expense" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="split/[id]/settle" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="split/[id]/members" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="gallery/index" />
-                <Stack.Screen name="gallery/all" />
-                <Stack.Screen name="gallery/compare" />
-                <Stack.Screen name="gallery/album/[id]" />
-                <Stack.Screen name="gallery/photo/[id]" />
-                <Stack.Screen
-                  name="gallery/story/[period]"
-                  options={{ presentation: 'fullScreenModal', animation: 'fade' }}
-                />
-                <Stack.Screen name="profile" />
-                <Stack.Screen name="settings/index" />
-                <Stack.Screen name="settings/notifications" />
-                <Stack.Screen name="settings/notification-sound" />
-                <Stack.Screen name="settings/sync" />
-                <Stack.Screen name="settings/sync-conflicts" />
-                <Stack.Screen name="settings/media" />
-                <Stack.Screen name="settings/operator" />
-                <Stack.Screen name="settings/blocked" />
-                {/* The private space brings its own layout (screenshot block,
-                    no swipe-back), so it is registered as one route here. */}
-                <Stack.Screen name="private" />
-                <Stack.Screen name="notifications" />
-                <Stack.Screen name="search" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="task/new" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="note/new" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="habit/new" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="routine/new" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="timeline/event/new" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="music/playlist/new" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="music/now-playing" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="goals/new" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="sleep/log" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="study/log" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="budget/transaction" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="budget/savings/new" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="budget/debts/new" options={{ presentation: 'modal' }} />
-                <Stack.Screen name="gallery/album/new" options={{ presentation: 'modal' }} />
-              </Stack>
+              <AppNavigator background={c.background} />
               <AuthGate />
               <SyncTrigger />
               <SyncStatusBridge />

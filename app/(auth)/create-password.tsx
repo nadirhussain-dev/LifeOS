@@ -64,7 +64,7 @@ export default function CreatePasswordScreen() {
     }
     setBusy(false);
     // This screen is one the auth gate deliberately leaves alone (see
-    // use-auth-gate.ts's PASSWORD_SETUP_SCREENS) so the session `verifySignupOtp`
+    // use-auth-gate.ts's PASSWORD_SETUP_SCREENS) so the session `verifyEmailCode`
     // created doesn't bounce the user out before they've set a password — so
     // unlike most auth actions, navigating onward is this screen's own job.
     // A brand-new account has no onboardingCompletedAt yet; an existing one

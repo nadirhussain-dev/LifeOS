@@ -1,6 +1,8 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { MAILER_TEMPLATES } from '../../scripts/auth-config.mjs';
+
 /**
  * That every outbound email says Daykeep.
  *
@@ -23,8 +25,36 @@ const templates = readdirSync(DIR).filter((f) => f.endsWith('.html'));
  *  moved, this fails rather than passing over an empty list. */
 it('finds the auth email templates', () => {
   expect(templates).toEqual(
-    expect.arrayContaining(['confirm-signup.html', 'magic-link.html', 'reset-password.html']),
+    expect.arrayContaining([
+      'confirm-signup.html',
+      'magic-link.html',
+      'reset-password.html',
+      'email-change.html',
+      'reauthentication.html',
+    ]),
   );
+});
+
+/**
+ * The list the deploy script applies and the files on disk are the same set.
+ *
+ * These fail in opposite directions and both are silent. A file with no entry
+ * in MAILER_TEMPLATES is never uploaded, so the project keeps sending
+ * Supabase's stock email while the repository contains a branded one that
+ * looks applied. An entry with no file makes the script throw at step 4 —
+ * after it has already repointed SMTP — leaving the project half-configured.
+ */
+describe('the deploy script', () => {
+  it('applies exactly the templates that exist', () => {
+    expect(MAILER_TEMPLATES.map((t) => t.file).sort()).toEqual([...templates].sort());
+  });
+
+  /** The subject is set by the script; the same line is repeated in a comment
+   *  at the top of each file for whoever pastes one in by hand. Two copies of
+   *  a string drift, and the drift shows up in somebody's inbox. */
+  it.each(MAILER_TEMPLATES)('$file documents the subject the script sets', (template) => {
+    expect(readFileSync(join(DIR, template.file), 'utf8')).toContain(template.subject);
+  });
 });
 
 describe.each(templates)('%s', (file) => {

@@ -4,6 +4,7 @@ import {
   redeemTransfer,
   type RedeemResult,
 } from '@/features/private/services/key-transfer';
+import { env } from '@/lib/env';
 import { generateId } from '@/lib/id';
 import { supabase } from '@/lib/supabase';
 import { toSupabaseError } from '@/lib/supabase-error';
@@ -29,6 +30,33 @@ import { toSupabaseError } from '@/lib/supabase-error';
 
 function assertOk(error: unknown): void {
   if (error) throw toSupabaseError(error);
+}
+
+/**
+ * The shareable half of an invite, as an https link.
+ *
+ * NOT `Linking.createURL()`, which is what this was and why album invites did
+ * not work. That produces `daykeep://private/albums/accept/<token>`, and a
+ * custom scheme dies twice over on its way to the person being invited: Gmail
+ * sanitises `href` down to http/https/mailto/ftp so the link renders as
+ * unclickable text, WhatsApp and most messengers do not linkify it at all, and
+ * on a phone without Daykeep it resolves to nothing whatever the sender does.
+ * The sender's own device opens it perfectly, which is exactly why it survived
+ * testing — the one device it works on is the one holding it.
+ *
+ * `supabase/functions/join` already exists to answer this for group invites
+ * (see its header, and commit 70f105a). It serves an https page that hands the
+ * token to the app and falls back to visible instructions, so the same URL
+ * works for somebody who has the app, somebody who does not, and every mail
+ * client in between. Album invites take the same road with `/album/` in front
+ * of the token.
+ *
+ * The link still grants Postgres/RLS membership ONLY — see this file's header.
+ * The album key travels the other channel, and the landing page says so.
+ */
+export function albumInviteUrl(token: string): string {
+  const base = env.EXPO_PUBLIC_SUPABASE_URL.replace(/\/+$/, '');
+  return `${base}/functions/v1/join/album/${token}`;
 }
 
 /** Long enough to read a QR code over a phone call without the link going

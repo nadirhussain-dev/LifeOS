@@ -36,6 +36,16 @@ export function useDeviceSessionSync() {
       return;
     }
 
+    // A revoked verdict belongs to the session that ended, and the store
+    // persists it on purpose so the notice survives the wipe that produced it.
+    // A NEW session is a new question: whoever just signed in is owed the
+    // answer to their own sign-in, not the last one's. Left in place, it covers
+    // a successful sign-in with a lockout screen until the round trip below
+    // comes back — and covers it forever if the device is offline.
+    if (useDeviceSessionStore.getState().verdict === 'revoked') {
+      useDeviceSessionStore.getState().clear();
+    }
+
     void pass();
 
     const sub = AppState.addEventListener('change', (state) => {
@@ -67,7 +77,26 @@ async function pass(): Promise<void> {
 
   const standing = await refreshDeviceSession();
 
+  // 'revoked' means another device took the account, or the account is gone —
+  // never "this device signed out", which `refreshDeviceSession` maps to
+  // 'unregistered' so the claim below simply takes the slot back.
   if (standing === 'revoked') {
+    const { revokedAt, surrenderedFor } = useDeviceSessionStore.getState();
+
+    // Already wiped and signed out for this exact revocation, and yet here is a
+    // session again — which can only mean the user deliberately signed back in
+    // on this phone. Surrendering a second time would sign them out of a
+    // sign-in they just performed, and they would never get past it: the notice
+    // screen has no way back, so the phone that was taken over could never take
+    // the account back. Claiming does have a way back — it answers
+    // `otp_required`, which is the takeover screen, which is a code away from
+    // working. The wipe is not skipped by this: an unacknowledged wipe command
+    // is retried from `use-account-standing` on every launch regardless.
+    if (revokedAt && surrenderedFor === revokedAt) {
+      await claimThisDevice();
+      return;
+    }
+
     await surrender();
     return;
   }
@@ -95,7 +124,14 @@ async function pass(): Promise<void> {
  *  3. **Sign out.** Last, because the session is what made step 1 possible.
  */
 async function surrender(): Promise<void> {
-  const { revokedReason, otherDevice } = useDeviceSessionStore.getState();
+  const { revokedReason, otherDevice, revokedAt } = useDeviceSessionStore.getState();
+
+  // Recorded before the work rather than after it. The steps below wipe and
+  // sign out, and if the app is killed midway the one thing that must not be
+  // lost is that this revocation has been dealt with — a lost record is a user
+  // who cannot sign back in on this phone, which is the failure this marker
+  // exists to prevent.
+  useDeviceSessionStore.getState().markSurrendered();
 
   try {
     await processDeviceCommands();
@@ -105,13 +141,13 @@ async function surrender(): Promise<void> {
     reportError(error, { scope: 'device-session-wipe' });
   }
 
-  useDeviceSessionStore.getState().setVerdict('revoked', otherDevice, revokedReason);
+  useDeviceSessionStore.getState().setVerdict('revoked', otherDevice, revokedReason, revokedAt);
 
   await useAuthStore.getState().signOut({ wipeDevice: false, release: false });
 
   // Re-asserted after sign-out too: signing out clears the store again, and
   // the person holding this phone is owed the reason it just emptied.
-  useDeviceSessionStore.getState().setVerdict('revoked', otherDevice, revokedReason);
+  useDeviceSessionStore.getState().setVerdict('revoked', otherDevice, revokedReason, revokedAt);
 }
 
 /** Sends the code that authorises moving the account to this device. */

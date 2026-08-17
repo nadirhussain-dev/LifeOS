@@ -3,6 +3,13 @@ import type { Session, User } from '@supabase/supabase-js';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import {
+  authErrorMessage,
+  authFailure,
+  retryAfterSeconds,
+  type AuthAction,
+  type SupabaseAuthError,
+} from '@/features/auth/services/auth-errors';
 import { releaseThisDevice, revokeAllDevices } from '@/features/auth/services/device-session';
 import {
   reconcileAccountOnSignIn,
@@ -28,7 +35,23 @@ const NOT_CONFIGURED = {
 
 /** Result shape both sign-in and sign-up return so screens can show a friendly
  * error without importing Supabase's error types. */
-export type AuthResult = { ok: true } | { ok: false; error: string };
+export type AuthResult =
+  | { ok: true }
+  | {
+      ok: false;
+      error: string;
+      /**
+       * Which failure this was, as `auth-errors.ts` classified it — for the one
+       * caller that has to branch on it rather than merely show it. `error` is
+       * a translated sentence and comparing those is how a flow breaks the
+       * first time somebody edits the copy.
+       */
+      key?: string;
+      /** When the server said how long before it will accept another send.
+       *  The resend countdown uses it instead of guessing — see
+       *  `email-code-step.tsx`. */
+      retryAfterSeconds?: number | null;
+    };
 
 /** How much a sign-out should tear down. Defaults are the ordinary case; every
  *  field exists for one caller that genuinely needs the other answer. */
@@ -99,11 +122,21 @@ type AuthState = {
   init: () => void;
   signIn: (email: string, password: string) => Promise<AuthResult>;
   /** Sends a 6-digit sign-up code to `email` and creates the account once it's
-   *  verified (see `verifySignupOtp`). No password yet — that's a separate
+   *  verified (see `verifyEmailCode`). No password yet — that's a separate
    *  step once a session exists, via `updatePassword`. */
   sendSignupOtp: (email: string, displayName?: string) => Promise<AuthResult>;
-  /** Verifies the sign-up code and establishes the session. */
-  verifySignupOtp: (email: string, token: string) => Promise<AuthResult>;
+  /** Sends a 6-digit sign-in code to an account that already exists. Refuses
+   *  to create one, which is what makes an unknown address answerable. */
+  sendSignInOtp: (email: string) => Promise<AuthResult>;
+  /**
+   * Verifies an emailed 6-digit code and establishes the session.
+   *
+   * One function for sign-up and sign-in alike, because it is one server call:
+   * a code proves control of the mailbox, and GoTrue's `type: 'email'` covers
+   * both. What differs is only where the app goes next, which is the screen's
+   * business and not this store's.
+   */
+  verifyEmailCode: (email: string, token: string) => Promise<AuthResult>;
   /**
    * Signs out and, unless told otherwise, wipes this device — see
    * `SignOutOptions`.
@@ -140,21 +173,30 @@ type AuthState = {
   claimUsername: (candidate: string) => Promise<UsernameClaim>;
 };
 
-/** Maps Supabase's error messages to something a person wants to read. */
-function friendly(message: string): string {
-  const m = message.toLowerCase();
-  if (m.includes('invalid login')) return 'That email or password is incorrect.';
-  if (m.includes('already registered') || m.includes('already been registered'))
-    return 'An account with this email already exists.';
-  if (m.includes('password should be')) return 'Password must be at least 6 characters.';
-  if (m.includes('unable to validate email') || m.includes('invalid email'))
-    return 'That email address looks invalid.';
-  if (m.includes('email not confirmed')) return 'Please confirm your email first, then sign in.';
-  if (m.includes('network')) return 'Network error — check your connection and try again.';
-  if (m.includes('otp') || m.includes('token has expired') || m.includes('token is invalid')) {
-    return 'That code is incorrect or has expired. Request a new one.';
+/**
+ * Turns a failed auth call into a result the screens can show.
+ *
+ * The mapping itself lives in `auth-errors.ts` — see the note there for why it
+ * reads `error.code` rather than matching words in the message, and what the
+ * word-matching version told people instead.
+ *
+ * A server fault is reported as well as translated. These are the failures
+ * nobody files a bug about, because from the outside they look like the email
+ * simply never arriving.
+ */
+function fail(error: SupabaseAuthError, action: AuthAction): AuthResult {
+  if (typeof error.status === 'number' && error.status >= 500) {
+    reportError(new Error(`auth ${action}: ${error.status} ${error.code ?? error.message}`), {
+      scope: 'auth',
+      action,
+    });
   }
-  return message;
+  return {
+    ok: false,
+    error: authErrorMessage(error, action),
+    key: authFailure(error, action).key,
+    retryAfterSeconds: retryAfterSeconds(error),
+  };
 }
 
 /**
@@ -264,7 +306,7 @@ export const useAuthStore = create<AuthState>()(
         const { error } = await withRetry(() =>
           supabase.auth.signInWithPassword({ email: email.trim(), password }),
         );
-        if (error) return { ok: false, error: friendly(error.message) };
+        if (error) return fail(error, 'signInWithPassword');
         set({ isGuest: false });
         return { ok: true };
       },
@@ -280,16 +322,38 @@ export const useAuthStore = create<AuthState>()(
             },
           }),
         );
-        if (error) return { ok: false, error: friendly(error.message) };
+        if (error) return fail(error, 'sendSignUpCode');
         return { ok: true };
       },
 
-      verifySignupOtp: async (email, token) => {
+      /**
+       * A code to sign in with, for an account that already exists.
+       *
+       * `shouldCreateUser: false` is the whole difference from `sendSignupOtp`,
+       * and it is load-bearing twice over. It stops a typo in the address from
+       * silently creating a second, empty account that the user then cannot
+       * find their data in — and it is what makes "there's no account with this
+       * email" answerable at all, since the server's refusal (`otp_disabled`)
+       * only happens when it has been told not to create one.
+       */
+      sendSignInOtp: async (email) => {
+        if (!isSupabaseConfigured) return NOT_CONFIGURED;
+        const { error } = await withRetry(() =>
+          supabase.auth.signInWithOtp({
+            email: email.trim(),
+            options: { shouldCreateUser: false },
+          }),
+        );
+        if (error) return fail(error, 'sendSignInCode');
+        return { ok: true };
+      },
+
+      verifyEmailCode: async (email, token) => {
         if (!isSupabaseConfigured) return NOT_CONFIGURED;
         const { error } = await withRetry(() =>
           supabase.auth.verifyOtp({ email: email.trim(), token: token.trim(), type: 'email' }),
         );
-        if (error) return { ok: false, error: friendly(error.message) };
+        if (error) return fail(error, 'verifyCode');
         set({ isGuest: false });
         return { ok: true };
       },
@@ -346,7 +410,7 @@ export const useAuthStore = create<AuthState>()(
             redirectTo: passwordResetRedirectUrl(),
           }),
         );
-        if (error) return { ok: false, error: friendly(error.message) };
+        if (error) return fail(error, 'sendResetCode');
         return { ok: true };
       },
 
@@ -355,14 +419,14 @@ export const useAuthStore = create<AuthState>()(
         const { error } = await withRetry(() =>
           supabase.auth.verifyOtp({ email: email.trim(), token: token.trim(), type: 'recovery' }),
         );
-        if (error) return { ok: false, error: friendly(error.message) };
+        if (error) return fail(error, 'verifyCode');
         return { ok: true };
       },
 
       updatePassword: async (newPassword) => {
         if (!isSupabaseConfigured) return NOT_CONFIGURED;
         const { error } = await supabase.auth.updateUser({ password: newPassword });
-        if (error) return { ok: false, error: friendly(error.message) };
+        if (error) return fail(error, 'updatePassword');
         return { ok: true };
       },
 
@@ -382,7 +446,7 @@ export const useAuthStore = create<AuthState>()(
         // function — the client can't call auth.admin.deleteUser. See
         // supabase/functions/delete-account. Requires App/Play store compliance.
         const { error } = await supabase.functions.invoke('delete-account');
-        if (error) return { ok: false, error: friendly(error.message) };
+        if (error) return fail(error, 'deleteAccount');
         // The full device wipe, not the account-switch one: there is no account
         // to come back to, so nothing about this install should still describe
         // the person who just deleted theirs.
@@ -474,7 +538,9 @@ export const useAuthStore = create<AuthState>()(
           .from('profiles')
           .update({ display_name: displayName.trim() })
           .eq('id', user.id);
-        if (error) return { ok: false, error: friendly(error.message) };
+        // A PostgREST error, not an auth one — `authErrorMessage` would have
+        // nothing to say about it, so the server's own message stands.
+        if (error) return { ok: false, error: error.message };
         set((s) => ({
           profile: s.profile ? { ...s.profile, displayName: displayName.trim() } : s.profile,
         }));

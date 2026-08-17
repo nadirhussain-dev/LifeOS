@@ -189,13 +189,41 @@ describe('shared albums: the same two gaps, closed the same way', () => {
     }
   });
 
-  it('encrypts photo bytes at exactly one choke point', () => {
-    // Not "does this file call encryptBytes" — a second, unaudited upload
-    // path would satisfy that just as well as the real one. The assertion is
-    // that album-uploader.ts is the ONLY caller of the shared-albums upload,
-    // so there is one place to audit for "did this actually encrypt first."
+  it('uploads to the shared-albums bucket from an enumerated set of files', () => {
+    // Not "does this file call encryptBytes" — a second, unaudited upload path
+    // would satisfy that just as well as the real one. The assertion is that
+    // the callers of the shared-albums upload are exactly these, so there is a
+    // fixed list to audit for "did this actually encrypt first."
+    //
+    // It was one file until 0054 added voice notes, which upload a different
+    // kind of object on a different path (`<album>/voice/...`, the segment the
+    // premium carve-out keys off) and cannot route through the photo uploader
+    // without that function growing a mode flag. Adding to this list is
+    // allowed; doing it silently is not, which is the point of the test.
     const uploaders = filesMentioning('storage.from(SHARED_ALBUM_BUCKET).upload', 'features');
-    expect(uploaders).toEqual(['features/private/services/album-uploader.ts']);
+    expect(uploaders).toEqual([
+      'features/private/services/album-uploader.ts',
+      'features/private/services/voice-notes.ts',
+    ]);
+  });
+
+  it('encrypts before uploading in every one of them', () => {
+    // The property the list above only stood in for, now checked directly:
+    // whatever reaches Storage is the output of an encrypt call, not the
+    // plaintext the caller handed in. Positional rather than clever — a file
+    // that encrypts *after* its upload would pass a mere "mentions both".
+    for (const file of [
+      'features/private/services/album-uploader.ts',
+      'features/private/services/voice-notes.ts',
+    ]) {
+      const source = readFileSync(join(ROOT, file), 'utf8');
+      const encryptedAt = source.search(/const ciphertext = encrypt\w+\(/);
+      const uploadedAt = source.indexOf('storage.from(SHARED_ALBUM_BUCKET).upload');
+      expect(encryptedAt).toBeGreaterThan(-1);
+      expect(uploadedAt).toBeGreaterThan(encryptedAt);
+      // And that it is the ciphertext being handed over, not the source bytes.
+      expect(source).toMatch(/\.upload\([^)]*ciphertext/s);
+    }
   });
 });
 

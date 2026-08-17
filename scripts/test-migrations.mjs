@@ -4014,6 +4014,19 @@ const putAlbumObject = (albumId, path, size, metadata = {}) =>
     [`${albumId}/${path}`, size, JSON.stringify(metadata)],
   );
 
+// Both uploaders in this section hold premium, because since 0052 a
+// shared-album upload without it is refused by `enforce_album_media_premium`
+// before anything here gets a chance to be tested. That matters most for the
+// non-member case below: a BEFORE ROW trigger fires ahead of the WITH CHECK
+// policy, so an unpaid outsider would be turned away by the paywall and the
+// test would pass while proving nothing about album isolation. Granted
+// directly rather than through `admin_grant_premium`, which is owner-only and
+// whose bootstrap is deliberately kept until the end of this file.
+await db.query(`update public.profiles set premium_until = $1 where id = any($2::uuid[])`, [
+  Date.now() + 365 * 86400000,
+  [ALBUM_PEST, ALBUM_OUTSIDER],
+]);
+
 await test('0028 a member can store and read an object in their album’s folder', async () => {
   await asUser(db, ALBUM_PEST, async () => {
     await putAlbumObject('alb-pest', 'photo-a.bin', 1024);
@@ -4306,6 +4319,339 @@ await test('0029 chat: off by default, owner-only to enable, then open to member
       0,
       'a non-member cannot',
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+console.log('\nchat: receipts, disappearing, voice (0053 + 0054)');
+// ---------------------------------------------------------------------------
+//
+// Continues on alb-together with allow_chat now true and 'msg-third' present
+// from the 0029 suite above. ALBUM_OUTSIDER is still not a member, which is
+// what every negative case here leans on.
+
+await test('0053 a member can edit their own message, and nobody else’s', async () => {
+  await asUser(db, ALBUM_THIRD, async () => {
+    await db.query(`select public.edit_album_message('msg-third','cipher:hey-fixed')`);
+  });
+  expectEqual(
+    (await one(`select body_ciphertext b from public.shared_album_messages where id='msg-third'`))
+      .b,
+    'cipher:hey-fixed',
+    'the author’s own edit landed',
+  );
+  expectEqual(
+    Boolean(
+      (
+        await one(
+          `select edited_at is not null e from public.shared_album_messages where id='msg-third'`,
+        )
+      ).e,
+    ),
+    true,
+    'edited_at stamped, so clients can show "edited"',
+  );
+
+  // The point of the RPC: 0029's update policy lets any member update any row
+  // in their album, so this must be refused by the function, not by RLS.
+  await asUser(db, ALBUM_PARTNER, async () => {
+    await expectRejection(
+      () => db.query(`select public.edit_album_message('msg-third','cipher:forged')`),
+      'only the author may edit a message',
+    );
+  });
+});
+
+await test('0053 reactions dedupe, and only their owner can remove one', async () => {
+  await asUser(db, ALBUM_PARTNER, async () => {
+    for (let i = 0; i < 2; i++) {
+      await db.query(
+        `insert into public.shared_album_message_reactions
+           (message_id, album_id, user_id, emoji, created_at)
+         values ('msg-third','alb-together',$1,'👍',$2)
+         on conflict do nothing`,
+        [ALBUM_PARTNER, Date.now()],
+      );
+    }
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.shared_album_message_reactions where message_id='msg-third'`,
+    ),
+    1,
+    'reacting twice with the same emoji is one fact, not two',
+  );
+  await asUser(db, ALBUM_THIRD, async () => {
+    await db.query(
+      `delete from public.shared_album_message_reactions
+        where message_id='msg-third' and user_id=$1`,
+      [ALBUM_PARTNER],
+    );
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.shared_album_message_reactions where message_id='msg-third'`,
+    ),
+    1,
+    'somebody else’s delete removed nothing',
+  );
+});
+
+await test('0053 the read marker only ever moves forward', async () => {
+  await asUser(db, ALBUM_PARTNER, async () => {
+    await db.query(`select public.mark_album_read('alb-together', 5000)`);
+    await db.query(`select public.mark_album_read('alb-together', 9000)`);
+    // Out of order, as a second device reporting late would be.
+    await db.query(`select public.mark_album_read('alb-together', 7000)`);
+  });
+  expectEqual(
+    Number(
+      (
+        await one(
+          `select read_through r from public.shared_album_reads
+            where album_id='alb-together' and user_id=$1`,
+          [ALBUM_PARTNER],
+        )
+      ).r,
+    ),
+    9000,
+    'the late, older report did not un-read anything',
+  );
+});
+
+await test('0054 marking read also marks delivered', async () => {
+  // The contradiction this prevents: a blue read tick sitting above a grey
+  // undelivered one, permanently, because nothing else would ever move the
+  // delivery marker for a message that was already read.
+  expectEqual(
+    Number(
+      (
+        await one(
+          `select delivered_through d from public.shared_album_deliveries
+            where album_id='alb-together' and user_id=$1`,
+          [ALBUM_PARTNER],
+        )
+      ).d,
+    ),
+    9000,
+    'delivery marker carried along by the read above',
+  );
+});
+
+await test('0054 the delivery marker moves forward independently, and never back', async () => {
+  await asUser(db, ALBUM_THIRD, async () => {
+    await db.query(`select public.mark_album_delivered('alb-together', 4000)`);
+    await db.query(`select public.mark_album_delivered('alb-together', 2000)`);
+  });
+  expectEqual(
+    Number(
+      (
+        await one(
+          `select delivered_through d from public.shared_album_deliveries
+            where album_id='alb-together' and user_id=$1`,
+          [ALBUM_THIRD],
+        )
+      ).d,
+    ),
+    4000,
+    'greatest(), same as the read marker',
+  );
+  // Delivered without read: the whole point of a separate marker.
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.shared_album_reads
+        where album_id='alb-together' and user_id=$1`,
+      [ALBUM_THIRD],
+    ),
+    0,
+    'a delivery did not invent a read',
+  );
+});
+
+await test('0054 a non-member cannot mark anything in an album they are not in', async () => {
+  await asUser(db, ALBUM_OUTSIDER, async () => {
+    await expectRejection(
+      () => db.query(`select public.mark_album_delivered('alb-together', 1)`),
+      'not a member of this album',
+    );
+  });
+});
+
+await test('0053 the disappearing timer is owner-only and bounded', async () => {
+  await asUser(db, ALBUM_THIRD, async () => {
+    await expectRejection(
+      () => db.query(`select public.set_album_disappearing('alb-together', 3600)`),
+      'owner',
+    );
+  });
+  await asUser(db, ALBUM_OWNER, async () => {
+    await expectRejection(
+      () => db.query(`select public.set_album_disappearing('alb-together', 2)`),
+      'timer out of range',
+    );
+  });
+});
+
+await test('0053 the timer stamps at insert, and changing it is not retroactive', async () => {
+  const t0 = Date.now();
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(`select public.set_album_disappearing('alb-together', 60)`);
+    await db.query(
+      `insert into public.shared_album_messages
+         (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at)
+       values ('msg-timed','alb-together',$1,'Owner','cipher:timed',$2,$2)`,
+      [ALBUM_OWNER, t0],
+    );
+  });
+  expectEqual(
+    Number(
+      (await one(`select expires_at e from public.shared_album_messages where id='msg-timed'`)).e,
+    ),
+    t0 + 60000,
+    'expiry copied from the album’s timer at insert',
+  );
+
+  // The load-bearing half: a message already said must not be re-dated by a
+  // later change to the album's timer.
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(`select public.set_album_disappearing('alb-together', 5)`);
+  });
+  expectEqual(
+    Number(
+      (await one(`select expires_at e from public.shared_album_messages where id='msg-timed'`)).e,
+    ),
+    t0 + 60000,
+    'the already-sent message kept the timer it was sent under',
+  );
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(`select public.set_album_disappearing('alb-together', null)`);
+  });
+});
+
+await test('0053 the sweep is a SOFT delete — the row stays', async () => {
+  const past = Date.now() - 10000;
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(
+      `insert into public.shared_album_messages
+         (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at)
+       values ('msg-due','alb-together',$1,'Owner','cipher:due',$2,$2)`,
+      [ALBUM_OWNER, past],
+    );
+    await db.query(`update public.shared_album_messages set expires_at = $1 where id='msg-due'`, [
+      past,
+    ]);
+    expectEqual(
+      Number((await one(`select public.expire_album_messages('alb-together') n`)).n),
+      1,
+      'one message was due',
+    );
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.shared_album_messages where id='msg-due'`),
+    1,
+    'the row is still there — a hard delete here would be unrecoverable',
+  );
+  expectEqual(
+    Boolean(
+      (
+        await one(
+          `select disappeared_at is not null d from public.shared_album_messages where id='msg-due'`,
+        )
+      ).d,
+    ),
+    true,
+    'stamped rather than removed',
+  );
+  await asUser(db, ALBUM_OWNER, async () => {
+    expectEqual(
+      Number((await one(`select public.expire_album_messages('alb-together') n`)).n),
+      0,
+      'idempotent — a swept row no longer matches',
+    );
+  });
+});
+
+await test('0054 a voice message carries a recording and a text message may not', async () => {
+  await asUser(db, ALBUM_OWNER, async () => {
+    await db.query(
+      `insert into public.shared_album_messages
+         (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at,
+          kind, voice_path, voice_duration_ms, voice_byte_length)
+       values ('msg-voice','alb-together',$1,'Owner','cipher:v',$2,$2,
+               'voice','alb-together/voice/msg-voice.bin',4200,9000)`,
+      [ALBUM_OWNER, Date.now()],
+    );
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.shared_album_messages
+             (id, album_id, author_id, author_name, body_ciphertext, created_at, updated_at,
+              kind, voice_path)
+           values ('msg-bad','alb-together',$1,'Owner','cipher:x',$2,$2,
+                   'text','alb-together/voice/nope.bin')`,
+          [ALBUM_OWNER, Date.now()],
+        ),
+      'shared_album_messages_voice_shape',
+    );
+  });
+  expectEqual(
+    (await one(`select kind k from public.shared_album_messages where id='msg-voice'`)).k,
+    'voice',
+    'the voice row stands',
+  );
+});
+
+await test('0054 a voice note is free, while a photo in the same album is not', async () => {
+  // MEDIA_PLAN_FREE is on plus_monthly by the time the 0035/0052 suite has run,
+  // so this uses a fresh free account: the whole assertion is about the plan.
+  const VOICE_FREE = '99400000-0000-0000-0000-000000000001';
+  await createUser(db, VOICE_FREE, 'voice-free@example.com');
+  await asUser(db, VOICE_FREE, async () => {
+    await db.query(
+      `select public.create_shared_album('alb-voice-free','cipher:x','m-voice-free',null,'act-voice-free',$1)`,
+      [Date.now()],
+    );
+    await expectRejection(
+      () => putAlbumObject('alb-voice-free', 'photo.bin', 1024),
+      'requires a paid plan',
+    );
+    await putAlbumObject('alb-voice-free', 'voice/note.bin', 1024);
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from storage.objects
+        where bucket_id='shared-albums' and name='alb-voice-free/voice/note.bin'`,
+    ),
+    1,
+    'the voice note went through on a free plan',
+  );
+});
+
+await test('0054 the voice carve-out is capped, so it is not free storage', async () => {
+  const VOICE_FREE = '99400000-0000-0000-0000-000000000001';
+  await asUser(db, VOICE_FREE, async () => {
+    await expectRejection(
+      () => putAlbumObject('alb-voice-free', 'voice/huge.bin', 17 * 1024 * 1024),
+      'limited to 16 MiB',
+    );
+  });
+});
+
+await test('0054 an album named "voice" cannot smuggle photos past the gate', async () => {
+  // The carve-out reads path segment 2, not segment 1 — this is the test that
+  // says so, because reading segment 1 would look identical until someone
+  // named an album this.
+  //
+  // A second free account, because the free plan allows one album at a time
+  // and the account above has already spent its one.
+  const VOICE_NAMED = '99400000-0000-0000-0000-000000000002';
+  await createUser(db, VOICE_NAMED, 'voice-named@example.com');
+  await asUser(db, VOICE_NAMED, async () => {
+    await db.query(
+      `select public.create_shared_album('voice','cipher:x','m-voice-album',null,'act-voice-album',$1)`,
+      [Date.now()],
+    );
+    await expectRejection(() => putAlbumObject('voice', 'photo.bin', 1024), 'requires a paid plan');
   });
 });
 
@@ -4929,14 +5275,41 @@ await test('0035 a free-plan account cannot back up media at all', async () => {
   });
 });
 
-await test('0035 the same free-plan account can still add photos to a shared album', async () => {
-  // Proves the two buckets are gated independently — 0032's own album/member
-  // limits are the shared-albums lever, not this migration.
+await test('0052 a free-plan account can make a shared album but not put photos in it', async () => {
+  // 0035 exempted shared-album media so the couple case worked free, and this
+  // test asserted exactly that. 0052 reverses the exemption deliberately — see
+  // its header, which reverses the promise where the promise was made — so the
+  // assertion is inverted here rather than deleted: the reversal is the thing
+  // worth holding onto, and a deleted test would let it drift back silently.
+  //
+  // The album itself is still free to create. Only the upload is gated, and
+  // only at upload — nothing already stored is touched.
   await asUser(db, MEDIA_PLAN_FREE, async () => {
     await db.query(
       `select public.create_shared_album('alb-media-free','cipher:x','m-media-free-owner',null,'act-media-free',$1)`,
       [Date.now()],
     );
+    await expectRejection(
+      () => putAlbumObject('alb-media-free', 'photo-a.bin', 1024),
+      'adding photos to a shared album requires a paid plan',
+    );
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from storage.objects
+        where bucket_id = 'shared-albums' and name = 'alb-media-free/photo-a.bin'`,
+    ),
+    0,
+    'nothing was stored on the free plan',
+  );
+});
+
+await test('0052 upgrading the same account lets the photo through', async () => {
+  // The other half of the gate: it refuses a plan, not a person. Paired with
+  // the test above so a regression that refuses everybody cannot pass as one
+  // that merely charges for it.
+  await asUser(db, MEDIA_PLAN_FREE, async () => {
+    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
     await putAlbumObject('alb-media-free', 'photo-a.bin', 1024);
   });
   expectEqual(
@@ -4945,7 +5318,7 @@ await test('0035 the same free-plan account can still add photos to a shared alb
         where bucket_id = 'shared-albums' and name = 'alb-media-free/photo-a.bin'`,
     ),
     1,
-    'shared-album upload succeeded on the free plan',
+    'the same upload succeeds once the account is paid',
   );
 });
 

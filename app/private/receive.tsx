@@ -10,7 +10,8 @@ import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { PinPad } from '@/features/private/components/pin-pad';
 import { PrivateScreen } from '@/features/private/components/private-screen';
-import { redeemTransfer } from '@/features/private/services/key-transfer';
+import { storeAlbumKeys } from '@/features/private/services/album-keys';
+import { redeemTransfer, type AlbumKeyMap } from '@/features/private/services/key-transfer';
 import { MIN_PIN_LENGTH, adoptVault } from '@/features/private/services/vault-keys';
 import { usePrivateStore } from '@/features/private/store/private-store';
 import { useTheme } from '@/hooks/use-theme';
@@ -39,6 +40,7 @@ export default function VaultReceiveScreen() {
   const [code, setCode] = useState('');
   const [pin, setPin] = useState('');
   const [masterKey, setMasterKey] = useState<Uint8Array | null>(null);
+  const [albumKeys, setAlbumKeys] = useState<AlbumKeyMap>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -62,6 +64,7 @@ export default function VaultReceiveScreen() {
       return;
     }
     setMasterKey(result.masterKey);
+    setAlbumKeys(result.albumKeys);
     setStep('pin');
   };
 
@@ -69,6 +72,13 @@ export default function VaultReceiveScreen() {
     if (!masterKey) return;
     setBusy(true);
     await adoptVault(pin, masterKey);
+
+    // After the vault, never before: each album key is stored wrapped under the
+    // vault key, so there is nothing to wrap them with until `adoptVault` has
+    // established it on this device. Best-effort per album — an album that
+    // fails to store is one a co-member can re-share, and failing the whole
+    // adoption over it would strand the vault too.
+    await storeAlbumKeys(masterKey, albumKeys);
     setBusy(false);
 
     // Straight into the space. The rows are probably already here — private

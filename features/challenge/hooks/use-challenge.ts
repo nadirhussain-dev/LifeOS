@@ -9,6 +9,7 @@ import type {
   ChecklistItem,
 } from '@/features/challenge/types/challenge.types';
 import { isSupabaseConfigured } from '@/lib/env';
+import { reportError } from '@/lib/error-reporting';
 import { supabase } from '@/lib/supabase';
 
 /** What `challenge_today()` returns. Server-owned; see migration 0048. */
@@ -109,6 +110,39 @@ export function useOpenSeason() {
       ]);
       if (tiers.error) throw new Error(tiers.error.message);
       if (modules.error) throw new Error(modules.error.message);
+
+      /**
+       * A season nobody can enrol in is not an open season, whatever its
+       * `enabled` column says.
+       *
+       * Enrolment picks `required_modules` modules from this list, so an empty
+       * one makes the join screen unfinishable by construction: a list with
+       * nothing in it, above a button that can never satisfy "choose 3" and so
+       * never enables. The screen behind it meanwhile offers "Start a run",
+       * because a row existed. Reporting `null` puts both back on the honest
+       * answer — there is nothing to join right now — and the screen already
+       * knows how to say that.
+       *
+       * Seasons are created by hand in the database (there is no operator
+       * screen for them), so a half-finished one is a live possibility rather
+       * than a theoretical one: staging has had exactly this since 2026-08-16,
+       * enabled, with no modules and no tiers.
+       */
+      if ((modules.data ?? []).length === 0) {
+        reportError(new Error(`challenge season "${season.name}" is enabled with no modules`), {
+          scope: 'challenge-season',
+          seasonId: season.id as string,
+        });
+        return null;
+      }
+      // Not fatal — a run without a ladder still runs — but the ladder is what
+      // the feature promises, so it should not go missing quietly.
+      if ((tiers.data ?? []).length === 0) {
+        reportError(new Error(`challenge season "${season.name}" has no reward tiers`), {
+          scope: 'challenge-season',
+          seasonId: season.id as string,
+        });
+      }
 
       return {
         id: season.id as string,

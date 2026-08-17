@@ -39,6 +39,9 @@ jest.mock('@/lib/error-reporting', () => ({ reportError: jest.fn() }));
 beforeEach(() => {
   mockRpc.mockReset();
   useDeviceSessionStore.getState().clear();
+  // `clear()` deliberately spares `surrenderedFor` — see the store. Tests need
+  // the genuinely blank slate that no runtime caller wants.
+  useDeviceSessionStore.setState({ surrenderedFor: null });
 });
 
 describe('claiming this device', () => {
@@ -135,6 +138,7 @@ describe('the heartbeat', () => {
       data: {
         status: 'revoked',
         revokedReason: 'signed_in_elsewhere',
+        revokedAt: '2026-08-16T10:00:00Z',
         activeDevice: { label: 'iPhone 14 · iOS 17', platform: 'ios', lastSeenAt: null },
       },
       error: null,
@@ -143,6 +147,30 @@ describe('the heartbeat', () => {
     await expect(refreshDeviceSession()).resolves.toBe('revoked');
     expect(useDeviceSessionStore.getState().revokedReason).toBe('signed_in_elsewhere');
     expect(useDeviceSessionStore.getState().otherDevice?.label).toBe('iPhone 14 · iOS 17');
+    // Which revocation, not merely that there was one: the hook surrenders once
+    // per revocation and needs to tell a second takeover from the first.
+    expect(useDeviceSessionStore.getState().revokedAt).toBe('2026-08-16T10:00:00Z');
+  });
+
+  /**
+   * The regression this mapping exists for. 0047 revokes the row on an
+   * ordinary sign-out (`revoked_reason = 'signed_out'`) and its `device_status`
+   * reported that as 'revoked' — so signing out and back in on the SAME phone
+   * wiped it, showed "your account was opened on another device", and signed
+   * the user out again. Migration 0051 answers 'unknown' now; this covers the
+   * databases that still only have 0047.
+   */
+  it('lets a device that signed itself out sign back in', async () => {
+    mockRpc.mockResolvedValue({
+      data: { status: 'revoked', revokedReason: 'signed_out', activeDevice: null },
+      error: null,
+    });
+
+    await expect(refreshDeviceSession()).resolves.toBe('unregistered');
+    // Nothing written back: the notice screen reads the verdict, and this is
+    // not something to notify anybody about.
+    expect(useDeviceSessionStore.getState().verdict).toBe('unknown');
+    expect(useDeviceSessionStore.getState().revokedReason).toBeNull();
   });
 
   /** Offline must be distinguishable from an answer, and must leave the
@@ -179,6 +207,37 @@ describe('the heartbeat', () => {
     await refreshDeviceSession();
 
     expect(useDeviceSessionStore.getState().verdict).toBe('otp_required');
+  });
+});
+
+/**
+ * The record that keeps a taken-over phone from becoming a dead end. Once this
+ * device has wiped and signed out for a revocation, signing in on it again must
+ * lead to the takeover screen — not to the same notice, forever.
+ */
+describe('the mark of a revocation already carried out', () => {
+  const store = () => useDeviceSessionStore.getState();
+
+  it('survives the wipe and the sign-out that follow it', () => {
+    store().setVerdict('revoked', null, 'signed_in_elsewhere', '2026-08-16T10:00:00Z');
+    store().markSurrendered();
+
+    // What `wipeDeviceData()` and every sign-out do.
+    store().clear();
+
+    expect(store().verdict).toBe('unknown');
+    expect(store().surrenderedFor).toBe('2026-08-16T10:00:00Z');
+  });
+
+  /** A boolean would swallow the second one. */
+  it('does not cover a later, separate takeover', () => {
+    store().setVerdict('revoked', null, 'signed_in_elsewhere', '2026-08-16T10:00:00Z');
+    store().markSurrendered();
+    store().clear();
+
+    store().setVerdict('revoked', null, 'signed_in_elsewhere', '2026-08-20T18:30:00Z');
+
+    expect(store().surrenderedFor).not.toBe(store().revokedAt);
   });
 });
 

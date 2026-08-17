@@ -74,7 +74,7 @@ const pendingWipe = {
 beforeEach(() => {
   mockCalls.length = 0;
   jest.clearAllMocks();
-  mockEvacuate.mockResolvedValue({ pushed: 12, unsaved: [] });
+  mockEvacuate.mockResolvedValue({ pushed: 12, unsaved: [], deviceOnly: [] });
   mockWipe.mockReturnValue(undefined);
   mockRpc.mockImplementation((fn: string) =>
     fn === 'pending_device_commands'
@@ -128,9 +128,12 @@ describe('operator-ordered wipe', () => {
   });
 
   it('reports the modules the push could not save', async () => {
-    // Modules with sync switched off were never uploaded. The person is owed
-    // the list by name before they appeal, not a reassuring summary.
-    mockEvacuate.mockResolvedValue({ pushed: 3, unsaved: ['gallery', 'private'] });
+    // Both kinds of loss, in one list. The sign-out dialog keeps them apart
+    // because it is still asking a question; this is a receipt, and by the time
+    // it is written the only fact left is which modules were on the device and
+    // are not in the account. The person is owed that list by name before they
+    // appeal, not a reassuring summary.
+    mockEvacuate.mockResolvedValue({ pushed: 3, unsaved: ['gallery'], deviceOnly: ['private'] });
 
     await processDeviceCommands();
 

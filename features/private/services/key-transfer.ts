@@ -85,7 +85,49 @@ export type TransferBundle = {
   payload: string;
 };
 
+/**
+ * Version 1 seals the 32-byte master key and nothing else. Version 2 seals a
+ * JSON object holding that key **and** this device's shared-album keys.
+ *
+ * ## Why v2 exists
+ *
+ * Moving the vault used to move the vault only. Shared albums have their own
+ * per-album keys (album-keys.ts), kept wrapped in this device's keystore and
+ * nowhere else — so a person who moved to a new phone arrived with every
+ * private module intact and every shared album shut: the messages and photos
+ * synced down from the server exactly as designed and could not be opened,
+ * which reads as data loss and is indistinguishable from it.
+ *
+ * The album keys ride inside the *same sealed blob* as the master key rather
+ * than in a second transfer. That is the property worth protecting: they are
+ * covered by the same one-time code, over the same two channels, and they still
+ * never touch a server. Nothing about the security argument in this file's
+ * header changes — the payload got bigger, not weaker.
+ *
+ * ## Why v1 is still emitted
+ *
+ * `album-invite.ts` reuses `createTransfer` to hand ONE album key to a
+ * co-member. That payload must stay a bare key: the recipient is not adopting a
+ * vault and has no business receiving a map of albums they are not in. So
+ * `createTransfer` is untouched and v2 has its own entry point.
+ *
+ * A v2 payload presented to an older build is refused as `unsupported-version`,
+ * which is the one honest answer available and already has a message.
+ */
 const VERSION = 1;
+const VERSION_WITH_ALBUMS = 2;
+
+/** Album id → the album's 32-byte key, as this device holds them. */
+export type AlbumKeyMap = Record<string, Uint8Array>;
+
+/** The wire shape of a v2 payload, before sealing. Keys are single letters
+ *  because this blob is base64'd into something a person may have to paste. */
+type VaultBundleJson = {
+  /** base64 master key. */
+  k: string;
+  /** album id → base64 album key. */
+  a: Record<string, string>;
+};
 
 /**
  * Wraps `masterKey` for transfer.
@@ -105,8 +147,42 @@ export async function createTransfer(masterKey: Uint8Array): Promise<TransferBun
   return { code, payload: `${VERSION}.${toBase64(salt)}.${toBase64(sealed)}` };
 }
 
+/**
+ * Wraps `masterKey` **and** this device's album keys for transfer to another
+ * device the same person owns.
+ *
+ * Same code, same salt-per-transfer, same two channels as `createTransfer` —
+ * see the note on `VERSION_WITH_ALBUMS` for why the albums travel inside the
+ * one sealed blob instead of alongside it.
+ */
+export async function createVaultTransfer(
+  masterKey: Uint8Array,
+  albumKeys: AlbumKeyMap,
+): Promise<TransferBundle> {
+  const code = generateTransferCode();
+  const salt = randomBytes(16);
+  const wrappingKey = await deriveKek(normaliseTransferCode(code), salt);
+
+  const bundle: VaultBundleJson = {
+    k: toBase64(masterKey),
+    a: Object.fromEntries(Object.entries(albumKeys).map(([id, key]) => [id, toBase64(key)])),
+  };
+  const sealed = encryptBytes(wrappingKey, new TextEncoder().encode(JSON.stringify(bundle)));
+
+  return {
+    code,
+    payload: `${VERSION_WITH_ALBUMS}.${toBase64(salt)}.${toBase64(sealed)}`,
+  };
+}
+
 export type RedeemResult =
-  | { ok: true; masterKey: Uint8Array }
+  | {
+      ok: true;
+      masterKey: Uint8Array;
+      /** Empty for a v1 payload and for an album invite, which carries one key
+       *  and is not a vault adoption — see `createTransfer`. */
+      albumKeys: AlbumKeyMap;
+    }
   | { ok: false; reason: 'malformed' | 'unsupported-version' | 'wrong-code' };
 
 /**
@@ -121,7 +197,10 @@ export async function redeemTransfer(payload: string, code: string): Promise<Red
   if (parts.length !== 3) return { ok: false, reason: 'malformed' };
 
   const [version, saltRaw, sealedRaw] = parts;
-  if (version !== String(VERSION)) return { ok: false, reason: 'unsupported-version' };
+  const carriesAlbums = version === String(VERSION_WITH_ALBUMS);
+  if (version !== String(VERSION) && !carriesAlbums) {
+    return { ok: false, reason: 'unsupported-version' };
+  }
 
   let salt: Uint8Array;
   let sealed: Uint8Array;
@@ -135,12 +214,62 @@ export async function redeemTransfer(payload: string, code: string): Promise<Red
 
   try {
     const wrappingKey = await deriveKek(normaliseTransferCode(code), salt);
-    const masterKey = decryptBytes(wrappingKey, sealed);
-    // A 32-byte result is the only shape a vault master key has; anything else
-    // means the decrypt "succeeded" on something that was never a key.
-    if (masterKey.length !== 32) return { ok: false, reason: 'wrong-code' };
-    return { ok: true, masterKey };
+    const plaintext = decryptBytes(wrappingKey, sealed);
+
+    if (!carriesAlbums) {
+      // A 32-byte result is the only shape a vault master key has; anything else
+      // means the decrypt "succeeded" on something that was never a key.
+      if (plaintext.length !== 32) return { ok: false, reason: 'wrong-code' };
+      return { ok: true, masterKey: plaintext, albumKeys: {} };
+    }
+
+    return parseVaultBundle(plaintext);
   } catch {
     return { ok: false, reason: 'wrong-code' };
   }
+}
+
+/**
+ * Reads a v2 blob back into keys.
+ *
+ * Every failure here answers `wrong-code`, and that is not laziness: this runs
+ * only after AES-GCM has already authenticated the plaintext, so a blob that
+ * decrypts and then does not parse is not a wrong code and not a corrupt
+ * payload either — it is something that was never one of ours. There is no
+ * third answer worth inventing, and the two that exist both mean "start again".
+ *
+ * A malformed album entry is skipped rather than failing the whole transfer.
+ * Arriving with the vault and nine albums out of ten is strictly better than
+ * arriving with nothing, and the tenth is recoverable by re-sharing with a
+ * co-member — which is exactly what a device that never had it would do.
+ */
+function parseVaultBundle(plaintext: Uint8Array): RedeemResult {
+  let parsed: VaultBundleJson;
+  try {
+    parsed = JSON.parse(new TextDecoder().decode(plaintext)) as VaultBundleJson;
+  } catch {
+    return { ok: false, reason: 'wrong-code' };
+  }
+  if (!parsed || typeof parsed.k !== 'string') return { ok: false, reason: 'wrong-code' };
+
+  let masterKey: Uint8Array;
+  try {
+    masterKey = fromBase64(parsed.k);
+  } catch {
+    return { ok: false, reason: 'wrong-code' };
+  }
+  if (masterKey.length !== 32) return { ok: false, reason: 'wrong-code' };
+
+  const albumKeys: AlbumKeyMap = {};
+  for (const [id, encoded] of Object.entries(parsed.a ?? {})) {
+    if (typeof encoded !== 'string') continue;
+    try {
+      const key = fromBase64(encoded);
+      if (key.length === 32) albumKeys[id] = key;
+    } catch {
+      // Skipped — see the note above.
+    }
+  }
+
+  return { ok: true, masterKey, albumKeys };
 }

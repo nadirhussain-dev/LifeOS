@@ -71,6 +71,48 @@ const PULL_PAGE = 1000;
 /** The device-local column set, as a Set for per-row lookups. */
 const DEVICE_LOCAL = new Set(SYNC_DEVICE_LOCAL_COLUMNS);
 
+/**
+ * Ceiling on a single push or pull request.
+ *
+ * Generous, because it is a backstop and not a latency budget: a first sync of a
+ * large table over a slow connection is allowed to be slow. It only has to be
+ * shorter than "forever".
+ */
+const REQUEST_TIMEOUT_MS = 30_000;
+
+/**
+ * Bounds one PostgREST request.
+ *
+ * Nothing below this bounded a request's lifetime — not React Native's `fetch`,
+ * and not the wrapper in lib/supabase.ts — so a half-open connection (a captive
+ * portal, a VPN dropping, a handover from wifi to cellular mid-request) left the
+ * `await` in pushTable/pullTable suspended rather than failing.
+ *
+ * A hang there is worse than an error, because it is not scoped to the request.
+ * `runSync` has already written `status: 'syncing'` by that point, so the Sync
+ * screen sits on "Syncing…" with the only control that starts a new run
+ * disabled; and `inFlight` never settles, so `syncNow()` hands the manual
+ * button, the foreground trigger and the retry toast the same dead promise for
+ * the remainder of the process. One stalled socket disables sync until the app
+ * is relaunched. A timeout turns all of that back into a normal module failure,
+ * which the per-module catch already handles and the backoff already schedules a
+ * retry for.
+ *
+ * Written as a controller plus a timer rather than `AbortSignal.timeout`, which
+ * Hermes does not provide. The timer is cleared on the success path too — an
+ * uncleared one keeps the runtime scheduling work for every request that ever
+ * completed normally.
+ */
+async function withTimeout<T>(run: (signal: AbortSignal) => PromiseLike<T>): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await run(controller.signal);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 type ColumnInfo = { name: string; type: string; notnull: number; dflt_value: string | null };
 
 type TableShape = {
@@ -185,9 +227,12 @@ async function pushTable(
       return out;
     });
 
-    const { error } = await supabase
-      .from(table.name)
-      .upsert(payload, { onConflict: keyColumn === 'user_id' ? 'user_id' : 'id' });
+    const { error } = await withTimeout((signal) =>
+      supabase
+        .from(table.name)
+        .upsert(payload, { onConflict: keyColumn === 'user_id' ? 'user_id' : 'id' })
+        .abortSignal(signal),
+    );
     if (error) throw new Error(`push ${table.name}: ${error.message}`);
 
     for (const row of rows) pushedKeys.add(String(row[keyColumn] ?? ''));
@@ -228,16 +273,18 @@ async function pullTable(
     // `''`, which Postgres refuses to parse as one ("invalid input syntax for
     // type uuid"). Plain tables keep the lexicographic tuple comparison, in
     // PostgREST's filter language, since many rows can share one `updated_at`.
-    const { data, error } = await (
-      keyColumn === 'user_id'
+    const { data, error } = await withTimeout((signal) =>
+      (keyColumn === 'user_id'
         ? base.gt('updated_at', cursor.at)
         : base.or(
             `updated_at.gt.${cursor.at},and(updated_at.eq.${cursor.at},${keyColumn}.gt.${JSON.stringify(cursor.key)})`,
           )
-    )
-      .order('updated_at', { ascending: true })
-      .order(keyColumn, { ascending: true })
-      .limit(PULL_PAGE);
+      )
+        .order('updated_at', { ascending: true })
+        .order(keyColumn, { ascending: true })
+        .limit(PULL_PAGE)
+        .abortSignal(signal),
+    );
     if (error) throw new Error(`pull ${table.name}: ${error.message}`);
     if (!data || data.length === 0) break;
 
@@ -380,15 +427,30 @@ export function syncNow(options: { force?: boolean } = {}): Promise<void> {
  * of a window the server opened deliberately, so that a wipe does not destroy
  * data the cloud never received.
  *
- * Returns the modules it could not save. Those are the ones the user had sync
- * switched OFF for: an evacuation does not override that choice, because
- * consent to upload is not something a block should be able to revoke
- * retroactively — and the person is owed an accurate list of what is about to
- * be lost rather than a reassuring one.
+ * Reports what it could not save in TWO lists, because they are two different
+ * facts about the user's data and merging them produces a sentence that is
+ * false about half of it:
+ *
+ *  - `unsaved` — sync is ON for this module and the push failed anyway. The
+ *    window closed, the network dropped. Data that was meant to be in the
+ *    account is not, and waiting or reconnecting is a real remedy.
+ *  - `deviceOnly` — sync is OFF for this module, by the user's own choice, so
+ *    nothing of it has ever been in the account and nothing ever will be. An
+ *    evacuation does not override that choice: consent to upload is not
+ *    something a block, or a sign-out, gets to revoke retroactively.
+ *
+ * Both are lost to a wipe, which is why the older single list was tempting. But
+ * only one of them is a malfunction, and telling somebody their device-only
+ * module "hasn't reached your account yet" describes a delay that is never
+ * going to end.
  */
-export async function evacuateBeforeWipe(): Promise<{ pushed: number; unsaved: SyncModule[] }> {
+export async function evacuateBeforeWipe(): Promise<{
+  pushed: number;
+  unsaved: SyncModule[];
+  deviceOnly: SyncModule[];
+}> {
   const uid = useAuthStore.getState().user?.id;
-  if (!uid) return { pushed: 0, unsaved: [] };
+  if (!uid) return { pushed: 0, unsaved: [], deviceOnly: [] };
 
   const store = useSyncStore.getState();
   const cursors: CursorBatch = new Map();
@@ -398,10 +460,11 @@ export async function evacuateBeforeWipe(): Promise<{ pushed: number; unsaved: S
 
   let pushed = 0;
   const unsaved: SyncModule[] = [];
+  const deviceOnly: SyncModule[] = [];
 
   for (const mod of SYNC_MODULES) {
     if (!(store.modules[mod.key] ?? false)) {
-      if (moduleHasRows(mod)) unsaved.push(mod.key);
+      if (moduleHasRows(mod)) deviceOnly.push(mod.key);
       continue;
     }
     try {
@@ -419,7 +482,7 @@ export async function evacuateBeforeWipe(): Promise<{ pushed: number; unsaved: S
   }
 
   useSyncStore.getState().commitCursors(cursors);
-  return { pushed, unsaved };
+  return { pushed, unsaved, deviceOnly };
 }
 
 /** Whether this module has anything on the device worth mentioning as lost. */
@@ -473,6 +536,43 @@ async function runSync(force: boolean): Promise<void> {
   }
 
   store.setStatus('syncing');
+
+  /**
+   * Everything from here down runs under a guard, because `status` is not just
+   * a label — the Sync screen disables "Sync now" while it reads 'syncing', so
+   * a status that never leaves that value is an unusable screen rather than a
+   * cosmetic wrong word.
+   *
+   * The module loop already isolates its own failures, so the throws this
+   * catches are the ones from *outside* it: a store write, the i18n lookup that
+   * builds the partial-failure message, `reportError` itself. Each of those is
+   * unlikely on its own and each of them used to reject `runSync` — which both
+   * stranded the status and, since every caller invokes this as
+   * `void syncNow(…)`, surfaced as an unhandled rejection rather than anything
+   * the user could act on.
+   */
+  try {
+    await runSyncModules(uid);
+  } catch (e) {
+    reportError(e, { scope: 'sync-engine' });
+  } finally {
+    // Belt and braces. Not `else`-d off the catch: it also covers any future
+    // path through the body that returns without settling the status.
+    if (useSyncStore.getState().status === 'syncing') {
+      const failures = useSyncStore.getState().consecutiveFailures + 1;
+      useSyncStore.getState().setStatus('error', null);
+      // The normal failure path arms the backoff, so this one has to as well —
+      // otherwise a run that broke here would be retried in full on every
+      // single foreground event, with nothing throttling it.
+      useSyncStore.getState().setNextAttemptAt(Date.now() + backoffFor(failures));
+    }
+  }
+}
+
+/** The body of a sync run. Split out only so `runSync` can wrap the whole of it
+ * in the status guard above — see the comment there. */
+async function runSyncModules(uid: string): Promise<void> {
+  const store = useSyncStore.getState();
 
   // Seeded from the persisted cursors, mutated during the run, written back
   // once at the end — including on failure, so the tables that did complete
