@@ -166,7 +166,8 @@ export function authFailure(
     return { key: 'invalidEmail' };
   }
   if (m.includes('email not confirmed')) return { key: 'emailNotConfirmed' };
-  if (m.includes('token has expired') || m.includes('token is invalid')) return { key: 'codeExpired' };
+  if (m.includes('token has expired') || m.includes('token is invalid'))
+    return { key: 'codeExpired' };
   if (m.includes('for security purposes')) {
     return seconds ? { key: 'waitSeconds', params: { seconds } } : { key: 'tooManyAttempts' };
   }

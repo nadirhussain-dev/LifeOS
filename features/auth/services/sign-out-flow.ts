@@ -39,7 +39,11 @@ export async function confirmAndSignOut(): Promise<boolean> {
 
   const warning = await whatWouldBeLost();
   if (warning) {
-    const anyway = await confirm({ ...warning, cancelLabel: t('common.cancel'), destructive: true });
+    const anyway = await confirm({
+      ...warning,
+      cancelLabel: t('common.cancel'),
+      destructive: true,
+    });
     if (!anyway) return false;
   }
 

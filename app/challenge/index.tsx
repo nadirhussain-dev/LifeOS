@@ -124,10 +124,7 @@ export default function ChallengeScreen() {
           {!session ? (
             <>
               <Text variant="caption">{t('challenge.signInBody')}</Text>
-              <Button
-                label={t('sync.signInCreate')}
-                onPress={() => router.push('/(auth)/login')}
-              />
+              <Button label={t('sync.signInCreate')} onPress={() => router.push('/(auth)/login')} />
             </>
           ) : season.data === null ? (
             <>

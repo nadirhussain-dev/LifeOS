@@ -111,9 +111,9 @@ describe('the ordinary rejections', () => {
     ['signup_disabled', 'sendSignUpCode', 'signUpsClosed'],
     ['email_provider_disabled', 'sendSignInCode', 'emailAuthOff'],
   ])('%s -> %s', (code, action, expected) => {
-    expect(
-      authFailure({ code, status: 400, message: 'irrelevant' }, action as never).key,
-    ).toBe(expected);
+    expect(authFailure({ code, status: 400, message: 'irrelevant' }, action as never).key).toBe(
+      expected,
+    );
   });
 });
 
@@ -130,8 +130,10 @@ describe('when there is no error code at all', () => {
 
   it('recognises being offline, which is not a rejection', () => {
     expect(
-      authFailure({ name: 'AuthRetryableFetchError', message: 'Network request failed' }, 'verifyCode')
-        .key,
+      authFailure(
+        { name: 'AuthRetryableFetchError', message: 'Network request failed' },
+        'verifyCode',
+      ).key,
     ).toBe('offline');
   });
 
@@ -147,8 +149,8 @@ describe('when there is no error code at all', () => {
   });
 
   it('passes a genuine sentence through unchanged', () => {
-    expect(authFailure({ status: 400, message: 'Something specific went wrong' }, 'verifyCode')).toEqual(
-      { key: 'raw', params: { message: 'Something specific went wrong' } },
-    );
+    expect(
+      authFailure({ status: 400, message: 'Something specific went wrong' }, 'verifyCode'),
+    ).toEqual({ key: 'raw', params: { message: 'Something specific went wrong' } });
   });
 });

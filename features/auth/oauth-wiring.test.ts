@@ -77,7 +77,9 @@ describe('completing the sign-in', () => {
     expect(body).toContain('getSession()');
     // Checked after the failure as well as before it, which is the half that
     // covers losing the race rather than arriving late.
-    expect(body.lastIndexOf('getSession()')).toBeGreaterThan(body.indexOf('exchangeCodeForSession'));
+    expect(body.lastIndexOf('getSession()')).toBeGreaterThan(
+      body.indexOf('exchangeCodeForSession'),
+    );
   });
 
   /** The gate only moves people out of `(onboarding)` and `(auth)`, and this
