@@ -598,7 +598,14 @@
     "debtReminderOweTitle": "أنت مدين لـ {{name}}",
     "debtReminderOwedTitle": "{{name}} مدين لك",
     "debtReminderOweBody": "{{amount}} مستحقة في {{date}} — حان وقت السداد.",
-    "debtReminderOwedBody": "{{amount}} مستحقة في {{date}} — حان وقت التحصيل."
+    "debtReminderOwedBody": "{{amount}} مستحقة في {{date}} — حان وقت التحصيل.",
+    "categoryBudgets": "ميزانيات الفئات",
+    "overBy": "تجاوز بمقدار {{amount}}",
+    "leftOf": "بقي {{amount}} من {{limit}}",
+    "capsExceedMonthly": "مجموع حدود فئاتك يتجاوز ميزانيتك الشهرية.",
+    "noCategoryBudgets": "لا توجد حدود للفئات بعد. حدّد واحدًا وسيظهر إنفاق هذا الشهر مقابله.",
+    "setCap": "حدّد حدًا",
+    "categoryCapFor": "حد فئة {{category}}"
   },
   "debtStatus": {
     "settled": "مسدّد",

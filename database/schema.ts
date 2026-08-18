@@ -681,6 +681,29 @@ export const budgetSettings = sqliteTable('budget_settings', {
  * deadline and a reminder scheduled some days before it. `direction` is
  * 'borrowed' (you owe them) or 'lent' (they owe you). All money is integer
  * minor units (cents). */
+/**
+ * A spending cap for one expense category.
+ *
+ * Keyed by `userId:category` rather than a random id, the same derived-id trick
+ * the join tables use: two devices that set a Food cap offline produce the same
+ * row and the upsert collapses them, instead of leaving two caps for one
+ * category and no way to tell which the app should believe.
+ *
+ * One row per category the user has actually capped. Absent means uncapped,
+ * which is different from a cap of zero — zero is "I intend to spend nothing
+ * here" and should show as over budget the moment anything is spent.
+ */
+export const budgetCategoryLimits = sqliteTable('budget_category_limits', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  /** Category key from the expense catalog in features/budget/config. */
+  category: text('category').notNull(),
+  limitCents: integer('limit_cents').notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  deletedAt: integer('deleted_at'),
+});
+
 export const budgetDebts = sqliteTable('budget_debts', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
@@ -1379,6 +1402,16 @@ export const TABLE_BOOTSTRAP_SQL = `
     updated_at INTEGER NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS budget_category_limits (
+    id TEXT PRIMARY KEY NOT NULL,
+    user_id TEXT NOT NULL,
+    category TEXT NOT NULL,
+    limit_cents INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
+  );
+
   CREATE TABLE IF NOT EXISTS budget_debts (
     id TEXT PRIMARY KEY NOT NULL,
     user_id TEXT NOT NULL,
@@ -1612,6 +1645,8 @@ export const INDEX_BOOTSTRAP_SQL = `
   CREATE INDEX IF NOT EXISTS idx_sync_study_sessions ON study_sessions(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_water_intake_logs
     ON water_intake_logs(user_id, updated_at, id);
+  CREATE INDEX IF NOT EXISTS idx_sync_budget_category_limits
+    ON budget_category_limits(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_budget_transactions
     ON budget_transactions(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_gallery_photos ON gallery_photos(user_id, updated_at, id);

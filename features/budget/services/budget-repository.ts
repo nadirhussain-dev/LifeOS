@@ -2,12 +2,18 @@ import { and, desc, eq, isNull } from 'drizzle-orm';
 import { format } from 'date-fns';
 
 import { getDb } from '@/database/client';
-import { budgetSettings, budgetTransactions, savingsGoals } from '@/database/schema';
+import {
+  budgetCategoryLimits,
+  budgetSettings,
+  budgetTransactions,
+  savingsGoals,
+} from '@/database/schema';
 import { generateId } from '@/lib/id';
 import { LOCAL_USER_ID } from '@/lib/local-user';
 import type {
   BudgetSettings,
   BudgetTransaction,
+  CategoryLimit,
   CreateTransactionInput,
   SavingsGoal,
   SavingsGoalWithProgress,
@@ -212,5 +218,79 @@ export function updateBudgetSettings(input: Partial<BudgetSettings>) {
   db.update(budgetSettings)
     .set({ ...input, updatedAt: now })
     .where(eq(budgetSettings.userId, LOCAL_USER_ID))
+    .run();
+}
+
+// ---- Per-category spending caps -------------------------------------------
+
+/** Derived from the pair, so two devices capping the same category offline
+ *  agree on one row instead of leaving two caps and no way to choose. */
+function categoryLimitId(category: string): string {
+  return `${LOCAL_USER_ID}:${category}`;
+}
+
+export function listCategoryLimits(): CategoryLimit[] {
+  return getDb()
+    .select()
+    .from(budgetCategoryLimits)
+    .where(
+      and(eq(budgetCategoryLimits.userId, LOCAL_USER_ID), isNull(budgetCategoryLimits.deletedAt)),
+    )
+    .all()
+    .map((row) => ({ id: row.id, category: row.category, limitCents: row.limitCents }));
+}
+
+/** Category → cap, the shape `categoryBudgetStatuses` wants. */
+export function categoryLimitsByCategory(): Record<string, number> {
+  return Object.fromEntries(
+    listCategoryLimits().map((limit) => [limit.category, limit.limitCents]),
+  );
+}
+
+/**
+ * Sets or clears a category's cap.
+ *
+ * A null cap is a soft delete, not a zero: zero is "I plan to spend nothing
+ * here" and must keep showing as over budget when anything is spent, while
+ * absent means this feature has no opinion about the category. Collapsing the
+ * two would make it impossible to express the first.
+ *
+ * Reconciled rather than deleted-and-reinserted, because the id is derived from
+ * the category — re-capping has to revive the existing row or the primary key
+ * refuses the second insert.
+ */
+export function setCategoryLimit(category: string, limitCents: number | null) {
+  const db = getDb();
+  const now = Date.now();
+  const id = categoryLimitId(category);
+  const existing = db
+    .select()
+    .from(budgetCategoryLimits)
+    .where(eq(budgetCategoryLimits.id, id))
+    .get();
+
+  if (existing) {
+    db.update(budgetCategoryLimits)
+      .set({
+        limitCents: limitCents ?? existing.limitCents,
+        deletedAt: limitCents === null ? now : null,
+        updatedAt: now,
+      })
+      .where(eq(budgetCategoryLimits.id, id))
+      .run();
+    return;
+  }
+
+  if (limitCents === null) return;
+
+  db.insert(budgetCategoryLimits)
+    .values({
+      id,
+      userId: LOCAL_USER_ID,
+      category,
+      limitCents,
+      createdAt: now,
+      updatedAt: now,
+    })
     .run();
 }

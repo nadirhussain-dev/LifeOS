@@ -578,7 +578,14 @@
     "debtReminderOweTitle": "आपको {{name}} को देना है",
     "debtReminderOwedTitle": "{{name}} को आपको देना है",
     "debtReminderOweBody": "{{amount}}, {{date}} तक — लौटाने का समय।",
-    "debtReminderOwedBody": "{{amount}}, {{date}} तक — वसूलने का समय।"
+    "debtReminderOwedBody": "{{amount}}, {{date}} तक — वसूलने का समय।",
+    "categoryBudgets": "श्रेणी बजट",
+    "overBy": "{{amount}} अधिक",
+    "leftOf": "{{limit}} में से {{amount}} शेष",
+    "capsExceedMonthly": "आपकी श्रेणी सीमाओं का योग आपके मासिक बजट से अधिक है।",
+    "noCategoryBudgets": "अभी कोई श्रेणी सीमा नहीं है। एक तय करें और इस महीने का खर्च उसके सामने दिखेगा।",
+    "setCap": "सीमा तय करें",
+    "categoryCapFor": "{{category}} की सीमा"
   },
   "debtStatus": {
     "settled": "निपटाया गया",

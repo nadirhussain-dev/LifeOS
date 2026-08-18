@@ -578,7 +578,14 @@
     "debtReminderOweTitle": "You owe {{name}}",
     "debtReminderOwedTitle": "{{name}} owes you",
     "debtReminderOweBody": "{{amount}} due {{date}} — time to pay it back.",
-    "debtReminderOwedBody": "{{amount}} due {{date}} — time to collect."
+    "debtReminderOwedBody": "{{amount}} due {{date}} — time to collect.",
+    "categoryBudgets": "Category budgets",
+    "overBy": "{{amount}} over",
+    "leftOf": "{{amount}} of {{limit}} left",
+    "capsExceedMonthly": "Your category caps add up to more than your monthly budget.",
+    "noCategoryBudgets": "No category caps yet. Set one and this month's spending will show against it.",
+    "setCap": "Set a cap",
+    "categoryCapFor": "Cap for {{category}}"
   },
   "debtStatus": {
     "settled": "Settled",

@@ -172,6 +172,7 @@ export const SYNC_MODULES: SyncModuleConfig[] = [
     labelKey: 'syncModule.budget',
     tables: [
       t('budget_transactions'),
+      t('budget_category_limits'),
       t('savings_goals'),
       t('budget_debts'),
       singleton('budget_settings'),

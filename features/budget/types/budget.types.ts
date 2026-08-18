@@ -155,3 +155,21 @@ export type AccountBalance = {
   account: BudgetAccount;
   balanceCents: number;
 };
+
+/** One capped expense category's standing within the current month. */
+export type CategoryBudgetStatus = {
+  category: string;
+  spentCents: number;
+  limitCents: number;
+  /** Can be negative — that is the point of it. */
+  remainingCents: number;
+  /** Unclamped, and Infinity for anything spent against a zero cap. */
+  ratio: number;
+  isOver: boolean;
+};
+
+export type CategoryLimit = {
+  id: string;
+  category: string;
+  limitCents: number;
+};

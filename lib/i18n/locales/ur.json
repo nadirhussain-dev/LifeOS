@@ -578,7 +578,14 @@
     "debtReminderOweTitle": "آپ کو {{name}} کو دینا ہے",
     "debtReminderOwedTitle": "{{name}} کو آپ کو دینا ہے",
     "debtReminderOweBody": "{{amount}}، {{date}} تک — واپس کرنے کا وقت۔",
-    "debtReminderOwedBody": "{{amount}}، {{date}} تک — وصول کرنے کا وقت۔"
+    "debtReminderOwedBody": "{{amount}}، {{date}} تک — وصول کرنے کا وقت۔",
+    "categoryBudgets": "زمرہ بجٹ",
+    "overBy": "{{amount}} زیادہ",
+    "leftOf": "{{limit}} میں سے {{amount}} باقی",
+    "capsExceedMonthly": "آپ کی زمرہ حدود کا مجموعہ آپ کے ماہانہ بجٹ سے زیادہ ہے۔",
+    "noCategoryBudgets": "ابھی کوئی زمرہ حد نہیں ہے۔ ایک مقرر کریں اور اس ماہ کے اخراجات اس کے سامنے دکھائی دیں گے۔",
+    "setCap": "حد مقرر کریں",
+    "categoryCapFor": "{{category}} کی حد"
   },
   "debtStatus": {
     "settled": "طے شدہ",

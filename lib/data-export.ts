@@ -6,6 +6,7 @@ import { getDb } from '@/database/client';
 import { HUB_SECTIONS } from '@/features/hub/config/modules';
 import { privatisedModules } from '@/features/private/store/private-store';
 import {
+  budgetCategoryLimits,
   budgetDebts,
   budgetSettings,
   budgetTransactions,
@@ -92,6 +93,7 @@ const EXPORT_TABLES = {
   budgetTransactions,
   savingsGoals,
   budgetSettings,
+  budgetCategoryLimits,
   budgetDebts,
   galleryAlbums,
   galleryPhotos,

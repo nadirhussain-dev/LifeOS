@@ -1,13 +1,16 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import {
+  categoryLimitsByCategory,
   getBudgetSettings,
   getTransaction,
   listSavingsGoalsWithProgress,
   listTransactions,
+  setCategoryLimit,
 } from '@/features/budget/services/budget-repository';
+import { categoryBudgetStatuses } from '@/features/budget/services/category-budgets';
 import {
   accountBalances,
   expenseByCategory,
@@ -77,4 +80,47 @@ export function useBudgetOverview(period: Period, anchorTime: number) {
     monthlyBudgetCents: settings?.monthlyBudgetCents ?? null,
     ...value,
   };
+}
+
+/**
+ * Every capped category's standing in the current month, worst first.
+ *
+ * The month, not the selected period: a cap is a monthly intention, and showing
+ * a monthly cap against a week's spending would report everyone as comfortably
+ * under budget every Monday.
+ */
+export function useCategoryBudgets() {
+  const { data: limits = {} } = useQuery({
+    queryKey: ['budget', 'category-limits'],
+    queryFn: async () => categoryLimitsByCategory(),
+  });
+
+  const { data: transactions = [] } = useTransactions();
+
+  const statuses = useMemo(() => {
+    const now = new Date();
+    const { start, end } = periodRange('month', now);
+    const spent: Record<string, number> = {};
+    for (const tx of transactions) {
+      if (tx.type !== 'expense') continue;
+      if (tx.occurredAt < start || tx.occurredAt > end) continue;
+      spent[tx.category] = (spent[tx.category] ?? 0) + tx.amountCents;
+    }
+    return categoryBudgetStatuses(spent, limits);
+  }, [transactions, limits]);
+
+  return { limits, statuses };
+}
+
+export function useCategoryBudgetMutations() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ category, limitCents }: { category: string; limitCents: number | null }) =>
+      setCategoryLimit(category, limitCents),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budget'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
 }

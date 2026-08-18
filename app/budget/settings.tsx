@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
+import { CategoryCapEditor } from '@/features/budget/components/category-cap-editor';
 import { ChevronForward } from '@/components/ui/directional-icon';
 import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -17,7 +18,11 @@ import {
 } from '@/features/budget/config/currencies';
 import { parseAmountToCents } from '@/features/budget/services/money';
 import { useBudgetMutations } from '@/features/budget/hooks/use-budget-mutations';
-import { useBudgetSettings } from '@/features/budget/hooks/use-budget';
+import {
+  useBudgetSettings,
+  useCategoryBudgetMutations,
+  useCategoryBudgets,
+} from '@/features/budget/hooks/use-budget';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function BudgetSettingsScreen() {
@@ -25,6 +30,8 @@ export default function BudgetSettingsScreen() {
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const { data: settings } = useBudgetSettings();
+  const { limits } = useCategoryBudgets();
+  const setLimit = useCategoryBudgetMutations();
   const { saveSettings } = useBudgetMutations();
 
   const code = settings?.currency ?? DEFAULT_CURRENCY_CODE;
@@ -98,6 +105,20 @@ export default function BudgetSettingsScreen() {
             />
           </View>
           <Text variant="caption">{t('budget.monthlyBudgetHint')}</Text>
+        </View>
+
+        <View className="gap-2.5">
+          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
+            {t('budget.categoryBudgets')}
+          </Text>
+          <View className={cardClass({ padding: 'md' })}>
+            <CategoryCapEditor
+              limits={limits}
+              currencyCode={code}
+              monthlyBudgetCents={settings?.monthlyBudgetCents ?? null}
+              onChange={(category, limitCents) => setLimit.mutate({ category, limitCents })}
+            />
+          </View>
         </View>
 
         <Button label={t('budget.saveSettings')} onPress={save} size="lg" variant="accent" />
