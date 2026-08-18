@@ -224,7 +224,11 @@
     "deletedToast": "“{{title}}” हटाया गया।",
     "archivedToast": "“{{title}}” संग्रहीत।",
     "reminderDueNow": "अभी करना है।",
-    "reminderDueToday": "आज करना है।"
+    "reminderDueToday": "आज करना है।",
+    "checklist": "चेकलिस्ट",
+    "checklistProgress": "{{total}} में से {{done}}",
+    "addChecklistItem": "आइटम जोड़ें",
+    "removeChecklistItem": "{{title}} हटाएँ"
   },
   "buckets": {
     "overdue": "अतिदेय",

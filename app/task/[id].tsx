@@ -26,6 +26,7 @@ import { DueDateField } from '@/features/tasks/components/due-date-field';
 import { HabitLinkPicker } from '@/features/tasks/components/habit-link-picker';
 import { PriorityPicker } from '@/features/tasks/components/priority-picker';
 import { RecurrencePicker } from '@/features/tasks/components/recurrence-picker';
+import { SubtaskList } from '@/features/tasks/components/subtask-list';
 import { useSourceNote, useTask } from '@/features/tasks/hooks/use-task';
 import { useTaskMutations } from '@/features/tasks/hooks/use-task-mutations';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -231,6 +232,8 @@ export default function TaskDetailScreen() {
             />
           </AttributeRow>
         </View>
+
+        <SubtaskList taskId={task.id} />
 
         <View className="gap-2.5">
           <View className="flex-row items-center gap-1.5">

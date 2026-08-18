@@ -17,6 +17,7 @@ import { colors } from '@/constants/theme';
 import { AdSlot } from '@/features/ads/components/ad-slot';
 import { TaskRow } from '@/features/tasks/components/task-row';
 import { useTaskMutations } from '@/features/tasks/hooks/use-task-mutations';
+import { useSubtaskCounts } from '@/features/tasks/hooks/use-subtasks';
 import { useTasks } from '@/features/tasks/hooks/use-tasks';
 import { groupTasksByDueDate } from '@/features/tasks/services/task-grouping';
 import { useTasksFilterStore } from '@/features/tasks/store/tasks-filter-store';
@@ -40,6 +41,8 @@ export default function TasksScreen() {
 
   const { filter, setFilter, searchQuery, setSearchQuery } = useTasksFilterStore();
   const { data: tasks = [], isLoading, isError, refetch } = useTasks();
+  const taskIds = useMemo(() => tasks.map((task) => task.id), [tasks]);
+  const { data: subtaskCounts = {} } = useSubtaskCounts(taskIds);
   const { complete, reopen, archive, remove, restore } = useTaskMutations();
 
   // Pull-to-refresh existed on the dashboard and nowhere else, so the reflex
@@ -167,6 +170,8 @@ export default function TasksScreen() {
             ) : (
               <TaskRow
                 task={item.task}
+                checklistDone={subtaskCounts[item.task.id]?.done}
+                checklistTotal={subtaskCounts[item.task.id]?.total}
                 onPress={() => router.push(`/task/${item.task.id}`)}
                 onToggleComplete={() =>
                   item.task.status === 'completed'

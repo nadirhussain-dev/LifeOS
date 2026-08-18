@@ -224,7 +224,11 @@
     "deletedToast": "“{{title}}” deleted.",
     "archivedToast": "“{{title}}” archived.",
     "reminderDueNow": "It’s due now.",
-    "reminderDueToday": "Due today."
+    "reminderDueToday": "Due today.",
+    "checklist": "Checklist",
+    "checklistProgress": "{{done}} of {{total}}",
+    "addChecklistItem": "Add an item",
+    "removeChecklistItem": "Remove {{title}}"
   },
   "buckets": {
     "overdue": "Overdue",

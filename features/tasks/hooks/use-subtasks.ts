@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createSubtask,
   deleteSubtask,
+  getSubtaskCounts,
   listSubtasks,
   renameSubtask,
   reorderSubtasks,
@@ -15,6 +16,21 @@ export function useSubtasks(taskId: string | undefined) {
     queryKey: ['tasks', 'subtasks', taskId],
     queryFn: async () => (taskId ? listSubtasks(taskId) : []),
     enabled: !!taskId,
+  });
+}
+
+/**
+ * Checklist totals for a whole list of tasks, in one grouped query.
+ *
+ * Keyed on the task ids so it refetches when the list changes, and it shares
+ * the `['tasks']` namespace so every existing mutation already invalidates it.
+ */
+export function useSubtaskCounts(taskIds: string[]) {
+  return useQuery({
+    queryKey: ['tasks', 'subtaskCounts', taskIds],
+    queryFn: async () => getSubtaskCounts(taskIds),
+    enabled: taskIds.length > 0,
+    placeholderData: (previous) => previous,
   });
 }
 

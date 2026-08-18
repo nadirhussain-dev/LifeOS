@@ -1,6 +1,6 @@
 import { format, isToday } from 'date-fns';
 import * as Haptics from 'expo-haptics';
-import { Archive, Check, Trash2 } from 'lucide-react-native';
+import { Archive, Check, ListChecks, Trash2 } from 'lucide-react-native';
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
@@ -20,6 +20,11 @@ import type { Task } from '@/features/tasks/types/task.types';
 
 type Props = {
   task: Task;
+  /** Checklist totals, passed as two primitives rather than one object: this
+   *  component is memoised, and a fresh `{ done, total }` on every parent
+   *  render would defeat that for every row in the list. */
+  checklistDone?: number;
+  checklistTotal?: number;
   onPress: () => void;
   onToggleComplete: () => void;
   onArchive: () => void;
@@ -43,7 +48,15 @@ function DueDateLabel({ task }: { task: Task }) {
   );
 }
 
-function TaskRowComponent({ task, onPress, onToggleComplete, onArchive, onDelete }: Props) {
+function TaskRowComponent({
+  task,
+  checklistDone = 0,
+  checklistTotal = 0,
+  onPress,
+  onToggleComplete,
+  onArchive,
+  onDelete,
+}: Props) {
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const isCompleted = task.status === 'completed';
@@ -148,7 +161,17 @@ function TaskRowComponent({ task, onPress, onToggleComplete, onArchive, onDelete
           >
             {task.title}
           </Text>
-          <DueDateLabel task={task} />
+          <View className="flex-row items-center gap-2">
+            <DueDateLabel task={task} />
+            {checklistTotal > 0 && (
+              <View className="flex-row items-center gap-1">
+                <ListChecks size={11} color={colors[scheme].mutedForeground} />
+                <Text variant="micro" className="text-muted-foreground">
+                  {checklistDone}/{checklistTotal}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
       </Pressable>
     </SwipeableRow>

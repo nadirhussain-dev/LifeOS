@@ -232,7 +232,11 @@
     "deletedToast": "تم حذف «{{title}}».",
     "archivedToast": "تمت أرشفة «{{title}}».",
     "reminderDueNow": "موعدها الآن.",
-    "reminderDueToday": "مستحقة اليوم."
+    "reminderDueToday": "مستحقة اليوم.",
+    "checklist": "قائمة المهام",
+    "checklistProgress": "{{done}} من {{total}}",
+    "addChecklistItem": "أضف عنصرًا",
+    "removeChecklistItem": "إزالة {{title}}"
   },
   "buckets": {
     "overdue": "متأخرة",
