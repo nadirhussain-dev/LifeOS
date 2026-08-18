@@ -81,6 +81,31 @@ export const taskSubtasks = sqliteTable('task_subtasks', {
   deletedAt: integer('deleted_at'),
 });
 
+/**
+ * Which tags are on a task.
+ *
+ * The tag *vocabulary* is `note_tags`, shared rather than duplicated. The name
+ * is now a misnomer — it is the app's tag list, not the notes module's — but
+ * renaming a synced table means renaming it on the server too, and every
+ * device's sync cursor is per table, so the rename costs a full re-pull of
+ * every tag on every install to fix a word. The sharing is the point: a task
+ * and a note tagged `#renovation` are on the same tag, so searching it returns
+ * both. Two parallel vocabularies would have made that impossible while
+ * looking, on each screen alone, perfectly correct.
+ *
+ * `id` is derived from the pair (`taskId:tagId`), the same convention 0016 gave
+ * the other join tables: two devices that add the same tag offline produce the
+ * same row and the upsert collapses them, instead of tagging the task twice.
+ */
+export const taskTagLinks = sqliteTable('task_tag_links', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  taskId: text('task_id').notNull(),
+  tagId: text('tag_id').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  deletedAt: integer('deleted_at'),
+});
+
 export const noteCategories = sqliteTable('note_categories', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
@@ -902,6 +927,15 @@ export const TABLE_BOOTSTRAP_SQL = `
     deleted_at INTEGER
   );
 
+  CREATE TABLE IF NOT EXISTS task_tag_links (
+    id TEXT PRIMARY KEY NOT NULL,
+    user_id TEXT NOT NULL,
+    task_id TEXT NOT NULL,
+    tag_id TEXT NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
+  );
+
   CREATE TABLE IF NOT EXISTS note_categories (
     id TEXT PRIMARY KEY NOT NULL,
     user_id TEXT NOT NULL,
@@ -1481,6 +1515,8 @@ export const INDEX_BOOTSTRAP_SQL = `
   CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(user_id, is_pinned);
   CREATE INDEX IF NOT EXISTS idx_notes_updated ON notes(user_id, updated_at);
   CREATE INDEX IF NOT EXISTS idx_notes_archived ON notes(user_id, is_archived);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_task_tag_links ON task_tag_links(task_id, tag_id);
+  CREATE INDEX IF NOT EXISTS idx_task_tag_links_tag ON task_tag_links(tag_id);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_note_tag_links ON note_tag_links(note_id, tag_id);
   CREATE INDEX IF NOT EXISTS idx_note_attachments_note ON note_attachments(note_id);
   CREATE INDEX IF NOT EXISTS idx_habits_position ON habits(user_id, is_archived, position);
@@ -1546,6 +1582,7 @@ export const INDEX_BOOTSTRAP_SQL = `
   CREATE INDEX IF NOT EXISTS idx_sync_tasks ON tasks(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_task_subtasks ON task_subtasks(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_notes ON notes(user_id, updated_at, id);
+  CREATE INDEX IF NOT EXISTS idx_sync_task_tag_links ON task_tag_links(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_note_tag_links ON note_tag_links(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_note_attachments
     ON note_attachments(user_id, updated_at, id);

@@ -43,6 +43,7 @@ import {
   taskCategories,
   tasks,
   taskSubtasks,
+  taskTagLinks,
   waterIntakeLogs,
 } from '@/database/schema';
 
@@ -58,6 +59,7 @@ const EXPORT_TABLES = {
   taskCategories,
   tasks,
   taskSubtasks,
+  taskTagLinks,
   noteCategories,
   notes,
   noteTags,

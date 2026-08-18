@@ -6401,6 +6401,99 @@ await test('0057 an operator can reach the checklist of a task they are handling
 });
 
 // ---------------------------------------------------------------------------
+console.log('\ntask tags (0058)');
+// ---------------------------------------------------------------------------
+
+const TAGGER = '7ac57a5c-0000-4000-8000-00000000c003';
+const TAG_ONLOOKER = '7ac57a5c-0000-4000-8000-00000000c004';
+await createUser(db, TAGGER, 'tagger@example.com');
+await createUser(db, TAG_ONLOOKER, 'tag-onlooker@example.com');
+
+await test('0058 the same tag row can be reached from a note and a task', async () => {
+  // The whole reason there is no `task_tags` table. Two vocabularies would make
+  // this query return one of the two and look correct on either screen alone.
+  await asUser(db, TAGGER, async () => {
+    await db.query(
+      `insert into public.note_tags (id, user_id, name, created_at, updated_at)
+         values ('tag-reno', $1::uuid, 'renovation', 1, 1)`,
+      [TAGGER],
+    );
+    await db.query(
+      `insert into public.note_tag_links (id, user_id, note_id, tag_id, updated_at)
+         values ('note-1:tag-reno', $1::uuid, 'note-1', 'tag-reno', 1)`,
+      [TAGGER],
+    );
+    await db.query(
+      `insert into public.task_tag_links (id, user_id, task_id, tag_id, updated_at)
+         values ('task-1:tag-reno', $1::uuid, 'task-1', 'tag-reno', 1)`,
+      [TAGGER],
+    );
+
+    expectEqual(
+      await count(
+        `select count(*)::int n from public.task_tag_links l
+           join public.note_tags g on g.id = l.tag_id
+          where g.name = 'renovation'`,
+      ),
+      1,
+      'tasks under the shared tag',
+    );
+  });
+});
+
+await test('0058 the derived id makes the same tag applied twice one row', async () => {
+  // Two devices tagging the same task offline both compute `task:tag`, so the
+  // upsert collapses them instead of tagging it twice.
+  await asUser(db, TAGGER, async () => {
+    await db.query(
+      `insert into public.task_tag_links (id, user_id, task_id, tag_id, updated_at)
+         values ('task-1:tag-reno', $1::uuid, 'task-1', 'tag-reno', 2)
+       on conflict (id) do update set updated_at = excluded.updated_at`,
+      [TAGGER],
+    );
+    expectEqual(
+      await count(`select count(*)::int n from public.task_tag_links where task_id = 'task-1'`),
+      1,
+      'rows after re-tagging',
+    );
+  });
+});
+
+await test('0058 the pair is unique even under a forged id', async () => {
+  await asUser(db, TAGGER, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.task_tag_links (id, user_id, task_id, tag_id, updated_at)
+             values ('something-else', $1::uuid, 'task-1', 'tag-reno', 3)`,
+          [TAGGER],
+        ),
+      'task_tag_links_pair_idx',
+    );
+  });
+});
+
+await test('0058 another account sees none of it', async () => {
+  await asUser(db, TAG_ONLOOKER, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.task_tag_links`),
+      0,
+      "another account's view",
+    );
+  });
+  await asAnon(db, async () => {
+    expectEqual(await count(`select count(*)::int n from public.task_tag_links`), 0, 'anon rows');
+  });
+});
+
+await test("0058 an operator can reach a task's tags", async () => {
+  const tables = (await one(`select public.operator_readable_tables() as t`)).t;
+  if (!tables.includes('task_tag_links')) {
+    throw new Error('task_tag_links missing from operator_readable_tables()');
+  }
+});
+
+// ---------------------------------------------------------------------------
 console.log('\ntask recurrence rules (0056)');
 // ---------------------------------------------------------------------------
 

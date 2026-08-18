@@ -87,7 +87,11 @@ export const SYNC_MODULES: SyncModuleConfig[] = [
   {
     key: 'tasks',
     labelKey: 'syncModule.tasks',
-    tables: [t('task_categories'), t('tasks'), t('task_subtasks')],
+    // `note_tags` is not listed here: it is the shared tag vocabulary and
+    // travels with the notes toggle, which is also where tags are managed. A
+    // link whose tag has not arrived yet renders as nothing rather than
+    // wrongly — the same trade the media rows already make.
+    tables: [t('task_categories'), t('tasks'), t('task_subtasks'), t('task_tag_links')],
     sensitive: false,
   },
   {
