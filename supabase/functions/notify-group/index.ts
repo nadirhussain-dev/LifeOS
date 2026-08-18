@@ -23,6 +23,8 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+import { consumeRateLimit, tooManyRequests } from '../_shared/rate-limit.ts';
+
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 /** Expo rejects batches larger than this. */
 const CHUNK = 100;
@@ -67,6 +69,13 @@ Deno.serve(async (req: Request) => {
   const { data: userData } = await asCaller.auth.getUser();
   const actorId = userData?.user?.id;
   if (!actorId) return json({ error: 'unauthorized' }, 401);
+
+  // Before the membership lookup, not after: the budget bounds the database
+  // work this function does on a caller's behalf as well as the Expo fan-out at
+  // the end of it, and the membership query is the more expensive of the two
+  // for a caller who is not in the group and is looping to find out.
+  const budget = await consumeRateLimit(asCaller, 'edge_notify_group');
+  if (!budget.allowed) return tooManyRequests(budget);
 
   const { data: membership, error: membershipError } = await asCaller
     .from('expense_group_members')

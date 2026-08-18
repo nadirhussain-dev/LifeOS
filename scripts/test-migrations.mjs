@@ -13,6 +13,8 @@
  *
  * Run with `npm run test:sql`.
  */
+import { readFileSync } from 'node:fs';
+
 import {
   asAnon,
   asUser,
@@ -35,6 +37,11 @@ const VANDAL = '77777777-7777-7777-7777-777777777777';
 // 0018: a subject with no report history, so the report gate is tested from a
 // clean slate — ALICE already collects reports in the 0010 rate-limit tests.
 const SUBJECT = '88888888-8888-8888-8888-888888888888';
+// 0062/0063: accounts with no counters and no billing history of their own, for
+// the same reason SUBJECT exists — the edge-function budgets are asserted at
+// their exact boundary, and any earlier test spending one would move it.
+const SPENDER = '99999999-9999-9999-9999-999999999999';
+const SPENDER2 = 'aaaaaaaa-9999-9999-9999-999999999999';
 
 const { db, files } = await bootDatabase();
 const one = async (sql, params = []) => (await db.query(sql, params)).rows[0];
@@ -6698,10 +6705,9 @@ await test('0059 revoking clears the granted tier as well as the window', async 
   await asUser(db, ADMIN, async () => {
     await db.query(`select public.admin_revoke_premium($1)`, [TIER_BOTH]);
   });
-  const row = await one(
-    `select premium_until, granted_tier from public.profiles where id = $1`,
-    [TIER_BOTH],
-  );
+  const row = await one(`select premium_until, granted_tier from public.profiles where id = $1`, [
+    TIER_BOTH,
+  ]);
   expectEqual(row.premium_until, null, 'window cleared');
   expectEqual(row.granted_tier, null, 'tier cleared');
   expectEqual(
@@ -6717,26 +6723,29 @@ await test('0059 revoking clears the granted tier as well as the window', async 
 await test('0059 a grant needs a reason, a future end, and a real tier', async () => {
   await asUser(db, ADMIN, async () => {
     await expectRejection(
-      () => db.query(`select public.admin_grant_premium($1, $2, '  ', 'premium')`, [
-        TIER_FREE,
-        Date.now() + 86400000,
-      ]),
+      () =>
+        db.query(`select public.admin_grant_premium($1, $2, '  ', 'premium')`, [
+          TIER_FREE,
+          Date.now() + 86400000,
+        ]),
       'a reason is required',
     );
     await expectRejection(
-      () => db.query(`select public.admin_grant_premium($1, $2, 'late', 'premium')`, [
-        TIER_FREE,
-        Date.now() - 86400000,
-      ]),
+      () =>
+        db.query(`select public.admin_grant_premium($1, $2, 'late', 'premium')`, [
+          TIER_FREE,
+          Date.now() - 86400000,
+        ]),
       'must end in the future',
     );
     // Granting `freemium` is not a grant, it is a demotion wearing a grant's
     // clothes — refused rather than silently accepted.
     await expectRejection(
-      () => db.query(`select public.admin_grant_premium($1, $2, 'nope', 'freemium')`, [
-        TIER_FREE,
-        Date.now() + 86400000,
-      ]),
+      () =>
+        db.query(`select public.admin_grant_premium($1, $2, 'nope', 'freemium')`, [
+          TIER_FREE,
+          Date.now() + 86400000,
+        ]),
       'standard or premium',
     );
   });
@@ -6745,10 +6754,11 @@ await test('0059 a grant needs a reason, a future end, and a real tier', async (
 await test('0059 only the owner may grant, revoke, or change an entitlement', async () => {
   await asUser(db, TIER_STD, async () => {
     await expectRejection(
-      () => db.query(`select public.admin_grant_premium($1, $2, 'self serve', 'premium')`, [
-        TIER_STD,
-        Date.now() + 86400000,
-      ]),
+      () =>
+        db.query(`select public.admin_grant_premium($1, $2, 'self serve', 'premium')`, [
+          TIER_STD,
+          Date.now() + 86400000,
+        ]),
       'only the owner',
     );
     await expectRejection(
@@ -6912,6 +6922,331 @@ await test('0033 claim_owner succeeds exactly once, for the first caller, on an 
   await asUser(db, ROSTER_ADMIN2, async () => {
     await expectRejection(() => db.query(`select public.claim_owner()`), 'already has an owner');
   });
+});
+
+// ===========================================================================
+// 0062 — the rate limiter the edge functions call
+// ===========================================================================
+console.log('\nedge-function rate limits (0062)');
+
+await createUser(db, SPENDER, 'spender@example.com');
+await createUser(db, SPENDER2, 'spender2@example.com');
+
+/** One call to consume_rate_limit as `who`, returning the decision row. */
+const spend = (who, action, limit = 3, windowMs = 3600000) =>
+  asUser(db, who, () =>
+    one(`select * from public.consume_rate_limit($1, $2, $3)`, [action, limit, windowMs]),
+  );
+
+await test('0062 allows exactly up to the limit and refuses the next call', async () => {
+  for (let i = 1; i <= 3; i++) {
+    const row = await spend(SPENDER, 'edge_safepay_checkout');
+    expectEqual(row.allowed, true, `call ${i} allowed`);
+    expectEqual(row.remaining, 3 - i, `remaining after call ${i}`);
+  }
+  const over = await spend(SPENDER, 'edge_safepay_checkout');
+  expectEqual(over.allowed, false, 'the fourth call');
+  expectEqual(over.remaining, 0, 'remaining never goes negative');
+  expectEqual(over.retry_after_seconds > 0, true, 'a refusal always says when to retry');
+});
+
+await test('0062 keeps each account to its own budget', async () => {
+  // The counter is keyed on auth.uid(), so one account exhausting an action
+  // cannot refuse anybody else's.
+  const row = await spend(SPENDER2, 'edge_safepay_checkout');
+  expectEqual(row.allowed, true, 'a second account is unaffected');
+  expectEqual(row.remaining, 2, 'and starts from a full budget');
+});
+
+await test('0062 keeps each action to its own budget', async () => {
+  const row = await spend(SPENDER, 'edge_send_invite');
+  expectEqual(row.allowed, true, 'a different action for the same account');
+  expectEqual(row.remaining, 2, 'counted separately');
+});
+
+await test('0062 takes no user id — the identity cannot arrive in the request', async () => {
+  // The property that makes this safe to grant to `authenticated`. A signature
+  // taking p_user_id would put the one unforgeable field in the caller's hands.
+  const args = await one(
+    `select pg_get_function_identity_arguments(p.oid) as args
+       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname = 'consume_rate_limit'`,
+  );
+  expectEqual(args.args, 'p_action text, p_limit integer, p_window_ms bigint', 'signature');
+});
+
+await test('0062 refuses an unknown action instead of counting it', async () => {
+  // abuse_counters' primary key includes `action` and nothing constrains it, so a
+  // free-text action reachable from a client session is an invitation to bloat
+  // the table — the limiter becoming the thing that needs limiting.
+  await asUser(db, SPENDER, async () => {
+    await expectRejection(
+      () => db.query(`select * from public.consume_rate_limit('anything_at_all', 5, 60000)`),
+      'unknown rate limit action',
+    );
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.abuse_counters
+        where user_id = $1::uuid and action = 'anything_at_all'`,
+      [SPENDER],
+    ),
+    0,
+    'rows written for the refused action',
+  );
+});
+
+await test('0062 requires a session', async () => {
+  await asAnon(db, async () => {
+    await expectRejection(
+      () => db.query(`select * from public.consume_rate_limit('edge_send_invite', 5, 60000)`),
+      'permission denied',
+    );
+  });
+});
+
+await test('0062 clamps an absurd window rather than dividing by zero', async () => {
+  // p_limit and p_window_ms are deliberately client-supplied — the limit that
+  // matters is the one the edge function passes — but a window of 0 would divide
+  // by zero computing the bucket.
+  const row = await spend(SPENDER2, 'edge_notify_group', 5, 0);
+  expectEqual(row.allowed, true, 'a zero window is clamped, not fatal');
+});
+
+await test('0062 a client cannot read or clear its own counters', async () => {
+  // The whole point of SECURITY DEFINER here: spend your budget, never see it,
+  // and never reset it.
+  await asUser(db, SPENDER, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.abuse_counters`),
+      0,
+      'rows visible to a client',
+    );
+    await db.query(`delete from public.abuse_counters`);
+  });
+  expectEqual(
+    (await count(`select count(*)::int n from public.abuse_counters where user_id = $1::uuid`, [
+      SPENDER,
+    ])) > 0,
+    true,
+    'the counters survived a client DELETE',
+  );
+});
+
+await test('0062 prune_abuse_counters is service-role only', async () => {
+  await asUser(db, SPENDER, async () => {
+    await expectRejection(
+      () => db.query(`select public.prune_abuse_counters()`),
+      'permission denied',
+    );
+  });
+});
+
+await test('0062 pruning drops stale windows and keeps live ones', async () => {
+  const now = Date.now();
+  await db.query(
+    `insert into public.abuse_counters (user_id, action, window_start, count)
+     values ($1::uuid, 'edge_send_invite', $2, 9)
+     on conflict (user_id, action, window_start) do update set count = 9`,
+    [SPENDER, now - 30 * 24 * 3600 * 1000],
+  );
+  const before = await count(
+    `select count(*)::int n from public.abuse_counters where user_id = $1::uuid`,
+    [SPENDER],
+  );
+  const deleted = Number((await one(`select public.prune_abuse_counters() as n`)).n);
+  expectEqual(deleted >= 1, true, 'the month-old window was deleted');
+  expectEqual(
+    (await count(`select count(*)::int n from public.abuse_counters where user_id = $1::uuid`, [
+      SPENDER,
+    ])) < before,
+    true,
+    'fewer rows than before',
+  );
+});
+
+await test('0062 every action the shared helper names is allowlisted', async () => {
+  // The two lists have to agree, and nothing at runtime would notice if they
+  // stopped: a missing action raises, so the edge function would fail open on a
+  // path no test covers. Read from the TypeScript rather than restated here, so
+  // adding one to either side without the other fails.
+  const source = readFileSync('supabase/functions/_shared/rate-limit.ts', 'utf8');
+  const declared = [...source.matchAll(/^\s{2}(edge_[a-z_]+):\s*\{/gm)].map((m) => m[1]);
+  expectEqual(declared.length > 0, true, 'actions found in rate-limit.ts');
+  const allowlisted = (await one(`select public.rate_limited_actions() as a`)).a;
+  for (const action of declared) {
+    expectEqual(allowlisted.includes(action), true, `${action} is allowlisted in 0062`);
+  }
+});
+
+// ===========================================================================
+// 0063 — claiming a checkout intent
+// ===========================================================================
+console.log('\ncheckout idempotency (0063)');
+
+await test('0063 an idempotency key cannot be reused by the same account', async () => {
+  await db.query(
+    `insert into public.checkout_intents (user_id, plan_id, idempotency_key, created_at)
+     values ($1::uuid, 'free', 'c:key-one', $2)`,
+    [SPENDER, Date.now()],
+  );
+  await expectRejection(
+    () =>
+      db.query(
+        `insert into public.checkout_intents (user_id, plan_id, idempotency_key, created_at)
+         values ($1::uuid, 'free', 'c:key-one', $2)`,
+        [SPENDER, Date.now()],
+      ),
+    'duplicate key',
+  );
+});
+
+await test('0063 but the same key belongs to each account separately', async () => {
+  // A globally unique key would let one account's key refuse another's
+  // legitimate checkout.
+  await db.query(
+    `insert into public.checkout_intents (user_id, plan_id, idempotency_key, created_at)
+     values ($1::uuid, 'free', 'c:key-one', $2)`,
+    [SPENDER2, Date.now()],
+  );
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.checkout_intents where idempotency_key = 'c:key-one'`,
+    ),
+    2,
+    'one row per account',
+  );
+});
+
+await test('0063 intents with no key at all do not collide', async () => {
+  // The index is partial, so the pre-0063 rows and any future keyless insert are
+  // unconstrained rather than all colliding on one NULL.
+  for (let i = 0; i < 3; i++) {
+    await db.query(
+      `insert into public.checkout_intents (user_id, plan_id, created_at)
+       values ($1::uuid, 'free', $2)`,
+      [SPENDER, Date.now() + i],
+    );
+  }
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.checkout_intents
+        where user_id = $1::uuid and idempotency_key is null`,
+      [SPENDER],
+    ),
+    3,
+    'keyless rows',
+  );
+});
+
+await test('0063 claim_checkout_intent returns the row and consumes it, exactly once', async () => {
+  const row = await one(
+    `insert into public.checkout_intents (user_id, plan_id, idempotency_key, created_at)
+     values ($1::uuid, 'free', 'c:claim-me', $2) returning reference`,
+    [SPENDER, Date.now()],
+  );
+  const now = Date.now();
+
+  const first = await one(`select * from public.claim_checkout_intent($1::uuid, $2)`, [
+    row.reference,
+    now,
+  ]);
+  expectEqual(first.plan_id, 'free', 'the claimed plan');
+  expectEqual(first.user_id, SPENDER, 'the claimed owner');
+
+  // The second claim gets nothing — `where consumed_at is null` in the UPDATE is
+  // what makes this a claim rather than a read, so two concurrent webhook
+  // deliveries cannot both act on one intent.
+  const again = await db.query(`select * from public.claim_checkout_intent($1::uuid, $2)`, [
+    row.reference,
+    now,
+  ]);
+  expectEqual(again.rows.length, 0, 'rows returned by the second claim');
+
+  const stored = await one(
+    `select consumed_at from public.checkout_intents where reference = $1::uuid`,
+    [row.reference],
+  );
+  expectEqual(Number(stored.consumed_at), now, 'consumed_at was stamped');
+});
+
+await test('0063 claiming a reference that does not exist is not an error', async () => {
+  const result = await db.query(
+    `select * from public.claim_checkout_intent('00000000-0000-0000-0000-000000000000'::uuid, $1)`,
+    [Date.now()],
+  );
+  expectEqual(result.rows.length, 0, 'rows returned');
+});
+
+await test('0063 a client cannot claim an intent, including its own', async () => {
+  // A client able to claim its own intent could attach an arbitrary plan to
+  // itself — the webhook is the only thing that gets to say a checkout converted.
+  const row = await one(
+    `insert into public.checkout_intents (user_id, plan_id, idempotency_key, created_at)
+     values ($1::uuid, 'free', 'c:mine', $2) returning reference`,
+    [SPENDER, Date.now()],
+  );
+  await asUser(db, SPENDER, async () => {
+    await expectRejection(
+      () =>
+        db.query(`select * from public.claim_checkout_intent($1::uuid, $2)`, [
+          row.reference,
+          Date.now(),
+        ]),
+      'permission denied',
+    );
+  });
+});
+
+await test('0063 a client cannot read or write checkout_intents directly either', async () => {
+  await asUser(db, SPENDER, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.checkout_intents`),
+      0,
+      'intents visible to their own owner',
+    );
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.checkout_intents (user_id, plan_id, created_at)
+           values ($1::uuid, 'free', $2)`,
+          [SPENDER, Date.now()],
+        ),
+      'row-level security',
+    );
+  });
+});
+
+// ===========================================================================
+// 0064 — the webhook's freshness column
+// ===========================================================================
+console.log('\nwebhook replay window (0064)');
+
+await test('0064 payment_events records both when it was signed and when it arrived', async () => {
+  const signed = Date.now() - 30000;
+  const received = Date.now();
+  await db.query(
+    `insert into public.payment_events (id, type, payload, received_at, signed_at)
+     values ('evt-window-1', 'subscription.payment_succeeded', '{}'::jsonb, $1, $2)`,
+    [received, signed],
+  );
+  const row = await one(
+    `select received_at - signed_at as lag from public.payment_events where id = 'evt-window-1'`,
+  );
+  expectEqual(Number(row.lag), received - signed, 'the delivery lag is derivable');
+});
+
+await test('0064 signed_at is nullable, so an undated delivery is still recordable', async () => {
+  // The function tolerates a delivery whose timestamp field it does not
+  // recognise rather than refusing every payment. NOT NULL here would turn that
+  // tolerance into a crash.
+  await db.query(
+    `insert into public.payment_events (id, type, payload, received_at)
+     values ('evt-window-2', 'subscription.created', '{}'::jsonb, $1)`,
+    [Date.now()],
+  );
+  const row = await one(`select signed_at from public.payment_events where id = 'evt-window-2'`);
+  expectEqual(row.signed_at, null, 'signed_at');
 });
 
 summary();

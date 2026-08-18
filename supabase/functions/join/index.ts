@@ -47,6 +47,31 @@
 // This file is Deno (URL imports) and is excluded from the app's tsconfig.
 
 import { optionalSecret } from '../_shared/env.ts';
+import { callerKey, consumeLocalBudget } from '../_shared/rate-limit.ts';
+
+/**
+ * Per-IP flood ceiling, and the one function here that cannot use the
+ * database-backed limiter.
+ *
+ * `consume_rate_limit` (0062) keys on `auth.uid()`, and this request has no
+ * caller and no JWT — that is the whole point of `--no-verify-jwt`. The
+ * alternative, an IP-keyed table, would give this function a database
+ * dependency it does not currently have, on the one endpoint that is reachable
+ * by anybody: a flood would then be pointed at Postgres instead of at a
+ * static page, which is a worse target than the one it started with.
+ *
+ * So this is in-memory and per-isolate, which means a distributed flood gets a
+ * multiple of the limit and a cold start forgives whatever was spent. Stated
+ * plainly because it matters: this is a speed bump against one source walking
+ * token guesses, not a DoS defence. The DoS defence for this endpoint is
+ * Supabase's own edge, which is not ours to configure.
+ *
+ * 60 in 5 minutes is far above any real invitation flow — a recipient opens the
+ * link once, maybe twice if the app was not installed yet — and far below the
+ * rate that makes guessing a 32-byte token worth attempting.
+ */
+const JOIN_LIMIT = 60;
+const JOIN_WINDOW_MS = 5 * 60 * 1000;
 
 /** The app's deep-link scheme for THIS project. Staging builds are
  *  `daykeep-staging://` (scripts/build-env.js gives them their own scheme so
@@ -75,10 +100,11 @@ const escapeHtml = (s: string) =>
  *  URL and the markup. */
 const isWellFormedToken = (token: string) => /^[A-Za-z0-9_-]{16,128}$/.test(token);
 
-const page = (body: string, status = 200) =>
+const page = (body: string, status = 200, extraHeaders: Record<string, string> = {}) =>
   new Response(body, {
     status,
     headers: {
+      ...extraHeaders,
       'Content-Type': 'text/html; charset=utf-8',
       // The token is in the URL. Keeping it out of shared caches and out of the
       // Referer header of anything the page links to costs nothing here.
@@ -211,6 +237,25 @@ function invitationPage(token: string, kind: Destination): string {
 }
 
 Deno.serve((req: Request) => {
+  // First, before parsing anything. A refusal here is deliberately HTML rather
+  // than JSON: every other caller of this endpoint is a browser following a
+  // link from an email, and a JSON body would render as a wall of punctuation
+  // to the one audience that ever sees it.
+  const budget = consumeLocalBudget(callerKey(req), JOIN_LIMIT, JOIN_WINDOW_MS);
+  if (!budget.allowed) {
+    return page(
+      shell(
+        'Too many requests',
+        `<h1>Slow down a moment</h1>
+        <p>Too many invitation links have been opened from this connection just
+        now. Wait a minute and try again — the invitation itself is unaffected
+        and stays valid for 14 days.</p>`,
+      ),
+      429,
+      { 'Retry-After': String(budget.retryAfterSeconds) },
+    );
+  }
+
   const url = new URL(req.url);
 
   // Supabase routes the whole path to the function, so the request arrives as

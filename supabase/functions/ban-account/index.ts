@@ -30,6 +30,8 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+import { consumeRateLimit, tooManyRequests } from '../_shared/rate-limit.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -61,6 +63,14 @@ Deno.serve(async (req: Request) => {
 
     const { data: userData, error: userError } = await asCaller.auth.getUser();
     if (userError || !userData.user) return json({ error: 'Invalid session' }, 401);
+
+    // Ahead of `is_admin()`, not after it. Placing it after would leave the
+    // privilege check itself unbounded for every caller who fails it, and the
+    // point of bounding this function is not distrust of the admin — it is that
+    // a stolen admin session must not be able to ban the whole user table in a
+    // loop. A non-admin spending this budget only spends their own.
+    const budget = await consumeRateLimit(asCaller, 'edge_ban_account');
+    if (!budget.allowed) return tooManyRequests(budget, corsHeaders);
 
     const { data: isAdmin, error: adminError } = await asCaller.rpc('is_admin');
     if (adminError)

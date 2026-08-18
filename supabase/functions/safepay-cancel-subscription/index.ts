@@ -13,6 +13,7 @@
 // This file is Deno (URL imports) and is excluded from the app's tsconfig.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { consumeRateLimit, tooManyRequests } from '../_shared/rate-limit.ts';
 import { safepayClient } from '../_shared/safepay.ts';
 
 const corsHeaders = {
@@ -42,6 +43,12 @@ Deno.serve(async (req: Request) => {
 
     const { data: userData, error: userError } = await asCaller.auth.getUser();
     if (userError || !userData.user) return json({ error: 'unauthorized' }, 401);
+
+    // Before the Safepay call, after knowing who is asking. Cancelling is cheap
+    // and idempotent-ish, but it still reaches the payment provider, and a loop
+    // here is a loop against them under our merchant credentials.
+    const budget = await consumeRateLimit(asCaller, 'edge_safepay_cancel');
+    if (!budget.allowed) return tooManyRequests(budget, corsHeaders);
 
     // RLS already restricts this to the caller's own row — there is no
     // p_user_id to accept from the body.

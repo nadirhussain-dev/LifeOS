@@ -23,6 +23,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 import { optionalSecret } from '../_shared/env.ts';
+import { consumeRateLimit, tooManyRequests } from '../_shared/rate-limit.ts';
 
 const INVITE_TTL_MS = 14 * 24 * 60 * 60 * 1000; // two weeks
 
@@ -84,6 +85,15 @@ Deno.serve(async (req: Request) => {
   const { data: userData } = await asCaller.auth.getUser();
   const inviter = userData?.user;
   if (!inviter) return json({ error: 'unauthorized' }, 401);
+
+  // Ahead of both the invitation row and the email. Deliberately spent even
+  // when the send later fails: what is being rationed is the attempt, and a
+  // provider bounce is not a refund — otherwise a bad address becomes an
+  // unlimited one. Uses the caller's own anon-key client, because
+  // consume_rate_limit reads auth.uid() rather than taking an id, so this
+  // function still needs no service-role key of its own.
+  const budget = await consumeRateLimit(asCaller, 'edge_send_invite');
+  if (!budget.allowed) return tooManyRequests(budget, corsHeaders);
 
   const token = mintToken();
   const now = Date.now();

@@ -1,0 +1,49 @@
+-- 0064 — Make the webhook's freshness check auditable.
+--
+-- ## What the app-side change is
+--
+-- `safepay-webhook` verified the signature and nothing else about *when* the
+-- delivery was made. A signature is a statement about the bytes, not the
+-- moment: a delivery captured off the wire — a proxy log, a mirrored request, a
+-- misconfigured intermediary — stays signature-valid forever, so anyone holding
+-- one could replay it indefinitely. `payment_events.id` (0047) already makes a
+-- replay a *no-op*, which is why this was never an exploitable double-charge,
+-- but "we accepted it and then ignored it" is a weaker answer than "we refused
+-- it", and the log could not tell the two apart.
+--
+-- The function now rejects a delivery older than
+-- `SAFEPAY_WEBHOOK_MAX_AGE_SECONDS` (default 300, the same five minutes
+-- Stripe's own tolerance uses). This migration is the column that makes that
+-- decision visible afterwards.
+--
+-- ## Why a column rather than nothing
+--
+-- Refused deliveries are deliberately NOT recorded — writing one would consume
+-- its `payment_events.id` and turn a later, legitimate retry of the same event
+-- into a silent no-op, which is exactly the failure the id is there to prevent.
+-- So the only durable evidence of the window working is on the deliveries it
+-- *let through*: `signed_at` is the timestamp the function read out of the
+-- delivery, and `received_at` (0047) is when it arrived. The gap between them
+-- is the delivery lag, which is the number to look at before anyone tightens
+-- the window and starts refusing real payments.
+--
+-- Nullable on purpose. Safepay's timestamp field name is documented but not
+-- confirmed for this merchant account (0047 and the function header both say
+-- so), and the function tolerates a delivery it cannot find a timestamp in
+-- rather than refusing every payment if the name turns out to differ. A NULL
+-- here is that case, and counting NULLs is how you find out whether the strict
+-- mode is safe to switch on:
+--
+--   select count(*) filter (where signed_at is null) as undated,
+--          count(*) as total,
+--          max(received_at - signed_at) as worst_lag_ms
+--     from public.payment_events;
+--
+-- All NULL means the field name is wrong — fix `readTimestamp()` and leave
+-- `SAFEPAY_WEBHOOK_REQUIRE_TIMESTAMP` off until it isn't.
+
+alter table public.payment_events
+  add column if not exists signed_at bigint;
+
+-- No RLS change and no policy: `payment_events` has had neither since 0047,
+-- deliberately, and this adds a column to it rather than a way in.

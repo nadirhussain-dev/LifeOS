@@ -34,6 +34,8 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+import { consumeRateLimit, tooManyRequests } from '../_shared/rate-limit.ts';
+
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 /** Expo rejects batches larger than this. */
 const CHUNK = 100;
@@ -120,6 +122,13 @@ Deno.serve(async (req: Request) => {
   const { data: userData } = await asCaller.auth.getUser();
   const actorId = userData?.user?.id;
   if (!actorId) return json({ error: 'unauthorized' }, 401);
+
+  // Same placement and reasoning as notify-group. The budget here is twice its
+  // size because this one carries chat: a fast back-and-forth in an album
+  // genuinely produces a push per message, where a shared-expense group
+  // produces one per settled expense.
+  const budget = await consumeRateLimit(asCaller, 'edge_notify_album');
+  if (!budget.allowed) return tooManyRequests(budget);
 
   const { data: membership, error: membershipError } = await asCaller
     .from('shared_album_members')

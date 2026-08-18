@@ -45,6 +45,13 @@ module.exports = {
      * "LifeOS". See test/supabase-js-stub.js.
      */
     '^https://esm\\.sh/@supabase/supabase-js@2$': '<rootDir>/test/supabase-js-stub.js',
+    /**
+     * The Safepay SDK, for the same reason and with the same consequence: the
+     * two functions that decide whether anybody is on a paid plan could not be
+     * executed by a test while this import was unresolvable. See
+     * test/sfpy-node-sdk-stub.js.
+     */
+    '^https://esm\\.sh/@sfpy/node-sdk$': '<rootDir>/test/sfpy-node-sdk-stub.js',
   },
   /**
    * See test/async-storage-setup.js — without it, every test that touches a
