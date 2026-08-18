@@ -28,6 +28,13 @@ export type Task = {
   dueDate: number | null;
   hasDueTime: boolean;
   recurrenceFrequency: TaskRecurrenceFrequency;
+  /** "Every N" — 1 for every task that predates the richer rules. */
+  recurrenceInterval: number;
+  /** Weekly-on-chosen-days, 0 = Sunday. Null means plain "every N weeks".
+   *  Stored as JSON text; the repository is the only place that sees the
+   *  string form. */
+  recurrenceDaysOfWeek: number[] | null;
+  recurrenceAnchor: TaskRecurrenceAnchor;
   recurrenceParentId: string | null;
   completedAt: number | null;
   position: number;
@@ -57,6 +64,9 @@ export type CreateTaskInput = {
   dueDate?: number | null;
   hasDueTime?: boolean;
   recurrenceFrequency?: TaskRecurrenceFrequency;
+  recurrenceInterval?: number;
+  recurrenceDaysOfWeek?: number[] | null;
+  recurrenceAnchor?: TaskRecurrenceAnchor;
   /** Internal only — set by completeTask() when auto-cloning a recurring task. Not exposed in any picker UI. */
   recurrenceParentId?: string | null;
   reminderEnabled?: boolean;

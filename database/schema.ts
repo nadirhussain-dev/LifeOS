@@ -30,6 +30,14 @@ export const tasks = sqliteTable('tasks', {
   })
     .notNull()
     .default('none'),
+  /** "Every N" — 1 unless the user asked for a fortnightly or quarterly repeat. */
+  recurrenceInterval: integer('recurrence_interval').notNull().default(1),
+  /** Weekly-on-chosen-days, as a JSON int array with 0 = Sunday. Null means
+   *  plain "every N weeks". Same convention as `habits.schedule_days`. */
+  recurrenceDaysOfWeek: text('recurrence_days_of_week'),
+  recurrenceAnchor: text('recurrence_anchor', { enum: ['due_date', 'completion'] })
+    .notNull()
+    .default('due_date'),
   recurrenceParentId: text('recurrence_parent_id'),
   completedAt: integer('completed_at'),
   position: integer('position').notNull().default(0),
@@ -837,6 +845,9 @@ export const TABLE_BOOTSTRAP_SQL = `
     due_date INTEGER,
     has_due_time INTEGER NOT NULL DEFAULT 0,
     recurrence_frequency TEXT NOT NULL DEFAULT 'none',
+    recurrence_interval INTEGER NOT NULL DEFAULT 1,
+    recurrence_days_of_week TEXT,
+    recurrence_anchor TEXT NOT NULL DEFAULT 'due_date',
     recurrence_parent_id TEXT,
     completed_at INTEGER,
     position INTEGER NOT NULL DEFAULT 0,
@@ -1599,6 +1610,21 @@ export const ADDITIVE_COLUMNS: Record<string, { name: string; ddl: string }[]> =
     {
       name: 'recurrence_frequency',
       ddl: "ALTER TABLE tasks ADD COLUMN recurrence_frequency TEXT NOT NULL DEFAULT 'none'",
+    },
+    // Richer repeat rules. Existing rows keep the behaviour they already had:
+    // interval 1 with a due-date anchor is exactly the old four-case switch,
+    // so unlike the history tables above there is nothing to backfill.
+    {
+      name: 'recurrence_interval',
+      ddl: 'ALTER TABLE tasks ADD COLUMN recurrence_interval INTEGER NOT NULL DEFAULT 1',
+    },
+    {
+      name: 'recurrence_days_of_week',
+      ddl: 'ALTER TABLE tasks ADD COLUMN recurrence_days_of_week TEXT',
+    },
+    {
+      name: 'recurrence_anchor',
+      ddl: "ALTER TABLE tasks ADD COLUMN recurrence_anchor TEXT NOT NULL DEFAULT 'due_date'",
     },
     { name: 'recurrence_parent_id', ddl: 'ALTER TABLE tasks ADD COLUMN recurrence_parent_id TEXT' },
     { name: 'source_note_id', ddl: 'ALTER TABLE tasks ADD COLUMN source_note_id TEXT' },
