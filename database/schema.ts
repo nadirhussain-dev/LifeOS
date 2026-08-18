@@ -2000,3 +2000,63 @@ export const ADDITIVE_COLUMNS: Record<string, { name: string; ddl: string }[]> =
     { name: 'deleted_at', ddl: 'ALTER TABLE playlist_songs ADD COLUMN deleted_at INTEGER' },
   ],
 };
+
+/**
+ * Full-text search over notes, as a separate and individually-guarded step.
+ *
+ * NOT part of TABLE_BOOTSTRAP_SQL, and that is the whole design. A failing
+ * statement aborts an entire `execSync`, which is how this app once spent a
+ * release unable to open its database at all (see bootstrap.ts). FTS5 is a
+ * compile-time SQLite option: it is present in `node:sqlite` and expected in
+ * op-sqlite, but "expected" is not "verified on every device this ships to", and
+ * the cost of being wrong inside the main blob would be every screen in the app
+ * failing rather than one search being slower.
+ *
+ * So this runs on its own, its failure is caught, and `search-index.ts` falls
+ * back to LIKE when the table is absent.
+ *
+ * A standalone table rather than FTS5's external-content mode: external content
+ * keys on an INTEGER rowid, while `notes.id` is TEXT, so the coupling would rest
+ * on SQLite's implicit rowid staying stable across a vacuum. Storing the id
+ * UNINDEXED costs a little space and removes the assumption.
+ *
+ * `remove_diacritics 2` matches the existing search's behaviour, where "cafe"
+ * finds "café" — see features/search/services/global-search.ts.
+ */
+export const SEARCH_INDEX_SQL = `
+  CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
+    note_id UNINDEXED,
+    title,
+    body,
+    tokenize = 'unicode61 remove_diacritics 2'
+  );
+
+  CREATE TRIGGER IF NOT EXISTS notes_fts_insert AFTER INSERT ON notes BEGIN
+    INSERT INTO notes_fts (note_id, title, body)
+    VALUES (new.id, new.title, COALESCE(new.body, ''));
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS notes_fts_update AFTER UPDATE ON notes BEGIN
+    DELETE FROM notes_fts WHERE note_id = old.id;
+    INSERT INTO notes_fts (note_id, title, body)
+    VALUES (new.id, new.title, COALESCE(new.body, ''));
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS notes_fts_delete AFTER DELETE ON notes BEGIN
+    DELETE FROM notes_fts WHERE note_id = old.id;
+  END;
+`;
+
+/**
+ * Fills the index for notes written before it existed.
+ *
+ * Separate from the DDL because it must run after it and be re-runnable: the
+ * NOT EXISTS makes it a no-op once every note is indexed, so it can sit in the
+ * same guarded step on every launch without rebuilding anything.
+ */
+export const SEARCH_INDEX_BACKFILL_SQL = `
+  INSERT INTO notes_fts (note_id, title, body)
+  SELECT n.id, n.title, COALESCE(n.body, '')
+  FROM notes n
+  WHERE NOT EXISTS (SELECT 1 FROM notes_fts f WHERE f.note_id = n.id);
+`;
