@@ -15,6 +15,7 @@
 // This file is Deno (URL imports) and is excluded from the app's tsconfig.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { discountedCents } from '../_shared/money.ts';
 import { createSafepayPlan, safepayClient, toSafepayInterval } from '../_shared/safepay.ts';
 
 const corsHeaders = {
@@ -86,10 +87,15 @@ Deno.serve(async (req: Request) => {
 
       // Discounted price needs its own Plan object — Safepay Plans are
       // fixed-price, there is no discount-on-an-existing-plan call.
-      const discountedCents =
-        coupon.discount_type === 'percent'
-          ? Math.round((plan.price_cents as number) * (1 - coupon.discount_value / 100))
-          : Math.max(0, (plan.price_cents as number) - coupon.discount_value);
+      //
+      // Shared with the client's coupon preview (money.ts) so the number
+      // somebody is shown before subscribing and the number they are charged
+      // cannot drift.
+      const discounted = discountedCents(
+        plan.price_cents as number,
+        coupon.discount_type as 'percent' | 'fixed',
+        coupon.discount_value,
+      );
 
       // service-role client for everything past this point: billing_plans/
       // plan_coupon_variants have no client write policy (0034/0048's own
@@ -107,7 +113,7 @@ Deno.serve(async (req: Request) => {
         safepayPlanId = variant.safepay_plan_id;
       } else {
         const createdId = await createSafepayPlan({
-          amountCents: discountedCents,
+          amountCents: discounted,
           currency: plan.currency as string,
           interval: toSafepayInterval(plan.period as 'month' | 'year'),
           name: `${plan.name} (${body.couponCode})`,
@@ -116,7 +122,7 @@ Deno.serve(async (req: Request) => {
           base_plan_id: plan.id,
           coupon_id: couponId,
           safepay_plan_id: createdId,
-          price_cents: discountedCents,
+          price_cents: discounted,
           created_at: Date.now(),
         });
         safepayPlanId = createdId;

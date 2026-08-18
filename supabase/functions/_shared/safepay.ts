@@ -19,6 +19,7 @@
 // for this merchant account before the first production deploy — if the
 // shape differs, this is the only function that needs to change.
 import Safepay from 'https://esm.sh/@sfpy/node-sdk';
+import { toSafepayAmount } from './money.ts';
 
 export type SafepayEnv = 'sandbox' | 'production';
 
@@ -73,7 +74,11 @@ export async function createSafepayPlan(input: {
     },
     body: JSON.stringify({
       name: input.name,
-      amount: String(Math.round(input.amountCents / 100)),
+      // Was `String(Math.round(amountCents / 100))`, which billed $4.99 as
+      // "5" and rounded every percentage coupon into meaninglessness. See
+      // money.ts for the full account and for the two constants that still
+      // need confirming against a sandbox account.
+      amount: toSafepayAmount(input.amountCents, input.currency),
       currency: input.currency.toUpperCase(),
       interval: input.interval,
       interval_count: 1,
