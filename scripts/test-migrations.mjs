@@ -6035,6 +6035,291 @@ await test('0048 operator actions land in the shared audit log', async () => {
 });
 
 // ---------------------------------------------------------------------------
+console.log('\nseason state and the operator console (0055)');
+// ---------------------------------------------------------------------------
+//
+// `challenge_season_state()` is the single derivation both consoles quote, and
+// the reason it exists is a bug that no unit test could have caught: the app
+// decided "is it open" from the module list, the operator screen decided it
+// from `enabled` and two dates, both were right, and they disagreed for weeks
+// with nothing on either screen able to show the other's answer.
+//
+// So the states are exercised here, against real rows, one condition at a time
+// — and in the order the function checks them, because the first failure is the
+// one it is supposed to report.
+
+const STATE_SEASON = (
+  await one(
+    `insert into public.challenge_seasons (name, enabled, required_modules)
+     values ('State Season', false, 3) returning id`,
+  )
+).id;
+
+// Its own runner. `challenge_enrollments` allows one active run per account and
+// the 0048 accounts are already spending theirs, so borrowing one here would
+// fail on the unique index rather than on anything this section is testing.
+const STATE_RUNNER = 'aaaaaaaa-0000-4000-8000-000000000003';
+await createUser(db, STATE_RUNNER, 'state-runner@example.com');
+
+const stateOf = async (season) =>
+  (await one(`select public.challenge_season_state($1::uuid) as v`, [season])).v;
+
+const setSeason = async (sets, params) =>
+  db.query(`update public.challenge_seasons set ${sets} where id = $1`, [STATE_SEASON, ...params]);
+
+await test('0055 a season nobody switched on is closed, whatever its dates say', async () => {
+  expectEqual(await stateOf(STATE_SEASON), 'closed', 'the season’s own switch comes first');
+});
+
+await test('0055 a season with no modules is not open, however enabled it is', async () => {
+  // The exact shape staging was in: enabled, inside its window, and impossible
+  // to join. The old console called this Open.
+  await setSeason(`enabled = true`, []);
+  expectEqual(await stateOf(STATE_SEASON), 'notReady', 'nothing to commit to');
+});
+
+await test('0055 too few eligible modules is as unjoinable as none at all', async () => {
+  // `required_modules` is 3. Two eligible modules fails the picker just as
+  // surely as zero, only further along, which is why the check is a comparison
+  // rather than an emptiness test.
+  for (const m of ['habits', 'water']) {
+    await db.query(`insert into public.challenge_modules (season_id, module_id) values ($1, $2)`, [
+      STATE_SEASON,
+      m,
+    ]);
+  }
+  expectEqual(await stateOf(STATE_SEASON), 'notReady', 'two of the three it asks for');
+
+  await db.query(
+    `insert into public.challenge_modules (season_id, module_id) values ($1, 'tasks')`,
+    [STATE_SEASON],
+  );
+  expectEqual(await stateOf(STATE_SEASON), 'open', 'the third one opens it');
+});
+
+await test('0055 an ineligible module does not count toward the requirement', async () => {
+  await db.query(
+    `update public.challenge_modules set eligible = false
+      where season_id = $1 and module_id = 'tasks'`,
+    [STATE_SEASON],
+  );
+  expectEqual(await stateOf(STATE_SEASON), 'notReady', 'curation is subtraction');
+  await db.query(
+    `update public.challenge_modules set eligible = true
+      where season_id = $1 and module_id = 'tasks'`,
+    [STATE_SEASON],
+  );
+});
+
+await test('0055 a season that has not started reads as upcoming, not as nothing', async () => {
+  await setSeason(`starts_at = now() + interval '10 days'`, []);
+  expectEqual(await stateOf(STATE_SEASON), 'upcoming', 'waiting, not missing');
+  await setSeason(`starts_at = null`, []);
+});
+
+await test('0055 a season past its end date reads as ended', async () => {
+  await setSeason(`ends_at = now() - interval '1 day'`, []);
+  expectEqual(await stateOf(STATE_SEASON), 'ended', 'finished, not broken');
+  await setSeason(`ends_at = null`, []);
+});
+
+await test('0055 the switch outranks the dates', async () => {
+  // A season both closed and out of window is reported closed, because that is
+  // the one an operator has to act on first.
+  await setSeason(`enabled = false, starts_at = now() + interval '5 days'`, []);
+  expectEqual(await stateOf(STATE_SEASON), 'closed', 'first failure wins');
+  await setSeason(`enabled = true, starts_at = null`, []);
+});
+
+await test('0055 a season reaching its cap reads as full, and only then', async () => {
+  await setSeason(`max_enrollments = 1`, []);
+  expectEqual(await stateOf(STATE_SEASON), 'open', 'a cap nobody has reached changes nothing');
+
+  await asUser(db, STATE_RUNNER, async () => {
+    await db.query(
+      `select public.enroll_in_challenge($1::uuid, 0, $2::text[], '{}'::text[], 'dev-state')`,
+      [STATE_SEASON, ['habits', 'water', 'tasks']],
+    );
+  });
+  expectEqual(await stateOf(STATE_SEASON), 'full', 'the cap bites once it is met');
+});
+
+await test('0055 the app is told which season it could join, and why not', async () => {
+  // 0048's season is enabled and older, so it wins the pick. Switched off for
+  // the length of this assertion so the answer is about the season under test.
+  await db.query(`update public.challenge_seasons set enabled = false where id = $1`, [SEASON]);
+  const status = (await one(`select public.challenge_season_status() as v`)).v;
+  // Reported rather than hidden: a full season is still the season, and the
+  // screen has a sentence for it. Returning nothing is what produced the dead
+  // end this whole migration is about.
+  expectEqual(status.state, 'full', 'the state travels to the client');
+  expectEqual(status.seatsLeft, 0, 'zero seats is an answer, not an absence');
+  expectEqual(status.requiredModules, 3, 'the picker’s rule comes with it');
+  expectEqual(Array.isArray(status.modules), true, 'and the modules to pick from');
+  await db.query(`update public.challenge_seasons set enabled = true where id = $1`, [SEASON]);
+});
+
+await test('0055 a run inside a paused season is told so, rather than failing quietly', async () => {
+  // The symptom this fixes: `record_challenge_day` refuses with 'season paused'
+  // and the checklist, having no field for a reason, renders an ordinary
+  // unfinished day forever.
+  await setSeason(`enabled = false`, []);
+  await asUser(db, STATE_RUNNER, async () => {
+    const today = (await one(`select public.challenge_today() as v`)).v;
+    expectEqual(today.enrolled, true, 'still enrolled — a pause is not an eviction');
+    expectEqual(today.seasonState, 'closed', 'and told what the season is doing');
+    expectEqual(today.seasonName, 'State Season', 'by name, so it is clear which one');
+  });
+  await setSeason(`enabled = true`, []);
+});
+
+await test('0055 seeding fills an empty season and leaves a curated one alone', async () => {
+  const empty = (
+    await one(`insert into public.challenge_seasons (name) values ('Seed Me') returning id`)
+  ).id;
+
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_seed_challenge_season($1::uuid)`, [empty]);
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.challenge_modules where season_id = $1`, [
+      empty,
+    ]),
+    8,
+    'the naturally-daily set',
+  );
+  expectEqual(
+    await count(`select count(*)::int n from public.challenge_tiers where season_id = $1`, [empty]),
+    9,
+    'and the reference ladder',
+  );
+
+  // The curated season already has three modules and no ladder. Seeding must
+  // add the ladder and touch nothing else — an operator pressing this button is
+  // usually not the person who made the curation.
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_seed_challenge_season($1::uuid)`, [STATE_SEASON]);
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.challenge_modules where season_id = $1`, [
+      STATE_SEASON,
+    ]),
+    3,
+    'the curation survives the button',
+  );
+});
+
+await test('0055 a patch changes only what it names', async () => {
+  // The reason the patch exists: 0048's upsert coalesces every absent setting
+  // to a factory default, so moving an end date would quietly reset the shield
+  // economy of a season people are two hundred days into.
+  await db.query(
+    `update public.challenge_seasons set shield_cap = 2, min_writes = 4 where id = $1`,
+    [STATE_SEASON],
+  );
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_update_challenge_season($1::uuid, $2::jsonb)`, [
+      STATE_SEASON,
+      JSON.stringify({ endsAt: '2027-01-01T00:00:00Z' }),
+    ]);
+  });
+  const row = await one(
+    `select shield_cap, min_writes, ends_at from public.challenge_seasons where id = $1`,
+    [STATE_SEASON],
+  );
+  expectEqual(row.shield_cap, 2, 'untouched');
+  expectEqual(row.min_writes, 4, 'untouched');
+  expectEqual(row.ends_at !== null, true, 'and the one named key did change');
+});
+
+await test('0055 an explicit null clears a date, while an absent key leaves it', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_update_challenge_season($1::uuid, $2::jsonb)`, [
+      STATE_SEASON,
+      JSON.stringify({ endsAt: null }),
+    ]);
+  });
+  expectEqual(
+    (await one(`select ends_at from public.challenge_seasons where id = $1`, [STATE_SEASON]))
+      .ends_at,
+    null,
+    'clearing is a thing a patch can express',
+  );
+});
+
+await test('0055 closing a season is one call that cannot change anything else', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_set_challenge_season_enabled($1::uuid, false)`, [
+      STATE_SEASON,
+    ]);
+  });
+  expectEqual(await stateOf(STATE_SEASON), 'closed', 'the switch that actually closes it');
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_set_challenge_season_enabled($1::uuid, true)`, [
+      STATE_SEASON,
+    ]);
+  });
+});
+
+await test('0055 a season somebody has joined is refused deletion, not silently emptied', async () => {
+  // Every challenge table cascades from this row. Deleting one with runs in it
+  // would take the ledger and event history of everybody in it.
+  await asUser(db, ADMIN, async () => {
+    await expectRejection(
+      () => db.query(`select public.admin_delete_challenge_season($1::uuid)`, [STATE_SEASON]),
+      'close it instead',
+    );
+  });
+});
+
+await test('0055 an ordinary account can read the programme but not change it', async () => {
+  await asUser(db, RUNNER, async () => {
+    // Readable, like the tables underneath it — it describes the programme, not
+    // a person, which is what lets a signed-out visitor see what is on offer.
+    const status = (await one(`select public.challenge_season_status() as v`)).v;
+    expectEqual(typeof status.state, 'string', 'anyone may ask what is running');
+
+    await expectRejection(
+      () => db.query(`select public.admin_challenge_seasons()`),
+      'not an administrator',
+    );
+    await expectRejection(
+      () =>
+        db.query(`select public.admin_set_challenge_season_enabled($1::uuid, false)`, [
+          STATE_SEASON,
+        ]),
+      'not an administrator',
+    );
+    await expectRejection(
+      () =>
+        db.query(`select public.admin_update_challenge_season($1::uuid, '{}'::jsonb)`, [
+          STATE_SEASON,
+        ]),
+      'not an administrator',
+    );
+  });
+});
+
+await test('0055 a signed-out visitor is told what is on offer', async () => {
+  await asAnon(db, async () => {
+    const status = (await one(`select public.challenge_season_status() as v`)).v;
+    expectEqual(typeof status.state, 'string', 'the join screen can show the pitch first');
+  });
+});
+
+await test('0055 every console write lands in the shared audit log', async () => {
+  expectEqual(
+    (await count(
+      `select count(*)::int n from public.admin_audit_log
+        where action in ('challenge_season_enabled', 'challenge_season_patch',
+                         'challenge_season_seed')`,
+    )) > 0,
+    true,
+    'the same timeline as every other operator action',
+  );
+});
+
+// ---------------------------------------------------------------------------
 console.log('\nowner bootstrap (0033, continued — destructive, kept last)');
 // ---------------------------------------------------------------------------
 //

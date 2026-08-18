@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
-import { useChallengeToday, useOpenSeason } from '@/features/challenge/hooks/use-challenge';
+import { useChallengeToday, useSeasonStatus } from '@/features/challenge/hooks/use-challenge';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/lib/toast-store';
@@ -35,7 +35,7 @@ export default function ChallengeSwapScreen() {
   const queryClient = useQueryClient();
 
   const today = useChallengeToday();
-  const season = useOpenSeason();
+  const season = useSeasonStatus();
 
   const [out, setOut] = useState<string | null>(null);
   const [into, setInto] = useState<string | null>(null);

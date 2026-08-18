@@ -10,8 +10,10 @@ import { cardClass } from '@/components/ui/card';
 import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
-import { useOpenSeason } from '@/features/challenge/hooks/use-challenge';
+import { SeasonNotice } from '@/features/challenge/components/season-notice';
+import { useSeasonStatus } from '@/features/challenge/hooks/use-challenge';
 import { estimatedDailyMinutes } from '@/features/challenge/services/challenge-math';
+import { canJoin } from '@/features/challenge/services/season-state';
 import { useTheme } from '@/hooks/use-theme';
 import { toast } from '@/lib/toast-store';
 import { supabase } from '@/lib/supabase';
@@ -36,16 +38,16 @@ export default function ChallengeJoinScreen() {
   const { c, tint } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const season = useOpenSeason();
+  const season = useSeasonStatus();
 
   const [chosen, setChosen] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
 
-  const required = season.data?.requiredModules ?? 3;
+  const status = season.data ?? { state: 'none' as const };
+  const required = status.requiredModules ?? 3;
   const estimates = useMemo(
-    () =>
-      Object.fromEntries((season.data?.modules ?? []).map((m) => [m.moduleId, m.estDailySeconds])),
-    [season.data],
+    () => Object.fromEntries((status.modules ?? []).map((m) => [m.moduleId, m.estDailySeconds])),
+    [status.modules],
   );
 
   const enough = chosen.length >= required;
@@ -59,14 +61,14 @@ export default function ChallengeJoinScreen() {
     );
 
   const join = async () => {
-    if (!season.data || !enough || busy) return;
+    if (!status.seasonId || !enough || busy) return;
     setBusy(true);
     try {
       // The first `required` chosen form the contract; the rest are extras.
       // Order is the order they were tapped, which is the only ranking the user
       // has actually given us.
       const { error } = await supabase.rpc('enroll_in_challenge', {
-        p_season: season.data.id,
+        p_season: status.seasonId,
         p_tz_offset_minutes: -new Date().getTimezoneOffset(),
         p_required: chosen.slice(0, required),
         p_extra: chosen.slice(required),
@@ -97,15 +99,31 @@ export default function ChallengeJoinScreen() {
       >
         {season.isError ? (
           <QueryError onRetry={() => void season.refetch()} />
-        ) : season.data == null ? (
-          <Text variant="muted">{t('challenge.noSeasonBody')}</Text>
+        ) : !canJoin(status.state) ? (
+          /*
+            Reached by anybody deep-linked here, or still holding the screen
+            when a season closes under them. It states which season and why —
+            the same sentence the challenge screen shows — rather than the flat
+            "no season is open" that used to stand in for six situations.
+          */
+          <View className={cardClass({ padding: 'md' }, 'gap-1')}>
+            <SeasonNotice status={status} />
+          </View>
         ) : (
           <>
             <Text variant="muted">{t('challenge.joinLead', { count: required })}</Text>
 
+            {/* What is being joined, stated before the picker rather than
+                nowhere at all: the name, and the date it runs to. Somebody
+                choosing three commitments for a year is entitled to know the
+                length of the year first. */}
+            <View className={cardClass({ padding: 'md' }, 'gap-1')}>
+              <SeasonNotice status={status} />
+            </View>
+
             <View className={cardClass({ padding: 'md' }, 'gap-1')}>
               <Text variant="micro">{t('challenge.joinRequired')}</Text>
-              {season.data.modules.map((module, index) => {
+              {(status.modules ?? []).map((module, index) => {
                 const picked = chosen.includes(module.moduleId);
                 const rank = chosen.indexOf(module.moduleId);
                 return (
@@ -149,7 +167,7 @@ export default function ChallengeJoinScreen() {
                 })}
               </Text>
               <Text variant="caption">
-                {t('challenge.lockNotice', { days: season.data.moduleLockDays })}
+                {t('challenge.lockNotice', { days: status.moduleLockDays ?? 30 })}
               </Text>
               {extras > 0 ? <Text variant="caption">{t('challenge.joinExtraBody')}</Text> : null}
             </View>

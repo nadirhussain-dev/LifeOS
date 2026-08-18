@@ -17,15 +17,18 @@ import { DemotionSheet } from '@/features/challenge/components/demotion-sheet';
 import { ShareButton, ShareCard } from '@/features/challenge/components/share-card';
 import { ShieldSlots } from '@/features/challenge/components/shield-slots';
 import { TodayChecklist } from '@/features/challenge/components/today-checklist';
+import { SeasonNotice } from '@/features/challenge/components/season-notice';
 import {
   useChallengeChain,
   useChallengeChecklist,
   useChallengeEvents,
   useChallengeRank,
+  useChallengeTiers,
   useChallengeToday,
-  useOpenSeason,
+  useSeasonStatus,
 } from '@/features/challenge/hooks/use-challenge';
 import { nextTier } from '@/features/challenge/services/challenge-math';
+import { canJoin } from '@/features/challenge/services/season-state';
 import { currentDay, useChallengeStore } from '@/features/challenge/store/challenge-store';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -53,7 +56,7 @@ export default function ChallengeScreen() {
   const shareTarget = useRef<View>(null);
 
   const today = useChallengeToday();
-  const season = useOpenSeason();
+  const season = useSeasonStatus();
   const checklist = useChallengeChecklist();
   const chain = useChallengeChain(today.data?.seasonId);
   const rank = useChallengeRank();
@@ -66,7 +69,13 @@ export default function ChallengeScreen() {
 
   const enrolled = today.data?.enrolled === true;
   const qualifiedDays = today.data?.qualifiedDays ?? 0;
-  const tiers = season.data?.tiers ?? [];
+  const status = season.data ?? { state: 'none' as const };
+  // The ladder of the run being drawn, which is not necessarily the season on
+  // offer — see `useChallengeTiers`. Falls back to the joinable season's ladder
+  // for the not-enrolled case, where there is no run yet to belong to.
+  const runSeasonId = today.data?.seasonId ?? status.seasonId;
+  const seasonTiers = useChallengeTiers(runSeasonId);
+  const tiers = seasonTiers.data ?? status.tiers ?? [];
   const next = nextTier(tiers, qualifiedDays);
 
   /**
@@ -107,45 +116,57 @@ export default function ChallengeScreen() {
     }
 
     if (!enrolled) {
+      const joinable = canJoin(status.state);
       return (
         <View className={cardClass({ padding: 'md' }, 'gap-3')}>
           <Text variant="subheading">{t('challenge.notEnrolledTitle')}</Text>
           <Text variant="muted">{t('challenge.notEnrolledBody')}</Text>
+
           {/*
-            Each of the three states ends in something to press. This screen
-            used to explain the requirement and then stop: a signed-out visitor
-            read "joining a run needs an account" under a heading that says
-            they are not in one, with no account to be made anywhere on the
-            screen and no other control on it either. The requirement was
-            correct and the screen was still a dead end, which is the worse of
-            the two failures — being told what you need is only useful next to
-            the way to get it.
+            The state, named and dated, rather than one blanket sentence.
+
+            This card used to collapse six different situations into "No season
+            is open right now" — a season starting on Tuesday, one that ended
+            last week, a full one, and one an operator had not finished setting
+            up all read identically, so nobody could tell "wait two days" from
+            "this is broken". `SeasonNotice` says which season, which state, and
+            when; the button below then says what to do about it.
+          */}
+          <View className="rounded-2xl border border-border p-3">
+            <SeasonNotice status={status} />
+          </View>
+
+          {/*
+            Every state ends in something to press. This screen once explained
+            the requirement and then stopped: a signed-out visitor read
+            "joining a run needs an account" under a heading saying they were
+            not in one, with no way to make an account anywhere on the screen.
+            Being told what you need is only useful next to the way to get it.
           */}
           {!session ? (
             <>
               <Text variant="caption">{t('challenge.signInBody')}</Text>
               <Button label={t('sync.signInCreate')} onPress={() => router.push('/(auth)/login')} />
             </>
-          ) : season.data === null ? (
-            <>
-              <Text variant="caption">{t('challenge.noSeasonBody')}</Text>
-              {/* Nothing here is the user's to fix, so the action is the only
-                  honest one: ask again. Without it the screen is frozen on an
-                  answer that was true when it loaded and cannot update. */}
-              <Button
-                label={season.isFetching ? t('common.loadingEllipsis') : t('challenge.checkAgain')}
-                variant="secondary"
-                disabled={season.isFetching}
-                onPress={() => {
-                  void season.refetch();
-                  void today.refetch();
-                }}
-              />
-            </>
-          ) : (
+          ) : joinable ? (
             <Button
               label={t('challenge.startRun')}
               onPress={() => router.push('/challenge/join')}
+            />
+          ) : (
+            // Nothing in the remaining states is the user's to fix, so the only
+            // honest action is to ask again. Without it the screen is frozen on
+            // an answer that was true when it loaded and cannot update — and
+            // these are exactly the answers an operator changes from the
+            // console while somebody is looking at them.
+            <Button
+              label={season.isFetching ? t('common.loadingEllipsis') : t('challenge.checkAgain')}
+              variant="secondary"
+              disabled={season.isFetching}
+              onPress={() => {
+                void season.refetch();
+                void today.refetch();
+              }}
             />
           )}
         </View>
@@ -154,6 +175,37 @@ export default function ChallengeScreen() {
 
     return (
       <View className="gap-3">
+        {/*
+          Why today is not counting, when it is not counting.
+
+          The single worst thing this feature could do to somebody is take a
+          day's work and say nothing, and until now that was exactly what a
+          paused or finished season did: `record_challenge_day` refused every
+          submission with a reason the client had no field for, so the checklist
+          rendered an ordinary unfinished day and went on doing so forever.
+
+          Above the checklist rather than below it, because it changes what the
+          checklist means — read afterwards it is an explanation, read first it
+          is a warning.
+        */}
+        {checklist.blockedBy ? (
+          <View
+            className={cardClass({ padding: 'md' }, 'gap-1')}
+            style={{ borderColor: c.warning, borderWidth: 1 }}
+          >
+            <SeasonNotice
+              status={{
+                // The run's own season, not the one on offer — an enrolled user
+                // is being told about the season they are in.
+                state: checklist.blockedBy,
+                name: today.data?.seasonName,
+                endsAt: today.data?.seasonEndsAt,
+              }}
+            />
+            <Text variant="caption">{t('challenge.progressSafe')}</Text>
+          </View>
+        ) : null}
+
         <TodayChecklist
           items={checklist.items}
           qualified={checklist.qualified}
