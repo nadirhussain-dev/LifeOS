@@ -6320,6 +6320,56 @@ await test('0055 every console write lands in the shared audit log', async () =>
 });
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+console.log('\ntask recurrence rules (0056)');
+// ---------------------------------------------------------------------------
+
+await test('0056 the recurrence columns exist with the types the engine pushes', async () => {
+  const columns = Object.fromEntries(
+    (
+      await db.query(
+        `select column_name, data_type from information_schema.columns
+          where table_schema = 'public' and table_name = 'tasks'`,
+      )
+    ).rows.map((row) => [row.column_name, row.data_type]),
+  );
+  // The engine builds its upsert from the local column names, so a column
+  // missing here is a failed push for the whole tasks table rather than one
+  // absent field.
+  for (const [column, type] of Object.entries({
+    recurrence_interval: 'bigint',
+    recurrence_days_of_week: 'text',
+    recurrence_anchor: 'text',
+  })) {
+    expectEqual(columns[column] ?? 'nothing', type, `tasks.${column}`);
+  }
+});
+
+await test('0056 a row from an older build describes the behaviour it actually had', async () => {
+  // An older client does not send these columns. What its rows land on must be
+  // the rule it was really following — every N=1, counted from the due date —
+  // because any other default rewrites the user's cadence on their behalf while
+  // two app versions are pushing to this table at once.
+  //
+  // Deliberately NOT run through asUser: this asserts a column default, not a
+  // policy, and by this point in the suite ALICE's write path is shaped by
+  // every moderation migration that has run since 0001. Those are asserted
+  // where they belong; borrowing them here would only make the default's
+  // failure mode look like an RLS failure.
+  await db.query(
+    `insert into public.tasks (id, user_id, title, created_at, updated_at)
+       values ('t-legacy-recurrence', $1::uuid, 'Weekly review', 1, 1)`,
+    [ALICE],
+  );
+  const row = await one(
+    `select recurrence_interval, recurrence_days_of_week, recurrence_anchor
+       from public.tasks where id = 't-legacy-recurrence'`,
+  );
+  expectEqual(Number(row.recurrence_interval), 1, 'interval');
+  expectEqual(row.recurrence_days_of_week, null, 'chosen weekdays');
+  expectEqual(row.recurrence_anchor, 'due_date', 'anchor');
+});
+
 console.log('\nowner bootstrap (0033, continued — destructive, kept last)');
 // ---------------------------------------------------------------------------
 //
