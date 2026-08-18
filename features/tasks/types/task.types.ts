@@ -2,6 +2,14 @@ export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'archived';
 export type TaskPriority = 'none' | 'low' | 'medium' | 'high';
 export type TaskRecurrenceFrequency = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
 
+/** What the next occurrence of a repeating task counts from.
+ *
+ *  `due_date` is a fixed cadence — the weekly review happens on Mondays whether
+ *  or not you did last Monday's. `completion` is an interval since you last did
+ *  it, which is what chores actually are: watering the plants three days after
+ *  the last watering, not three days after a date that has since passed twice. */
+export type TaskRecurrenceAnchor = 'due_date' | 'completion';
+
 export type TaskCategory = {
   id: string;
   name: string;
