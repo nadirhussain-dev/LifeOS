@@ -177,7 +177,8 @@
     "medium": "Medium",
     "high": "High",
     "noTime": "No time",
-    "unit": "Unit"
+    "unit": "Unit",
+    "tags": "Tags"
   },
   "recurrence": {
     "oneTime": "One-time",

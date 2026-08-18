@@ -9,6 +9,7 @@ import {
   Repeat2,
   StickyNote,
   Tag,
+  Tags,
   Trash2,
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -27,6 +28,9 @@ import { HabitLinkPicker } from '@/features/tasks/components/habit-link-picker';
 import { PriorityPicker } from '@/features/tasks/components/priority-picker';
 import { RecurrencePicker } from '@/features/tasks/components/recurrence-picker';
 import { SubtaskList } from '@/features/tasks/components/subtask-list';
+import { TagPicker } from '@/features/notes/components/tag-picker';
+import { useNoteTags } from '@/features/notes/hooks/use-notes';
+import { useTaskTagMutations, useTaskTags } from '@/features/tasks/hooks/use-task-tags';
 import { useSourceNote, useTask } from '@/features/tasks/hooks/use-task';
 import { useTaskMutations } from '@/features/tasks/hooks/use-task-mutations';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -49,6 +53,9 @@ export default function TaskDetailScreen() {
   const { data: task } = useTask(id);
   const { data: sourceNote } = useSourceNote(task?.sourceNoteId);
   const { update, archive, remove } = useTaskMutations();
+  const { data: allTags = [] } = useNoteTags();
+  const { data: taskTags = [] } = useTaskTags(id);
+  const { setTags, addTag, removeTag } = useTaskTagMutations(id);
 
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
@@ -212,6 +219,23 @@ export default function TaskDetailScreen() {
             <CategoryPicker
               value={task.categoryId}
               onChange={(categoryId) => update.mutate({ id: task.id, input: { categoryId } })}
+            />
+          </AttributeRow>
+
+          <AttributeRow icon={Tags} label={t('fields.tags')}>
+            <TagPicker
+              tags={allTags}
+              selectedTagIds={taskTags.map((tag) => tag.id)}
+              onToggle={(tagId) => {
+                const current = taskTags.map((tag) => tag.id);
+                setTags.mutate(
+                  current.includes(tagId)
+                    ? current.filter((id) => id !== tagId)
+                    : [...current, tagId],
+                );
+              }}
+              onCreateTag={(name) => addTag.mutate(name)}
+              onDeleteTag={(tagId) => removeTag.mutate(tagId)}
             />
           </AttributeRow>
 

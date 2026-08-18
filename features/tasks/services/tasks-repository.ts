@@ -9,6 +9,7 @@ import {
   deleteChecklistForTask,
 } from '@/features/tasks/services/subtasks-repository';
 import { nextRecurrenceDueDate } from '@/features/tasks/services/task-recurrence';
+import { deleteTagLinksForTask } from '@/features/tasks/services/task-tags-repository';
 import { generateId } from '@/lib/id';
 import { LOCAL_USER_ID } from '@/lib/local-user';
 import type {
@@ -288,9 +289,10 @@ export function deleteTask(id: string) {
     .set({ deletedAt: Date.now(), updatedAt: Date.now(), syncStatus: 'pending' })
     .where(eq(tasks.id, id))
     .run();
-  // Otherwise the checklist outlives the task, syncing forever as rows that
-  // belong to nothing and that no screen can reach to remove.
+  // Otherwise the checklist and tag links outlive the task, syncing forever as
+  // rows that belong to nothing and that no screen can reach to remove.
   deleteChecklistForTask(id);
+  deleteTagLinksForTask(id);
 }
 
 /**

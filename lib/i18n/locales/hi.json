@@ -177,7 +177,8 @@
     "medium": "मध्यम",
     "high": "उच्च",
     "noTime": "कोई समय नहीं",
-    "unit": "इकाई"
+    "unit": "इकाई",
+    "tags": "टैग"
   },
   "recurrence": {
     "oneTime": "एक बार",
