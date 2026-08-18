@@ -6546,6 +6546,335 @@ await test('0056 a row from an older build describes the behaviour it actually h
 console.log('\nowner bootstrap (0033, continued — destructive, kept last)');
 // ---------------------------------------------------------------------------
 //
+// ---------------------------------------------------------------------------
+console.log('\nplan tiers + entitlements (0059)');
+// ---------------------------------------------------------------------------
+//
+// ADMIN is the owner by this point in the suite (see the 0033 section above),
+// which is what the owner-only RPCs below need.
+
+const TIER_FREE = '9a000000-0000-0000-0000-000000000001';
+const TIER_STD = '9a000000-0000-0000-0000-000000000002';
+const TIER_GRANTED = '9a000000-0000-0000-0000-000000000003';
+const TIER_BOTH = '9a000000-0000-0000-0000-000000000004';
+
+await createUser(db, TIER_FREE, 'tier-free@example.com');
+await createUser(db, TIER_STD, 'tier-std@example.com');
+await createUser(db, TIER_GRANTED, 'tier-granted@example.com');
+await createUser(db, TIER_BOTH, 'tier-both@example.com');
+
+// plus_monthly backfilled to tier `standard` — see 0059's section 4.
+await db.query(`update public.profiles set plan_id = 'plus_monthly' where id = any($1::uuid[])`, [
+  [TIER_STD, TIER_BOTH],
+]);
+
+await test('0059 tier_rank orders the ladder and floors anything unknown', async () => {
+  const r = await one(`
+    select public.tier_rank('freemium') f,
+           public.tier_rank('standard') s,
+           public.tier_rank('premium') p,
+           public.tier_rank('enterprise') u
+  `);
+  expectEqual(r.f < r.s && r.s < r.p, true, 'freemium < standard < premium');
+  // The safe direction: a tier this build has never heard of must be the
+  // weakest, never accidentally the strongest.
+  expectEqual(r.u, 0, 'unknown ranks 0');
+});
+
+await test('0059 every tier defines every entitlement key', async () => {
+  // A missing cell resolves to null and a null entitlement denies, so the
+  // failure mode of a typo in the seed is a paying customer silently refused.
+  const gaps = await count(`
+    select count(*)::int n
+      from (select unnest(array['freemium','standard','premium']) as tier) t
+     cross join (select distinct key from public.plan_entitlements) k
+     where not exists (
+       select 1 from public.plan_entitlements e where e.tier = t.tier and e.key = k.key
+     )
+  `);
+  expectEqual(gaps, 0, 'no missing cells');
+  expectEqual(
+    await count(`select count(distinct key)::int n from public.plan_entitlements`),
+    10,
+    'ten keys',
+  );
+});
+
+await test('0059 a new account is freemium', async () => {
+  await asUser(db, TIER_FREE, async () => {
+    expectEqual((await one(`select public.my_tier() t`)).t, 'freemium', 'defaults freemium');
+    expectEqual((await one(`select public.has_premium() v`)).v, false, 'not paid');
+  });
+});
+
+await test('0059 a legacy Plus subscriber reads as standard', async () => {
+  await asUser(db, TIER_STD, async () => {
+    expectEqual((await one(`select public.my_tier() t`)).t, 'standard', 'plus_monthly -> standard');
+  });
+});
+
+await test('0059 has_premium() still answers true for a Standard subscriber', async () => {
+  // The regression this migration could most easily have shipped. Three
+  // triggers (avatar 0052, album media 0052, voice notes 0054) gate on
+  // has_premium(); narrowing it to `my_tier() = 'premium'` would have stripped
+  // all three from every existing paying customer the moment this ran.
+  await asUser(db, TIER_STD, async () => {
+    expectEqual((await one(`select public.has_premium() v`)).v, true, 'standard is paid');
+  });
+  expectEqual(
+    (await one(`select public.user_has_premium($1) v`, [TIER_STD])).v,
+    true,
+    'and from the outside too',
+  );
+});
+
+await test('0059 a grant lifts a free account to the tier it names', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_grant_premium($1, $2, 'beta tester', 'premium')`, [
+      TIER_GRANTED,
+      Date.now() + 30 * 86400000,
+    ]);
+  });
+  await asUser(db, TIER_GRANTED, async () => {
+    expectEqual((await one(`select public.my_tier() t`)).t, 'premium', 'granted premium');
+    expectEqual((await one(`select public.has_premium() v`)).v, true, 'and counts as paid');
+  });
+  expectEqual(
+    (await one(`select tier from public.premium_grants where user_id = $1`, [TIER_GRANTED])).tier,
+    'premium',
+    'the grant records its tier',
+  );
+});
+
+await test('0059 an expired grant simply stops counting', async () => {
+  // Nothing runs to expire it — an expiry that depends on a sweep having run
+  // is an expiry that does not happen the week the sweep is broken.
+  await db.query(`update public.profiles set premium_until = $1 where id = $2`, [
+    Date.now() - 1000,
+    TIER_GRANTED,
+  ]);
+  await asUser(db, TIER_GRANTED, async () => {
+    expectEqual((await one(`select public.my_tier() t`)).t, 'freemium', 'back to freemium');
+  });
+});
+
+await test('0059 a lapsed grant drops a subscriber to their plan, not to freemium', async () => {
+  // Why my_tier() is a maximum and not an override: an override would silently
+  // cancel the plan they are still paying for.
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_grant_premium($1, $2, 'support gesture', 'premium')`, [
+      TIER_BOTH,
+      Date.now() + 30 * 86400000,
+    ]);
+  });
+  await asUser(db, TIER_BOTH, async () => {
+    expectEqual((await one(`select public.my_tier() t`)).t, 'premium', 'grant wins while live');
+  });
+
+  await db.query(`update public.profiles set premium_until = $1 where id = $2`, [
+    Date.now() - 1000,
+    TIER_BOTH,
+  ]);
+  await asUser(db, TIER_BOTH, async () => {
+    expectEqual((await one(`select public.my_tier() t`)).t, 'standard', 'falls back to the plan');
+  });
+});
+
+await test('0059 a grant weaker than the plan does not demote anyone', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_grant_premium($1, $2, 'mistake', 'standard')`, [
+      TIER_BOTH,
+      Date.now() + 30 * 86400000,
+    ]);
+  });
+  await asUser(db, TIER_BOTH, async () => {
+    expectEqual((await one(`select public.my_tier() t`)).t, 'standard', 'still standard');
+  });
+});
+
+await test('0059 revoking clears the granted tier as well as the window', async () => {
+  // Leaving granted_tier set would have my_tier() reading a tier with no
+  // window to live in.
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_revoke_premium($1)`, [TIER_BOTH]);
+  });
+  const row = await one(
+    `select premium_until, granted_tier from public.profiles where id = $1`,
+    [TIER_BOTH],
+  );
+  expectEqual(row.premium_until, null, 'window cleared');
+  expectEqual(row.granted_tier, null, 'tier cleared');
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.premium_grants where user_id = $1 and revoked_at is null`,
+      [TIER_BOTH],
+    ),
+    0,
+    'every live grant marked revoked',
+  );
+});
+
+await test('0059 a grant needs a reason, a future end, and a real tier', async () => {
+  await asUser(db, ADMIN, async () => {
+    await expectRejection(
+      () => db.query(`select public.admin_grant_premium($1, $2, '  ', 'premium')`, [
+        TIER_FREE,
+        Date.now() + 86400000,
+      ]),
+      'a reason is required',
+    );
+    await expectRejection(
+      () => db.query(`select public.admin_grant_premium($1, $2, 'late', 'premium')`, [
+        TIER_FREE,
+        Date.now() - 86400000,
+      ]),
+      'must end in the future',
+    );
+    // Granting `freemium` is not a grant, it is a demotion wearing a grant's
+    // clothes — refused rather than silently accepted.
+    await expectRejection(
+      () => db.query(`select public.admin_grant_premium($1, $2, 'nope', 'freemium')`, [
+        TIER_FREE,
+        Date.now() + 86400000,
+      ]),
+      'standard or premium',
+    );
+  });
+});
+
+await test('0059 only the owner may grant, revoke, or change an entitlement', async () => {
+  await asUser(db, TIER_STD, async () => {
+    await expectRejection(
+      () => db.query(`select public.admin_grant_premium($1, $2, 'self serve', 'premium')`, [
+        TIER_STD,
+        Date.now() + 86400000,
+      ]),
+      'only the owner',
+    );
+    await expectRejection(
+      () => db.query(`select public.admin_revoke_premium($1)`, [TIER_STD]),
+      'only the owner',
+    );
+    await expectRejection(
+      () => db.query(`select public.admin_set_entitlement('freemium', 'ads', 'false'::jsonb)`),
+      'only the owner',
+    );
+    await expectRejection(
+      () => db.query(`select public.admin_list_premium_grants($1)`, [TIER_STD]),
+      'only the owner',
+    );
+  });
+});
+
+await test('0059 my_entitlement answers from the caller’s own tier', async () => {
+  await asUser(db, TIER_FREE, async () => {
+    expectEqual(
+      (await one(`select public.my_entitlement('media_backup') v`)).v,
+      false,
+      'freemium has no backup',
+    );
+    expectEqual((await one(`select public.my_entitlement('album_limit') v`)).v, 1, 'one album');
+  });
+  await asUser(db, TIER_STD, async () => {
+    expectEqual(
+      (await one(`select public.my_entitlement('media_backup') v`)).v,
+      true,
+      'standard does',
+    );
+    expectEqual((await one(`select public.my_entitlement('album_limit') v`)).v, 5, 'five albums');
+  });
+});
+
+await test('0059 an unconfigured key reads null, so a gate refuses', async () => {
+  await asUser(db, TIER_FREE, async () => {
+    expectEqual(
+      (await one(`select public.my_entitlement('teleportation') v`)).v,
+      null,
+      'null, not a default',
+    );
+  });
+});
+
+await test('0059 my_billing_state carries tier, grant expiry and the whole map', async () => {
+  await asUser(db, TIER_STD, async () => {
+    const state = (await one(`select public.my_billing_state() s`)).s;
+    expectEqual(state.tier, 'standard', 'tier');
+    expectEqual(state.premiumUntil, null, 'no grant');
+    expectEqual(Object.keys(state.entitlements).length, 10, 'ten keys in one round trip');
+    expectEqual(state.entitlements.album_limit, 5, 'values are the tier’s');
+  });
+});
+
+await test('0059 an owner can retune a tier without a release', async () => {
+  // The whole point of entitlements being data.
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_set_entitlement('standard', 'album_limit', '9'::jsonb)`);
+  });
+  await asUser(db, TIER_STD, async () => {
+    expectEqual((await one(`select public.my_entitlement('album_limit') v`)).v, 9, 'retuned');
+  });
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_set_entitlement('standard', 'album_limit', '5'::jsonb)`);
+  });
+});
+
+await test('0059 entitlements are readable by any signed-in account but not anonymously', async () => {
+  await asUser(db, TIER_FREE, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.plan_entitlements`),
+      30,
+      'three tiers of ten keys',
+    );
+  });
+  await asAnon(db, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.plan_entitlements`),
+      0,
+      'nothing for a signed-out visitor',
+    );
+  });
+});
+
+await test('0059 the free plan is retiered rather than duplicated', async () => {
+  // Two active free-period rows would show every user the same plan twice and
+  // leave profiles.plan_id with two values meaning one thing.
+  expectEqual(
+    await count(`select count(*)::int n from public.billing_plans where period = 'free'`),
+    1,
+    'exactly one free plan',
+  );
+  const free = await one(`select tier, active from public.billing_plans where id = 'free'`);
+  expectEqual(free.tier, 'freemium', 'retiered');
+  expectEqual(free.active, true, 'still offered');
+  // `name` is deliberately not asserted: the 0037 section above upserts this
+  // row back to 'Free' as its own fixture, and admin_upsert_plan is exactly the
+  // console call an operator would use to rename it anyway. The tier is the
+  // part that has to survive an edit, and it does — admin_upsert_plan (0034)
+  // never writes `tier`.
+});
+
+await test('0059 the new tier plan rows are seeded but not yet offered', async () => {
+  // Unpriced until 0060 — an inactive plan is invisible to the picker
+  // (0034's billing_plans_read is `active or is_admin()`), so seeding them
+  // cannot show anyone a price nobody agreed to.
+  const rows = await db.query(
+    `select id, tier, active from public.billing_plans
+      where id in ('standard_monthly','standard_yearly','premium_monthly','premium_yearly')
+      order by id`,
+  );
+  expectEqual(rows.rows.length, 4, 'four new rows');
+  expectEqual(
+    rows.rows.every((r) => r.active === false),
+    true,
+    'all inactive until priced',
+  );
+  expectEqual(
+    rows.rows.filter((r) => r.tier === 'premium').length,
+    2,
+    'two premium rows, monthly and yearly',
+  );
+});
+
 // Everything above this point in the whole suite needed ADMIN's ordinary
 // admin rights or the roster as already populated. Nothing after this point
 // does — this section empties `admins` entirely to exercise claim_owner()'s

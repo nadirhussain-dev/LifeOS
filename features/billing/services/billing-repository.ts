@@ -1,3 +1,10 @@
+import {
+  ENTITLEMENT_DEFAULTS,
+  parseEntitlements,
+  parseTier,
+  type Entitlements,
+  type Tier,
+} from '@/features/billing/config/entitlements';
 import type { BillingPeriod, StoragePlan, StoragePlanId } from '@/features/billing/config/plans';
 import { supabase } from '@/lib/supabase';
 import { toSupabaseError } from '@/lib/supabase-error';
@@ -30,6 +37,40 @@ export async function fetchMyPlan(userId: string): Promise<PlanRow> {
   if (res.error) throw toSupabaseError(res.error);
   return toPlanRow(res.data);
 }
+
+export type BillingState = {
+  tier: Tier;
+  entitlements: Entitlements;
+  premiumUntil: number | null;
+};
+
+/**
+ * The account's effective tier and what it includes, in one round trip —
+ * `my_billing_state()` (0059). Already accounts for a grant, so this is the
+ * only thing the client has to ask to know what somebody may do.
+ *
+ * Every field is parsed rather than cast: this decides whether a gate opens,
+ * and an unrecognised tier or a key of the wrong type must degrade to freemium
+ * rather than to `undefined`. See entitlements.ts's header.
+ */
+export async function fetchBillingState(): Promise<BillingState> {
+  const { data, error } = await supabase.rpc('my_billing_state');
+  if (error) throw toSupabaseError(error);
+  const row = (data ?? {}) as Record<string, unknown>;
+  return {
+    tier: parseTier(row.tier),
+    entitlements: parseEntitlements(row.entitlements),
+    premiumUntil: typeof row.premiumUntil === 'number' ? row.premiumUntil : null,
+  };
+}
+
+/** Used when there is no session to ask about — a guest has no profile row and
+ *  so no tier, the same way `useBillingSync` already treats them as `free`. */
+export const GUEST_BILLING_STATE: BillingState = {
+  tier: 'freemium',
+  entitlements: ENTITLEMENT_DEFAULTS,
+  premiumUntil: null,
+};
 
 export async function setMyPlan(planId: StoragePlanId, renewsAt: number | null): Promise<void> {
   const { error } = await supabase.rpc('set_my_plan', {
