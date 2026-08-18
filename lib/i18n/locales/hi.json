@@ -229,7 +229,9 @@
     "checklist": "चेकलिस्ट",
     "checklistProgress": "{{total}} में से {{done}}",
     "addChecklistItem": "आइटम जोड़ें",
-    "removeChecklistItem": "{{title}} हटाएँ"
+    "removeChecklistItem": "{{title}} हटाएँ",
+    "emptyTagTitle": "इस टैग में कुछ नहीं",
+    "emptyTagBody": "अभी #{{tag}} टैग वाला कोई कार्य नहीं है। सब कुछ देखने के लिए टैग पर फिर से टैप करें।"
   },
   "buckets": {
     "overdue": "अतिदेय",

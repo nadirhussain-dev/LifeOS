@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { listTaskIdsForTag } from '@/features/tasks/services/task-tags-repository';
 import {
   getCategoryById,
   listCategories,
@@ -8,11 +9,19 @@ import {
 import { useTasksFilterStore } from '@/features/tasks/store/tasks-filter-store';
 
 export function useTasks() {
-  const { filter, sort, searchQuery } = useTasksFilterStore();
+  const { filter, sort, searchQuery, tagId } = useTasksFilterStore();
 
   return useQuery({
-    queryKey: ['tasks', filter, sort],
-    queryFn: async () => listTasks(filter, sort),
+    // The tag is part of the key, not just the `select`: it is answered by a
+    // second query against the link table, so it has to re-run when the tag
+    // changes rather than being re-filtered from a cached list.
+    queryKey: ['tasks', filter, sort, tagId],
+    queryFn: async () => {
+      const tasks = listTasks(filter, sort);
+      if (!tagId) return tasks;
+      const tagged = new Set(listTaskIdsForTag(tagId));
+      return tasks.filter((task) => tagged.has(task.id));
+    },
     select: (tasks) =>
       searchQuery.trim()
         ? tasks.filter((task) =>

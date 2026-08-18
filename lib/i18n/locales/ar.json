@@ -237,7 +237,9 @@
     "checklist": "قائمة المهام",
     "checklistProgress": "{{done}} من {{total}}",
     "addChecklistItem": "أضف عنصرًا",
-    "removeChecklistItem": "إزالة {{title}}"
+    "removeChecklistItem": "إزالة {{title}}",
+    "emptyTagTitle": "لا شيء تحت هذا الوسم",
+    "emptyTagBody": "لا توجد مهام موسومة بـ #{{tag}} حاليًا. اضغط على الوسم مرة أخرى لعرض كل شيء."
   },
   "buckets": {
     "overdue": "متأخرة",

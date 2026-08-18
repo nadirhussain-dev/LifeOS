@@ -229,7 +229,9 @@
     "checklist": "Checklist",
     "checklistProgress": "{{done}} of {{total}}",
     "addChecklistItem": "Add an item",
-    "removeChecklistItem": "Remove {{title}}"
+    "removeChecklistItem": "Remove {{title}}",
+    "emptyTagTitle": "Nothing under this tag",
+    "emptyTagBody": "No tasks are tagged #{{tag}} right now. Tap the tag again to see everything."
   },
   "buckets": {
     "overdue": "Overdue",

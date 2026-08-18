@@ -229,7 +229,9 @@
     "checklist": "چیک لسٹ",
     "checklistProgress": "{{total}} میں سے {{done}}",
     "addChecklistItem": "آئٹم شامل کریں",
-    "removeChecklistItem": "{{title}} ہٹائیں"
+    "removeChecklistItem": "{{title}} ہٹائیں",
+    "emptyTagTitle": "اس ٹیگ میں کچھ نہیں",
+    "emptyTagBody": "ابھی #{{tag}} ٹیگ والا کوئی کام نہیں ہے۔ سب کچھ دیکھنے کے لیے ٹیگ پر دوبارہ ٹیپ کریں۔"
   },
   "buckets": {
     "overdue": "مدت گزر گئی",
