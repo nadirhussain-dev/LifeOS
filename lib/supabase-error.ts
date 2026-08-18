@@ -32,6 +32,11 @@ export type SupabaseErrorKind =
   | 'permission'
   /** Uniqueness/constraint violation — usually "that already exists". */
   | 'conflict'
+  /** Refused for going too fast, not for being wrong. The only kind that comes
+   *  with a specific "try again in N seconds", which is why it is not folded
+   *  into 'server': retrying immediately is exactly what must not happen, and
+   *  every other retryable kind invites it. */
+  | 'rate-limited'
   /** The server errored. Ours to fix, not the user's. */
   | 'server'
   | 'unknown';
@@ -51,13 +56,24 @@ export class SupabaseError extends Error {
   /** Postgres SQLSTATE or PostgREST code, kept for logs and triage. */
   readonly code: string | null;
   readonly details: string | null;
+  /** Set only on 'rate-limited'. Seconds, from the server's own Retry-After —
+   *  never guessed, because a guess that is too short spends the next window
+   *  too. */
+  readonly retryAfterSeconds: number | null;
 
-  constructor(kind: SupabaseErrorKind, message: string, code: string | null, details = null) {
+  constructor(
+    kind: SupabaseErrorKind,
+    message: string,
+    code: string | null,
+    details: string | null = null,
+    retryAfterSeconds: number | null = null,
+  ) {
     super(message);
     this.name = 'SupabaseError';
     this.kind = kind;
     this.code = code;
     this.details = details;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -103,6 +119,7 @@ function classify(code: string | null, message: string): SupabaseErrorKind {
     if (SIGNED_OUT.has(code)) return 'signed-out';
     if (PERMISSION.has(code)) return 'permission';
     if (CONFLICT.has(code)) return 'conflict';
+    if (code === '429') return 'rate-limited';
     // Everything else in the 5xx/PGRST5xx space is a server fault.
     if (code.startsWith('PGRST5') || code === '57014') return 'server';
   }
@@ -138,7 +155,7 @@ export function toSupabaseError(error: unknown): SupabaseError {
 
   const details = typeof raw.details === 'string' ? raw.details : null;
 
-  return new SupabaseError(classify(code, message), message, code, details as never);
+  return new SupabaseError(classify(code, message), message, code, details);
 }
 
 /** The kind of a failure, for anything that already caught it loosely. */
@@ -154,8 +171,98 @@ export function errorMessageKey(error: unknown): string {
   return `errors.${errorKind(error)}`;
 }
 
-/** True when retrying the exact same request could plausibly work. */
+/**
+ * Interpolation values the key above may need. Empty for every kind but
+ * 'rate-limited', whose copy names the wait.
+ *
+ * Returned alongside the key rather than baked into it, because a caller that
+ * forgets it renders the literal `{{seconds}}` on screen — so the pair is what
+ * gets passed to `t()`, and there is exactly one place that knows which kinds
+ * take params. Falls back to 60 rather than omitting the number: copy with a
+ * hole in it reads as a bug, and the header is only missing when a proxy ate it.
+ */
+export function errorMessageParams(error: unknown): { seconds: number } | undefined {
+  const wait = retryAfterSeconds(error);
+  return errorKind(error) === 'rate-limited' ? { seconds: wait ?? 60 } : undefined;
+}
+
+/**
+ * True when retrying the exact same request could plausibly work.
+ *
+ * 'rate-limited' is deliberately absent. A retry *will* eventually work, but not
+ * now, and every caller of this treats `true` as "retry immediately" — which for
+ * a rate limit spends the next window as well. Ask `retryAfterSeconds` instead
+ * and wait.
+ */
 export function isRetryable(error: unknown): boolean {
   const kind = errorKind(error);
   return kind === 'offline' || kind === 'server' || kind === 'unknown';
+}
+
+/** Seconds to wait before retrying, when the server said so. Null otherwise. */
+export function retryAfterSeconds(error: unknown): number | null {
+  return error instanceof SupabaseError ? error.retryAfterSeconds : null;
+}
+
+// ---------------------------------------------------------------------------
+// Edge functions
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalises a `supabase.functions.invoke` failure, reading the function's own
+ * response body.
+ *
+ * Needed because `invoke` does NOT behave like an RPC call on a non-2xx: it
+ * throws a `FunctionsHttpError` whose message is the literal string "Edge
+ * Function returned a non-2xx status code", sets `data` to null, and puts the
+ * real body on the `Response` it hands back separately. Passed through
+ * `toSupabaseError`, every 400, 403, 429 and 500 an edge function can return
+ * therefore classified as 'unknown' and told the user to check their connection
+ * — the exact failure this module was written to stop, reintroduced by a
+ * different transport.
+ *
+ * So the status is read from the response, and the body is read for the
+ * `{ error, retryAfterSeconds }` shape our own functions answer with.
+ *
+ * Async because reading a Response body is. Callers already `await` the invoke,
+ * so this costs them nothing.
+ */
+export async function toEdgeFunctionError(
+  error: unknown,
+  response?: Response,
+): Promise<SupabaseError> {
+  if (error instanceof SupabaseError) return error;
+  if (!response) return toSupabaseError(error);
+
+  let body: { error?: unknown; retryAfterSeconds?: unknown } = {};
+  try {
+    // Cloned: the caller may want the body too, and a Response body can only be
+    // read once.
+    body = await response.clone().json();
+  } catch {
+    // A non-JSON body (a gateway's own HTML error page, most likely) is not a
+    // reason to lose the status, which is the more useful half anyway.
+  }
+
+  const message =
+    typeof body.error === 'string' && body.error
+      ? body.error
+      : error instanceof Error
+        ? error.message
+        : String(error ?? 'unknown error');
+
+  const code = String(response.status);
+
+  // The header is authoritative — it is what every HTTP client already
+  // understands — and the body is the fallback, since the app reads JSON.
+  const header = Number(response.headers.get('Retry-After'));
+  const fromBody = Number(body.retryAfterSeconds);
+  const retryAfter =
+    Number.isFinite(header) && header > 0
+      ? header
+      : Number.isFinite(fromBody) && fromBody > 0
+        ? fromBody
+        : null;
+
+  return new SupabaseError(classify(code, message), message, code, null, retryAfter);
 }

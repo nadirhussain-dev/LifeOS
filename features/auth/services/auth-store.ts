@@ -19,7 +19,7 @@ import { GUEST_SENTINEL, useSyncStore } from '@/features/sync/store/sync-store';
 import { ensureProfileRow } from '@/features/auth/services/ensure-profile';
 import { isSupabaseConfigured } from '@/lib/env';
 import { reportError } from '@/lib/error-reporting';
-import { looksOffline } from '@/lib/supabase-error';
+import { looksOffline, toEdgeFunctionError } from '@/lib/supabase-error';
 import { passwordResetRedirectUrl, supabase } from '@/lib/supabase';
 import { toast } from '@/lib/toast-store';
 import i18n from '@/lib/i18n';
@@ -445,8 +445,26 @@ export const useAuthStore = create<AuthState>()(
         // Server-side deletion (auth user + all their rows) runs in an edge
         // function — the client can't call auth.admin.deleteUser. See
         // supabase/functions/delete-account. Requires App/Play store compliance.
-        const { error } = await supabase.functions.invoke('delete-account');
-        if (error) return fail(error, 'deleteAccount');
+        const { error, response } = await supabase.functions.invoke('delete-account');
+        if (error) {
+          // Normalised so the function's own message survives: `invoke` replaces
+          // it with a generic "non-2xx status code", and this function's
+          // failures are the ones a user most needs the real text of —
+          // "refusing to delete: these tables would keep your rows" is
+          // actionable, "check your connection" is not. The status comes across
+          // too, so `authFailure` can recognise a 429 as a wait rather than a
+          // wall.
+          const edge = await toEdgeFunctionError(error, response);
+          return fail(
+            {
+              message: edge.message,
+              status: response?.status,
+              code: edge.code ?? undefined,
+              retryAfterSeconds: edge.retryAfterSeconds,
+            },
+            'deleteAccount',
+          );
+        }
         // The full device wipe, not the account-switch one: there is no account
         // to come back to, so nothing about this install should still describe
         // the person who just deleted theirs.

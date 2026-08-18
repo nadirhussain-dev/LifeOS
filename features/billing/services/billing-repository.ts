@@ -1,3 +1,5 @@
+import * as Crypto from 'expo-crypto';
+
 import {
   ENTITLEMENT_DEFAULTS,
   parseEntitlements,
@@ -7,7 +9,7 @@ import {
 } from '@/features/billing/config/entitlements';
 import type { BillingPeriod, StoragePlan, StoragePlanId } from '@/features/billing/config/plans';
 import { supabase } from '@/lib/supabase';
-import { toSupabaseError } from '@/lib/supabase-error';
+import { toEdgeFunctionError, toSupabaseError } from '@/lib/supabase-error';
 
 /**
  * Supabase access for the mock billing plan (migration 0031) and the
@@ -174,12 +176,36 @@ export async function fetchMySubscription(): Promise<MySubscription | null> {
  * `WebBrowser.openAuthSessionAsync` — the same pattern
  * `features/auth/services/oauth.ts`'s `signInWithGoogle` already uses for
  * Google sign-in, so no new native config is needed.
+ *
+ * ## Why it sends an Idempotency-Key
+ *
+ * This call creates a `checkout_intents` row and, the first time any coupon is
+ * used, a Safepay Plan object at the provider — neither reversible from here. A
+ * key makes a retry replay the first response instead of doing it again.
+ *
+ * The key is minted per *attempt*, not per render, so tapping subscribe twice
+ * with a deliberate pause between sends two different keys and gets two real
+ * checkouts — which is correct, because that is a person who changed their mind
+ * and came back. What it protects is the retry of a request whose response never
+ * arrived: the same key, so the same answer.
+ *
+ * The function synthesizes a key when none is sent (see its header), so this is
+ * the better half of a guard that works either way rather than the only one.
  */
 export async function createCheckout(planId: string, couponCode?: string): Promise<string> {
-  const { data, error } = await supabase.functions.invoke('safepay-checkout', {
+  const {
+    data,
+    error,
+    response: httpResponse,
+  } = await supabase.functions.invoke('safepay-checkout', {
     body: { planId, couponCode: couponCode?.trim() || undefined },
+    headers: { 'Idempotency-Key': Crypto.randomUUID() },
   });
-  if (error) throw toSupabaseError(error);
+  // Not toSupabaseError: `invoke` puts the function's own body on a Response it
+  // hands back separately, so every non-2xx would otherwise classify as
+  // 'unknown' and tell the user to check their connection. See
+  // lib/supabase-error.ts's toEdgeFunctionError.
+  if (error) throw await toEdgeFunctionError(error, httpResponse);
   const url = (data as { checkoutUrl?: string } | null)?.checkoutUrl;
   if (!url) throw new Error((data as { error?: string } | null)?.error ?? 'checkout failed');
   return url;
@@ -189,8 +215,8 @@ export async function createCheckout(planId: string, couponCode?: string): Promi
  *  stays as-is until the resulting webhook flips it (see fetchMySubscription
  *  and useBillingSync). */
 export async function cancelMySubscription(): Promise<void> {
-  const { data, error } = await supabase.functions.invoke('safepay-cancel-subscription');
-  if (error) throw toSupabaseError(error);
+  const { data, error, response } = await supabase.functions.invoke('safepay-cancel-subscription');
+  if (error) throw await toEdgeFunctionError(error, response);
   const err = (data as { error?: string } | null)?.error;
   if (err) throw new Error(err);
 }

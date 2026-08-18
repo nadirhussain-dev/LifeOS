@@ -1873,6 +1873,7 @@
     "backend-missing": "Cloud setup for this account is incomplete, so shared features cannot run yet.",
     "permission": "You do not have access to this. If somebody shared it with you, ask them to add you again.",
     "conflict": "That already exists.",
+    "rate-limited": "Too many attempts just now. Give it {{seconds}} seconds and try again — nothing was lost.",
     "server": "Something broke on our side. It has been logged — try again in a moment.",
     "unknown": "That did not work. Please try again.",
     "title": "That did not work",
