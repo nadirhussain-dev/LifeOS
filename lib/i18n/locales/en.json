@@ -184,7 +184,21 @@
     "daily": "Daily",
     "weekly": "Weekly",
     "monthly": "Monthly",
-    "yearly": "Yearly"
+    "yearly": "Yearly",
+    "everyDays_one": "Every day",
+    "everyDays_other": "Every {{count}} days",
+    "everyWeeks_one": "Every week",
+    "everyWeeks_other": "Every {{count}} weeks",
+    "everyMonths_one": "Every month",
+    "everyMonths_other": "Every {{count}} months",
+    "everyYears_one": "Every year",
+    "everyYears_other": "Every {{count}} years",
+    "decreaseInterval": "Repeat less often",
+    "increaseInterval": "Repeat more often",
+    "onDays": "On days",
+    "weekdays": "Weekdays",
+    "fromDueDate": "From due date",
+    "afterCompletion": "After completion"
   },
   "tasks": {
     "filterActive": "Active",

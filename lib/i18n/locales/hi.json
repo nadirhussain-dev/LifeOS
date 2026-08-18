@@ -184,7 +184,21 @@
     "daily": "दैनिक",
     "weekly": "साप्ताहिक",
     "monthly": "मासिक",
-    "yearly": "वार्षिक"
+    "yearly": "वार्षिक",
+    "everyDays_one": "हर दिन",
+    "everyDays_other": "हर {{count}} दिन",
+    "everyWeeks_one": "हर सप्ताह",
+    "everyWeeks_other": "हर {{count}} सप्ताह",
+    "everyMonths_one": "हर महीने",
+    "everyMonths_other": "हर {{count}} महीने",
+    "everyYears_one": "हर साल",
+    "everyYears_other": "हर {{count}} साल",
+    "decreaseInterval": "कम बार दोहराएँ",
+    "increaseInterval": "अधिक बार दोहराएँ",
+    "onDays": "इन दिनों",
+    "weekdays": "कार्यदिवस",
+    "fromDueDate": "नियत तिथि से",
+    "afterCompletion": "पूरा होने के बाद"
   },
   "tasks": {
     "filterActive": "सक्रिय",

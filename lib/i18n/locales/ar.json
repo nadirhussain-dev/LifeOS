@@ -192,7 +192,21 @@
     "daily": "يوميًا",
     "weekly": "أسبوعيًا",
     "monthly": "شهريًا",
-    "yearly": "سنويًا"
+    "yearly": "سنويًا",
+    "everyDays_one": "كل يوم",
+    "everyDays_other": "كل {{count}} أيام",
+    "everyWeeks_one": "كل أسبوع",
+    "everyWeeks_other": "كل {{count}} أسابيع",
+    "everyMonths_one": "كل شهر",
+    "everyMonths_other": "كل {{count}} أشهر",
+    "everyYears_one": "كل سنة",
+    "everyYears_other": "كل {{count}} سنوات",
+    "decreaseInterval": "تكرار أقل",
+    "increaseInterval": "تكرار أكثر",
+    "onDays": "في الأيام",
+    "weekdays": "أيام العمل",
+    "fromDueDate": "من تاريخ الاستحقاق",
+    "afterCompletion": "بعد الإنجاز"
   },
   "tasks": {
     "filterActive": "نشطة",

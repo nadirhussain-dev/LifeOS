@@ -18,7 +18,8 @@ import { DueDateField } from '@/features/tasks/components/due-date-field';
 import { PriorityPicker } from '@/features/tasks/components/priority-picker';
 import { RecurrencePicker } from '@/features/tasks/components/recurrence-picker';
 import { useTaskMutations } from '@/features/tasks/hooks/use-task-mutations';
-import type { TaskPriority, TaskRecurrenceFrequency } from '@/features/tasks/types/task.types';
+import type { RecurrenceRule } from '@/features/tasks/services/task-recurrence';
+import type { TaskPriority } from '@/features/tasks/types/task.types';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 
 /**
@@ -43,7 +44,12 @@ export default function NewTaskScreen() {
   const [dueDate, setDueDate] = useState<number | null>(null);
   const [hasDueTime, setHasDueTime] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
-  const [recurrenceFrequency, setRecurrenceFrequency] = useState<TaskRecurrenceFrequency>('none');
+  const [recurrence, setRecurrence] = useState<RecurrenceRule>({
+    frequency: 'none',
+    interval: 1,
+    daysOfWeek: null,
+    anchor: 'due_date',
+  });
   const [categoryId, setCategoryId] = useState<string | null>(null);
 
   const focusProgress = useSharedValue(0);
@@ -62,7 +68,10 @@ export default function NewTaskScreen() {
       priority,
       dueDate,
       hasDueTime,
-      recurrenceFrequency,
+      recurrenceFrequency: recurrence.frequency,
+      recurrenceInterval: recurrence.interval,
+      recurrenceDaysOfWeek: recurrence.daysOfWeek,
+      recurrenceAnchor: recurrence.anchor,
       categoryId,
       reminderEnabled: reminderEnabled && dueDate !== null,
     });
@@ -133,7 +142,7 @@ export default function NewTaskScreen() {
           )}
 
           <AttributeRow icon={Repeat} label={t('fields.repeat')}>
-            <RecurrencePicker value={recurrenceFrequency} onChange={setRecurrenceFrequency} />
+            <RecurrencePicker value={recurrence} onChange={setRecurrence} />
           </AttributeRow>
 
           <AttributeRow icon={Tag} label={t('fields.category')}>

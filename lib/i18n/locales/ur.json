@@ -184,7 +184,21 @@
     "daily": "روزانہ",
     "weekly": "ہفتہ وار",
     "monthly": "ماہانہ",
-    "yearly": "سالانہ"
+    "yearly": "سالانہ",
+    "everyDays_one": "ہر دن",
+    "everyDays_other": "ہر {{count}} دن",
+    "everyWeeks_one": "ہر ہفتے",
+    "everyWeeks_other": "ہر {{count}} ہفتے",
+    "everyMonths_one": "ہر مہینے",
+    "everyMonths_other": "ہر {{count}} مہینے",
+    "everyYears_one": "ہر سال",
+    "everyYears_other": "ہر {{count}} سال",
+    "decreaseInterval": "کم بار دہرائیں",
+    "increaseInterval": "زیادہ بار دہرائیں",
+    "onDays": "ان دنوں",
+    "weekdays": "کام کے دن",
+    "fromDueDate": "مقررہ تاریخ سے",
+    "afterCompletion": "مکمل ہونے کے بعد"
   },
   "tasks": {
     "filterActive": "فعال",

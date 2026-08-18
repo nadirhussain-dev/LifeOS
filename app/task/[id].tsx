@@ -187,9 +187,22 @@ export default function TaskDetailScreen() {
 
           <AttributeRow icon={Repeat} label={t('fields.repeat')}>
             <RecurrencePicker
-              value={task.recurrenceFrequency}
-              onChange={(recurrenceFrequency) =>
-                update.mutate({ id: task.id, input: { recurrenceFrequency } })
+              value={{
+                frequency: task.recurrenceFrequency,
+                interval: task.recurrenceInterval,
+                daysOfWeek: task.recurrenceDaysOfWeek,
+                anchor: task.recurrenceAnchor,
+              }}
+              onChange={(rule) =>
+                update.mutate({
+                  id: task.id,
+                  input: {
+                    recurrenceFrequency: rule.frequency,
+                    recurrenceInterval: rule.interval,
+                    recurrenceDaysOfWeek: rule.daysOfWeek,
+                    recurrenceAnchor: rule.anchor,
+                  },
+                })
               }
             />
           </AttributeRow>
