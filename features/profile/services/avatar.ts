@@ -109,6 +109,45 @@ export function avatarUrl(path: string | null, updatedAt: number | null): string
   return updatedAt ? `${data.publicUrl}?v=${updatedAt}` : data.publicUrl;
 }
 
+/** How long a fallback signed URL stays good for. An hour is far longer than
+ *  any single visit to the profile screen and short enough that the URL is not
+ *  a durable credential if it leaks into a log. */
+const SIGNED_TTL_SECONDS = 3600;
+
+/**
+ * The same object, reached through a signed URL instead of the public one.
+ *
+ * `getPublicUrl()` is pure string construction — it returns a URL whether or
+ * not the bucket is actually public, and whether or not the object is there.
+ * So a project where the `avatars` bucket predates 0036 (created by hand, or
+ * flipped private) hands the app a URL that 400s, and the only symptom is a
+ * picture that never appears. Signing works in both cases, because the read
+ * goes through the owner's own session rather than the bucket's public flag.
+ *
+ * Only used as a retry after the public URL has actually failed — see
+ * features/profile/components/avatar.tsx. Signing on every render would cost a
+ * network round-trip to display a picture that normally loads straight from
+ * cache.
+ */
+export async function signedAvatarUrl(
+  path: string | null,
+  updatedAt: number | null,
+): Promise<string | null> {
+  if (!path || !isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase.storage
+      .from(AVATAR_BUCKET)
+      .createSignedUrl(path, SIGNED_TTL_SECONDS);
+    if (error || !data?.signedUrl) return null;
+    // Same cache-buster as the public URL: the signed URL's own token changes
+    // every call, but expo-image keys its disk cache on the whole string and a
+    // stale entry for the previous picture would otherwise win.
+    return updatedAt ? `${data.signedUrl}&v=${updatedAt}` : data.signedUrl;
+  } catch {
+    return null;
+  }
+}
+
 /** Initials fallback, so a profile without a picture still reads as a person
  * rather than an empty circle. */
 export function initialsFor(name: string | null, email: string | null): string {

@@ -577,8 +577,8 @@
   "settings": {
     "title": "Settings",
     "hub": "More",
-    "showAllModules": "Show all modules",
-    "showAllModulesSubtitle": "Skip the curated view and show every module, regardless of your onboarding focus areas",
+    "manageModules": "Your modules",
+    "manageModulesSubtitle": "Choose which modules you use. Closing one switches it off — its tile, its reminders and its screens.",
     "appearance": "Appearance",
     "system": "System",
     "light": "Light",
@@ -1319,7 +1319,13 @@
     "soon": "Soon",
     "openHint": "Open {{title}}",
     "showMoreModules_one": "Show {{count}} more module",
-    "showMoreModules_other": "Show {{count}} more modules"
+    "showMoreModules_other": "Show {{count}} more modules",
+    "manageTitle": "Your modules",
+    "manageBody": "Choose what you use. Closing a module switches it off — its tile, its reminders and its screens — but deletes nothing, and the switch brings it all straight back.",
+    "manageCount": "{{on}} of {{total}} in use",
+    "manageHintOpen": "Double tap to switch this module on",
+    "manageHintClose": "Double tap to switch this module off",
+    "manageReset": "Follow my focus areas again"
   },
   "notif": {
     "title": "Notifications",
@@ -2496,6 +2502,9 @@
     "rewardsEnabledSubtitle": "Off hides it from every account. No data is touched.",
     "rewardsTitle": "Streak challenge",
     "rewardsNoSeason": "No season exists yet. Create one before enabling the challenge.",
+    "rewardsSeasonLive": "Open",
+    "rewardsSeasonClosed": "Not open",
+    "rewardsSeasonClosedWhy": "Nobody can enrol, so the figures below are zero for that reason and not for lack of interest. A season has its own switch, separate from the one above: the one above decides whether users see the challenge, this one decides whether they can join it.",
     "rewardsRuns": "Runs",
     "rewardsEnrolled": "Enrolled",
     "rewardsActive": "Active",

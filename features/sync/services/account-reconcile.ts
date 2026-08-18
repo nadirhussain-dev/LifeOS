@@ -1,5 +1,6 @@
 import { useDeviceSessionStore } from '@/features/auth/store/device-session-store';
 import { useModerationStore } from '@/features/moderation/store/moderation-store';
+import { useOnboardingDraftStore } from '@/features/onboarding/store/onboarding-draft-store';
 import { useProfileStore } from '@/features/profile/store/profile-store';
 import { useSyncStore } from '@/features/sync/store/sync-store';
 import { clearAllData } from '@/lib/data-management';
@@ -98,6 +99,12 @@ export function wipeLocalData(): void {
   useSyncStore.getState().resetCursors();
   useSyncStore.getState().setLastUserId(null);
   useProfileStore.getState().resetAnswers();
+  // The *draft* of those same answers, which outlived both wipes until now.
+  // `resetAnswers()` above clears the answers once they have been written to
+  // the profile; this clears the half-finished copy onboarding keeps while it
+  // is still being filled in. Missing it meant the name field on the first
+  // onboarding step came pre-filled with the previous account's name.
+  useOnboardingDraftStore.getState().reset();
   cancelScheduledReminders();
 }
 
@@ -137,6 +144,10 @@ export function wipeDeviceData(): void {
   useSyncStore.getState().resetCursors();
   useSyncStore.getState().setLastUserId(null);
   useProfileStore.getState().reset();
+  // Same omission as `wipeLocalData` had, and it mattered more here: sign-out
+  // returns this device to first-run, so the very next screen is onboarding —
+  // reading the previous account's name back to whoever signed in next.
+  useOnboardingDraftStore.getState().reset();
   useModerationStore.getState().clear();
   useDeviceSessionStore.getState().clear();
   cancelScheduledReminders();
