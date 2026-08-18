@@ -897,7 +897,37 @@
     "journalMoodSentence": "جن دنوں آپ جرنل میں زیادہ لکھتے ہیں، آپ کا موڈ {{percent}}% بہتر رہتا ہے۔",
     "lateNightSpendingSentence": "جن دنوں آپ دیر سے سوتے ہیں، آپ کے اخراجات {{percent}}% زیادہ رہتے ہیں۔",
     "movesTogether": "یہ ساتھ چلتے ہیں — اس کا مطلب یہ نہیں کہ ایک دوسرے کی وجہ ہے۔",
-    "evidence": "{{days}} دنوں سے، جانچے گئے {{pairs}} جوڑوں میں سے"
+    "evidence": "{{days}} دنوں سے، جانچے گئے {{pairs}} جوڑوں میں سے",
+    "actionSleepGoal": "نیند کا ہدف مقرر کریں",
+    "actionBedtime": "سونے کی یاد دہانی مقرر کریں",
+    "actionHabits": "اپنی عادات دیکھیں",
+    "actionBudget": "ماہانہ بجٹ مقرر کریں",
+    "actionJournalReminder": "جرنل یاد دہانی مقرر کریں",
+    "actionWaterTarget": "پانی کا ہدف بڑھائیں",
+    "actionStudyReminder": "پڑھائی کی یاد دہانی مقرر کریں",
+    "actionTasks": "کل کی منصوبہ بندی کریں",
+    "reviewTitle": "آپ کا ہفتہ",
+    "reviewEyebrow": "ہفتہ وار جائزہ",
+    "reviewMoved": "کیا آگے بڑھا",
+    "reviewSlipped": "کیا پیچھے رہا",
+    "reviewSteady": "مستحکم",
+    "reviewOnePattern": "ایک پیٹرن",
+    "reviewOneChange": "ایک چیز آزمانے کے لیے",
+    "reviewEmptyTitle": "ابھی پورا ہفتہ نہیں ہے",
+    "reviewEmptyBody": "چند ہفتوں تک لاگ کریں اور یہ ایک جھلک کی بجائے موازنہ بن جائے گا۔",
+    "reviewLoggedDays": "7 میں سے {{count}} دن لاگ کیے",
+    "reviewNothingChanged": "اس ہفتے کسی بھی سمت میں زیادہ تبدیلی نہیں ہوئی۔",
+    "metricSleepMinutes": "نیند",
+    "metricHabitsCompleted": "مکمل عادات",
+    "metricTasksCompleted": "مکمل کام",
+    "metricMoodScore": "موڈ",
+    "metricEnergy": "توانائی",
+    "metricWaterMl": "پانی",
+    "metricStudySeconds": "پڑھائی",
+    "metricStress": "تناؤ",
+    "metricSpendCents": "اخراجات",
+    "reviewNotifTitle": "آپ کا ہفتہ تیار ہے",
+    "reviewNotifBody": "چند منٹ یہ دیکھنے کے لیے کہ کیا آگے بڑھا، کیا پیچھے رہا، اور ایک چیز آزمانے کے لیے۔"
   },
   "sleep": {
     "title": "نیند",
@@ -1540,6 +1570,10 @@
     "cycle": {
       "label": "سائیکل",
       "description": "جب آپ کا پیریڈ جلد متوقع ہو تو ایک اشارہ۔ یہ کبھی بھی پرائیویٹ اسپیس ریمائنڈر کے طور پر نہیں دکھایا جاتا۔"
+    },
+    "review": {
+      "label": "ہفتہ وار جائزہ",
+      "description": "ہفتے میں ایک بار دیکھنے کے لیے کہ کیا آگے بڑھا اور کیا پیچھے رہا۔"
     }
   },
   "authError": {

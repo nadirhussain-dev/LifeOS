@@ -897,7 +897,37 @@
     "journalMoodSentence": "जिन दिनों आप जर्नल में अधिक लिखते हैं, आपकी मनोदशा {{percent}}% बेहतर रहती है।",
     "lateNightSpendingSentence": "जिन दिनों आप देर से सोते हैं, आपका खर्च {{percent}}% अधिक रहता है।",
     "movesTogether": "ये साथ चलते हैं — इसका मतलब यह नहीं कि एक दूसरे का कारण है।",
-    "evidence": "{{days}} दिनों से, जाँचे गए {{pairs}} जोड़ों में से"
+    "evidence": "{{days}} दिनों से, जाँचे गए {{pairs}} जोड़ों में से",
+    "actionSleepGoal": "नींद का लक्ष्य तय करें",
+    "actionBedtime": "सोने का अनुस्मारक तय करें",
+    "actionHabits": "अपनी आदतें देखें",
+    "actionBudget": "मासिक बजट तय करें",
+    "actionJournalReminder": "जर्नल अनुस्मारक तय करें",
+    "actionWaterTarget": "पानी का लक्ष्य बढ़ाएँ",
+    "actionStudyReminder": "अध्ययन अनुस्मारक तय करें",
+    "actionTasks": "कल की योजना बनाएँ",
+    "reviewTitle": "आपका सप्ताह",
+    "reviewEyebrow": "साप्ताहिक समीक्षा",
+    "reviewMoved": "क्या आगे बढ़ा",
+    "reviewSlipped": "क्या पीछे रहा",
+    "reviewSteady": "स्थिर",
+    "reviewOnePattern": "एक पैटर्न",
+    "reviewOneChange": "एक चीज़ आज़माने के लिए",
+    "reviewEmptyTitle": "अभी पूरा सप्ताह नहीं है",
+    "reviewEmptyBody": "कुछ सप्ताहों तक लॉग करें और यह एक झलक की जगह तुलना बन जाएगा।",
+    "reviewLoggedDays": "7 में से {{count}} दिन लॉग किए",
+    "reviewNothingChanged": "इस सप्ताह किसी भी दिशा में ज़्यादा बदलाव नहीं हुआ।",
+    "metricSleepMinutes": "नींद",
+    "metricHabitsCompleted": "पूरी आदतें",
+    "metricTasksCompleted": "पूरे कार्य",
+    "metricMoodScore": "मनोदशा",
+    "metricEnergy": "ऊर्जा",
+    "metricWaterMl": "पानी",
+    "metricStudySeconds": "अध्ययन",
+    "metricStress": "तनाव",
+    "metricSpendCents": "खर्च",
+    "reviewNotifTitle": "आपका सप्ताह तैयार है",
+    "reviewNotifBody": "कुछ मिनट यह देखने के लिए कि क्या आगे बढ़ा, क्या पीछे रहा, और एक चीज़ आज़माने के लिए।"
   },
   "sleep": {
     "title": "नींद",
@@ -1540,6 +1570,10 @@
     "cycle": {
       "label": "साइकिल",
       "description": "जब आपका पीरियड जल्द अपेक्षित हो तो एक संकेत। इसे कभी भी प्राइवेट-स्पेस रिमाइंडर के रूप में नहीं दिखाया जाता।"
+    },
+    "review": {
+      "label": "साप्ताहिक समीक्षा",
+      "description": "सप्ताह में एक बार देखने के लिए कि क्या आगे बढ़ा और क्या पीछे रहा।"
     }
   },
   "authError": {

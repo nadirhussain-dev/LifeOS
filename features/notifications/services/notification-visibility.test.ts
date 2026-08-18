@@ -34,14 +34,20 @@ describe('category → module map', () => {
     expect(unmapped).toEqual([]);
   });
 
-  it('leaves only the digest unowned', () => {
+  it('leaves only the cross-module categories unowned', () => {
     const unowned = (Object.keys(MODULE_FOR_CATEGORY) as NotificationCategory[]).filter(
       (category) => MODULE_FOR_CATEGORY[category] === null,
     );
-    // The digest names several modules in one sentence, so it is filtered line
-    // by line in digest.ts instead. Anything else appearing here is a category
-    // that has quietly opted out of both switches.
-    expect(unowned).toEqual(['digest']);
+    // Exactly two categories may be unowned, and both for the same reason: they
+    // span every module, so no single module's being hidden should suppress
+    // them. The digest is filtered line by line in digest.ts; the weekly review
+    // shows only what the data it reads already allows.
+    //
+    // This list is deliberately exhaustive rather than a `toContain`. Anything
+    // new appearing here is a category that has quietly opted out of both
+    // switches, and the failure would otherwise stay invisible until somebody's
+    // lock screen showed something it should not.
+    expect(unowned.sort()).toEqual(['digest', 'review']);
   });
 });
 

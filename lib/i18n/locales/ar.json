@@ -953,7 +953,37 @@
     "journalMoodSentence": "في الأيام التي تكتب فيها أكثر في يومياتك، يتحسن مزاجك بنسبة {{percent}}%.",
     "lateNightSpendingSentence": "في الأيام التي تنام فيها متأخرًا، يزيد إنفاقك بنسبة {{percent}}%.",
     "movesTogether": "هذان يتحركان معًا — وهذا لا يعني أن أحدهما سبب الآخر.",
-    "evidence": "من {{days}} يومًا، من أصل {{pairs}} زوجًا تم فحصها"
+    "evidence": "من {{days}} يومًا، من أصل {{pairs}} زوجًا تم فحصها",
+    "actionSleepGoal": "حدّد هدف النوم",
+    "actionBedtime": "حدّد تذكير موعد النوم",
+    "actionHabits": "راجع عاداتك",
+    "actionBudget": "حدّد ميزانية شهرية",
+    "actionJournalReminder": "حدّد تذكير اليوميات",
+    "actionWaterTarget": "ارفع هدف الماء",
+    "actionStudyReminder": "حدّد تذكير الدراسة",
+    "actionTasks": "خطّط للغد",
+    "reviewTitle": "أسبوعك",
+    "reviewEyebrow": "المراجعة الأسبوعية",
+    "reviewMoved": "ما تقدّم",
+    "reviewSlipped": "ما تراجع",
+    "reviewSteady": "ثابت",
+    "reviewOnePattern": "نمط واحد",
+    "reviewOneChange": "شيء واحد لتجربته",
+    "reviewEmptyTitle": "لا يوجد أسبوع كافٍ بعد",
+    "reviewEmptyBody": "سجّل على مدى أسبوعين ليصبح هذا مقارنة بدلًا من لمحة.",
+    "reviewLoggedDays": "{{count}} من 7 أيام مسجّلة",
+    "reviewNothingChanged": "لم يتغير شيء كثيرًا في أي اتجاه هذا الأسبوع.",
+    "metricSleepMinutes": "النوم",
+    "metricHabitsCompleted": "العادات المنجزة",
+    "metricTasksCompleted": "المهام المنجزة",
+    "metricMoodScore": "المزاج",
+    "metricEnergy": "الطاقة",
+    "metricWaterMl": "الماء",
+    "metricStudySeconds": "الدراسة",
+    "metricStress": "التوتر",
+    "metricSpendCents": "الإنفاق",
+    "reviewNotifTitle": "أسبوعك جاهز",
+    "reviewNotifBody": "دقائق قليلة لترى ما تقدّم وما تراجع، وشيئًا واحدًا لتجربته."
   },
   "sleep": {
     "title": "النوم",
@@ -1672,6 +1702,10 @@
     "cycle": {
       "label": "الدورة",
       "description": "تنبيه عند اقتراب موعد دورتك المتوقع. لا يظهر أبدًا كتذكير من المساحة الخاصة."
+    },
+    "review": {
+      "label": "المراجعة الأسبوعية",
+      "description": "تنبيه واحد أسبوعيًا لتنظر في ما تقدّم وما تراجع."
     }
   },
   "authError": {

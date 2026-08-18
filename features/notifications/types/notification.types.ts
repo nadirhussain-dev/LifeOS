@@ -37,6 +37,7 @@ export type NotificationCategory =
   | 'notes'
   | 'goals'
   | 'digest'
+  | 'review'
   | 'streak'
   | 'split'
   | 'together'
@@ -62,6 +63,15 @@ export const CATEGORY_META: Record<NotificationCategory, NotificationCategoryMet
     descriptionKey: 'notifCategory.tasks.description',
     icon: CheckSquare,
     tint: '#6366f1',
+    bypassQuietHours: true,
+  },
+  review: {
+    labelKey: 'notifCategory.review.label',
+    descriptionKey: 'notifCategory.review.description',
+    icon: Sparkles,
+    tint: '#8b5cf6',
+    // A weekly review is the one notification worth arriving on a quiet Sunday
+    // evening — that is precisely when it is read, and it is once a week.
     bypassQuietHours: true,
   },
   habits: {
@@ -213,6 +223,7 @@ export const CATEGORY_ORDER: NotificationCategory[] = [
   'notes',
   'goals',
   'digest',
+  'review',
   'streak',
   'split',
   'together',

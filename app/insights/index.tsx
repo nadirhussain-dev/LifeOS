@@ -1,8 +1,10 @@
 import { format, parseISO } from 'date-fns';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
+import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { DualTrendChart } from '@/components/ui/dual-trend-chart';
 import { QueryError } from '@/components/ui/query-error';
@@ -31,6 +33,7 @@ function average(values: number[]): number | null {
 }
 
 export default function InsightsScreen() {
+  const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   // Month by default: a week rarely has enough days for the engine's own
@@ -95,6 +98,15 @@ export default function InsightsScreen() {
             ]}
             value={range}
             onChange={setRange}
+          />
+
+          {/* The review is the ritual; this screen is the reference. Linking
+              across rather than burying the review in the Hub, because the
+              person reading a pattern here is the person it is for. */}
+          <Button
+            label={t('insights.reviewEyebrow')}
+            variant="secondary"
+            onPress={() => router.push('/review')}
           />
 
           <InsightHeroCard

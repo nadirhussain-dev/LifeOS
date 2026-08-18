@@ -897,7 +897,37 @@
     "journalMoodSentence": "On days you write more in your journal, your mood runs {{percent}}% higher.",
     "lateNightSpendingSentence": "On days you go to bed later, your spending runs {{percent}}% higher.",
     "movesTogether": "These move together — it does not mean one causes the other.",
-    "evidence": "From {{days}} days, of {{pairs}} pairs checked"
+    "evidence": "From {{days}} days, of {{pairs}} pairs checked",
+    "actionSleepGoal": "Set a sleep goal",
+    "actionBedtime": "Set a bedtime reminder",
+    "actionHabits": "Review your habits",
+    "actionBudget": "Set a monthly budget",
+    "actionJournalReminder": "Set a journal reminder",
+    "actionWaterTarget": "Raise your water target",
+    "actionStudyReminder": "Set a study reminder",
+    "actionTasks": "Plan tomorrow",
+    "reviewTitle": "Your week",
+    "reviewEyebrow": "Weekly review",
+    "reviewMoved": "What moved",
+    "reviewSlipped": "What slipped",
+    "reviewSteady": "Holding steady",
+    "reviewOnePattern": "One pattern",
+    "reviewOneChange": "One thing to try",
+    "reviewEmptyTitle": "Not enough of a week yet",
+    "reviewEmptyBody": "Log across a couple of weeks and this becomes a comparison rather than a snapshot.",
+    "reviewLoggedDays": "{{count}} of 7 days logged",
+    "reviewNothingChanged": "Nothing moved much either way this week.",
+    "metricSleepMinutes": "Sleep",
+    "metricHabitsCompleted": "Habits done",
+    "metricTasksCompleted": "Tasks done",
+    "metricMoodScore": "Mood",
+    "metricEnergy": "Energy",
+    "metricWaterMl": "Water",
+    "metricStudySeconds": "Study",
+    "metricStress": "Stress",
+    "metricSpendCents": "Spending",
+    "reviewNotifTitle": "Your week is ready",
+    "reviewNotifBody": "A few minutes to see what moved, what slipped, and one thing to try."
   },
   "sleep": {
     "title": "Sleep",
@@ -1540,6 +1570,10 @@
     "cycle": {
       "label": "Cycle",
       "description": "A nudge when your period is expected soon. Never shown as a private-space reminder."
+    },
+    "review": {
+      "label": "Weekly review",
+      "description": "One nudge a week to look at what moved and what slipped."
     }
   },
   "authError": {

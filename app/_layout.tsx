@@ -72,6 +72,7 @@ import { syncCycleReminders } from '@/features/private/services/cycle-reminders'
 // directly — see register-reminders.ts and reminder-scheduler.ts's own
 // comment on why.
 import '@/features/private/services/register-reminders';
+import '@/features/insights/services/register-reminders';
 import { usePrivateStore } from '@/features/private/store/private-store';
 import { useSplashStore } from '@/hooks/use-splash-store';
 import { useSyncTrigger } from '@/features/sync/hooks/use-sync';
