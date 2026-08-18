@@ -25,10 +25,14 @@ type Props = {
    *  render would defeat that for every row in the list. */
   checklistDone?: number;
   checklistTotal?: number;
-  onPress: () => void;
-  onToggleComplete: () => void;
-  onArchive: () => void;
-  onDelete: () => void;
+  /** These take the task rather than closing over it, so a list can hold one
+   *  stable handler per action instead of allocating four closures per row on
+   *  every render. That is what makes the `memo` below do anything — see its
+   *  comment. */
+  onPress: (task: Task) => void;
+  onToggleComplete: (task: Task) => void;
+  onArchive: (task: Task) => void;
+  onDelete: (task: Task) => void;
 };
 
 function DueDateLabel({ task }: { task: Task }) {
@@ -84,7 +88,7 @@ function TaskRowComponent({
     Haptics.impactAsync(
       isCompleted ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium,
     );
-    onToggleComplete();
+    onToggleComplete(task);
   };
 
   return (
@@ -94,13 +98,13 @@ function TaskRowComponent({
         { name: 'delete', label: t('common.delete') },
       ]}
       onAccessibilityAction={(name) =>
-        name === 'archive' ? onArchive() : name === 'delete' ? onDelete() : undefined
+        name === 'archive' ? onArchive(task) : name === 'delete' ? onDelete(task) : undefined
       }
       actions={
         <>
           <Pressable
             accessibilityRole="button"
-            onPress={onArchive}
+            onPress={() => onArchive(task)}
             accessibilityLabel={t('common.archiveNamed', { name: task.title })}
             className="flex-1 items-center justify-center bg-secondary"
           >
@@ -108,7 +112,7 @@ function TaskRowComponent({
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            onPress={onDelete}
+            onPress={() => onDelete(task)}
             accessibilityLabel={t('common.deleteNamed', { name: task.title })}
             className="flex-1 items-center justify-center bg-destructive"
           >
@@ -119,7 +123,7 @@ function TaskRowComponent({
     >
       <Pressable
         accessibilityRole="button"
-        onPress={onPress}
+        onPress={() => onPress(task)}
         className="flex-row items-center gap-3 px-4 py-3.5"
       >
         {accentColor && (
@@ -181,5 +185,12 @@ function TaskRowComponent({
 /**
  * Memoised: these rows carry their own Reanimated hooks, and every keystroke in
  * the list's search field re-rendered all of them.
+ *
+ * The memo only earns that if its props are referentially stable. It was added
+ * while the list still passed `onPress={() => router.push(...)}` and three more
+ * inline arrows per row, so every parent render allocated four fresh functions,
+ * every prop comparison failed, and the memo re-rendered the whole list exactly
+ * as before while looking like it had fixed the problem. The handlers now take
+ * the task, so the list holds one `useCallback` per action.
  */
 export const TaskRow = memo(TaskRowComponent);

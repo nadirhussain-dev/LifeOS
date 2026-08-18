@@ -13,11 +13,13 @@ import type { HabitWithToday } from '@/features/habits/types/habit.types';
 
 type Props = {
   habit: HabitWithToday;
-  onPress: () => void;
-  onToggleDone: () => void;
-  onQuickLog: () => void;
-  onArchive: () => void;
-  onDelete: () => void;
+  /** Take the habit rather than closing over it, so the list can hold one
+   *  stable handler per action. See the `memo` at the bottom of this file. */
+  onPress: (habit: HabitWithToday) => void;
+  onToggleDone: (habit: HabitWithToday) => void;
+  onQuickLog: (habit: HabitWithToday) => void;
+  onArchive: (habit: HabitWithToday) => void;
+  onDelete: (habit: HabitWithToday) => void;
 };
 
 const QUANTIFIED_TYPES = new Set(['count', 'duration', 'distance', 'time']);
@@ -41,7 +43,7 @@ function HabitRowComponent({
     void Haptics.impactAsync(
       isDone ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium,
     );
-    onToggleDone();
+    onToggleDone(habit);
   };
 
   // Was two hardcoded English template strings, so the streak read in English
@@ -60,12 +62,12 @@ function HabitRowComponent({
         { name: 'delete', label: t('common.delete') },
       ]}
       onAccessibilityAction={(name) =>
-        name === 'archive' ? onArchive() : name === 'delete' ? onDelete() : undefined
+        name === 'archive' ? onArchive(habit) : name === 'delete' ? onDelete(habit) : undefined
       }
       actions={
         <>
           <Pressable
-            onPress={onArchive}
+            onPress={() => onArchive(habit)}
             accessibilityRole="button"
             accessibilityLabel={t('common.archiveNamed', { name: habit.name })}
             className="flex-1 items-center justify-center bg-secondary"
@@ -73,7 +75,7 @@ function HabitRowComponent({
             <Archive color={colors[scheme].foreground} size={18} />
           </Pressable>
           <Pressable
-            onPress={onDelete}
+            onPress={() => onDelete(habit)}
             accessibilityRole="button"
             accessibilityLabel={t('common.deleteNamed', { name: habit.name })}
             className="flex-1 items-center justify-center bg-destructive"
@@ -84,7 +86,7 @@ function HabitRowComponent({
       }
     >
       <Pressable
-        onPress={onPress}
+        onPress={() => onPress(habit)}
         accessibilityRole="button"
         accessibilityLabel={habit.name}
         className="flex-row items-center gap-3 px-4 py-3"
@@ -116,7 +118,7 @@ function HabitRowComponent({
           <Pressable
             onPress={() => {
               void Haptics.selectionAsync();
-              onQuickLog();
+              onQuickLog(habit);
             }}
             hitSlop={6}
             accessibilityRole="button"

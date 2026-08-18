@@ -35,6 +35,29 @@ export default function NotesScreen() {
   const { data: categories = [] } = useNoteCategories();
   const { remove, restore, archive, unarchive } = useNoteMutations();
 
+  // Hoisted, one per action, rather than three closures per card per render.
+  // NoteCard is memoised and inline arrows made that memo inert — see its
+  // comment. Each takes the note so the identity never has to change.
+  const openNote = useCallback((note: Note) => router.push(`/note/${note.id}`), [router]);
+
+  const deleteNote = useCallback(
+    ({ id, title }: Note) =>
+      remove.mutate(id, {
+        onSuccess: () =>
+          toast.undo(
+            t('notes.deletedToast', { title: title || t('notes.untitled') }),
+            t('common.undo'),
+            () => restore.mutate(id),
+          ),
+      }),
+    [remove, restore, t],
+  );
+
+  const toggleArchiveNote = useCallback(
+    (note: Note) => (note.isArchived ? unarchive.mutate(note.id) : archive.mutate(note.id)),
+    [archive, unarchive],
+  );
+
   const { data: notes = [], isLoading, refetch } = showArchived ? archivedNotes : activeNotes;
 
   // Pull-to-refresh existed on the dashboard and nowhere else, so the reflex
@@ -134,23 +157,9 @@ export default function NotesScreen() {
                 categoryColor={
                   item.note.categoryId ? categoryColorById.get(item.note.categoryId) : undefined
                 }
-                onPress={() => router.push(`/note/${item.note.id}`)}
-                onDelete={() => {
-                  const { id, title } = item.note;
-                  remove.mutate(id, {
-                    onSuccess: () =>
-                      toast.undo(
-                        t('notes.deletedToast', { title: title || t('notes.untitled') }),
-                        t('common.undo'),
-                        () => restore.mutate(id),
-                      ),
-                  });
-                }}
-                onToggleArchive={() =>
-                  item.note.isArchived
-                    ? unarchive.mutate(item.note.id)
-                    : archive.mutate(item.note.id)
-                }
+                onPress={openNote}
+                onDelete={deleteNote}
+                onToggleArchive={toggleArchiveNote}
               />
             )
           }

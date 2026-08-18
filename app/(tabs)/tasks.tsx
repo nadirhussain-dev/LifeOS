@@ -45,7 +45,44 @@ export default function TasksScreen() {
   const { data: tasks = [], isLoading, isError, refetch } = useTasks();
   const taskIds = useMemo(() => tasks.map((task) => task.id), [tasks]);
   const { data: subtaskCounts = {} } = useSubtaskCounts(taskIds);
+
   const { complete, reopen, archive, remove, restore } = useTaskMutations();
+
+  // Hoisted, one per action, rather than four closures per row per render.
+  // TaskRow is memoised and inline arrows made that memo inert — see its
+  // comment. Each takes the task so the identity never has to change.
+  const openTask = useCallback((task: Task) => router.push(`/task/${task.id}`), [router]);
+
+  const toggleTask = useCallback(
+    (task: Task) =>
+      task.status === 'completed' ? reopen.mutate(task.id) : complete.mutate(task.id),
+    [complete, reopen],
+  );
+
+  const archiveTask = useCallback(
+    ({ id, title }: Task) =>
+      archive.mutate(id, {
+        onSuccess: () =>
+          toast.undo(t('tasks.archivedToast', { title }), t('common.undo'), () =>
+            reopen.mutate(id),
+          ),
+      }),
+    [archive, reopen, t],
+  );
+
+  // Deletes are tombstones, so the row can come straight back. An undo window
+  // beats a confirmation dialog here: dialogs get dismissed reflexively, undo
+  // does not.
+  const deleteTask = useCallback(
+    ({ id, title }: Task) =>
+      remove.mutate(id, {
+        onSuccess: () =>
+          toast.undo(t('tasks.deletedToast', { title }), t('common.undo'), () =>
+            restore.mutate(id),
+          ),
+      }),
+    [remove, restore, t],
+  );
 
   // Pull-to-refresh existed on the dashboard and nowhere else, so the reflex
   // gesture did nothing on every list in the app.
@@ -229,33 +266,10 @@ export default function TasksScreen() {
                 task={item.task}
                 checklistDone={subtaskCounts[item.task.id]?.done}
                 checklistTotal={subtaskCounts[item.task.id]?.total}
-                onPress={() => router.push(`/task/${item.task.id}`)}
-                onToggleComplete={() =>
-                  item.task.status === 'completed'
-                    ? reopen.mutate(item.task.id)
-                    : complete.mutate(item.task.id)
-                }
-                onArchive={() => {
-                  const { id, title } = item.task;
-                  archive.mutate(id, {
-                    onSuccess: () =>
-                      toast.undo(t('tasks.archivedToast', { title }), t('common.undo'), () =>
-                        reopen.mutate(id),
-                      ),
-                  });
-                }}
-                onDelete={() => {
-                  // Deletes are tombstones, so the row can come straight back.
-                  // An undo window beats a confirmation dialog here: dialogs get
-                  // dismissed reflexively, undo does not.
-                  const { id, title } = item.task;
-                  remove.mutate(id, {
-                    onSuccess: () =>
-                      toast.undo(t('tasks.deletedToast', { title }), t('common.undo'), () =>
-                        restore.mutate(id),
-                      ),
-                  });
-                }}
+                onPress={openTask}
+                onToggleComplete={toggleTask}
+                onArchive={archiveTask}
+                onDelete={deleteTask}
               />
             )
           }
