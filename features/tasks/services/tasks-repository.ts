@@ -4,6 +4,10 @@ import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { getDb } from '@/database/client';
 import { entryLinks, taskCategories, tasks } from '@/database/schema';
 import { logHabit, unlogHabit } from '@/features/habits/services/habits-repository';
+import {
+  copyChecklistToTask,
+  deleteChecklistForTask,
+} from '@/features/tasks/services/subtasks-repository';
 import { nextRecurrenceDueDate } from '@/features/tasks/services/task-recurrence';
 import { generateId } from '@/lib/id';
 import { LOCAL_USER_ID } from '@/lib/local-user';
@@ -230,7 +234,7 @@ export function completeTask(id: string): Task | null {
       now,
     );
     if (dueDate === null) return null;
-    return createTask({
+    const next = createTask({
       title: task.title,
       notes: task.notes,
       priority: task.priority,
@@ -247,6 +251,8 @@ export function completeTask(id: string): Task | null {
       recurrenceParentId: task.recurrenceParentId ?? task.id,
       reminderEnabled: task.reminderEnabled,
     });
+    copyChecklistToTask(task.id, next.id);
+    return next;
   }
 
   return null;
@@ -282,6 +288,9 @@ export function deleteTask(id: string) {
     .set({ deletedAt: Date.now(), updatedAt: Date.now(), syncStatus: 'pending' })
     .where(eq(tasks.id, id))
     .run();
+  // Otherwise the checklist outlives the task, syncing forever as rows that
+  // belong to nothing and that no screen can reach to remove.
+  deleteChecklistForTask(id);
 }
 
 /**

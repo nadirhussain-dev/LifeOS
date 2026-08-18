@@ -51,6 +51,19 @@ export type Task = {
   updatedAt: number;
 };
 
+/** One checklist item on a task. Deliberately smaller than a task: no due
+ *  date, no reminder, no category, no recurrence. */
+export type Subtask = {
+  id: string;
+  taskId: string;
+  title: string;
+  isDone: boolean;
+  completedAt: number | null;
+  position: number;
+  createdAt: number;
+  updatedAt: number;
+};
+
 export type TaskDueBucket = 'overdue' | 'today' | 'upcoming' | 'no-date';
 
 export type TaskListFilter = 'active' | 'completed' | 'archived';
