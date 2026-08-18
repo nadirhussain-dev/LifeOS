@@ -46,9 +46,7 @@ describe('the entitlement matrix', () => {
     // Guards the regex above: a silently-empty parse would make every
     // comparison below vacuously pass.
     expect(Object.keys(seed).sort()).toEqual(['freemium', 'premium', 'standard']);
-    expect(Object.keys(seed.freemium).length).toBe(
-      Object.keys(ENTITLEMENT_DEFAULTS).length,
-    );
+    expect(Object.keys(seed.freemium).length).toBe(Object.keys(ENTITLEMENT_DEFAULTS).length);
   });
 
   for (const tier of TIERS) {
