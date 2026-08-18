@@ -37,7 +37,8 @@
     "ok": "ठीक है",
     "or": "या",
     "optional": "वैकल्पिक",
-    "loadingEllipsis": "लोड हो रहा है…"
+    "loadingEllipsis": "लोड हो रहा है…",
+    "manage": "प्रबंधित करें"
   },
   "reminder": {
     "in1Hour": "1 घंटे में",
@@ -585,7 +586,27 @@
     "capsExceedMonthly": "आपकी श्रेणी सीमाओं का योग आपके मासिक बजट से अधिक है।",
     "noCategoryBudgets": "अभी कोई श्रेणी सीमा नहीं है। एक तय करें और इस महीने का खर्च उसके सामने दिखेगा।",
     "setCap": "सीमा तय करें",
-    "categoryCapFor": "{{category}} की सीमा"
+    "categoryCapFor": "{{category}} की सीमा",
+    "recurring": "आवर्ती",
+    "addRecurring": "आवर्ती प्रविष्टि जोड़ें",
+    "repeats": "दोहराव",
+    "recurringWeekly_one": "हर सप्ताह",
+    "recurringWeekly_other": "हर {{count}} सप्ताह",
+    "recurringMonthly_one": "हर महीने",
+    "recurringMonthly_other": "हर {{count}} महीने",
+    "recurringYearly_one": "हर साल",
+    "recurringYearly_other": "हर {{count}} साल",
+    "recurringWeeklyShort": "साप्ताहिक",
+    "recurringMonthlyShort": "मासिक",
+    "recurringYearlyShort": "वार्षिक",
+    "recurringActive": "सक्रिय",
+    "recurringPaused": "रुका हुआ",
+    "nextOn": "अगला {{date}}",
+    "noRecurringTitle": "अभी कुछ दोहराया नहीं जा रहा",
+    "noRecurringBody": "किराया, सदस्यता या वेतन एक बार जोड़ें और यह स्वयं दर्ज होता रहेगा।",
+    "deleteRecurringTitle": "यह आवर्ती प्रविष्टि हटाएँ?",
+    "deleteRecurringBody": "{{name}} दर्ज होना बंद हो जाएगा। इसने जो लेन-देन बनाए हैं वे रहेंगे।",
+    "recurringNotePlaceholder": "किराया, नेटफ्लिक्स, वेतन…"
   },
   "debtStatus": {
     "settled": "निपटाया गया",

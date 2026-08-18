@@ -8,6 +8,7 @@ import { privatisedModules } from '@/features/private/store/private-store';
 import {
   budgetCategoryLimits,
   budgetDebts,
+  budgetRecurring,
   budgetSettings,
   budgetTransactions,
   calendarEvents,
@@ -95,6 +96,7 @@ const EXPORT_TABLES = {
   budgetSettings,
   budgetCategoryLimits,
   budgetDebts,
+  budgetRecurring,
   galleryAlbums,
   galleryPhotos,
 } as const;

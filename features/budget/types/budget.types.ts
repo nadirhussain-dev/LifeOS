@@ -173,3 +173,33 @@ export type CategoryLimit = {
   category: string;
   limitCents: number;
 };
+
+export type RecurringFrequencyOption = 'weekly' | 'monthly' | 'yearly';
+
+export type RecurringTransaction = {
+  id: string;
+  type: 'income' | 'expense' | 'savings';
+  amountCents: number;
+  category: string;
+  account: BudgetAccount;
+  note: string | null;
+  frequency: RecurringFrequencyOption;
+  interval: number;
+  anchorDate: string;
+  lastPostedDate: string | null;
+  isActive: boolean;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type CreateRecurringInput = {
+  type: 'income' | 'expense' | 'savings';
+  amountCents: number;
+  category: string;
+  account?: BudgetAccount;
+  note?: string | null;
+  frequency: RecurringFrequencyOption;
+  interval?: number;
+  /** `yyyy-MM-dd` of the first occurrence. */
+  anchorDate: string;
+};

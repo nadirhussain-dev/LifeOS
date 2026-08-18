@@ -693,6 +693,43 @@ export const budgetSettings = sqliteTable('budget_settings', {
  * which is different from a cap of zero — zero is "I intend to spend nothing
  * here" and should show as over budget the moment anything is spent.
  */
+/**
+ * A transaction that repeats — rent, a subscription, a salary.
+ *
+ * Occurrences are *materialized* into `budget_transactions` rather than being
+ * computed on read, because a budget is a ledger: the rows have to be editable,
+ * deletable and searchable like any other, and a virtual row that vanishes when
+ * a rule changes is not a record of anything.
+ *
+ * `lastPostedDate` is the high-water mark rather than a count, so a rule whose
+ * cadence is edited does not re-post its history. Combined with the derived
+ * occurrence id (see `occurrenceTransactionId`), catching up is replay-proof:
+ * two devices that both come online after a fortnight write the same ids and
+ * the upsert collapses them instead of billing the rent twice.
+ */
+export const budgetRecurring = sqliteTable('budget_recurring', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  type: text('type', { enum: ['income', 'expense', 'savings'] }).notNull(),
+  amountCents: integer('amount_cents').notNull(),
+  category: text('category').notNull(),
+  account: text('account', { enum: ['cash', 'wallet', 'bank'] })
+    .notNull()
+    .default('cash'),
+  note: text('note'),
+  frequency: text('frequency', { enum: ['weekly', 'monthly', 'yearly'] }).notNull(),
+  interval: integer('interval').notNull().default(1),
+  /** `yyyy-MM-dd` of the first occurrence — also the day-of-month every later
+   *  occurrence is derived from, which is why it is kept rather than replaced. */
+  anchorDate: text('anchor_date').notNull(),
+  /** `yyyy-MM-dd` of the most recent occurrence already written. */
+  lastPostedDate: text('last_posted_date'),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  deletedAt: integer('deleted_at'),
+});
+
 export const budgetCategoryLimits = sqliteTable('budget_category_limits', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
@@ -1402,6 +1439,24 @@ export const TABLE_BOOTSTRAP_SQL = `
     updated_at INTEGER NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS budget_recurring (
+    id TEXT PRIMARY KEY NOT NULL,
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    amount_cents INTEGER NOT NULL,
+    category TEXT NOT NULL,
+    account TEXT NOT NULL DEFAULT 'cash',
+    note TEXT,
+    frequency TEXT NOT NULL,
+    interval INTEGER NOT NULL DEFAULT 1,
+    anchor_date TEXT NOT NULL,
+    last_posted_date TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
+  );
+
   CREATE TABLE IF NOT EXISTS budget_category_limits (
     id TEXT PRIMARY KEY NOT NULL,
     user_id TEXT NOT NULL,
@@ -1645,6 +1700,8 @@ export const INDEX_BOOTSTRAP_SQL = `
   CREATE INDEX IF NOT EXISTS idx_sync_study_sessions ON study_sessions(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_water_intake_logs
     ON water_intake_logs(user_id, updated_at, id);
+  CREATE INDEX IF NOT EXISTS idx_sync_budget_recurring
+    ON budget_recurring(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_budget_category_limits
     ON budget_category_limits(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_budget_transactions

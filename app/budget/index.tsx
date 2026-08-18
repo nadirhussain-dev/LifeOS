@@ -15,6 +15,7 @@ import { ProgressBar } from '@/components/ui/progress-bar';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SectionHeader } from '@/components/ui/section-header';
 import { CategoryBudgetList } from '@/features/budget/components/category-budget-list';
+import { useMaterializeRecurring } from '@/features/budget/hooks/use-recurring';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
@@ -46,6 +47,11 @@ export default function BudgetScreen() {
   const overview = useBudgetOverview('month', anchorTime);
   const { data: savingsGoals = [] } = useSavingsGoals();
   const { statuses: categoryStatuses } = useCategoryBudgets();
+  // Posts anything the recurring rules owe. Here rather than at app start-up:
+  // it touches the database, and launch-time code that can fail is launch-time
+  // code that can stop the app opening. The occurrences are dated from the rule,
+  // so waiting until somebody looks at their budget costs nothing.
+  useMaterializeRecurring();
   const { totals: debtTotals } = useDebts();
   const {
     currency,
@@ -264,6 +270,13 @@ export default function BudgetScreen() {
               />
             </View>
           )}
+
+          <SectionHeader
+            title={t('budget.recurring')}
+            actionLabel={t('common.manage')}
+            onAction={() => router.push('/budget/recurring')}
+            actionTint={budgetTint}
+          />
 
           {/* Category caps — the answer to "where did it go wrong", which the
               donut above cannot give: a share of spending is not the same as a

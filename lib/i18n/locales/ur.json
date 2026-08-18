@@ -37,7 +37,8 @@
     "ok": "ٹھیک ہے",
     "or": "یا",
     "optional": "اختیاری",
-    "loadingEllipsis": "لوڈ ہو رہا ہے…"
+    "loadingEllipsis": "لوڈ ہو رہا ہے…",
+    "manage": "انتظام"
   },
   "reminder": {
     "in1Hour": "ایک گھنٹے میں",
@@ -585,7 +586,27 @@
     "capsExceedMonthly": "آپ کی زمرہ حدود کا مجموعہ آپ کے ماہانہ بجٹ سے زیادہ ہے۔",
     "noCategoryBudgets": "ابھی کوئی زمرہ حد نہیں ہے۔ ایک مقرر کریں اور اس ماہ کے اخراجات اس کے سامنے دکھائی دیں گے۔",
     "setCap": "حد مقرر کریں",
-    "categoryCapFor": "{{category}} کی حد"
+    "categoryCapFor": "{{category}} کی حد",
+    "recurring": "بار بار",
+    "addRecurring": "بار بار اندراج شامل کریں",
+    "repeats": "دہرائی",
+    "recurringWeekly_one": "ہر ہفتے",
+    "recurringWeekly_other": "ہر {{count}} ہفتے",
+    "recurringMonthly_one": "ہر مہینے",
+    "recurringMonthly_other": "ہر {{count}} مہینے",
+    "recurringYearly_one": "ہر سال",
+    "recurringYearly_other": "ہر {{count}} سال",
+    "recurringWeeklyShort": "ہفتہ وار",
+    "recurringMonthlyShort": "ماہانہ",
+    "recurringYearlyShort": "سالانہ",
+    "recurringActive": "فعال",
+    "recurringPaused": "روکا ہوا",
+    "nextOn": "اگلا {{date}}",
+    "noRecurringTitle": "ابھی کچھ دہرایا نہیں جا رہا",
+    "noRecurringBody": "کرایہ، سبسکرپشن یا تنخواہ ایک بار شامل کریں اور یہ خود درج ہوتا رہے گا۔",
+    "deleteRecurringTitle": "یہ بار بار اندراج حذف کریں؟",
+    "deleteRecurringBody": "{{name}} درج ہونا بند ہو جائے گا۔ اس نے جو لین دین بنائے ہیں وہ رہیں گے۔",
+    "recurringNotePlaceholder": "کرایہ، نیٹ فلکس، تنخواہ…"
   },
   "debtStatus": {
     "settled": "طے شدہ",

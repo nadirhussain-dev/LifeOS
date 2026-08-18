@@ -37,7 +37,8 @@
     "ok": "حسنًا",
     "or": "أو",
     "optional": "اختياري",
-    "loadingEllipsis": "جارٍ التحميل…"
+    "loadingEllipsis": "جارٍ التحميل…",
+    "manage": "إدارة"
   },
   "reminder": {
     "in1Hour": "خلال ساعة",
@@ -605,7 +606,27 @@
     "capsExceedMonthly": "مجموع حدود فئاتك يتجاوز ميزانيتك الشهرية.",
     "noCategoryBudgets": "لا توجد حدود للفئات بعد. حدّد واحدًا وسيظهر إنفاق هذا الشهر مقابله.",
     "setCap": "حدّد حدًا",
-    "categoryCapFor": "حد فئة {{category}}"
+    "categoryCapFor": "حد فئة {{category}}",
+    "recurring": "متكرر",
+    "addRecurring": "أضف عنصرًا متكررًا",
+    "repeats": "التكرار",
+    "recurringWeekly_one": "كل أسبوع",
+    "recurringWeekly_other": "كل {{count}} أسابيع",
+    "recurringMonthly_one": "كل شهر",
+    "recurringMonthly_other": "كل {{count}} أشهر",
+    "recurringYearly_one": "كل سنة",
+    "recurringYearly_other": "كل {{count}} سنوات",
+    "recurringWeeklyShort": "أسبوعي",
+    "recurringMonthlyShort": "شهري",
+    "recurringYearlyShort": "سنوي",
+    "recurringActive": "نشط",
+    "recurringPaused": "موقوف",
+    "nextOn": "التالي {{date}}",
+    "noRecurringTitle": "لا شيء متكرر بعد",
+    "noRecurringBody": "أضف الإيجار أو اشتراكًا أو راتبك مرة واحدة وسيُسجّل نفسه.",
+    "deleteRecurringTitle": "حذف هذا العنصر المتكرر؟",
+    "deleteRecurringBody": "سيتوقف {{name}} عن التسجيل. تُحفظ المعاملات التي أنشأها بالفعل.",
+    "recurringNotePlaceholder": "الإيجار، نتفليكس، الراتب…"
   },
   "debtStatus": {
     "settled": "مسدّد",
