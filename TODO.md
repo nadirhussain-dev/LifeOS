@@ -460,6 +460,68 @@ the UI:
 
 ---
 
+## 📈 Depth pass — modules made competitive (2026-08-18)
+
+Six sequenced steps, all landed except where noted. Every commit ran `tsc`,
+`eslint`, `check:i18n`, `check:migrations`, the unit suite and `test:sql`.
+
+- [x] **Tasks depth.** Recurrence that can express real rules (interval, chosen
+      weekdays, weekdays preset, due-date vs completion anchor), a checklist
+      (`task_subtasks`, carried onto the next occurrence of a repeating task),
+      and tags over the shared `note_tags` vocabulary with a filter. Migrations
+      0056–0058.
+- [x] **The list layer actually memoised.** `TaskRow`, `HabitRow` and `NoteCard`
+      were all wrapped in `memo` and all three were inert — every list passed
+      inline arrows, so props compared unequal on every parent render. Handlers
+      now take the row's record and each list holds one `useCallback` per action.
+- [x] **Optimistic writes** for water, gallery favourites and goal milestones,
+      on top of the tasks/habits/subtask toggles that already had them.
+- [x] **Goals advance from the work.** `tasks.goal_id` and `habits.goal_id`
+      (0060). Only count-mode goals can be linked, and the pickers offer only
+      those, so the rule is visible rather than a silent no-op.
+- [x] **The insight engine is real.** `DailyMetrics` widened to nineteen fields
+      across seven modules; fourteen declarative correlation specs replacing three
+      hand-written functions; Welch's t-test against the real t-distribution,
+      an effect-size floor and a Benjamini–Hochberg correction. `statistics.ts`
+      is tested against published t-table values, and the engine is tested to
+      find _nothing_ in 60 days of PRNG noise.
+- [x] **Weekly review** (`app/review.tsx`) with its own notification category,
+      plus a one-tap action per finding.
+- [x] **Budget depth.** Per-category caps (0061) and recurring transactions that
+      post themselves (0062).
+- [x] **Notes full-text search** (FTS5), created as a separately-guarded
+      bootstrap step with a LIKE fallback, because FTS5 is a compile-time SQLite
+      option and a missing one inside `TABLE_BOOTSTRAP_SQL` would abort the whole
+      exec and leave the app unable to open its database.
+
+Still open from this pass:
+
+- [ ] ⚠️ **Health Connect / HealthKit sleep import — not attempted.** It is the
+      right next step for Sleep (manual entry is the module's largest burden, and
+      imported sleep feeds the insight engine for free), and it is the one item
+      here that cannot be written without being able to build. It needs
+      `react-native-health-connect`, a config plugin, Android manifest
+      permissions and a prebuild — none of which can be typechecked, tested or
+      verified in this environment, and a broken native dependency would take
+      `release.yml`'s automatic `production-apk` build down with it. Do this on a
+      machine that can run `eas build -p android --profile development`.
+- [ ] **The non-English copy added by this pass is machine-generated.** Arabic,
+      Hindi and Urdu across recurrence, checklists, tags, goals, insights, the
+      weekly review and budget — roughly 200 strings. `check:i18n` passes, but
+      Arabic leans on `_other` where the existing file spells out dual and few by
+      hand. Wants a native speaker before release.
+- [ ] **Migrations 0056–0062 have only met WASM Postgres.** Written against the
+      current contracts (0020's cascade, the 0017/0019 policy shape, the sync
+      index, `operator_readable_tables()`) and asserted by `npm run test:sql`,
+      but no Supabase project exists for them to run against.
+- [ ] **FTS5 has not been confirmed present in op-sqlite on a device.** The
+      fallback means search degrades rather than breaks, but nobody has seen which
+      path a real build takes.
+- [ ] **None of this has run on hardware.** Same standing caveat as the rest of
+      this file.
+
+---
+
 ## ⚖️ Deferred (by design)
 
 - [ ] **Streak-at-risk notifications** — local notifications can't evaluate completion state at fire time, so any version nags after the habit is done. Revisit only with server push (FCM) or a background task. In-app confetti already covers celebrations.
