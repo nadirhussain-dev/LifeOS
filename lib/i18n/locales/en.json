@@ -1779,7 +1779,8 @@
     "formerMembers": "No longer in the group",
     "formerMembersHint": "Their expenses stay in the ledger, so everyone else’s balances still add up.",
     "removedSettled": "Settled up",
-    "removedOutstanding": "{{amount}} outstanding"
+    "removedOutstanding": "{{amount}} outstanding",
+    "seeAllExpenses": "See all"
   },
   "permissions": {
     "cameraDeniedTitle": "Camera access needed",

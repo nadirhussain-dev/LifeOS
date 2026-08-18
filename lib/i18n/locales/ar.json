@@ -1923,7 +1923,8 @@
     "formerMembers": "لم يعودوا في المجموعة",
     "formerMembersHint": "تبقى مصروفاتهم في السجل كي تظل أرصدة الجميع صحيحة.",
     "removedSettled": "مُسوّى",
-    "removedOutstanding": "{{amount}} مستحقة"
+    "removedOutstanding": "{{amount}} مستحقة",
+    "seeAllExpenses": "عرض الكل"
   },
   "permissions": {
     "cameraDeniedTitle": "مطلوب الوصول إلى الكاميرا",

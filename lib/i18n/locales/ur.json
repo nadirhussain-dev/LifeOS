@@ -1779,7 +1779,8 @@
     "formerMembers": "اب گروپ میں نہیں",
     "formerMembersHint": "اُن کے اخراجات حساب میں رہتے ہیں، تاکہ باقی سب کا حساب درست رہے۔",
     "removedSettled": "حساب برابر",
-    "removedOutstanding": "{{amount}} باقی"
+    "removedOutstanding": "{{amount}} باقی",
+    "seeAllExpenses": "سب دیکھیں"
   },
   "permissions": {
     "cameraDeniedTitle": "کیمرے کی اجازت درکار",

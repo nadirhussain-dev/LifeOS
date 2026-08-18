@@ -1779,7 +1779,8 @@
     "formerMembers": "अब समूह में नहीं",
     "formerMembersHint": "उनके खर्च हिसाब में बने रहते हैं, ताकि बाकी सबका हिसाब सही रहे।",
     "removedSettled": "हिसाब बराबर",
-    "removedOutstanding": "{{amount}} बकाया"
+    "removedOutstanding": "{{amount}} बकाया",
+    "seeAllExpenses": "सभी देखें"
   },
   "permissions": {
     "cameraDeniedTitle": "कैमरा अनुमति चाहिए",
