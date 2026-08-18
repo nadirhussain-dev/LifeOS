@@ -16,7 +16,12 @@ import {
   toggleMilestone,
   updateGoal,
 } from '@/features/goals/services/goals-repository';
-import type { Goal, CreateGoalInput, UpdateGoalInput } from '@/features/goals/types/goal.types';
+import type {
+  CreateGoalInput,
+  Goal,
+  GoalMilestone,
+  UpdateGoalInput,
+} from '@/features/goals/types/goal.types';
 
 export function useGoalMutations() {
   const queryClient = useQueryClient();
@@ -92,10 +97,42 @@ export function useGoalMutations() {
     onSuccess: invalidate,
   });
 
+  /**
+   * Ticks the milestone before the write lands.
+   *
+   * Same reasoning as the task checklist: the box is under the user's finger,
+   * so any gap between the tap and the fill reads as the app hesitating. The
+   * mutation is given only the milestone id, so this patches by id across the
+   * `milestones` caches rather than needing the goal it belongs to.
+   *
+   * `completedAt` is set here too, not just the flag — the row's own subtitle
+   * renders from it, so patching one and not the other would tick the box and
+   * leave "not yet completed" beside it.
+   */
   const toggleMilestoneMutation = useMutation({
     mutationFn: async ({ id, isCompleted }: { id: string; isCompleted: boolean }) =>
       toggleMilestone(id, isCompleted),
-    onSuccess: invalidate,
+    onMutate: async ({ id, isCompleted }) => {
+      const key = ['goals', 'milestones'];
+      await queryClient.cancelQueries({ queryKey: key });
+      const snapshot = queryClient.getQueriesData<GoalMilestone[]>({ queryKey: key });
+
+      queryClient.setQueriesData<GoalMilestone[]>({ queryKey: key }, (current) =>
+        (current ?? []).map((milestone) =>
+          milestone.id === id
+            ? { ...milestone, isCompleted, completedAt: isCompleted ? Date.now() : null }
+            : milestone,
+        ),
+      );
+
+      return { snapshot };
+    },
+    onError: (_error, _variables, context) => {
+      for (const [key, data] of context?.snapshot ?? []) {
+        queryClient.setQueryData(key, data);
+      }
+    },
+    onSettled: invalidate,
   });
 
   const renameMilestoneMutation = useMutation({
