@@ -6321,6 +6321,86 @@ await test('0055 every console write lands in the shared audit log', async () =>
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
+console.log('\ntask subtasks (0057)');
+// ---------------------------------------------------------------------------
+
+/** Its own account, because by this point in the suite the shared fixtures have
+ *  been blocked, reported and unblocked by the moderation sections, and
+ *  `may_access_own_data()` is exactly what those leave behind. A table's
+ *  isolation should be asserted against a plain user, not against whatever
+ *  state an unrelated test finished in. */
+const CHECKLIST_OWNER = '7ac57a5c-0000-4000-8000-00000000c001';
+const CHECKLIST_OTHER = '7ac57a5c-0000-4000-8000-00000000c002';
+await createUser(db, CHECKLIST_OWNER, 'checklist-owner@example.com');
+await createUser(db, CHECKLIST_OTHER, 'checklist-other@example.com');
+
+await test('0057 a checklist item belongs to the account that wrote it', async () => {
+  await asUser(db, CHECKLIST_OWNER, async () => {
+    await db.query(
+      `insert into public.task_subtasks
+         (id, task_id, user_id, title, created_at, updated_at)
+       values ('st-1', 'task-1', $1::uuid, 'Buy the paint', 1, 1)`,
+      [CHECKLIST_OWNER],
+    );
+    expectEqual(
+      await count(`select count(*)::int n from public.task_subtasks`),
+      1,
+      'owner sees it',
+    );
+  });
+
+  await asUser(db, CHECKLIST_OTHER, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.task_subtasks`),
+      0,
+      "another account's view",
+    );
+  });
+});
+
+await test('0057 one account cannot file a checklist item under another', async () => {
+  await asUser(db, CHECKLIST_OTHER, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.task_subtasks
+             (id, task_id, user_id, title, created_at, updated_at)
+           values ('st-forged', 'task-1', $1::uuid, 'Not mine to write', 1, 1)`,
+          [CHECKLIST_OWNER],
+        ),
+      'row-level security',
+    );
+  });
+});
+
+await test('0057 a signed-out visitor sees no checklist at all', async () => {
+  await asAnon(db, async () => {
+    expectEqual(await count(`select count(*)::int n from public.task_subtasks`), 0, 'anon rows');
+  });
+});
+
+await test('0057 deleting the account takes its checklist with it', async () => {
+  // The 0020 contract, asserted at birth rather than after a sweep: the
+  // reference is in the CREATE, so this table can never join the list of
+  // tables that had to be de-orphaned before they could get one.
+  await db.query(`delete from auth.users where id = $1::uuid`, [CHECKLIST_OWNER]);
+  expectEqual(
+    await count(`select count(*)::int n from public.task_subtasks where id = 'st-1'`),
+    0,
+    'rows surviving the account',
+  );
+});
+
+await test('0057 an operator can reach the checklist of a task they are handling', async () => {
+  // A whitelist miss does not error — it makes the moderation surface show a
+  // task whose checklist is silently absent, which reads as "nothing here".
+  const tables = (await one(`select public.operator_readable_tables() as t`)).t;
+  if (!tables.includes('task_subtasks')) {
+    throw new Error('task_subtasks missing from operator_readable_tables()');
+  }
+});
+
+// ---------------------------------------------------------------------------
 console.log('\ntask recurrence rules (0056)');
 // ---------------------------------------------------------------------------
 

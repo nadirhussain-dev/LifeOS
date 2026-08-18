@@ -55,6 +55,32 @@ export const tasks = sqliteTable('tasks', {
   serverUpdatedAt: integer('server_updated_at'),
 });
 
+/**
+ * A task's checklist.
+ *
+ * A separate table rather than a `parent_task_id` on `tasks`, which was the
+ * other obvious shape. Subtasks-as-tasks means every existing query that reads
+ * `tasks` — the dashboard, both widgets, search, the digest, challenge tracking
+ * — starts counting checklist items as tasks in their own right unless each one
+ * remembers to filter, and the failure is silent: a slightly wrong number on a
+ * screen nobody thinks to re-check. A checklist item is also a smaller thing
+ * than a task: it has no due date, no reminder, no category, no recurrence.
+ * Making it a row that *could* carry them invites the question of what a
+ * subtask with its own reminder is supposed to mean.
+ */
+export const taskSubtasks = sqliteTable('task_subtasks', {
+  id: text('id').primaryKey(),
+  taskId: text('task_id').notNull(),
+  userId: text('user_id').notNull(),
+  title: text('title').notNull(),
+  isDone: integer('is_done', { mode: 'boolean' }).notNull().default(false),
+  completedAt: integer('completed_at'),
+  position: integer('position').notNull().default(0),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  deletedAt: integer('deleted_at'),
+});
+
 export const noteCategories = sqliteTable('note_categories', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
@@ -863,6 +889,19 @@ export const TABLE_BOOTSTRAP_SQL = `
     server_updated_at INTEGER
   );
 
+  CREATE TABLE IF NOT EXISTS task_subtasks (
+    id TEXT PRIMARY KEY NOT NULL,
+    task_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    is_done INTEGER NOT NULL DEFAULT 0,
+    completed_at INTEGER,
+    position INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
+  );
+
   CREATE TABLE IF NOT EXISTS note_categories (
     id TEXT PRIMARY KEY NOT NULL,
     user_id TEXT NOT NULL,
@@ -1463,6 +1502,7 @@ export const INDEX_BOOTSTRAP_SQL = `
   CREATE UNIQUE INDEX IF NOT EXISTS idx_playlist_songs_position ON playlist_songs(playlist_id, position);
   CREATE INDEX IF NOT EXISTS idx_goals_status ON goals(user_id, status, position);
   CREATE INDEX IF NOT EXISTS idx_goals_due ON goals(user_id, due_date);
+  CREATE INDEX IF NOT EXISTS idx_task_subtasks_task ON task_subtasks(task_id, position);
   CREATE INDEX IF NOT EXISTS idx_goal_milestones_goal ON goal_milestones(goal_id, position);
   CREATE INDEX IF NOT EXISTS idx_goal_progress_logs_goal ON goal_progress_logs(goal_id, logged_at);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_sleep_sessions_date ON sleep_sessions(user_id, log_date) WHERE deleted_at IS NULL;
@@ -1504,6 +1544,7 @@ export const INDEX_BOOTSTRAP_SQL = `
   CREATE UNIQUE INDEX IF NOT EXISTS idx_playlist_songs_id ON playlist_songs(id);
 
   CREATE INDEX IF NOT EXISTS idx_sync_tasks ON tasks(user_id, updated_at, id);
+  CREATE INDEX IF NOT EXISTS idx_sync_task_subtasks ON task_subtasks(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_notes ON notes(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_note_tag_links ON note_tag_links(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_note_attachments

@@ -42,6 +42,7 @@ import {
   studySubjects,
   taskCategories,
   tasks,
+  taskSubtasks,
   waterIntakeLogs,
 } from '@/database/schema';
 
@@ -56,6 +57,7 @@ import {
 const EXPORT_TABLES = {
   taskCategories,
   tasks,
+  taskSubtasks,
   noteCategories,
   notes,
   noteTags,

@@ -87,7 +87,7 @@ export const SYNC_MODULES: SyncModuleConfig[] = [
   {
     key: 'tasks',
     labelKey: 'syncModule.tasks',
-    tables: [t('task_categories'), t('tasks')],
+    tables: [t('task_categories'), t('tasks'), t('task_subtasks')],
     sensitive: false,
   },
   {
