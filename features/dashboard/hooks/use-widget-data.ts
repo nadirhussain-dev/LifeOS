@@ -17,6 +17,7 @@ import { listSleepSessions } from '@/features/sleep/services/sleep-repository';
 import { listStudySessions } from '@/features/study/services/study-repository';
 import { getDueBucket } from '@/features/tasks/services/task-grouping';
 import { getWeeklyCompletionStats, listTasks } from '@/features/tasks/services/tasks-repository';
+import { listDailyTotals } from '@/features/water-intake/services/water-intake-repository';
 import { listTimelineForDate } from '@/features/timeline/services/timeline-repository';
 import { toDateKey } from '@/lib/date';
 import type {
@@ -141,6 +142,12 @@ export function useInsightTeaser() {
         habitLogs: listAllHabitLogsBetween(start, end),
         transactions: listTransactions(),
         journalEntries: listEntriesBetween(start, end),
+        tasks: [
+          ...listTasks('active', 'created'),
+          ...listTasks('completed', 'created'),
+          ...listTasks('archived', 'created'),
+        ],
+        waterTotals: listDailyTotals(start, end),
       });
       const { status, headline } = computeInsights(daily);
       return { status, headline };

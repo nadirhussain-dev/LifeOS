@@ -101,6 +101,7 @@ export default function InsightsScreen() {
             status={insights.status}
             headline={insights.headline}
             rangeDays={rangeDays}
+            pairsTested={insights.pairsTested}
           />
 
           <View className="flex-row gap-2.5">

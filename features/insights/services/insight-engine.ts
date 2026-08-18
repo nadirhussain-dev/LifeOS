@@ -1,135 +1,185 @@
+import {
+  CORRELATION_SPECS,
+  type CorrelationSpec,
+} from '@/features/insights/config/correlation-specs';
+import {
+  benjaminiHochberg,
+  mean,
+  tTestPValue,
+  welchT,
+} from '@/features/insights/services/statistics';
 import type {
   DailyMetrics,
   InsightCandidate,
   InsightsResult,
 } from '@/features/insights/types/insights.types';
 
-const SEVEN_HOURS_MINUTES = 420;
-const MIN_GROUP_SIZE = 3;
-const MIN_LOW_MOOD_DAYS = 2;
+/** Days with something in them. Below this the screen says so rather than
+ *  producing findings from a fortnight of blanks. */
 const MIN_LOGGED_DAYS = 7;
 
-function average(values: number[]): number {
-  return values.reduce((sum, v) => sum + v, 0) / values.length;
-}
+/** How many findings the screen will show at once, headline included. Not a
+ *  rendering limit — a list of twelve "patterns" reads as a horoscope however
+ *  well each one was tested. */
+const MAX_FINDINGS = 4;
 
-/** Caps a candidate's strength by how much data actually backs it, so ten
- *  qualifying days count for more than the three-day minimum. */
-function confidence(sampleSize: number, target: number): number {
-  return Math.min(1, sampleSize / target);
-}
-
-/** Nights with 7+ hours of sleep vs. shorter nights, compared on the focus
- *  rating of study sessions logged that same day. */
-function sleepFocusCandidate(daily: DailyMetrics[]): InsightCandidate | null {
-  const relevant = daily.filter((d) => d.sleepMinutes != null && d.focusRating != null);
-  const high = relevant.filter((d) => (d.sleepMinutes ?? 0) >= SEVEN_HOURS_MINUTES);
-  const low = relevant.filter((d) => (d.sleepMinutes ?? 0) < SEVEN_HOURS_MINUTES);
-  if (high.length < MIN_GROUP_SIZE || low.length < MIN_GROUP_SIZE) return null;
-
-  const highAvg = average(high.map((d) => d.focusRating as number));
-  const lowAvg = average(low.map((d) => d.focusRating as number));
-  if (lowAvg <= 0 || highAvg <= lowAvg) return null;
-
-  const percent = (highAvg - lowAvg) / lowAvg;
-  if (percent < 0.08) return null;
-
-  return {
-    key: 'sleepFocus',
-    modules: ['sleep', 'study'],
-    strength: Math.min(1, percent) * confidence(high.length + low.length, 16),
-    params: { percent: Math.round(percent * 100) },
-  };
-}
-
-/** Days most of that day's scheduled habits got done vs. days most didn't,
- *  compared on how long it took to fall asleep that night. */
-function habitsSleepCandidate(daily: DailyMetrics[]): InsightCandidate | null {
-  const relevant = daily.filter((d) => d.habitsScheduled > 0 && d.fellAsleepMinutes != null);
-  const completed = relevant.filter((d) => d.habitsCompleted / d.habitsScheduled >= 0.8);
-  const rest = relevant.filter((d) => d.habitsCompleted / d.habitsScheduled < 0.8);
-  if (completed.length < MIN_GROUP_SIZE || rest.length < MIN_GROUP_SIZE) return null;
-
-  const completedAvg = average(completed.map((d) => d.fellAsleepMinutes as number));
-  const restAvg = average(rest.map((d) => d.fellAsleepMinutes as number));
-  const minutesFaster = restAvg - completedAvg;
-  if (minutesFaster < 5) return null;
-
-  return {
-    key: 'habitsSleep',
-    modules: ['habit', 'sleep'],
-    strength: Math.min(1, minutesFaster / 30) * confidence(completed.length + rest.length, 16),
-    params: { minutes: Math.round(minutesFaster) },
-  };
-}
-
-/** Spending in the 1–2 days after a 'low'/'rough' mood entry vs. the overall
- *  daily average. */
-function moodSpendingCandidate(daily: DailyMetrics[]): InsightCandidate | null {
-  const sortedDates = daily.map((d) => d.date).sort();
-  const byDate = new Map(daily.map((d) => [d.date, d]));
-  const lowMoodDates = daily
-    .filter((d) => d.mood === 'low' || d.mood === 'rough')
-    .map((d) => d.date);
-  if (lowMoodDates.length < MIN_LOW_MOOD_DAYS) return null;
-
-  const afterLowMoodSpend: number[] = [];
-  for (const date of lowMoodDates) {
-    const index = sortedDates.indexOf(date);
-    if (index === -1) continue;
-    for (const offset of [1, 2]) {
-      const followingDate = sortedDates[index + offset];
-      const row = followingDate ? byDate.get(followingDate) : undefined;
-      if (row) afterLowMoodSpend.push(row.spendCents);
-    }
-  }
-  if (afterLowMoodSpend.length < MIN_LOW_MOOD_DAYS) return null;
-
-  const baseline = average(daily.map((d) => d.spendCents));
-  if (baseline <= 0) return null;
-  const afterAvg = average(afterLowMoodSpend);
-  const percent = (afterAvg - baseline) / baseline;
-  if (percent < 0.15) return null;
-
-  return {
-    key: 'moodSpending',
-    modules: ['journal', 'budget'],
-    strength: Math.min(1, percent / 2) * confidence(afterLowMoodSpend.length, 8),
-    params: { percent: Math.round(percent * 100) },
-  };
-}
-
-const CANDIDATE_FNS = [sleepFocusCandidate, habitsSleepCandidate, moodSpendingCandidate];
+/** Proportion of shown findings we accept being false. See the
+ *  Benjamini–Hochberg note in statistics.ts for why this is not 0.05. */
+const FALSE_DISCOVERY_RATE = 0.1;
 
 /**
- * Compares every module pair the app can currently join and ranks whatever
- * clears its own honesty bar (see the per-candidate thresholds above) by
- * strength — the strongest becomes the headline, the rest become pattern
- * cards. Deliberately not machine learning: at the volume one person logs
- * (dozens to a few hundred days) a plain "compare two groups" split is both
- * more honest and easier to explain than a model would be, and a candidate
- * that can't clear its minimum sample size simply doesn't fire rather than
- * guessing from three data points.
+ * Pairs each day's driver value with the outcome `lagDays` later.
+ *
+ * Both sides must be present. A null is missing information, not a zero, and
+ * pairing "no sleep session logged" with a good mood is how an engine ends up
+ * reporting that not tracking your sleep makes you happier.
+ */
+function pairedSamples(
+  daily: DailyMetrics[],
+  spec: CorrelationSpec,
+): { driver: number; outcome: number }[] {
+  const byDate = new Map(daily.map((day) => [day.date, day]));
+  const dates = daily.map((day) => day.date).sort();
+  const samples: { driver: number; outcome: number }[] = [];
+
+  dates.forEach((date, index) => {
+    const driverDay = byDate.get(date);
+    const outcomeDate = dates[index + spec.lagDays];
+    const outcomeDay = outcomeDate ? byDate.get(outcomeDate) : undefined;
+    if (!driverDay || !outcomeDay) return;
+
+    const driver = driverDay[spec.driver];
+    const outcome = outcomeDay[spec.outcome];
+    if (driver == null || outcome == null) return;
+    samples.push({ driver, outcome });
+  });
+
+  return samples;
+}
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
+}
+
+/**
+ * Evaluates one spec, returning a candidate only if it clears every guard.
+ *
+ * The guards are applied in increasing order of cost, which is also increasing
+ * order of how easy they are to argue with: enough data, then a difference big
+ * enough to be worth a sentence, then a difference unlikely to be chance. All
+ * three have to hold. Dropping any one of them is how this becomes a feature
+ * that tells people confident stories about noise.
+ */
+function evaluate(daily: DailyMetrics[], spec: CorrelationSpec): InsightCandidate | null {
+  const samples = pairedSamples(daily, spec);
+  if (samples.length < spec.minGroup * 2) return null;
+
+  const cut =
+    spec.split.kind === 'threshold'
+      ? spec.split.at
+      : median(samples.map((sample) => sample.driver));
+
+  const high = samples.filter((sample) => sample.driver >= cut).map((s) => s.outcome);
+  const low = samples.filter((sample) => sample.driver < cut).map((s) => s.outcome);
+  if (high.length < spec.minGroup || low.length < spec.minGroup) return null;
+
+  const highMean = mean(high);
+  const lowMean = mean(low);
+
+  // Signed so that a positive difference always means "the spec's expectation
+  // held", whichever direction it expected.
+  const observed = spec.expect === 'higher' ? highMean - lowMean : lowMean - highMean;
+  if (observed <= 0) return null;
+
+  const base = Math.min(highMean, lowMean);
+  // A relative effect needs something to be relative to. With a zero baseline —
+  // no spending at all in the quieter group, say — any difference is infinite,
+  // which is not a finding, it is a division by zero wearing a hat.
+  if (base <= 0) return null;
+
+  const relativeEffect = observed / base;
+  if (relativeEffect < spec.effectFloor) return null;
+
+  const t = welchT(high, low);
+  if (!t) return null;
+  const pValue = tTestPValue(t.t, t.df);
+
+  return {
+    key: spec.key,
+    modules: spec.modules,
+    // Effect size, damped by how much evidence stands behind it, so a big
+    // difference across eight days does not outrank a slightly smaller one
+    // across forty.
+    strength: Math.min(1, relativeEffect) * Math.min(1, samples.length / (spec.minGroup * 5)),
+    params: { percent: Math.round(relativeEffect * 100) },
+    sampleSize: samples.length,
+    pValue,
+    lagDays: spec.lagDays,
+  };
+}
+
+/**
+ * Every pattern the app can currently see, filtered down to the ones worth
+ * saying out loud.
+ *
+ * Deliberately not machine learning. At the volume one person logs — dozens to
+ * a few hundred days — a two-group comparison with a real significance test is
+ * both more honest and explicable in a sentence, which matters because every
+ * finding here is shown to someone as a claim about their own life.
+ *
+ * The multiple-comparison correction is the part that would be easiest to skip
+ * and most damaging to. Testing fourteen pairs at p<0.05 means an evens chance
+ * of at least one false positive in a person with no patterns at all, and that
+ * person is precisely who would screenshot it.
  */
 export function computeInsights(daily: DailyMetrics[]): InsightsResult {
   const loggedDays = daily.filter(
-    (d) =>
-      d.sleepMinutes != null ||
-      d.studySeconds > 0 ||
-      d.habitsScheduled > 0 ||
-      d.spendCents > 0 ||
-      d.mood != null,
+    (day) =>
+      day.sleepMinutes != null ||
+      day.studySeconds > 0 ||
+      day.habitsScheduled > 0 ||
+      day.spendCents > 0 ||
+      day.mood != null ||
+      day.tasksCompleted > 0 ||
+      day.waterMl > 0,
   );
 
-  const candidates = CANDIDATE_FNS.map((fn) => fn(daily))
-    .filter((c): c is InsightCandidate => c !== null)
+  if (loggedDays.length < MIN_LOGGED_DAYS) {
+    return {
+      status: 'insufficient_data',
+      headline: null,
+      patterns: [],
+      pairsTested: CORRELATION_SPECS.length,
+    };
+  }
+
+  const evaluated = CORRELATION_SPECS.map((spec) => evaluate(daily, spec)).filter(
+    (candidate): candidate is InsightCandidate => candidate !== null,
+  );
+
+  const survives = benjaminiHochberg(
+    evaluated.map((candidate) => candidate.pValue),
+    FALSE_DISCOVERY_RATE,
+  );
+  const kept = evaluated
+    .filter((_, index) => survives[index])
     .sort((a, b) => b.strength - a.strength);
 
-  if (loggedDays.length < MIN_LOGGED_DAYS) {
-    return { status: 'insufficient_data', headline: null, patterns: [] };
+  if (kept.length === 0) {
+    return {
+      status: 'no_pattern_yet',
+      headline: null,
+      patterns: [],
+      pairsTested: CORRELATION_SPECS.length,
+    };
   }
-  if (candidates.length === 0) {
-    return { status: 'no_pattern_yet', headline: null, patterns: [] };
-  }
-  return { status: 'ready', headline: candidates[0], patterns: candidates.slice(1, 4) };
+
+  return {
+    status: 'ready',
+    headline: kept[0],
+    patterns: kept.slice(1, MAX_FINDINGS),
+    pairsTested: CORRELATION_SPECS.length,
+  };
 }
