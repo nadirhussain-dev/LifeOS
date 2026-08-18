@@ -44,6 +44,9 @@ export const tasks = sqliteTable('tasks', {
   reminderEnabled: integer('reminder_enabled', { mode: 'boolean' }).notNull().default(false),
   reminderNotificationId: text('reminder_notification_id'),
   sourceNoteId: text('source_note_id'),
+  /** The goal this task's completion advances, if any. Only count-mode goals
+   *  can be linked — see features/goals/services/goal-contributions.ts. */
+  goalId: text('goal_id'),
   habitId: text('habit_id'),
   habitLogDate: text('habit_log_date'),
   createdAt: integer('created_at').notNull(),
@@ -214,6 +217,8 @@ export const habits = sqliteTable('habits', {
     .default('daily'),
   scheduleDays: text('schedule_days'),
   scheduleIntervalDays: integer('schedule_interval_days'),
+  /** The goal each log of this habit advances, if any. */
+  goalId: text('goal_id'),
   reminderTime: text('reminder_time'),
   reminderAdaptive: integer('reminder_adaptive', { mode: 'boolean' }).notNull().default(false),
   reminderNotificationId: text('reminder_notification_id'),
@@ -905,6 +910,7 @@ export const TABLE_BOOTSTRAP_SQL = `
     reminder_enabled INTEGER NOT NULL DEFAULT 0,
     reminder_notification_id TEXT,
     source_note_id TEXT,
+    goal_id TEXT,
     habit_id TEXT,
     habit_log_date TEXT,
     created_at INTEGER NOT NULL,
@@ -1024,6 +1030,7 @@ export const TABLE_BOOTSTRAP_SQL = `
     schedule_type TEXT NOT NULL DEFAULT 'daily',
     schedule_days TEXT,
     schedule_interval_days INTEGER,
+    goal_id TEXT,
     reminder_time TEXT,
     reminder_adaptive INTEGER NOT NULL DEFAULT 0,
     reminder_notification_id TEXT,
@@ -1706,6 +1713,7 @@ export const ADDITIVE_COLUMNS: Record<string, { name: string; ddl: string }[]> =
     },
     { name: 'recurrence_parent_id', ddl: 'ALTER TABLE tasks ADD COLUMN recurrence_parent_id TEXT' },
     { name: 'source_note_id', ddl: 'ALTER TABLE tasks ADD COLUMN source_note_id TEXT' },
+    { name: 'goal_id', ddl: 'ALTER TABLE tasks ADD COLUMN goal_id TEXT' },
     { name: 'habit_id', ddl: 'ALTER TABLE tasks ADD COLUMN habit_id TEXT' },
     { name: 'habit_log_date', ddl: 'ALTER TABLE tasks ADD COLUMN habit_log_date TEXT' },
     {
@@ -1733,6 +1741,7 @@ export const ADDITIVE_COLUMNS: Record<string, { name: string; ddl: string }[]> =
     },
   ],
   habits: [
+    { name: 'goal_id', ddl: 'ALTER TABLE habits ADD COLUMN goal_id TEXT' },
     {
       name: 'reminder_notification_id',
       ddl: 'ALTER TABLE habits ADD COLUMN reminder_notification_id TEXT',

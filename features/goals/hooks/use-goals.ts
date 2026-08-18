@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { canGoalReceiveContributions } from '@/features/goals/services/goal-contributions';
+
 import { PRIORITY_RANK } from '@/features/goals/config/goal-priority';
 import {
   getGoal,
@@ -29,6 +31,20 @@ function sortGoals(
     default:
       return copy.sort((a, b) => a.position - b.position);
   }
+}
+
+/**
+ * Active goals a task or habit can be linked to.
+ *
+ * Separate from `useGoals`, which is driven by the goals screen's filter store —
+ * a picker on the task screen must not change what it offers because the user
+ * last left the goals list filtered to "archived".
+ */
+export function useLinkableGoals() {
+  return useQuery({
+    queryKey: ['goals', 'linkable'],
+    queryFn: async () => listGoals('active').filter(canGoalReceiveContributions),
+  });
 }
 
 export function useGoals() {

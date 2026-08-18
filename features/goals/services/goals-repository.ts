@@ -2,6 +2,10 @@ import { format } from 'date-fns';
 import { and, eq, isNull } from 'drizzle-orm';
 
 import { getDb } from '@/database/client';
+import {
+  applyContribution,
+  canGoalReceiveContributions,
+} from '@/features/goals/services/goal-contributions';
 import { goalMilestones, goalProgressLogs, goals } from '@/database/schema';
 import { computeGoalProgress } from '@/features/goals/services/goal-progress';
 import { generateId } from '@/lib/id';
@@ -340,6 +344,25 @@ export function logGoalProgress(
       .run();
   }
   return log;
+}
+
+/**
+ * Advances a goal because linked work was finished, or reverses it because the
+ * work was undone.
+ *
+ * Silent when the goal is gone, soft-deleted, or not a count goal. That is
+ * deliberate rather than lax: a task can outlive the goal it named, and the
+ * alternative — throwing from inside `completeTask` — would mean a tick that
+ * refuses to register because of a goal the user deleted weeks ago.
+ */
+export function contributeToGoal(goalId: string, requestedDelta: number, note: string | null) {
+  const goal = getGoal(goalId);
+  if (!goal || !canGoalReceiveContributions(goal)) return;
+
+  const { value, delta } = applyContribution(goal, requestedDelta);
+  if (delta === 0) return;
+
+  logGoalProgress(goal, value, delta, note);
 }
 
 export function deleteProgressLog(id: string) {

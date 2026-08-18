@@ -178,7 +178,8 @@
     "high": "زیادہ",
     "noTime": "کوئی وقت نہیں",
     "unit": "یونٹ",
-    "tags": "ٹیگز"
+    "tags": "ٹیگز",
+    "goal": "ہدف"
   },
   "recurrence": {
     "oneTime": "ایک بار",
@@ -858,7 +859,8 @@
     "reminderNotifTitle": "{{title}}",
     "reminderNotifToday": "آج کی تاریخ ہے۔",
     "reminderNotifBody_one": "{{count}} دن میں۔",
-    "reminderNotifBody_other": "{{count}} دن میں۔"
+    "reminderNotifBody_other": "{{count}} دن میں۔",
+    "noCountGoals": "ابھی کوئی عدد پر مبنی ہدف نہیں ہے۔ جو ہدف کسی چیز کو گنتا ہے، اسے اس سے آگے بڑھایا جا سکتا ہے۔"
   },
   "insights": {
     "title": "آپ کی زندگی کے پیٹرن",

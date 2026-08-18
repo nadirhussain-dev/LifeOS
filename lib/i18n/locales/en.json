@@ -178,7 +178,8 @@
     "high": "High",
     "noTime": "No time",
     "unit": "Unit",
-    "tags": "Tags"
+    "tags": "Tags",
+    "goal": "Goal"
   },
   "recurrence": {
     "oneTime": "One-time",
@@ -858,7 +859,8 @@
     "reminderNotifTitle": "{{title}}",
     "reminderNotifToday": "Due today.",
     "reminderNotifBody_one": "Due in {{count}} day.",
-    "reminderNotifBody_other": "Due in {{count}} days."
+    "reminderNotifBody_other": "Due in {{count}} days.",
+    "noCountGoals": "No number-based goals yet. A goal that counts something can be advanced by this."
   },
   "insights": {
     "title": "Patterns Across Your Life",

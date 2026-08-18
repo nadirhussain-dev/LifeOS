@@ -1,6 +1,8 @@
 import { and, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
 
 import { getDb } from '@/database/client';
+import { habitLogContribution } from '@/features/goals/services/goal-contributions';
+import { contributeToGoal } from '@/features/goals/services/goals-repository';
 import {
   habitCategories,
   habitLogs,
@@ -41,6 +43,7 @@ function toHabit(row: typeof habits.$inferSelect): Habit {
     scheduleType: row.scheduleType,
     scheduleDays: row.scheduleDays ? (JSON.parse(row.scheduleDays) as number[]) : null,
     scheduleIntervalDays: row.scheduleIntervalDays,
+    goalId: row.goalId,
     reminderTime: row.reminderTime,
     reminderAdaptive: row.reminderAdaptive,
     reminderNotificationId: row.reminderNotificationId,
@@ -102,6 +105,7 @@ export function createHabit(input: CreateHabitInput): Habit {
     scheduleType: input.scheduleType,
     scheduleDays: input.scheduleDays ?? null,
     scheduleIntervalDays: input.scheduleIntervalDays ?? null,
+    goalId: input.goalId ?? null,
     reminderTime: input.reminderTime ?? null,
     reminderAdaptive: input.reminderAdaptive ?? false,
     reminderNotificationId: null,
@@ -220,6 +224,7 @@ export function listSkipsForHabit(habitId: string): HabitSkip[] {
 export function logHabit(habitId: string, logDate: string, value = 1, note: string | null = null) {
   const db = getDb();
   const now = Date.now();
+  const habit = getHabit(habitId);
   // Includes tombstones: re-ticking a day the user previously un-ticked has to
   // revive that row, not insert a second one alongside it.
   const existing = db
@@ -233,6 +238,12 @@ export function logHabit(habitId: string, logDate: string, value = 1, note: stri
       .set({ value, note, deletedAt: null, updatedAt: now })
       .where(eq(habitLogs.id, existing.id))
       .run();
+    // The *change*, not the new value. This function is idempotent by design —
+    // it revives a tombstone or overwrites a value rather than inserting a
+    // second row — so a day already logged at 5 and corrected to 8 owes a
+    // linked goal 3, not 8. A tombstone owes the whole amount, because its
+    // contribution was taken back when it was deleted.
+    contributeHabitLog(habit, existing.deletedAt === null ? existing.value : null, value, logDate);
     return;
   }
 
@@ -249,17 +260,52 @@ export function logHabit(habitId: string, logDate: string, value = 1, note: stri
       updatedAt: now,
     })
     .run();
+  contributeHabitLog(habit, null, value, logDate);
+}
+
+/**
+ * Passes a habit log's contribution to the goal the habit names, as the signed
+ * difference between what the day counted for before and what it counts for
+ * now.
+ *
+ * A habit and a task can both be linked to the same goal, and a task can also
+ * be linked to that habit — in which case one tick contributes twice. That is
+ * left as it is: both links were made explicitly, and silently ignoring one of
+ * them would be the app deciding which of the user's two statements it believed.
+ */
+function contributeHabitLog(
+  habit: Habit | null,
+  previousValue: number | null,
+  nextValue: number | null,
+  logDate: string,
+) {
+  if (!habit?.goalId) return;
+  const before = previousValue === null ? 0 : habitLogContribution(habit.type, previousValue);
+  const after = nextValue === null ? 0 : habitLogContribution(habit.type, nextValue);
+  contributeToGoal(habit.goalId, after - before, `${habit.name} · ${logDate}`);
 }
 
 /** Soft delete. A hard one cannot sync — the row would simply come back on the
  *  next pull from another device, silently re-ticking a habit the user cleared. */
 export function unlogHabit(habitId: string, logDate: string) {
   const now = Date.now();
-  getDb()
-    .update(habitLogs)
+  const db = getDb();
+  // Read before writing: once the tombstone is set there is no way to know what
+  // the day counted for, and the goal is owed exactly that much back.
+  const existing = db
+    .select()
+    .from(habitLogs)
+    .where(and(eq(habitLogs.habitId, habitId), eq(habitLogs.logDate, logDate)))
+    .get();
+
+  db.update(habitLogs)
     .set({ deletedAt: now, updatedAt: now })
     .where(and(eq(habitLogs.habitId, habitId), eq(habitLogs.logDate, logDate)))
     .run();
+
+  if (existing && existing.deletedAt === null) {
+    contributeHabitLog(getHabit(habitId), existing.value, null, logDate);
+  }
 }
 
 export function skipHabit(habitId: string, logDate: string, reason: HabitSkipReason) {

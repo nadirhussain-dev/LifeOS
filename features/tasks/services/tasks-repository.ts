@@ -3,6 +3,7 @@ import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 
 import { getDb } from '@/database/client';
 import { entryLinks, taskCategories, tasks } from '@/database/schema';
+import { contributeToGoal } from '@/features/goals/services/goals-repository';
 import { logHabit, unlogHabit } from '@/features/habits/services/habits-repository';
 import {
   copyChecklistToTask,
@@ -92,6 +93,7 @@ export function createTask(input: CreateTaskInput): Task {
     recurrenceDaysOfWeek: input.recurrenceDaysOfWeek ?? null,
     recurrenceAnchor: input.recurrenceAnchor ?? 'due_date',
     recurrenceParentId: input.recurrenceParentId ?? null,
+    goalId: input.goalId ?? null,
     completedAt: null,
     position: 0,
     reminderEnabled: input.reminderEnabled ?? false,
@@ -223,6 +225,13 @@ export function completeTask(id: string): Task | null {
     writeCompletedByLink(task.id, task.habitId);
   }
 
+  // One finished task is one unit toward a count goal. Recurring tasks
+  // contribute per occurrence, which is the point: "read 12 books" advances
+  // each time the monthly task is ticked, not once when it was created.
+  if (task?.goalId) {
+    contributeToGoal(task.goalId, 1, task.title);
+  }
+
   if (task && task.recurrenceFrequency !== 'none' && task.dueDate) {
     const dueDate = nextRecurrenceDueDate(
       {
@@ -271,6 +280,14 @@ export function reopenTask(id: string) {
   if (task?.habitId && task.habitLogDate) {
     unlogHabit(task.habitId, task.habitLogDate);
     removeCompletedByLink(task.id, task.habitId);
+  }
+
+  // Reopening reverses the contribution as a second, negative log rather than
+  // deleting the first. The progress feed is an audit trail: "advanced, then
+  // undone" is what happened, and rewriting it to say nothing happened loses
+  // the only record of a mis-tap.
+  if (task?.goalId) {
+    contributeToGoal(task.goalId, -1, task.title);
   }
 }
 

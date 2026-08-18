@@ -29,6 +29,7 @@ export default function EditHabitScreen() {
     scheduleIntervalDays: habit.scheduleIntervalDays,
     reminderTime: habit.reminderTime,
     reminderAdaptive: habit.reminderAdaptive,
+    goalId: habit.goalId,
   };
 
   return (

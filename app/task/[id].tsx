@@ -10,6 +10,7 @@ import {
   StickyNote,
   Tag,
   Tags,
+  Target,
   Trash2,
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -27,6 +28,7 @@ import { DueDateField } from '@/features/tasks/components/due-date-field';
 import { HabitLinkPicker } from '@/features/tasks/components/habit-link-picker';
 import { PriorityPicker } from '@/features/tasks/components/priority-picker';
 import { RecurrencePicker } from '@/features/tasks/components/recurrence-picker';
+import { GoalLinkPicker } from '@/features/goals/components/goal-link-picker';
 import { SubtaskList } from '@/features/tasks/components/subtask-list';
 import { TagPicker } from '@/features/notes/components/tag-picker';
 import { useNoteTags } from '@/features/notes/hooks/use-notes';
@@ -236,6 +238,13 @@ export default function TaskDetailScreen() {
               }}
               onCreateTag={(name) => addTag.mutate(name)}
               onDeleteTag={(tagId) => removeTag.mutate(tagId)}
+            />
+          </AttributeRow>
+
+          <AttributeRow icon={Target} label={t('fields.goal')}>
+            <GoalLinkPicker
+              value={task.goalId}
+              onChange={(goalId) => update.mutate({ id: task.id, input: { goalId } })}
             />
           </AttributeRow>
 

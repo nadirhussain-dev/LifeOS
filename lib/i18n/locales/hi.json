@@ -178,7 +178,8 @@
     "high": "उच्च",
     "noTime": "कोई समय नहीं",
     "unit": "इकाई",
-    "tags": "टैग"
+    "tags": "टैग",
+    "goal": "लक्ष्य"
   },
   "recurrence": {
     "oneTime": "एक बार",
@@ -858,7 +859,8 @@
     "reminderNotifTitle": "{{title}}",
     "reminderNotifToday": "आज की तारीख़ है।",
     "reminderNotifBody_one": "{{count}} दिन में।",
-    "reminderNotifBody_other": "{{count}} दिन में।"
+    "reminderNotifBody_other": "{{count}} दिन में।",
+    "noCountGoals": "अभी कोई संख्या-आधारित लक्ष्य नहीं है। जो लक्ष्य कुछ गिनता है, उसे इससे आगे बढ़ाया जा सकता है।"
   },
   "insights": {
     "title": "आपके जीवन के पैटर्न",

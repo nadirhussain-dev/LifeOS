@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as Haptics from 'expo-haptics';
-import { Bell, CalendarClock, Ruler, Sparkles, Tag } from 'lucide-react-native';
+import { Bell, CalendarClock, Ruler, Sparkles, Tag, Target } from 'lucide-react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, Switch, TextInput, View } from 'react-native';
@@ -12,6 +12,7 @@ import { AttributeRow } from '@/components/ui/attribute-row';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
+import { GoalLinkPicker } from '@/features/goals/components/goal-link-picker';
 import { HabitCategoryPicker } from '@/features/habits/components/habit-category-picker';
 import { HabitTypePicker } from '@/features/habits/components/habit-type-picker';
 import { SchedulePicker } from '@/features/habits/components/schedule-picker';
@@ -196,6 +197,14 @@ export function HabitForm({ defaultValues, submitLabel, onSubmit }: Props) {
             render={({ field }) => (
               <HabitCategoryPicker value={field.value} onChange={field.onChange} />
             )}
+          />
+        </AttributeRow>
+
+        <AttributeRow icon={Target} label={t('fields.goal')}>
+          <Controller
+            control={control}
+            name="goalId"
+            render={({ field }) => <GoalLinkPicker value={field.value} onChange={field.onChange} />}
           />
         </AttributeRow>
 

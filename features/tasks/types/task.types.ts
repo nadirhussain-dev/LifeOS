@@ -42,6 +42,8 @@ export type Task = {
   reminderNotificationId: string | null;
   /** Set when this task was created from a note via the note's "Create task" action. */
   sourceNoteId: string | null;
+  /** The count-mode goal this task's completion advances, if any. */
+  goalId: string | null;
   /** The habit this task's completion logs, and the day it logs it for — both
    *  set together when the task is linked to a habit, and fixed at link time
    *  (not re-derived if the due date changes afterward). */
@@ -84,6 +86,7 @@ export type CreateTaskInput = {
   recurrenceParentId?: string | null;
   reminderEnabled?: boolean;
   sourceNoteId?: string | null;
+  goalId?: string | null;
   habitId?: string | null;
   habitLogDate?: string | null;
 };

@@ -186,7 +186,8 @@
     "high": "عالية",
     "noTime": "بدون وقت",
     "unit": "الوحدة",
-    "tags": "الوسوم"
+    "tags": "الوسوم",
+    "goal": "الهدف"
   },
   "recurrence": {
     "oneTime": "مرة واحدة",
@@ -914,7 +915,8 @@
     "reminderNotifBody_two": "مستحق خلال يومين.",
     "reminderNotifBody_few": "مستحق خلال {{count}} أيام.",
     "reminderNotifBody_many": "مستحق خلال {{count}} يومًا.",
-    "reminderNotifBody_other": "مستحق خلال {{count}} يوم."
+    "reminderNotifBody_other": "مستحق خلال {{count}} يوم.",
+    "noCountGoals": "لا توجد أهداف رقمية بعد. الهدف الذي يَعُدّ شيئًا هو ما يمكن تقديمه من هنا."
   },
   "insights": {
     "title": "الأنماط في حياتك",
