@@ -131,7 +131,16 @@ describe("today's checklist", () => {
   it('ticks only what has cleared the write threshold', () => {
     const list = buildChecklist(required, { habits: 2, water: 5 }, 1);
     expect(list.map((i) => i.done)).toEqual([true, true, false]);
-    expect(list[2]).toEqual({ moduleId: 'journal', writes: 0, done: false });
+    expect(list[2]).toEqual({
+      moduleId: 'journal',
+      writes: 0,
+      done: false,
+      // The live-rule fields (0065) default to the pre-rule world, so a caller
+      // that passes neither gets exactly the old behaviour back.
+      attested: false,
+      liveRequired: false,
+      counts: false,
+    });
   });
 
   it('respects a threshold above one', () => {
@@ -170,5 +179,59 @@ describe('what a selection costs per day', () => {
 
   it('never rounds a real commitment down to nothing', () => {
     expect(estimatedDailyMinutes(['water'], estimates)).toBe(1);
+  });
+});
+
+/**
+ * The live-write rule (migration 0065), from the display side.
+ *
+ * The property worth pinning is the *divergence*: `done` and `counts` have to
+ * be the same field when the rule is off and different fields when it is on.
+ * A regression that collapsed them would be invisible in every other test here
+ * — the checklist would look right, the ticks would land, and the day would
+ * silently fail on the server.
+ */
+describe('the live-write rule', () => {
+  const required = ['habits', 'water', 'journal'];
+  const allDone = { habits: 1, water: 1, journal: 1 };
+
+  it('counts local writes when the season does not require live ones', () => {
+    const list = buildChecklist(required, allDone, 1, [], false);
+    expect(list.every((i) => i.counts)).toBe(true);
+    expect(outstandingModules(required, allDone, 1, [], false)).toEqual([]);
+  });
+
+  it('does not count a locally-finished module the server never witnessed', () => {
+    const list = buildChecklist(required, allDone, 1, [], true);
+    // Done on this phone, and counting for nothing — the exact state a user
+    // who worked through the evening offline is in.
+    expect(list.every((i) => i.done)).toBe(true);
+    expect(list.every((i) => i.counts)).toBe(false);
+  });
+
+  it('names the offline modules as outstanding, so the nudge tells the truth', () => {
+    expect(outstandingModules(required, allDone, 1, ['habits'], true)).toEqual([
+      'water',
+      'journal',
+    ]);
+  });
+
+  it('counts only what was attested, whatever the local buffer says', () => {
+    const list = buildChecklist(required, { habits: 9, water: 0, journal: 0 }, 1, ['water'], true);
+    const byId = Object.fromEntries(list.map((i) => [i.moduleId, i]));
+    // Nine local writes and no attestation loses to zero local writes and one
+    // attestation, which is the whole rule in one assertion.
+    expect(byId.habits.counts).toBe(false);
+    expect(byId.water.counts).toBe(true);
+  });
+
+  it('treats an attestation below the write threshold as not done', () => {
+    // The caller filters by `minWrites` before passing `attested` (see
+    // `useChallengeLiveToday`), so an attested module is only listed once it
+    // has cleared the bar — this pins that `counts` does not quietly re-admit
+    // it through the local buffer.
+    const list = buildChecklist(required, { habits: 5 }, 3, [], true);
+    expect(list[0].done).toBe(true);
+    expect(list[0].counts).toBe(false);
   });
 });

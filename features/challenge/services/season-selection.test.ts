@@ -28,6 +28,7 @@ const season = (id: string, state: SeasonState): AdminSeason => ({
   endsAt: null,
   createdAt: '2026-08-01T00:00:00Z',
   maxEnrollments: null,
+  requireLiveWrites: false,
   dayGraceHours: 0,
   minActiveSeconds: 30,
   minWrites: 1,

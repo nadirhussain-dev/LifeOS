@@ -47,6 +47,15 @@ export type SeasonStatus = {
   endsAt?: string | null;
   requiredModules?: number;
   moduleLockDays?: number;
+  /**
+   * The season demands server-witnessed writes (0065) — work logged offline
+   * does not count toward the day.
+   *
+   * Optional, and absent must read as false everywhere: a server that predates
+   * the column would otherwise have every join screen warning about a rule
+   * that is not in force.
+   */
+  requireLiveWrites?: boolean;
   moduleSwapsAllowed?: number;
   minWrites?: number;
   shieldCap?: number;

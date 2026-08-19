@@ -6501,6 +6501,260 @@ await test("0058 an operator can reach a task's tags", async () => {
 });
 
 // ---------------------------------------------------------------------------
+console.log('\nthe live-write rule (0065)');
+// ---------------------------------------------------------------------------
+//
+// 0048 promised that a day counts only when the work happened "while online",
+// and did not enforce it: `record_challenge_day` read the client's own write
+// map and accepted yesterday or today, so a full checklist completed in
+// airplane mode and synced the next morning credited in full.
+//
+// The behaviour these tests are about is one specific cheat, because it is the
+// one real users actually perform: finish everything offline in two minutes,
+// close the app, turn the connection back on. Every assertion below is
+// ultimately about that sequence being worth nothing.
+
+const LIVE_SEASON = (
+  await one(
+    `insert into public.challenge_seasons (name, enabled, required_modules, min_active_seconds)
+     values ('Live Season', true, 3, 0) returning id`,
+  )
+).id;
+
+for (const m of ['habits', 'water', 'journal', 'tasks']) {
+  await db.query(`insert into public.challenge_modules (season_id, module_id) values ($1, $2)`, [
+    LIVE_SEASON,
+    m,
+  ]);
+}
+
+// Its own runner: one active run per account, and the 0048/0055 accounts are
+// already spending theirs.
+const LIVE_RUNNER = 'aaaaaaaa-0000-4000-8000-000000000004';
+await createUser(db, LIVE_RUNNER, 'live-runner@example.com');
+
+await asUser(db, LIVE_RUNNER, async () => {
+  await db.query(
+    `select public.enroll_in_challenge($1::uuid, 0, $2::text[], $3::text[], 'dev-live')`,
+    [LIVE_SEASON, '{habits,water,journal}', '{}'],
+  );
+});
+
+const setLiveRule = (on) =>
+  db.query(`update public.challenge_seasons set require_live_writes = $2 where id = $1`, [
+    LIVE_SEASON,
+    on,
+  ]);
+
+/** The full client-side map for a finished day — what an offline session builds. */
+const FULL_MAP = JSON.stringify({ habits: 1, water: 1, journal: 1 });
+
+const recordDay = async (map) =>
+  (await one(`select public.record_challenge_day(current_date, $1::jsonb, 60, null) as v`, [map]))
+    .v;
+
+const clearDay = () =>
+  db.query(`delete from public.challenge_days where user_id = $1 and season_id = $2`, [
+    LIVE_RUNNER,
+    LIVE_SEASON,
+  ]);
+
+const clearAttestations = () =>
+  db.query(`delete from public.challenge_live_writes where user_id = $1`, [LIVE_RUNNER]);
+
+await test('0065 the rule is off by default, so applying the migration breaks nobody', async () => {
+  // The failure this guards against is the worst one available: every enrolled
+  // user on the previous build stops qualifying the moment the migration lands,
+  // and the first anybody hears of it is a support ticket about a lost run.
+  const on = (
+    await one(`select require_live_writes as v from public.challenge_seasons where id = $1`, [
+      LIVE_SEASON,
+    ])
+  ).v;
+  expectEqual(on, false, 'require_live_writes defaults off');
+});
+
+await test('0065 without the rule, the client map still credits the day', async () => {
+  await asUser(db, LIVE_RUNNER, async () => {
+    const result = await recordDay(FULL_MAP);
+    expectEqual(result.qualified, true, 'the pre-0065 path is untouched');
+  });
+  await clearDay();
+});
+
+await test('0065 with the rule on, a full client map and no attestations does not count', async () => {
+  // THE test. This is the offline-then-reconnect cheat, expressed exactly: the
+  // client claims all three modules, the server witnessed none of them, and the
+  // day must not be credited.
+  await setLiveRule(true);
+  await asUser(db, LIVE_RUNNER, async () => {
+    const result = await recordDay(FULL_MAP);
+    expectEqual(result.qualified, false, 'an unwitnessed day is not a day');
+    expectEqual(
+      [...result.outstanding].sort().join(','),
+      'habits,journal,water',
+      'every module is still owed, whatever the client says',
+    );
+    expectEqual(result.liveRequired, true, 'the response says which rule applied');
+  });
+});
+
+await test('0065 an attestation is recorded against the server clock', async () => {
+  await asUser(db, LIVE_RUNNER, async () => {
+    const result = (await one(`select public.attest_challenge_write('habits') as v`)).v;
+    expectEqual(result.ok, true, 'a committed module is accepted');
+  });
+  const row = await one(
+    `select writes, first_at, last_at,
+            (first_at <= now() and first_at > now() - interval '1 minute') as fresh
+       from public.challenge_live_writes
+      where user_id = $1 and module_id = 'habits'`,
+    [LIVE_RUNNER],
+  );
+  expectEqual(row.writes, 1, 'one witnessed write');
+  // The whole value of the row is that the caller could not choose this value:
+  // there is no timestamp parameter anywhere in the function's signature.
+  expectEqual(row.fresh, true, 'stamped from now(), not from anything sent');
+});
+
+await test('0065 repeat attestations coalesce onto one row and move last_at', async () => {
+  await asUser(db, LIVE_RUNNER, async () => {
+    await db.query(`select public.attest_challenge_write('habits')`);
+    await db.query(`select public.attest_challenge_write('habits')`);
+  });
+  const row = await one(
+    `select writes, (last_at >= first_at) as ordered
+       from public.challenge_live_writes where user_id = $1 and module_id = 'habits'`,
+    [LIVE_RUNNER],
+  );
+  expectEqual(row.writes, 3, 'counted, not duplicated');
+  expectEqual(row.ordered, true, 'last_at never precedes first_at');
+});
+
+await test('0065 a module the user never committed to is refused, not stored', async () => {
+  await asUser(db, LIVE_RUNNER, async () => {
+    const result = (await one(`select public.attest_challenge_write('tasks') as v`)).v;
+    expectEqual(result.ok, false, 'refused');
+    expectEqual(result.reason, 'not committed', 'and says why');
+  });
+  // Refused rather than stored, so the table cannot be grown by activity that
+  // could never affect a day.
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.challenge_live_writes
+        where user_id = $1 and module_id = 'tasks'`,
+      [LIVE_RUNNER],
+    ),
+    0,
+    'nothing written for an uncommitted module',
+  );
+});
+
+await test('0065 attesting every committed module credits the day with an EMPTY client map', async () => {
+  // The mirror of the headline test, and the proof that the server is now the
+  // authority rather than a second opinion: the client claims nothing at all
+  // and the day still counts, because the server watched it happen.
+  await asUser(db, LIVE_RUNNER, async () => {
+    await db.query(`select public.attest_challenge_write('water')`);
+    await db.query(`select public.attest_challenge_write('journal')`);
+    const result = await recordDay('{}');
+    expectEqual(result.qualified, true, 'witnessed work counts on its own');
+  });
+  await clearDay();
+  await clearAttestations();
+});
+
+await test('0065 a partly-witnessed day names only the modules that were missed', async () => {
+  await asUser(db, LIVE_RUNNER, async () => {
+    await db.query(`select public.attest_challenge_write('habits')`);
+    const result = await recordDay(FULL_MAP);
+    expectEqual(result.qualified, false, 'two of three is not a day');
+    expectEqual(
+      [...result.outstanding].sort().join(','),
+      'journal,water',
+      'the witnessed one drops off the list',
+    );
+  });
+  await clearAttestations();
+});
+
+await test('0065 min_writes is measured in witnessed writes, not claimed ones', async () => {
+  await db.query(`update public.challenge_seasons set min_writes = 2 where id = $1`, [LIVE_SEASON]);
+  await asUser(db, LIVE_RUNNER, async () => {
+    await db.query(`select public.attest_challenge_write('habits')`);
+    // One witnessed write against a threshold of two, while the client claims
+    // plenty. The claim must not make up the difference.
+    const result = await recordDay(JSON.stringify({ habits: 9, water: 9, journal: 9 }));
+    expectEqual(result.outstanding.includes('habits'), true, 'one witnessed write is not two');
+  });
+  await db.query(`update public.challenge_seasons set min_writes = 1 where id = $1`, [LIVE_SEASON]);
+  await clearAttestations();
+});
+
+await test('0065 the ledger is readable by its owner and writable by nobody', async () => {
+  await asUser(db, LIVE_RUNNER, async () => {
+    await db.query(`select public.attest_challenge_write('habits')`);
+    expectEqual(
+      await count(`select count(*)::int n from public.challenge_live_writes`),
+      1,
+      'the owner can read their own evidence',
+    );
+    // The entire design rests on this: evidence a client can INSERT is not
+    // evidence, and there is deliberately no policy that would allow it.
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.challenge_live_writes (user_id, season_id, local_day, module_id)
+             values ($1::uuid, $2::uuid, current_date, 'journal')`,
+          [LIVE_RUNNER, LIVE_SEASON],
+        ),
+      'row-level security',
+    );
+  });
+  // An UPDATE with no policy matches no rows rather than raising — the same
+  // shape 0048's "cannot change their own counters" test asserts, and the
+  // reason that one checks the value instead of expecting a rejection. Asserted
+  // by outcome, because "it did not error" and "it did not change anything" are
+  // very different guarantees and only the second one is worth having.
+  await asUser(db, LIVE_RUNNER, async () => {
+    await db.query(`update public.challenge_live_writes set writes = 999`);
+  });
+  expectEqual(
+    (await one(`select writes from public.challenge_live_writes where user_id = $1`, [LIVE_RUNNER]))
+      .writes,
+    1,
+    'the count is untouched by a client update',
+  );
+  await clearAttestations();
+});
+
+await test('0065 another account cannot see or attest into this run', async () => {
+  // Its own account, with no run at all. STATE_RUNNER and the 0048 accounts are
+  // each mid-season by this point, and an enrolled onlooker would test a
+  // different thing — "attests into their own run" rather than "cannot reach
+  // this one".
+  const ONLOOKER = 'aaaaaaaa-0000-4000-8000-000000000005';
+  await createUser(db, ONLOOKER, 'onlooker@example.com');
+  await asUser(db, LIVE_RUNNER, async () => {
+    await db.query(`select public.attest_challenge_write('habits')`);
+  });
+  await asUser(db, ONLOOKER, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.challenge_live_writes`),
+      0,
+      "somebody else's evidence is invisible",
+    );
+    // Not enrolled in this season at all, so there is no contract to attest
+    // against — and the function reads auth.uid() rather than taking a user id,
+    // so there is no parameter to point at somebody else's run.
+    const result = (await one(`select public.attest_challenge_write('habits') as v`)).v;
+    expectEqual(result.ok, false, 'refused for an account with no active run');
+  });
+  await clearAttestations();
+  await setLiveRule(false);
+});
+
+// ---------------------------------------------------------------------------
 console.log('\ntask recurrence rules (0056)');
 // ---------------------------------------------------------------------------
 

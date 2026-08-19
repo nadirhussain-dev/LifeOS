@@ -1,5 +1,6 @@
 import { setWriteObserver } from '@/database/write-observer';
 import { moduleForTable } from '@/features/challenge/config/write-attribution';
+import { attestChallengeWrite } from '@/features/challenge/services/live-writes';
 import { recordChallengeWrite } from '@/features/challenge/store/challenge-store';
 
 /**
@@ -17,7 +18,19 @@ import { recordChallengeWrite } from '@/features/challenge/store/challenge-store
 export function startChallengeWriteTracking(): () => void {
   setWriteObserver((table) => {
     const module = moduleForTable(table);
-    if (module) recordChallengeWrite(module);
+    if (!module) return;
+    // Two recipients, and they answer different questions. The buffer is what
+    // this phone believes it did, and it draws the checklist instantly with no
+    // network in the way. The attestation is what the *server* witnessed, and
+    // under a season with `require_live_writes` (0065) it is the only one that
+    // can credit a day.
+    //
+    // The local record happens first and unconditionally: even a write that
+    // cannot be attested — offline, backgrounded, signed out — is still work
+    // the user did, and the checklist showing it is what makes the "this did
+    // not count" state legible rather than baffling.
+    recordChallengeWrite(module);
+    attestChallengeWrite(module);
   });
   return () => setWriteObserver(null);
 }

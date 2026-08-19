@@ -32,6 +32,8 @@ export type AdminSeason = {
   minWrites: number;
   requiredModules: number;
   moduleLockDays: number;
+  /** The live-write rule (0065). Off unless the operator turns it on. */
+  requireLiveWrites: boolean;
   moduleSwapsAllowed: number;
   shieldEarnDays: number;
   shieldFloorDays: number;
@@ -80,6 +82,7 @@ export type SeasonPatch = {
   minWrites?: number;
   requiredModules?: number;
   moduleLockDays?: number;
+  requireLiveWrites?: boolean;
   moduleSwapsAllowed?: number;
   shieldEarnDays?: number;
   shieldFloorDays?: number;

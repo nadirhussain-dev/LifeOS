@@ -52,7 +52,24 @@ export type ChallengeToday = {
 export type ChecklistItem = {
   moduleId: string;
   writes: number;
+  /** Local evidence: this phone recorded enough writes. Instant, and on its own
+   *  no longer sufficient — see `counts`. */
   done: boolean;
+  /** The server witnessed a live write for this module today (0065). */
+  attested: boolean;
+  /** The season demands live writes, so `done` without `attested` is a line
+   *  that will not credit the day. */
+  liveRequired: boolean;
+  /**
+   * Whether this line will actually count toward today.
+   *
+   * The one field the UI should key its tick off. `done` and `counts` are the
+   * same thing on a season without the live rule and deliberately diverge on
+   * one with it — that divergence is the entire user-visible surface of 0065,
+   * and collapsing the two back into one boolean is how somebody ends up
+   * watching a green checklist fail at midnight.
+   */
+  counts: boolean;
 };
 
 /**

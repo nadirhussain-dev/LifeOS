@@ -284,6 +284,29 @@ export default function OperatorSeasonScreen() {
               value={draft.minWrites}
               onChange={(minWrites) => setPatch((p) => ({ ...p, minWrites }))}
             />
+            {/* A switch, not a number, and placed with the rules rather than
+                with the open/closed switch above: it changes what qualifies a
+                day, which is the same category of decision as min writes and
+                required modules. Turning it ON mid-season is safe — every
+                client that can attest has shipped by then. Turning it OFF is
+                the emergency lever, which is why it is one tap and not buried
+                behind the patch form's Save. */}
+            <View className="flex-row items-center gap-3 py-3.5">
+              <View className="flex-1">
+                <Text className="font-sora-medium text-foreground">
+                  {t('operator.seasonLiveWrites')}
+                </Text>
+                <Text variant="caption">{t('operator.seasonLiveWritesHint')}</Text>
+              </View>
+              <Switch
+                value={draft.requireLiveWrites ?? false}
+                disabled={busy}
+                onValueChange={(requireLiveWrites) =>
+                  setPatch((p) => ({ ...p, requireLiveWrites }))
+                }
+                trackColor={{ true: c.accent, false: c.border }}
+              />
+            </View>
             <NumberField
               label={t('operator.seasonMinSeconds')}
               hint={t('operator.seasonMinSecondsHint')}

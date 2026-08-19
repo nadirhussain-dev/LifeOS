@@ -169,6 +169,17 @@ export default function ChallengeJoinScreen() {
               <Text variant="caption">
                 {t('challenge.lockNotice', { days: status.moduleLockDays ?? 30 })}
               </Text>
+              {/* The live-write rule, stated before the commit for the same
+                  reason the lock is: it is the single most surprising way to
+                  lose a day, and finding out about it on day forty — having
+                  just lost one on a train — is the version that produces a
+                  one-star review rather than a shrug. Shown whenever the
+                  season carries the rule, not conditionally on the picker. */}
+              {status.requireLiveWrites ? (
+                <Text variant="caption" style={{ color: c.warning }}>
+                  {t('challenge.liveRuleNotice')}
+                </Text>
+              ) : null}
               {extras > 0 ? <Text variant="caption">{t('challenge.joinExtraBody')}</Text> : null}
             </View>
 

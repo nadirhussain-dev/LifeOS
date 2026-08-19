@@ -253,6 +253,65 @@ export function useChallengeEvents(seasonId: string | undefined) {
   });
 }
 
+/** What `challenge_live_today()` returns (0065). */
+export type ChallengeLiveTodayResponse = {
+  enrolled: boolean;
+  localDay?: string;
+  /** Whether this season demands server-witnessed writes at all. */
+  liveRequired?: boolean;
+  minWrites?: number;
+  /** Module id → how many writes the server actually watched happen today. */
+  attested?: Record<string, number>;
+};
+
+/**
+ * What the server has witnessed today — the other half of the checklist.
+ *
+ * Separate from `useChallengeToday` rather than folded into it, because the two
+ * change on completely different cadences. `challenge_today()` answers "what is
+ * owed and where do the counters stand", which moves once a day. This moves
+ * every time the user does anything, and under the live rule it is the field
+ * the checklist's ticks actually key off.
+ *
+ * `attestChallengeWrite` already writes each success straight into the store,
+ * so the common case needs no round trip at all. This exists for the two cases
+ * that optimistic state cannot cover: a cold start part-way through the day,
+ * and a second device — the ledger is per account, so work done on a tablet at
+ * lunchtime has to be able to show up on the phone in the evening.
+ */
+export function useChallengeLiveToday() {
+  const session = useAuthStore((s) => s.session);
+  const setAttested = useChallengeStore((s) => s.setAttested);
+  const setLiveRequired = useChallengeStore((s) => s.setLiveRequired);
+
+  return useQuery({
+    queryKey: ['challenge', 'live', session?.user.id ?? null],
+    enabled: isSupabaseConfigured && Boolean(session),
+    // Short: this is the field that decides whether somebody's evening counted,
+    // and a minute of staleness on the screen they are staring at is a minute
+    // of them believing the wrong thing.
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
+    queryFn: async (): Promise<ChallengeLiveTodayResponse> => {
+      const { data, error } = await supabase.rpc('challenge_live_today');
+      if (error) throw new Error(error.message);
+      const response = (data ?? { enrolled: false }) as ChallengeLiveTodayResponse;
+
+      if (response.enrolled && response.localDay) {
+        setLiveRequired(response.liveRequired === true);
+        const minWrites = response.minWrites ?? 1;
+        setAttested(
+          Object.entries(response.attested ?? {})
+            .filter(([, n]) => n >= minWrites)
+            .map(([moduleId]) => moduleId),
+          response.localDay,
+        );
+      }
+      return response;
+    },
+  });
+}
+
 /**
  * Today's checklist, merged.
  *
@@ -280,16 +339,43 @@ export function useChallengeChecklist(): {
    * why.
    */
   blockedBy: SeasonState | null;
+  /** The season demands server-witnessed writes (0065). */
+  liveRequired: boolean;
+  /**
+   * Modules the user has genuinely worked in today that will *not* count,
+   * because the server never saw the write — almost always: they were offline.
+   *
+   * The single most important thing this hook returns under the live rule. It
+   * is the difference between "you did the work and it did not count, and here
+   * is which part and why" and a checklist that silently lies until midnight.
+   */
+  offlineModules: string[];
 } {
   const today = useChallengeToday();
+  const live = useChallengeLiveToday();
   const required = useChallengeStore((s) => s.required);
   const minWrites = useChallengeStore((s) => s.minWrites);
   const days = useChallengeStore((s) => s.days);
 
-  const writes = days[currentDay()]?.writes ?? {};
+  const buffer = days[currentDay()];
+  const writes = buffer?.writes ?? {};
   const serverRequired = today.data?.required ?? required;
-  const items = buildChecklist(serverRequired, writes, today.data?.minWrites ?? minWrites);
-  const outstanding = items.filter((i) => !i.done).map((i) => i.moduleId);
+  // The store's copy, not the query's, so an attestation that just landed shows
+  // up without waiting for the next refetch — `attestChallengeWrite` writes
+  // there directly and `useChallengeLiveToday` reconciles it.
+  const attested = buffer?.attested ?? [];
+  // Absent means the pre-0065 rule, never the strict one. A server that has not
+  // run the migration, or a response that failed to arrive, must not be able to
+  // tell somebody their finished day does not count.
+  const liveRequired = live.data?.liveRequired === true;
+  const items = buildChecklist(
+    serverRequired,
+    writes,
+    today.data?.minWrites ?? minWrites,
+    attested,
+    liveRequired,
+  );
+  const outstanding = items.filter((i) => !i.counts).map((i) => i.moduleId);
   const qualified = today.data?.todayOutcome === 'qualified';
 
   // Absent on an older server, and absent is not "blocked" — a missing field
@@ -306,5 +392,11 @@ export function useChallengeChecklist(): {
     // app was uninstalled.
     awaitingServer: !qualified && !blockedBy && outstanding.length === 0 && items.length > 0,
     blockedBy,
+    liveRequired,
+    // Worked on, locally, and still not counting. Only meaningful under the
+    // live rule — without it `done` and `counts` are the same field and this is
+    // always empty, which is the correct answer for a season that never asked
+    // the user to be online.
+    offlineModules: items.filter((i) => i.done && !i.counts).map((i) => i.moduleId),
   };
 }
