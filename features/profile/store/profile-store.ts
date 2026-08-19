@@ -27,6 +27,20 @@ type ProfileState = {
   gender: Gender | null;
   focusAreas: FocusArea[];
   onboardingComplete: boolean;
+  /**
+   * Accounts that have finished onboarding **on this device**.
+   *
+   * The fix for the flag above being device-scoped: a boolean cannot tell
+   * "this account finished and we cannot reach the server" from "somebody
+   * else's account finished on this phone", and those want opposite answers.
+   * See `features/onboarding/services/onboarding-scope.ts` for the decision
+   * this feeds and why every one-line version of it was a worse bug.
+   *
+   * Absent from an install that predates this field, which reads as an empty
+   * list — handled deliberately as the ambiguous case in that file rather than
+   * by a store migration, because the answer depends on who signs in next.
+   */
+  onboardedUserIds: string[];
   appLockEnabled: boolean;
   /** True once AsyncStorage has rehydrated — boot waits for this so returning
    * users never flash the onboarding flow before their saved state loads. */
@@ -48,6 +62,8 @@ type ProfileState = {
    *  device never asked the questions, so it has no name/gender/focus areas
    *  to stamp; onboarding simply never runs here at all. */
   setOnboardingComplete: (complete: boolean) => void;
+  /** Records that `userId` has been through onboarding on this device. */
+  markAccountOnboarded: (userId: string) => void;
   reset: () => void;
   /** Clears the onboarding *answers* but leaves `onboardingComplete` as-is.
    * For an account switch on an already-onboarded device: the device doesn't
@@ -65,6 +81,7 @@ export const useProfileStore = create<ProfileState>()(
       gender: null,
       focusAreas: [],
       onboardingComplete: false,
+      onboardedUserIds: [],
       appLockEnabled: false,
       hydrated: false,
 
@@ -75,12 +92,24 @@ export const useProfileStore = create<ProfileState>()(
       completeOnboarding: ({ name, gender, focusAreas, appLockEnabled }) =>
         set({ name: name.trim(), gender, focusAreas, appLockEnabled, onboardingComplete: true }),
       setOnboardingComplete: (onboardingComplete) => set({ onboardingComplete }),
+      markAccountOnboarded: (userId) =>
+        set((s) =>
+          s.onboardedUserIds.includes(userId)
+            ? s
+            : // The device flag is set alongside, so a later sign-out still
+              // reads as onboarded — signing out is not un-onboarding.
+              { onboardedUserIds: [...s.onboardedUserIds, userId], onboardingComplete: true },
+        ),
       reset: () =>
         set({
           name: '',
           gender: null,
           focusAreas: [],
           onboardingComplete: false,
+          // Cleared here and deliberately NOT in `resetAnswers` below: this is
+          // the device forgetting everything, which is the one case where the
+          // next account really should be asked again.
+          onboardedUserIds: [],
           appLockEnabled: false,
         }),
       resetAnswers: () =>

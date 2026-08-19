@@ -2,6 +2,7 @@ import { useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { onboardingScope } from '@/features/onboarding/services/onboarding-scope';
 import { useProfileStore } from '@/features/profile/store/profile-store';
 
 /**
@@ -23,15 +24,12 @@ import { useProfileStore } from '@/features/profile/store/profile-store';
  * of `(auth)` is conditional on being onboarded: bouncing them straight back
  * would make those two links dead.
  *
- * `onboardingComplete` is otherwise a per-device flag, which used to mean a
- * returning user signing in on a device that has never seen their account
- * before (a fresh install, a reset phone) landed back in the welcome flow
- * instead of their dashboard — indistinguishable, from here, from a genuinely
- * new account. Migration 0042's `profile.onboardingCompletedAt` (set once,
- * on whichever device finishes onboarding first) is what lets this gate tell
- * the two apart: `accountOnboarded` below is that server signal, and the
- * moment it's seen this device adopts it as its own local flag too, so it is
- * never checked again after the first sign-in.
+ * Whether somebody counts as onboarded is no longer decided here. It is
+ * `onboardingScope()` (features/onboarding/services/onboarding-scope.ts),
+ * which is where the reasoning lives and where it is tested — the decision has
+ * two opposite failure modes, each of which is the obvious fix for the other,
+ * and it was carried as a known bug in TODO.md for exactly that reason. This
+ * gate now only routes on the answer.
  */
 export function useAuthGate() {
   const segments = useSegments();
@@ -42,7 +40,8 @@ export function useAuthGate() {
   const authHydrated = useAuthStore((s) => s.hasHydrated);
   const profile = useAuthStore((s) => s.profile);
   const onboardingComplete = useProfileStore((s) => s.onboardingComplete);
-  const setOnboardingComplete = useProfileStore((s) => s.setOnboardingComplete);
+  const onboardedUserIds = useProfileStore((s) => s.onboardedUserIds);
+  const markAccountOnboarded = useProfileStore((s) => s.markAccountOnboarded);
   const hydrated = useProfileStore((s) => s.hydrated);
 
   useEffect(() => {
@@ -67,23 +66,21 @@ export function useAuthGate() {
 
     if (onPasswordSetupScreen) return;
 
-    // `profile` loads asynchronously after sign-in (loadProfile()), so this
-    // is null for a moment even for an account that finished onboarding long
-    // ago — this effect re-runs once it arrives (it's a dependency below),
-    // correcting a possible one-frame trip through onboarding rather than
-    // blocking navigation until the network round-trip finishes.
-    const accountOnboarded = !!session && profile?.onboardingCompletedAt != null;
-    if (accountOnboarded && !onboardingComplete) setOnboardingComplete(true);
-    // KNOWN BUG, and the fix is not a one-liner — see TODO.md
-    // "onboarding flag is per device, not per account". A brand-new account
-    // signing in on a device somebody else already onboarded inherits this
-    // flag and skips onboarding entirely. Distrusting the flag whenever the
-    // loaded profile carries no stamp looks like the fix and is a worse bug:
-    // `markOnboardingComplete` only writes the local stamp *after* a
-    // successful server update, so anybody who finishes onboarding offline
-    // would be bounced back into the wizard on every launch, permanently.
-    // The flag has to become account-scoped first.
-    const effectivelyOnboarded = onboardingComplete || accountOnboarded;
+    // `profile` loads asynchronously after sign-in (loadProfile()), so
+    // `onboardingCompletedAt` is null for a moment even for an account that
+    // finished onboarding long ago. This effect re-runs once it arrives (it is
+    // a dependency below), and the local account list is what stops that
+    // moment becoming a one-frame trip through onboarding.
+    const scope = onboardingScope({
+      userId: session?.user.id ?? null,
+      onboardedUserIds,
+      deviceOnboarded: onboardingComplete,
+      accountOnboardedAt: profile?.onboardingCompletedAt ?? null,
+    });
+    // Writing it down is what makes the answer survive going offline, and what
+    // closes the ambiguous case permanently — see onboarding-scope.ts.
+    if (scope.adopt && session) markAccountOnboarded(session.user.id);
+    const effectivelyOnboarded = scope.onboarded;
 
     if (!effectivelyOnboarded) {
       // First run. Onboarding owns this phase and reaches into `(auth)` itself
@@ -123,7 +120,8 @@ export function useAuthGate() {
     isGuest,
     profile,
     onboardingComplete,
-    setOnboardingComplete,
+    onboardedUserIds,
+    markAccountOnboarded,
     segments,
     router,
   ]);

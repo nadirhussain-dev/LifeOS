@@ -71,6 +71,7 @@ export default function OnboardingScreen() {
   const reducedMotion = useReducedMotion();
 
   const completeOnboarding = useProfileStore((s) => s.completeOnboarding);
+  const markAccountOnboarded = useProfileStore((s) => s.markAccountOnboarded);
   const session = useAuthStore((s) => s.session);
   const markOnboardingComplete = useAuthStore((s) => s.markOnboardingComplete);
   const isGuest = useAuthStore((s) => s.isGuest);
@@ -176,11 +177,16 @@ export default function OnboardingScreen() {
   const finish = useCallback(
     (appLockEnabled: boolean) => {
       completeOnboarding({ name, gender, focusAreas, appLockEnabled });
-      // Marks the ACCOUNT, not just this device — see auth-store.ts's
-      // markOnboardingComplete. Fired without awaiting: this device already
-      // knows it's onboarded via the local flag above, so a slow or failed
-      // network write must not delay landing on the dashboard. It only
-      // matters to some OTHER device this account signs into later.
+      // Two records, and the difference matters.
+      //
+      // Locally: which ACCOUNT finished, not just that somebody did. This is
+      // the one that survives with no network, and the one that stops the next
+      // account to sign in on this phone inheriting the flow it never saw —
+      // see features/onboarding/services/onboarding-scope.ts.
+      if (session) markAccountOnboarded(session.user.id);
+      // On the server: so some OTHER device this account signs into later can
+      // skip the flow. Fired without awaiting, because this device already has
+      // its answer and a slow or failed write must not delay the dashboard.
       if (session) void markOnboardingComplete();
       // The draft has served its purpose; a stale one is a bug waiting for the
       // next person who resets the app.
@@ -195,6 +201,7 @@ export default function OnboardingScreen() {
       resetDraft,
       router,
       session,
+      markAccountOnboarded,
       markOnboardingComplete,
     ],
   );

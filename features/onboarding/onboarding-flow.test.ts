@@ -23,10 +23,14 @@ describe('the welcome comes before the sign-in wall', () => {
   // first screen of the app was a password field. Both gates were reordered; if
   // either drifts back the regression is invisible to anyone with a session,
   // which is everybody who works on it.
+  // Anchored on the redirects themselves rather than on whatever the condition
+  // above them is currently called. The rule being protected is "onboarding is
+  // decided before the session is", and naming the variable was never the rule
+  // — a rename broke this test once without changing any behaviour at all.
   it('checks onboarding before the session in the index redirect', () => {
     const source = read('app/index.tsx');
-    const onboardingGate = source.indexOf('!onboardingComplete');
-    const sessionGate = source.indexOf('!session && !isGuest');
+    const onboardingGate = source.indexOf('href="/(onboarding)"');
+    const sessionGate = source.indexOf('href="/(auth)/login"');
     expect(onboardingGate).toBeGreaterThan(-1);
     expect(sessionGate).toBeGreaterThan(-1);
     expect(onboardingGate).toBeLessThan(sessionGate);
@@ -35,11 +39,25 @@ describe('the welcome comes before the sign-in wall', () => {
   it('checks onboarding before the session in the auth gate', () => {
     const source = read('features/auth/hooks/use-auth-gate.ts');
     const effect = source.slice(source.indexOf('useEffect('));
-    const onboardingGate = effect.indexOf('!onboardingComplete');
+    const onboardingGate = effect.indexOf('if (!effectivelyOnboarded)');
     const authedGate = effect.indexOf('if (!authed)');
     expect(onboardingGate).toBeGreaterThan(-1);
     expect(authedGate).toBeGreaterThan(-1);
     expect(onboardingGate).toBeLessThan(authedGate);
+  });
+
+  it('decides onboarding from the account-scoped helper, not a bare device flag', () => {
+    // The device-scoped boolean let a brand-new account inherit somebody
+    // else's completed onboarding. Every screen that routes on it has to ask
+    // the same function, or the one that does not becomes the way back in.
+    for (const path of [
+      'app/index.tsx',
+      'features/auth/hooks/use-auth-gate.ts',
+      'app/auth/callback.tsx',
+      'app/(auth)/create-password.tsx',
+    ]) {
+      expect(read(path)).toContain('onboardingScope(');
+    }
   });
 
   it('lets an unonboarded visitor reach the auth stack', () => {
