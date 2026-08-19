@@ -2,6 +2,7 @@ import { usePathname } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
+import { flushFunnel } from '@/features/analytics/services/funnel-reporter';
 import { flushUsage } from '@/features/analytics/services/usage-reporter';
 import { trackModuleOpen, useUsageStore } from '@/features/analytics/store/usage-store';
 import { moduleForPath } from '@/features/hub/config/route-modules';
@@ -33,11 +34,19 @@ export function useUsageReporter() {
 
   useEffect(() => {
     if (!hydrated) return;
-    void flushUsage();
+    // Both buffers ride the same trigger. They are separate stores with
+    // separate consent rules but the same answer to "when is it cheapest to
+    // send" — and a second AppState listener for the second one would only be
+    // a second thing to keep in step with this.
+    const flush = () => {
+      void flushUsage();
+      void flushFunnel();
+    };
+    flush();
     const sub = AppState.addEventListener('change', (state) => {
       // On the way out: the buffer is at its fullest and the request is not
       // competing with anything the user is waiting for.
-      if (state === 'background' || state === 'active') void flushUsage();
+      if (state === 'background' || state === 'active') flush();
     });
     return () => sub.remove();
   }, [hydrated]);

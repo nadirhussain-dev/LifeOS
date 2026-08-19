@@ -1,11 +1,13 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ArrowBack } from '@/components/ui/directional-icon';
+import type { FunnelMetric } from '@/features/analytics/config/funnel-metrics';
+import { trackFunnel } from '@/features/analytics/store/funnel-store';
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { AboutYouStep } from '@/features/onboarding/components/about-you-step';
 import { AccountStep } from '@/features/onboarding/components/account-step';
@@ -68,6 +70,24 @@ import { requestNotificationPermission } from '@/lib/notifications';
  * up on a screen that no longer exists.
  */
 type StepId = 'welcome' | 'account' | 'about' | 'focus' | 'shape' | 'learn' | 'lock' | 'ready';
+
+/**
+ * The funnel metric each step reports on arrival.
+ *
+ * `welcome` is `onboarding_started` rather than `onboarding_reached_welcome`,
+ * because it is the denominator every other rung is read against and naming it
+ * for the step would bury that.
+ */
+const FUNNEL_FOR_STEP: Record<StepId, FunnelMetric> = {
+  welcome: 'onboarding_started',
+  account: 'onboarding_reached_account',
+  about: 'onboarding_reached_about',
+  focus: 'onboarding_reached_focus',
+  shape: 'onboarding_reached_shape',
+  learn: 'onboarding_reached_learn',
+  lock: 'onboarding_reached_lock',
+  ready: 'onboarding_reached_ready',
+};
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -165,6 +185,27 @@ export default function OnboardingScreen() {
     if (step !== index) setStep(index);
   }, [step, index, setStep]);
 
+  /**
+   * Reports the step the user has actually reached.
+   *
+   * Driven off `current` rather than fired from each step's own `onNext`, for
+   * the same reason `useUsageReporter` derives module opens from the route: a
+   * call somebody has to remember to add in seven places is a call that goes
+   * missing from one of them, and the symptom is a funnel with a hole in it
+   * that reads exactly like a drop-off.
+   *
+   * Deduped per step per session by `reported`, because going back and forward
+   * again is one person reaching a step, not two — the server counts totals and
+   * distinct installs separately, and only the second is the funnel.
+   */
+  const reported = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const metric = FUNNEL_FOR_STEP[current];
+    if (!metric || reported.current.has(metric)) return;
+    reported.current.add(metric);
+    trackFunnel(metric);
+  }, [current]);
+
   const goNext = useCallback(
     () => setStep(Math.min(index + 1, steps.length - 1)),
     [index, steps.length, setStep],
@@ -186,6 +227,7 @@ export default function OnboardingScreen() {
 
   const finish = useCallback(
     (appLockEnabled: boolean) => {
+      trackFunnel('onboarding_completed');
       completeOnboarding({ name, gender, focusAreas, appLockEnabled });
       // Two records, and the difference matters.
       //
@@ -227,7 +269,12 @@ export default function OnboardingScreen() {
    * whichever scheduling call happens to run first, with no context at all.
    */
   const allowReminders = useCallback(async () => {
+    // Shown is counted separately from the two answers: a prompt nobody reaches
+    // and a prompt everybody declines produce the same number of grants and
+    // want opposite fixes.
+    trackFunnel('notif_prompt_shown');
     const granted = await requestNotificationPermission();
+    trackFunnel(granted ? 'notif_permission_granted' : 'notif_permission_denied');
     if (granted) {
       // Only now. Every scheduling call below no-ops without permission, and a
       // set of switches flipped on for reminders that cannot fire is exactly

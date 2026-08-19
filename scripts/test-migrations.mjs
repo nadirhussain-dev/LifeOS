@@ -7503,4 +7503,181 @@ await test('0064 signed_at is nullable, so an undated delivery is still recordab
   expectEqual(row.signed_at, null, 'signed_at');
 });
 
+// ---------------------------------------------------------------------------
+console.log('\nfunnel metrics (0066)');
+// ---------------------------------------------------------------------------
+//
+// Every go/no-go gate in docs/GROWTH_PLAN.md was unanswerable before this:
+// usage_daily says what people do once they are in the app and nothing about
+// whether they got there. The two properties worth holding are that it counts
+// without a session — the population being measured largely has not got one —
+// and that a client cannot turn it into an unbounded event log.
+
+// The 0033 section immediately above empties the roster and then hands
+// ownership to ROSTER_OUTSIDER, so ADMIN is no longer an administrator by the
+// time this suite runs. It puts one back rather than depending on the order of
+// two sections that have nothing to do with each other — as a plain 'admin',
+// because `admins_single_owner_idx` allows exactly one owner and that seat is
+// taken by the test above.
+await db.query(
+  `insert into public.admins (user_id, role) values ($1::uuid, 'admin')
+     on conflict (user_id) do update set role = 'admin'`,
+  [ADMIN],
+);
+
+const INSTALL_A = '11111111-2222-4333-8444-555555555555';
+const INSTALL_B = '99999999-2222-4333-8444-555555555555';
+
+const funnelRow = async (install, metric) =>
+  one(
+    `select count from public.funnel_daily
+      where install_id = $1 and metric = $2 and day = current_date`,
+    [install, metric],
+  );
+
+await test('0066 counts a milestone for an install with no session at all', async () => {
+  // The whole reason this is keyed to an install rather than auth.uid(): the
+  // account step is one of the things being measured, and guests never sign in.
+  // A metric requiring a session would report a completion rate computed only
+  // over the people who completed the account step.
+  await asAnon(db, async () => {
+    await db.query(`select public.record_funnel($1, $2::jsonb)`, [
+      INSTALL_A,
+      JSON.stringify([{ day: TODAY, metric: 'onboarding_started', count: 1 }]),
+    ]);
+  });
+  expectEqual(Number((await funnelRow(INSTALL_A, 'onboarding_started')).count), 1, 'counted');
+});
+
+await test('0066 accumulates rather than replacing', async () => {
+  await asAnon(db, async () => {
+    await db.query(`select public.record_funnel($1, $2::jsonb)`, [
+      INSTALL_A,
+      JSON.stringify([{ day: TODAY, metric: 'onboarding_started', count: 4 }]),
+    ]);
+  });
+  expectEqual(Number((await funnelRow(INSTALL_A, 'onboarding_started')).count), 5, 'summed');
+});
+
+await test('0066 skips a metric nobody allowlisted rather than storing it', async () => {
+  // Reachable unauthenticated with a free-text name, this would be an
+  // invitation to insert a million distinct metrics and bloat the table —
+  // turning the thing that measures the app into the thing that needs watching.
+  await asAnon(db, async () => {
+    await db.query(`select public.record_funnel($1, $2::jsonb)`, [
+      INSTALL_A,
+      JSON.stringify([{ day: TODAY, metric: 'whatever_i_like', count: 1 }]),
+    ]);
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.funnel_daily where metric = 'whatever_i_like'`),
+    0,
+    'nothing stored',
+  );
+});
+
+await test('0066 refuses a malformed install id', async () => {
+  await asAnon(db, async () => {
+    await expectRejection(
+      () =>
+        db.query(`select public.record_funnel($1, $2::jsonb)`, [
+          'not-a-uuid',
+          JSON.stringify([{ day: TODAY, metric: 'onboarding_started', count: 1 }]),
+        ]),
+      'invalid install id',
+    );
+  });
+});
+
+await test('0066 clamps a count and refuses a day outside the window', async () => {
+  await asAnon(db, async () => {
+    await db.query(`select public.record_funnel($1, $2::jsonb)`, [
+      INSTALL_B,
+      JSON.stringify([
+        { day: TODAY, metric: 'notif_prompt_shown', count: 99999999 },
+        // A device with a wrong clock must not be able to write history.
+        { day: '2001-01-01', metric: 'notif_prompt_shown', count: 1 },
+      ]),
+    ]);
+  });
+  expectEqual(Number((await funnelRow(INSTALL_B, 'notif_prompt_shown')).count), 10000, 'clamped');
+  expectEqual(
+    await count(`select count(*)::int n from public.funnel_daily where day = '2001-01-01'::date`),
+    0,
+    'no backdated row',
+  );
+});
+
+await test('0066 a client cannot read the table, its own rows included', async () => {
+  // Unlike usage_daily, whose owner may read their own row, there is no owner
+  // here to show anything to — the id resolves to no account by design.
+  await asAnon(db, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.funnel_daily`),
+      0,
+      'anon sees none',
+    );
+  });
+  await asUser(db, ALICE, async () => {
+    expectEqual(await count(`select count(*)::int n from public.funnel_daily`), 0, 'nor a user');
+  });
+});
+
+await test('0066 the summary reports totals and distinct installs separately', async () => {
+  await asUser(db, ADMIN, async () => {
+    const summary = (await one(`select public.admin_funnel_summary(30) as v`)).v;
+    // Five from INSTALL_A across two calls. `total` counts the events and
+    // `installs` counts the devices, and only the second one is a funnel.
+    expectEqual(Number(summary.onboarding_started.total), 5, 'total');
+    expectEqual(Number(summary.onboarding_started.installs), 1, 'distinct installs');
+  });
+});
+
+await test('0066 only an administrator may read the funnel or the retention split', async () => {
+  await asUser(db, ALICE, async () => {
+    await expectRejection(
+      () => db.query(`select public.admin_funnel_summary(30)`),
+      'not an administrator',
+    );
+    await expectRejection(
+      () => db.query(`select public.admin_challenge_retention($1::uuid)`, [SEASON]),
+      'not an administrator',
+    );
+  });
+});
+
+await test('0066 retention reports no rate at all rather than zero for an empty cohort', async () => {
+  // A cohort younger than thirty days and a cohort where nobody survived are
+  // very different readings, and a dashboard that renders both as 0% will be
+  // believed. Null is the only honest answer to "what fraction of nobody".
+  const EMPTY_SEASON = (
+    await one(
+      `insert into public.challenge_seasons (name, enabled) values ('Nobody Season', false)
+       returning id`,
+    )
+  ).id;
+  await asUser(db, ADMIN, async () => {
+    const r = (await one(`select public.admin_challenge_retention($1::uuid) as v`, [EMPTY_SEASON]))
+      .v;
+    expectEqual(r.cohort, 0, 'nobody is thirty days in');
+    expectEqual(r.rate, null, 'and so there is no rate to quote');
+    expectEqual(r.controlRate, null, 'nor a control rate');
+  });
+});
+
+await test('0066 retention counts a cohort that is genuinely thirty days in', async () => {
+  // The 0048 suite plays a full year through the state machine, so its runner
+  // is long past day thirty — which makes this the arithmetic case rather than
+  // the empty one, and worth asserting separately from the null above.
+  await asUser(db, ADMIN, async () => {
+    const r = (await one(`select public.admin_challenge_retention($1::uuid) as v`, [SEASON])).v;
+    expectEqual(r.cohort > 0, true, 'there is a cohort to measure');
+    expectEqual(
+      r.rate !== null && Number(r.rate) >= 0 && Number(r.rate) <= 1,
+      true,
+      'the rate is a real fraction',
+    );
+  });
+});
+
 summary();

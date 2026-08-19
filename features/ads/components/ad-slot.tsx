@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
+import { trackFunnel } from '@/features/analytics/store/funnel-store';
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { useEntitlement } from '@/features/billing/hooks/use-billing';
 import { useBillingStore } from '@/features/billing/store/billing-store';
@@ -113,7 +114,14 @@ export function AdSlot({ placement }: Props) {
         // below already handles the variable height: nothing is drawn around
         // the banner until it reports a real ad on screen.
         size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-        onAdLoaded={() => setLoaded(true)}
+        onAdLoaded={() => {
+          setLoaded(true);
+          // The honest impression signal: an ad that is actually on screen,
+          // not one that was requested. It is the denominator the Phase 1 eCPM
+          // baseline is read against, and without it "revenue is lower than
+          // modelled" has no second number to be compared with.
+          trackFunnel('ad_impression');
+        }}
         onAdFailedToLoad={() => setFailed(true)}
       />
       {loaded && (
