@@ -9,7 +9,21 @@ import { useAdSessionStore } from '@/features/ads/store/ad-session-store';
  * all.
  */
 const DAY = 24 * 60 * 60 * 1000;
-const MONDAY_9AM = 1_700_000_000_000;
+/**
+ * Monday 13 November 2023, 09:00 **local time**, built from local components
+ * rather than written as an epoch literal.
+ *
+ * The literal this replaces (1_700_000_000_000) was named `MONDAY_9AM` but is
+ * 22:13 UTC, so "three hours later" crossed midnight and `beginSession` — which
+ * keys the day off `toDateKey`, i.e. the *local* date, correctly — reported a
+ * new day. The test passed in any timezone east of roughly UTC+2 and failed in
+ * UTC, which is to say it passed on the machine it was written on and failed in
+ * CI.
+ *
+ * 09:00 keeps every offset in this file (+3h, +2h, +1min) inside the same local
+ * day, and +DAY on the far side of it, wherever the suite runs.
+ */
+const MONDAY_9AM = new Date(2023, 10, 13, 9, 0, 0, 0).getTime();
 
 describe('the ad session', () => {
   beforeEach(() =>
