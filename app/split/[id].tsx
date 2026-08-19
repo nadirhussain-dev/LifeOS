@@ -30,6 +30,17 @@ import { errorMessageKey } from '@/lib/supabase-error';
 import { confirm } from '@/lib/dialog-store';
 import { toast } from '@/lib/toast-store';
 
+/**
+ * How many expenses the group screen shows inline.
+ *
+ * This section sits inside the screen's ScrollView, so every row it renders is
+ * mounted at once — a group that ran for a year mounts a year of expenses
+ * behind a summary nobody scrolled past. The same reasoning already caps the
+ * activity list below at twelve. The rest are one tap away on a virtualized
+ * screen rather than hidden.
+ */
+const INLINE_EXPENSE_LIMIT = 12;
+
 export default function SplitGroupScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -298,7 +309,18 @@ export default function SplitGroupScreen() {
 
           {/* Expenses */}
           <View className="gap-2">
-            <SectionHeader title={t('split.expenses')} />
+            <SectionHeader
+              title={t('split.expenses')}
+              actionLabel={
+                data.expenses.length > INLINE_EXPENSE_LIMIT ? t('split.seeAllExpenses') : undefined
+              }
+              onAction={
+                data.expenses.length > INLINE_EXPENSE_LIMIT
+                  ? () => router.push(`/split/${id}/expenses`)
+                  : undefined
+              }
+              actionTint={tint}
+            />
             {data.expenses.length === 0 ? (
               <View style={{ minHeight: 160 }}>
                 <EmptyState
@@ -312,7 +334,7 @@ export default function SplitGroupScreen() {
               </View>
             ) : (
               <View className={cardClass({ padding: 'none' }, 'px-4')}>
-                {data.expenses.map((expense, index) => {
+                {data.expenses.slice(0, INLINE_EXPENSE_LIMIT).map((expense, index) => {
                   const payer = memberName(expense.paidByMemberId);
                   const money = formatMoney(expense.amountCents, currency);
                   return (

@@ -17,13 +17,16 @@ type Props = {
   status: InsightsStatus;
   headline: InsightCandidate | null;
   rangeDays: number;
+  /** How many pairs the engine tested to produce this. Shown because "2 of 14
+   *  pairs stood out" is a materially more honest claim than "2 patterns". */
+  pairsTested: number;
 };
 
 /** The screen's single strongest claim, stated as a plain sentence rather
  *  than a chart the reader has to interpret — see insight-engine.ts for how
  *  it's chosen. Falls back to an honest "not yet" state instead of a fake
  *  claim when the data doesn't clear the engine's bar yet. */
-export function InsightHeroCard({ status, headline, rangeDays }: Props) {
+export function InsightHeroCard({ status, headline, rangeDays, pairsTested }: Props) {
   const { t } = useTranslation();
   const scheme = useColorScheme() ?? 'light';
 
@@ -37,7 +40,7 @@ export function InsightHeroCard({ status, headline, rangeDays }: Props) {
         </Text>
         <Text variant="muted">
           {status === 'no_pattern_yet'
-            ? t('insights.noPatternBody')
+            ? t('insights.noPatternBody', { count: pairsTested })
             : t('insights.insufficientBody')}
         </Text>
       </View>
@@ -71,7 +74,16 @@ export function InsightHeroCard({ status, headline, rangeDays }: Props) {
         {t(INSIGHT_SENTENCE_KEY[headline.key], headline.params)}
       </Text>
 
-      <Text variant="caption">{t('insights.basedOnDays', { count: rangeDays })}</Text>
+      {/* The caveat sits with the claim, not in a help screen. A two-group
+          comparison over one person's log cannot distinguish cause from
+          coincidence, and the sentence above is phrased not to imply it can —
+          this says so outright. */}
+      <Text variant="caption">{t('insights.movesTogether')}</Text>
+
+      <Text variant="caption">
+        {t('insights.basedOnDays', { count: rangeDays })} ·{' '}
+        {t('insights.evidence', { days: headline.sampleSize, pairs: pairsTested })}
+      </Text>
     </View>
   );
 }

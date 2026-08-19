@@ -2,6 +2,14 @@ export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'archived';
 export type TaskPriority = 'none' | 'low' | 'medium' | 'high';
 export type TaskRecurrenceFrequency = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
 
+/** What the next occurrence of a repeating task counts from.
+ *
+ *  `due_date` is a fixed cadence — the weekly review happens on Mondays whether
+ *  or not you did last Monday's. `completion` is an interval since you last did
+ *  it, which is what chores actually are: watering the plants three days after
+ *  the last watering, not three days after a date that has since passed twice. */
+export type TaskRecurrenceAnchor = 'due_date' | 'completion';
+
 export type TaskCategory = {
   id: string;
   name: string;
@@ -20,6 +28,13 @@ export type Task = {
   dueDate: number | null;
   hasDueTime: boolean;
   recurrenceFrequency: TaskRecurrenceFrequency;
+  /** "Every N" — 1 for every task that predates the richer rules. */
+  recurrenceInterval: number;
+  /** Weekly-on-chosen-days, 0 = Sunday. Null means plain "every N weeks".
+   *  Stored as JSON text; the repository is the only place that sees the
+   *  string form. */
+  recurrenceDaysOfWeek: number[] | null;
+  recurrenceAnchor: TaskRecurrenceAnchor;
   recurrenceParentId: string | null;
   completedAt: number | null;
   position: number;
@@ -27,11 +42,26 @@ export type Task = {
   reminderNotificationId: string | null;
   /** Set when this task was created from a note via the note's "Create task" action. */
   sourceNoteId: string | null;
+  /** The count-mode goal this task's completion advances, if any. */
+  goalId: string | null;
   /** The habit this task's completion logs, and the day it logs it for — both
    *  set together when the task is linked to a habit, and fixed at link time
    *  (not re-derived if the due date changes afterward). */
   habitId: string | null;
   habitLogDate: string | null;
+  createdAt: number;
+  updatedAt: number;
+};
+
+/** One checklist item on a task. Deliberately smaller than a task: no due
+ *  date, no reminder, no category, no recurrence. */
+export type Subtask = {
+  id: string;
+  taskId: string;
+  title: string;
+  isDone: boolean;
+  completedAt: number | null;
+  position: number;
   createdAt: number;
   updatedAt: number;
 };
@@ -49,10 +79,14 @@ export type CreateTaskInput = {
   dueDate?: number | null;
   hasDueTime?: boolean;
   recurrenceFrequency?: TaskRecurrenceFrequency;
+  recurrenceInterval?: number;
+  recurrenceDaysOfWeek?: number[] | null;
+  recurrenceAnchor?: TaskRecurrenceAnchor;
   /** Internal only — set by completeTask() when auto-cloning a recurring task. Not exposed in any picker UI. */
   recurrenceParentId?: string | null;
   reminderEnabled?: boolean;
   sourceNoteId?: string | null;
+  goalId?: string | null;
   habitId?: string | null;
   habitLogDate?: string | null;
 };

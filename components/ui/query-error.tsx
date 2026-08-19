@@ -1,11 +1,24 @@
-import { CloudOff, Lock, ServerCrash, TriangleAlert, WifiOff } from 'lucide-react-native';
+import {
+  CloudOff,
+  Hourglass,
+  Lock,
+  ServerCrash,
+  TriangleAlert,
+  WifiOff,
+} from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { errorKind, errorMessageKey, isRetryable, toSupabaseError } from '@/lib/supabase-error';
+import {
+  errorKind,
+  errorMessageKey,
+  errorMessageParams,
+  isRetryable,
+  toSupabaseError,
+} from '@/lib/supabase-error';
 import type { SupabaseErrorKind } from '@/lib/supabase-error';
 
 /**
@@ -37,6 +50,9 @@ const ICONS: Record<SupabaseErrorKind, typeof TriangleAlert> = {
   'backend-missing': CloudOff,
   permission: Lock,
   conflict: TriangleAlert,
+  // Not a warning triangle: nothing is wrong, the answer is "later". An alarming
+  // icon on a rate limit reads as a failure the user has to do something about.
+  'rate-limited': Hourglass,
   server: ServerCrash,
   unknown: TriangleAlert,
 };
@@ -59,7 +75,10 @@ export function QueryError({ onRetry, message, error, action }: Props) {
   const kind = error === undefined ? 'unknown' : errorKind(error);
   const Icon = ICONS[kind];
   const body =
-    message ?? (error === undefined ? t('common.loadFailedBody') : t(errorMessageKey(error)));
+    message ??
+    (error === undefined
+      ? t('common.loadFailedBody')
+      : t(errorMessageKey(error), errorMessageParams(error)));
   // Retrying an unapplied migration or an RLS refusal just replays the same
   // failure, so the button is only offered where it could actually help.
   const showRetry = !!onRetry && (error === undefined || isRetryable(error));
@@ -120,7 +139,11 @@ export function InlineError({ error, message }: { error?: unknown; message?: str
   const scheme = useColorScheme() ?? 'light';
   const kind = error === undefined ? 'unknown' : errorKind(error);
   const Icon = ICONS[kind];
-  const body = message ?? (error === undefined ? t('errors.unknown') : t(errorMessageKey(error)));
+  const body =
+    message ??
+    (error === undefined
+      ? t('errors.unknown')
+      : t(errorMessageKey(error), errorMessageParams(error)));
   const code = error === undefined ? null : toSupabaseError(error).code;
 
   return (

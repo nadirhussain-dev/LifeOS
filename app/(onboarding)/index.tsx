@@ -1,15 +1,18 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ArrowBack } from '@/components/ui/directional-icon';
+import type { FunnelMetric } from '@/features/analytics/config/funnel-metrics';
+import { trackFunnel } from '@/features/analytics/store/funnel-store';
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { AboutYouStep } from '@/features/onboarding/components/about-you-step';
 import { AccountStep } from '@/features/onboarding/components/account-step';
 import { FocusStep } from '@/features/onboarding/components/focus-step';
+import { LearnStep } from '@/features/onboarding/components/learn-step';
 import { LockStep } from '@/features/onboarding/components/lock-step';
 import { ReadyStep } from '@/features/onboarding/components/ready-step';
 import { ShapeStep, hasAnythingToShape } from '@/features/onboarding/components/shape-step';
@@ -18,6 +21,10 @@ import {
   applyOnboardingSeed,
   type SeedResult,
 } from '@/features/onboarding/services/seed-from-onboarding';
+import {
+  applyReminderDefaults,
+  type DefaultedReminder,
+} from '@/features/onboarding/services/reminder-defaults';
 import { useOnboardingDraftStore } from '@/features/onboarding/store/onboarding-draft-store';
 import { useProfileStore } from '@/features/profile/store/profile-store';
 import {
@@ -28,6 +35,7 @@ import {
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useTheme } from '@/hooks/use-theme';
 import { deviceCurrencyCode } from '@/lib/locale';
+import { requestNotificationPermission } from '@/lib/notifications';
 
 /**
  * First-run setup.
@@ -61,7 +69,25 @@ import { deviceCurrencyCode } from '@/lib/locale';
  * areas. Hardcoding indices around conditional screens is how a back button ends
  * up on a screen that no longer exists.
  */
-type StepId = 'welcome' | 'account' | 'about' | 'focus' | 'shape' | 'lock' | 'ready';
+type StepId = 'welcome' | 'account' | 'about' | 'focus' | 'shape' | 'learn' | 'lock' | 'ready';
+
+/**
+ * The funnel metric each step reports on arrival.
+ *
+ * `welcome` is `onboarding_started` rather than `onboarding_reached_welcome`,
+ * because it is the denominator every other rung is read against and naming it
+ * for the step would bury that.
+ */
+const FUNNEL_FOR_STEP: Record<StepId, FunnelMetric> = {
+  welcome: 'onboarding_started',
+  account: 'onboarding_reached_account',
+  about: 'onboarding_reached_about',
+  focus: 'onboarding_reached_focus',
+  shape: 'onboarding_reached_shape',
+  learn: 'onboarding_reached_learn',
+  lock: 'onboarding_reached_lock',
+  ready: 'onboarding_reached_ready',
+};
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -71,6 +97,7 @@ export default function OnboardingScreen() {
   const reducedMotion = useReducedMotion();
 
   const completeOnboarding = useProfileStore((s) => s.completeOnboarding);
+  const markAccountOnboarded = useProfileStore((s) => s.markAccountOnboarded);
   const session = useAuthStore((s) => s.session);
   const markOnboardingComplete = useAuthStore((s) => s.markOnboardingComplete);
   const isGuest = useAuthStore((s) => s.isGuest);
@@ -137,6 +164,10 @@ export default function OnboardingScreen() {
     if (!authed) list.push('account');
     list.push('about', 'focus');
     if (hasAnythingToShape(focusAreas)) list.push('shape');
+    // After the answers, before the finish. It needs the focus areas to name
+    // which reminders it is about to switch on, and it has to come before
+    // `ready` so the receipt there can confirm what actually landed.
+    list.push('learn');
     list.push('lock', 'ready');
     return list;
   }, [authed, focusAreas]);
@@ -153,6 +184,27 @@ export default function OnboardingScreen() {
   useEffect(() => {
     if (step !== index) setStep(index);
   }, [step, index, setStep]);
+
+  /**
+   * Reports the step the user has actually reached.
+   *
+   * Driven off `current` rather than fired from each step's own `onNext`, for
+   * the same reason `useUsageReporter` derives module opens from the route: a
+   * call somebody has to remember to add in seven places is a call that goes
+   * missing from one of them, and the symptom is a funnel with a hole in it
+   * that reads exactly like a drop-off.
+   *
+   * Deduped per step per session by `reported`, because going back and forward
+   * again is one person reaching a step, not two — the server counts totals and
+   * distinct installs separately, and only the second is the funnel.
+   */
+  const reported = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const metric = FUNNEL_FOR_STEP[current];
+    if (!metric || reported.current.has(metric)) return;
+    reported.current.add(metric);
+    trackFunnel(metric);
+  }, [current]);
 
   const goNext = useCallback(
     () => setStep(Math.min(index + 1, steps.length - 1)),
@@ -175,12 +227,18 @@ export default function OnboardingScreen() {
 
   const finish = useCallback(
     (appLockEnabled: boolean) => {
+      trackFunnel('onboarding_completed');
       completeOnboarding({ name, gender, focusAreas, appLockEnabled });
-      // Marks the ACCOUNT, not just this device — see auth-store.ts's
-      // markOnboardingComplete. Fired without awaiting: this device already
-      // knows it's onboarded via the local flag above, so a slow or failed
-      // network write must not delay landing on the dashboard. It only
-      // matters to some OTHER device this account signs into later.
+      // Two records, and the difference matters.
+      //
+      // Locally: which ACCOUNT finished, not just that somebody did. This is
+      // the one that survives with no network, and the one that stops the next
+      // account to sign in on this phone inheriting the flow it never saw —
+      // see features/onboarding/services/onboarding-scope.ts.
+      if (session) markAccountOnboarded(session.user.id);
+      // On the server: so some OTHER device this account signs into later can
+      // skip the flow. Fired without awaiting, because this device already has
+      // its answer and a slow or failed write must not delay the dashboard.
       if (session) void markOnboardingComplete();
       // The draft has served its purpose; a stale one is a bug waiting for the
       // next person who resets the app.
@@ -195,11 +253,37 @@ export default function OnboardingScreen() {
       resetDraft,
       router,
       session,
+      markAccountOnboarded,
       markOnboardingComplete,
     ],
   );
 
   const [lockChoice, setLockChoice] = useState(false);
+  const [remindersOn, setRemindersOn] = useState<DefaultedReminder[]>([]);
+
+  /**
+   * The one permission ask, in front of the sentence explaining it.
+   *
+   * Everything the app schedules is dead without this, and iOS gives one
+   * chance per install — which is why it is here rather than fired from
+   * whichever scheduling call happens to run first, with no context at all.
+   */
+  const allowReminders = useCallback(async () => {
+    // Shown is counted separately from the two answers: a prompt nobody reaches
+    // and a prompt everybody declines produce the same number of grants and
+    // want opposite fixes.
+    trackFunnel('notif_prompt_shown');
+    const granted = await requestNotificationPermission();
+    trackFunnel(granted ? 'notif_permission_granted' : 'notif_permission_denied');
+    if (granted) {
+      // Only now. Every scheduling call below no-ops without permission, and a
+      // set of switches flipped on for reminders that cannot fire is exactly
+      // the "settings screen describing something that does not happen" bug
+      // this whole area already has.
+      setRemindersOn(await applyReminderDefaults(focusAreas));
+    }
+    return granted;
+  }, [focusAreas]);
 
   const enableLock = useCallback(async () => {
     const ok = await authenticate(t('onboarding.confirmMethod', { method: bioLabel }));
@@ -271,6 +355,10 @@ export default function OnboardingScreen() {
           <FocusStep selected={focusAreas} onToggle={toggleFocus} onNext={goNext} />
         ) : null}
 
+        {current === 'learn' ? (
+          <LearnStep focusAreas={focusAreas} onAllowReminders={allowReminders} onNext={goNext} />
+        ) : null}
+
         {current === 'shape' ? (
           <ShapeStep
             focusAreas={focusAreas}
@@ -295,7 +383,12 @@ export default function OnboardingScreen() {
         ) : null}
 
         {current === 'ready' ? (
-          <ReadyStep name={name} seed={seed} onFinish={() => finish(lockChoice)} />
+          <ReadyStep
+            name={name}
+            seed={seed}
+            remindersOn={remindersOn}
+            onFinish={() => finish(lockChoice)}
+          />
         ) : null}
       </Animated.View>
     </View>

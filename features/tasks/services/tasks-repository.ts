@@ -1,9 +1,16 @@
-import { addDays, addMonths, addWeeks, addYears, endOfDay, startOfDay, subDays } from 'date-fns';
+import { endOfDay, startOfDay, subDays } from 'date-fns';
 import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 
 import { getDb } from '@/database/client';
 import { entryLinks, taskCategories, tasks } from '@/database/schema';
+import { contributeToGoal } from '@/features/goals/services/goals-repository';
 import { logHabit, unlogHabit } from '@/features/habits/services/habits-repository';
+import {
+  copyChecklistToTask,
+  deleteChecklistForTask,
+} from '@/features/tasks/services/subtasks-repository';
+import { nextRecurrenceDueDate } from '@/features/tasks/services/task-recurrence';
+import { deleteTagLinksForTask } from '@/features/tasks/services/task-tags-repository';
 import { generateId } from '@/lib/id';
 import { LOCAL_USER_ID } from '@/lib/local-user';
 import type {
@@ -11,12 +18,24 @@ import type {
   Task,
   TaskCategory,
   TaskListFilter,
-  TaskRecurrenceFrequency,
   TaskSort,
   UpdateTaskInput,
 } from '@/features/tasks/types/task.types';
 
 const ACTIVE_STATUSES = ['todo', 'in_progress'] as const;
+
+/** The one column whose stored form differs from its typed form: chosen
+ *  weekdays are JSON text in SQLite and a number array everywhere above it,
+ *  matching how `habits.schedule_days` is handled. */
+function toTask(row: typeof tasks.$inferSelect): Task {
+  const { recurrenceDaysOfWeek, userId, syncStatus, serverUpdatedAt, deletedAt, ...rest } = row;
+  return {
+    ...rest,
+    recurrenceDaysOfWeek: recurrenceDaysOfWeek
+      ? (JSON.parse(recurrenceDaysOfWeek) as number[])
+      : null,
+  };
+}
 
 const PRIORITY_RANK = sql`CASE ${tasks.priority}
   WHEN 'high' THEN 3
@@ -49,11 +68,13 @@ export function listTasks(filter: TaskListFilter, sort: TaskSort): Task[] {
       ),
     )
     .orderBy(orderForSort(sort))
-    .all();
+    .all()
+    .map(toTask);
 }
 
 export function getTask(id: string): Task | null {
-  return getDb().select().from(tasks).where(eq(tasks.id, id)).get() ?? null;
+  const row = getDb().select().from(tasks).where(eq(tasks.id, id)).get();
+  return row ? toTask(row) : null;
 }
 
 export function createTask(input: CreateTaskInput): Task {
@@ -68,7 +89,11 @@ export function createTask(input: CreateTaskInput): Task {
     dueDate: input.dueDate ?? null,
     hasDueTime: input.hasDueTime ?? false,
     recurrenceFrequency: input.recurrenceFrequency ?? 'none',
+    recurrenceInterval: input.recurrenceInterval ?? 1,
+    recurrenceDaysOfWeek: input.recurrenceDaysOfWeek ?? null,
+    recurrenceAnchor: input.recurrenceAnchor ?? 'due_date',
     recurrenceParentId: input.recurrenceParentId ?? null,
+    goalId: input.goalId ?? null,
     completedAt: null,
     position: 0,
     reminderEnabled: input.reminderEnabled ?? false,
@@ -81,15 +106,36 @@ export function createTask(input: CreateTaskInput): Task {
   };
   getDb()
     .insert(tasks)
-    .values({ ...task, userId: LOCAL_USER_ID, syncStatus: 'pending' })
+    .values({
+      ...task,
+      recurrenceDaysOfWeek: task.recurrenceDaysOfWeek
+        ? JSON.stringify(task.recurrenceDaysOfWeek)
+        : null,
+      userId: LOCAL_USER_ID,
+      syncStatus: 'pending',
+    })
     .run();
   return task;
 }
 
 export function updateTask(id: string, input: UpdateTaskInput) {
+  const { recurrenceDaysOfWeek, ...rest } = input;
   getDb()
     .update(tasks)
-    .set({ ...input, updatedAt: Date.now(), syncStatus: 'pending' })
+    .set({
+      ...rest,
+      // `undefined` means "not being changed" and must not become a written
+      // null, so the key is only present when the caller passed it.
+      ...(recurrenceDaysOfWeek !== undefined
+        ? {
+            recurrenceDaysOfWeek: recurrenceDaysOfWeek
+              ? JSON.stringify(recurrenceDaysOfWeek)
+              : null,
+          }
+        : {}),
+      updatedAt: Date.now(),
+      syncStatus: 'pending',
+    })
     .where(eq(tasks.id, id))
     .run();
 }
@@ -100,22 +146,6 @@ export function setTaskReminderNotificationId(id: string, notificationId: string
     .set({ reminderNotificationId: notificationId })
     .where(eq(tasks.id, id))
     .run();
-}
-
-function nextRecurrenceDueDate(dueDate: number, frequency: TaskRecurrenceFrequency): number {
-  const due = new Date(dueDate);
-  switch (frequency) {
-    case 'daily':
-      return addDays(due, 1).getTime();
-    case 'weekly':
-      return addWeeks(due, 1).getTime();
-    case 'monthly':
-      return addMonths(due, 1).getTime();
-    case 'yearly':
-      return addYears(due, 1).getTime();
-    default:
-      return dueDate;
-  }
 }
 
 /** Stable id for "this task's completion logged this habit" — a `completed_by`
@@ -195,18 +225,44 @@ export function completeTask(id: string): Task | null {
     writeCompletedByLink(task.id, task.habitId);
   }
 
+  // One finished task is one unit toward a count goal. Recurring tasks
+  // contribute per occurrence, which is the point: "read 12 books" advances
+  // each time the monthly task is ticked, not once when it was created.
+  if (task?.goalId) {
+    contributeToGoal(task.goalId, 1, task.title);
+  }
+
   if (task && task.recurrenceFrequency !== 'none' && task.dueDate) {
-    return createTask({
+    const dueDate = nextRecurrenceDueDate(
+      {
+        frequency: task.recurrenceFrequency,
+        interval: task.recurrenceInterval,
+        daysOfWeek: task.recurrenceDaysOfWeek,
+        anchor: task.recurrenceAnchor,
+      },
+      task.dueDate,
+      now,
+    );
+    if (dueDate === null) return null;
+    const next = createTask({
       title: task.title,
       notes: task.notes,
       priority: task.priority,
       categoryId: task.categoryId,
-      dueDate: nextRecurrenceDueDate(task.dueDate, task.recurrenceFrequency),
+      dueDate,
       hasDueTime: task.hasDueTime,
+      // The whole rule travels, not just the frequency — an occurrence that
+      // forgot its interval would silently fall back to "every 1" and a
+      // fortnightly task would start arriving weekly.
       recurrenceFrequency: task.recurrenceFrequency,
+      recurrenceInterval: task.recurrenceInterval,
+      recurrenceDaysOfWeek: task.recurrenceDaysOfWeek,
+      recurrenceAnchor: task.recurrenceAnchor,
       recurrenceParentId: task.recurrenceParentId ?? task.id,
       reminderEnabled: task.reminderEnabled,
     });
+    copyChecklistToTask(task.id, next.id);
+    return next;
   }
 
   return null;
@@ -225,6 +281,14 @@ export function reopenTask(id: string) {
     unlogHabit(task.habitId, task.habitLogDate);
     removeCompletedByLink(task.id, task.habitId);
   }
+
+  // Reopening reverses the contribution as a second, negative log rather than
+  // deleting the first. The progress feed is an audit trail: "advanced, then
+  // undone" is what happened, and rewriting it to say nothing happened loses
+  // the only record of a mis-tap.
+  if (task?.goalId) {
+    contributeToGoal(task.goalId, -1, task.title);
+  }
 }
 
 export function archiveTask(id: string) {
@@ -242,6 +306,10 @@ export function deleteTask(id: string) {
     .set({ deletedAt: Date.now(), updatedAt: Date.now(), syncStatus: 'pending' })
     .where(eq(tasks.id, id))
     .run();
+  // Otherwise the checklist and tag links outlive the task, syncing forever as
+  // rows that belong to nothing and that no screen can reach to remove.
+  deleteChecklistForTask(id);
+  deleteTagLinksForTask(id);
 }
 
 /**

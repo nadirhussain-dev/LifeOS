@@ -57,6 +57,17 @@ export type SupabaseAuthError = {
   code?: string;
   status?: number;
   message: string;
+  /**
+   * Seconds the server asked us to wait, when it said so in a header rather
+   * than in prose.
+   *
+   * GoTrue puts its own wait inside the message ("...after 17 seconds"), which
+   * `retryAfterSeconds` below parses. The edge functions answer with a real
+   * `Retry-After` header instead, and there is no sentence to parse — so this
+   * carries it across rather than having the caller invent a message for the
+   * regex to find.
+   */
+  retryAfterSeconds?: number | null;
 };
 
 export type AuthFailure = {
@@ -77,6 +88,12 @@ const SEND_ACTIONS = new Set<AuthAction>(['sendSignUpCode', 'sendSignInCode', 's
  * the server's rather than guessing — see `email-code-step.tsx`.
  */
 export function retryAfterSeconds(error: SupabaseAuthError | null | undefined): number | null {
+  // An explicit value wins over the prose: it came from a header, so it is the
+  // server's own number rather than one recovered from a sentence that might be
+  // reworded upstream at any time.
+  const explicit = error?.retryAfterSeconds;
+  if (typeof explicit === 'number' && Number.isFinite(explicit) && explicit > 0) return explicit;
+
   const match = /after (\d+) seconds?/i.exec(error?.message ?? '');
   if (!match) return null;
   const seconds = Number(match[1]);
@@ -139,6 +156,19 @@ export function authFailure(
     case 'session_expired':
     case 'refresh_token_not_found':
       return { key: 'sessionExpired' };
+  }
+
+  // An HTTP 429 with no code of its own — which is what the edge functions
+  // return now that they are rate limited (0062).
+  //
+  // Deliberately AFTER the switch, not before it. GoTrue's own rate limits
+  // arrive as a 429 *and* a specific code, and `over_email_send_rate_limit`
+  // knows something this does not: that it was an email that was throttled, so
+  // it can say "too many emails" rather than "too many attempts". Checking the
+  // status first threw that away for every GoTrue rate limit — which the
+  // 'falls back to a vaguer sentence when no number is given' case caught.
+  if (error.status === 429) {
+    return seconds ? { key: 'waitSeconds', params: { seconds } } : { key: 'tooManyAttempts' };
   }
 
   // No code. Either the transport never reached the API, or this is an older

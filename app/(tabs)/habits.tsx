@@ -104,10 +104,30 @@ export default function HabitsScreen() {
     return [...routineItems, ...groupedItems];
   }, [routines, habits, categories, t]);
 
-  const openQuickLog = (habit: HabitWithToday) => {
+  // Hoisted, one per action, rather than five closures per row on every render.
+  // HabitRow is memoised and inline arrows made that memo inert — see its
+  // comment. Each takes the habit so the identity never has to change.
+  const openQuickLog = useCallback((habit: HabitWithToday) => {
     setQuickLogHabit(habit);
     requestAnimationFrame(() => quickLogRef.current?.present());
-  };
+  }, []);
+
+  const openHabit = useCallback(
+    (habit: HabitWithToday) => router.push(`/habit/${habit.id}`),
+    [router],
+  );
+
+  const toggleHabit = useCallback(
+    (habit: HabitWithToday) =>
+      habit.todayStatus === 'done'
+        ? unlogToday.mutate(habit.id)
+        : logToday.mutate({ habitId: habit.id }),
+    [logToday, unlogToday],
+  );
+
+  const archiveHabit = useCallback((habit: HabitWithToday) => archive.mutate(habit.id), [archive]);
+
+  const deleteHabit = useCallback((habit: HabitWithToday) => remove.mutate(habit.id), [remove]);
 
   return (
     <View className="flex-1 bg-background">
@@ -202,15 +222,11 @@ export default function HabitsScreen() {
             return (
               <HabitRow
                 habit={habit}
-                onPress={() => router.push(`/habit/${habit.id}`)}
-                onToggleDone={() =>
-                  habit.todayStatus === 'done'
-                    ? unlogToday.mutate(habit.id)
-                    : logToday.mutate({ habitId: habit.id })
-                }
-                onQuickLog={() => openQuickLog(habit)}
-                onArchive={() => archive.mutate(habit.id)}
-                onDelete={() => remove.mutate(habit.id)}
+                onPress={openHabit}
+                onToggleDone={toggleHabit}
+                onQuickLog={openQuickLog}
+                onArchive={archiveHabit}
+                onDelete={deleteHabit}
               />
             );
           }}

@@ -115,10 +115,49 @@ export function useGalleryMutations() {
     onSuccess: invalidate,
   });
 
+  /**
+   * Fills the heart before the write lands.
+   *
+   * A photo appears under several cache keys — all photos, an album's photos,
+   * the favourites list, the single-photo view — so this patches every cached
+   * list that happens to contain it rather than naming one key. `setQueriesData`
+   * with a prefix is what makes that one operation instead of four that can
+   * fall out of step.
+   *
+   * Membership of the favourites *list* is deliberately not adjusted, only the
+   * flag: un-favouriting from that screen leaves the photo in place until the
+   * refetch, which is better than a tile vanishing from under the finger that
+   * tapped it.
+   */
   const toggleFavorite = useMutation({
     mutationFn: async ({ id, isFavorite }: { id: string; isFavorite: boolean }) =>
       togglePhotoFavorite(id, isFavorite),
-    onSuccess: invalidate,
+    onMutate: async ({ id, isFavorite }) => {
+      await queryClient.cancelQueries({ queryKey: ['gallery'] });
+      const snapshot = queryClient.getQueriesData({ queryKey: ['gallery'] });
+
+      queryClient.setQueriesData({ queryKey: ['gallery'] }, (current: unknown) => {
+        if (Array.isArray(current)) {
+          return current.map((entry) =>
+            entry && typeof entry === 'object' && 'id' in entry && entry.id === id
+              ? { ...entry, isFavorite }
+              : entry,
+          );
+        }
+        if (current && typeof current === 'object' && 'id' in current && current.id === id) {
+          return { ...current, isFavorite };
+        }
+        return current;
+      });
+
+      return { snapshot };
+    },
+    onError: (_error, _variables, context) => {
+      for (const [key, data] of context?.snapshot ?? []) {
+        queryClient.setQueryData(key, data);
+      }
+    },
+    onSettled: invalidate,
   });
 
   const removePhoto = useMutation({

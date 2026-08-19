@@ -21,6 +21,10 @@ import i18n from '@/lib/i18n';
  *
  * `streak` belongs to habits: it celebrates a habit chain, so if habits are
  * hidden the celebration names something hidden.
+ *
+ * `review` maps to nothing for the same reason as `digest`: the weekly review
+ * spans every module, so there is no single one whose being hidden should
+ * suppress it. What the review itself shows is filtered by the data it reads.
  */
 export const MODULE_FOR_CATEGORY: Record<NotificationCategory, string | null> = {
   tasks: 'tasks',
@@ -36,6 +40,7 @@ export const MODULE_FOR_CATEGORY: Record<NotificationCategory, string | null> = 
   split: 'split',
   streak: 'habits',
   digest: null,
+  review: null,
   together: 'together',
   cycle: 'cycle',
 };

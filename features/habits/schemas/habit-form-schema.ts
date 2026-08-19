@@ -16,6 +16,7 @@ export const habitFormSchema = z
       .regex(/^\d{2}:\d{2}$/)
       .nullable(),
     reminderAdaptive: z.boolean(),
+    goalId: z.string().nullable(),
   })
   .superRefine((values, ctx) => {
     if (values.scheduleType === 'custom_days' && (values.scheduleDays?.length ?? 0) === 0) {
@@ -58,4 +59,5 @@ export const habitFormDefaults: HabitFormValues = {
   scheduleIntervalDays: null,
   reminderTime: null,
   reminderAdaptive: false,
+  goalId: null,
 };

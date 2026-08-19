@@ -26,6 +26,8 @@ import * as schema from '@/database/schema';
  *     exists via (2) fails with "no such column" on a device that predates it.
  *     A failing statement aborts the whole exec, so one bad index would break
  *     every screen that touches the database, permanently.
+ *  5. The full-text search index — separately, and its failure caught. See
+ *     `buildSearchIndex`.
  */
 export interface BootstrapTarget {
   execSync(sql: string): void;
@@ -37,6 +39,30 @@ export function bootstrapDatabase(db: BootstrapTarget): void {
   applyAdditiveColumns(db);
   db.execSync(schema.BACKFILL_SQL);
   db.execSync(schema.INDEX_BOOTSTRAP_SQL);
+  buildSearchIndex(db);
+}
+
+/**
+ * Creates the notes full-text index, and returns whether it now exists.
+ *
+ * The only step here whose failure is caught rather than fatal. FTS5 is a
+ * compile-time SQLite option — present in `node:sqlite`, expected in op-sqlite,
+ * and not verified on every device this ships to. Inside the main bootstrap blob
+ * a missing FTS5 would abort the whole exec and leave the app unable to open its
+ * database, which is a catastrophic outcome for a search optimisation. Out here,
+ * the cost of being wrong is that search falls back to LIKE.
+ */
+export function buildSearchIndex(db: BootstrapTarget): boolean {
+  try {
+    db.execSync(schema.SEARCH_INDEX_SQL);
+    db.execSync(schema.SEARCH_INDEX_BACKFILL_SQL);
+    return true;
+  } catch {
+    // Intentionally swallowed, and intentionally not reported through the error
+    // sink: this runs before anything is initialised, on a path where an absent
+    // compile-time feature is a known possibility rather than a fault.
+    return false;
+  }
 }
 
 /**

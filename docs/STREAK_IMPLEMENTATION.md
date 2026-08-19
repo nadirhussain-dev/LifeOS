@@ -266,11 +266,32 @@ correctly, so the console had no way to see anything at all. Every function
 there returns aggregates, none takes a user id, and none can be coaxed into
 naming anybody — the same line 0010 drew for usage.
 
-The season and ladder **editor is not built**. Its admin RPCs exist
-(`admin_upsert_challenge_season`, `admin_upsert_challenge_tier`,
-`admin_set_challenge_module`), so seeding a season is a SQL-editor job for now.
-A form over three RPCs is worth building once the first season's shape has
-settled, not before.
+**A14b. Season console — `app/settings/operator/seasons.tsx` and `season.tsx`.**
+✅ done, and the deferral above is what made it necessary.
+
+"A form over three RPCs is worth building once the first season's shape has
+settled, not before" was a reasonable call and it cost weeks. Seeding by hand in
+the SQL editor produced a staging season that was `enabled`, inside its window,
+and had no rows in `challenge_modules` — enrolment impossible by construction.
+The console reported **Open** (it checked `enabled` and the dates); the app
+reported **"No season is open right now"** (it checked whether there was
+anything to pick from). Both were correct, and nothing on either screen could
+show the other's answer, so the state was only findable by reading two files.
+
+Two things came out of it, both in **`0055_challenge_season_console.sql`**:
+
+- **One derivation of "what is this season doing"**, in SQL, quoted by the app,
+  the console and `challenge_today()` alike — see REWARDS_PROGRAM.md §4.1. The
+  lesson generalises: two screens deriving the same fact from different columns
+  will eventually disagree, and neither can see it.
+- **The editor**, covering the season switch, both dates (extend and shorten,
+  with the resulting date shown before it commits), every rule and shield knob,
+  eligible modules, and the ladder — plus a one-tap "add the default set" for
+  the empty-season state, and a preview of the exact sentence users are being
+  shown right now, rendered with the app's own component.
+
+Deleting a season is refused by the server once anybody has joined; closing it
+is the reversible equivalent and is one tap away.
 _Verify (A13–A14):_ `npm run typecheck`, `npm test`, `npm run check:i18n`,
 `npx expo export`. Notification _delivery_ is unverifiable from here — see B5.
 

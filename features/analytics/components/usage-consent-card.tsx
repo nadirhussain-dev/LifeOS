@@ -7,6 +7,7 @@ import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
+import { useFunnelStore } from '@/features/analytics/store/funnel-store';
 import { useUsageStore } from '@/features/analytics/store/usage-store';
 import { useProfileStore } from '@/features/profile/store/profile-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -47,6 +48,26 @@ export function UsageConsentCard() {
   const hydrated = useUsageStore((s) => s.hydrated);
   const consentDecided = useUsageStore((s) => s.consentDecided);
   const decideConsent = useUsageStore((s) => s.decideConsent);
+  const clearFunnel = useFunnelStore((s) => s.clear);
+
+  /**
+   * Both answers clear the funnel buffer on a refusal, and this is the half of
+   * PRE_CONSENT_METRICS' argument that lives outside the analytics feature.
+   *
+   * The onboarding counters accrue before this card appears, because the card
+   * waits for onboarding to finish. That is only defensible if a refusal
+   * genuinely erases them rather than parking them until somebody changes
+   * their mind in Settings — which is exactly what `decideConsent(false)`
+   * already does for `usage-store`'s own pending counters.
+   *
+   * Wired here rather than inside `decideConsent` because `funnel-store`
+   * imports `usage-store`, and having the import go both ways to save one line
+   * at one call site is not a trade worth making.
+   */
+  const answer = (accepted: boolean) => {
+    if (!accepted) clearFunnel();
+    decideConsent(accepted);
+  };
   const onboarded = useProfileStore((s) => s.onboardingComplete);
 
   // Not before the store has rehydrated: acting on the default would show the
@@ -92,14 +113,14 @@ export function UsageConsentCard() {
             <Button
               label={t('usage.consentDecline')}
               variant="secondary"
-              onPress={() => decideConsent(false)}
+              onPress={() => answer(false)}
             />
           </View>
           <View className="flex-1">
             <Button
               label={t('usage.consentAccept')}
               variant="secondary"
-              onPress={() => decideConsent(true)}
+              onPress={() => answer(true)}
             />
           </View>
         </View>

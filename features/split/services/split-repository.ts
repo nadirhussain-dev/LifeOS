@@ -1,7 +1,7 @@
 import { ensureProfileRow } from '@/features/auth/services/ensure-profile';
 import { supabase } from '@/lib/supabase';
 import { generateId } from '@/lib/id';
-import { toSupabaseError } from '@/lib/supabase-error';
+import { toEdgeFunctionError, toSupabaseError } from '@/lib/supabase-error';
 import type {
   ExpenseShare,
   ExpenseGroup,
@@ -308,8 +308,12 @@ export async function sendInvite(input: {
   email: string;
   groupName: string;
 }): Promise<{ link: string; emailed: boolean }> {
-  const { data, error } = await supabase.functions.invoke('send-invite', { body: input });
-  assertOk(error);
+  const { data, error, response } = await supabase.functions.invoke('send-invite', { body: input });
+  // Not assertOk: `invoke` hands a non-2xx back as a FunctionsHttpError whose
+  // message is a generic "non-2xx status code", with the function's own body on
+  // a separate Response. Through toSupabaseError the 429 this can now return
+  // would read as 'unknown' — "check your connection" over a rate limit.
+  if (error) throw await toEdgeFunctionError(error, response);
   return { link: String(data?.link ?? ''), emailed: data?.emailed === true };
 }
 

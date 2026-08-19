@@ -91,12 +91,30 @@ export function useChallengeTracking(): void {
      */
     const resync = () => {
       const state = useChallengeStore.getState();
-      const writes = state.days[currentDay()]?.writes ?? {};
-      void syncChallengeReminder(outstandingModules(state.required, writes, state.minWrites));
+      const today = state.days[currentDay()];
+      void syncChallengeReminder(
+        outstandingModules(
+          state.required,
+          today?.writes ?? {},
+          state.minWrites,
+          // Under the live rule a module is only off the list once the server
+          // has witnessed it, so the 20:00 nudge names work that was done
+          // offline rather than falling silent on a locally-complete day that
+          // is not going to count.
+          today?.attested ?? [],
+          state.liveRequired,
+        ),
+      );
     };
     resync();
     const unsubscribe = useChallengeStore.subscribe((state, previous) => {
-      if (state.days !== previous.days || state.required !== previous.required) resync();
+      if (
+        state.days !== previous.days ||
+        state.required !== previous.required ||
+        state.liveRequired !== previous.liveRequired
+      ) {
+        resync();
+      }
     });
 
     return () => {

@@ -7,6 +7,7 @@ import {
   noteCategories,
   noteTagLinks,
   noteTags,
+  taskTagLinks,
   notes,
   tasks,
 } from '@/database/schema';
@@ -230,6 +231,15 @@ export function deleteTag(id: string) {
   db.update(noteTagLinks)
     .set({ deletedAt: now, updatedAt: now })
     .where(and(eq(noteTagLinks.tagId, id), isNull(noteTagLinks.deletedAt)))
+    .run();
+  // Tasks share this vocabulary (see 0058), so a tag deleted here has to let go
+  // of its tasks too. Reached through the schema rather than through the tasks
+  // feature: this is one table's rows being tidied, not notes asking tasks to
+  // do something, and the import would be a cross-feature dependency in the
+  // direction nothing else goes.
+  db.update(taskTagLinks)
+    .set({ deletedAt: now, updatedAt: now })
+    .where(and(eq(taskTagLinks.tagId, id), isNull(taskTagLinks.deletedAt)))
     .run();
   db.update(noteTags).set({ deletedAt: now, updatedAt: now }).where(eq(noteTags.id, id)).run();
 }

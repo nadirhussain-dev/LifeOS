@@ -9,6 +9,8 @@ import {
   Repeat2,
   StickyNote,
   Tag,
+  Tags,
+  Target,
   Trash2,
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -26,6 +28,11 @@ import { DueDateField } from '@/features/tasks/components/due-date-field';
 import { HabitLinkPicker } from '@/features/tasks/components/habit-link-picker';
 import { PriorityPicker } from '@/features/tasks/components/priority-picker';
 import { RecurrencePicker } from '@/features/tasks/components/recurrence-picker';
+import { GoalLinkPicker } from '@/features/goals/components/goal-link-picker';
+import { SubtaskList } from '@/features/tasks/components/subtask-list';
+import { TagPicker } from '@/features/notes/components/tag-picker';
+import { useNoteTags } from '@/features/notes/hooks/use-notes';
+import { useTaskTagMutations, useTaskTags } from '@/features/tasks/hooks/use-task-tags';
 import { useSourceNote, useTask } from '@/features/tasks/hooks/use-task';
 import { useTaskMutations } from '@/features/tasks/hooks/use-task-mutations';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
@@ -48,6 +55,9 @@ export default function TaskDetailScreen() {
   const { data: task } = useTask(id);
   const { data: sourceNote } = useSourceNote(task?.sourceNoteId);
   const { update, archive, remove } = useTaskMutations();
+  const { data: allTags = [] } = useNoteTags();
+  const { data: taskTags = [] } = useTaskTags(id);
+  const { setTags, addTag, removeTag } = useTaskTagMutations(id);
 
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
@@ -187,9 +197,22 @@ export default function TaskDetailScreen() {
 
           <AttributeRow icon={Repeat} label={t('fields.repeat')}>
             <RecurrencePicker
-              value={task.recurrenceFrequency}
-              onChange={(recurrenceFrequency) =>
-                update.mutate({ id: task.id, input: { recurrenceFrequency } })
+              value={{
+                frequency: task.recurrenceFrequency,
+                interval: task.recurrenceInterval,
+                daysOfWeek: task.recurrenceDaysOfWeek,
+                anchor: task.recurrenceAnchor,
+              }}
+              onChange={(rule) =>
+                update.mutate({
+                  id: task.id,
+                  input: {
+                    recurrenceFrequency: rule.frequency,
+                    recurrenceInterval: rule.interval,
+                    recurrenceDaysOfWeek: rule.daysOfWeek,
+                    recurrenceAnchor: rule.anchor,
+                  },
+                })
               }
             />
           </AttributeRow>
@@ -198,6 +221,30 @@ export default function TaskDetailScreen() {
             <CategoryPicker
               value={task.categoryId}
               onChange={(categoryId) => update.mutate({ id: task.id, input: { categoryId } })}
+            />
+          </AttributeRow>
+
+          <AttributeRow icon={Tags} label={t('fields.tags')}>
+            <TagPicker
+              tags={allTags}
+              selectedTagIds={taskTags.map((tag) => tag.id)}
+              onToggle={(tagId) => {
+                const current = taskTags.map((tag) => tag.id);
+                setTags.mutate(
+                  current.includes(tagId)
+                    ? current.filter((id) => id !== tagId)
+                    : [...current, tagId],
+                );
+              }}
+              onCreateTag={(name) => addTag.mutate(name)}
+              onDeleteTag={(tagId) => removeTag.mutate(tagId)}
+            />
+          </AttributeRow>
+
+          <AttributeRow icon={Target} label={t('fields.goal')}>
+            <GoalLinkPicker
+              value={task.goalId}
+              onChange={(goalId) => update.mutate({ id: task.id, input: { goalId } })}
             />
           </AttributeRow>
 
@@ -218,6 +265,8 @@ export default function TaskDetailScreen() {
             />
           </AttributeRow>
         </View>
+
+        <SubtaskList taskId={task.id} />
 
         <View className="gap-2.5">
           <View className="flex-row items-center gap-1.5">

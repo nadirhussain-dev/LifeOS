@@ -1,6 +1,15 @@
+import * as Crypto from 'expo-crypto';
+
+import {
+  ENTITLEMENT_DEFAULTS,
+  parseEntitlements,
+  parseTier,
+  type Entitlements,
+  type Tier,
+} from '@/features/billing/config/entitlements';
 import type { BillingPeriod, StoragePlan, StoragePlanId } from '@/features/billing/config/plans';
 import { supabase } from '@/lib/supabase';
-import { toSupabaseError } from '@/lib/supabase-error';
+import { toEdgeFunctionError, toSupabaseError } from '@/lib/supabase-error';
 
 /**
  * Supabase access for the mock billing plan (migration 0031) and the
@@ -30,6 +39,40 @@ export async function fetchMyPlan(userId: string): Promise<PlanRow> {
   if (res.error) throw toSupabaseError(res.error);
   return toPlanRow(res.data);
 }
+
+export type BillingState = {
+  tier: Tier;
+  entitlements: Entitlements;
+  premiumUntil: number | null;
+};
+
+/**
+ * The account's effective tier and what it includes, in one round trip —
+ * `my_billing_state()` (0059). Already accounts for a grant, so this is the
+ * only thing the client has to ask to know what somebody may do.
+ *
+ * Every field is parsed rather than cast: this decides whether a gate opens,
+ * and an unrecognised tier or a key of the wrong type must degrade to freemium
+ * rather than to `undefined`. See entitlements.ts's header.
+ */
+export async function fetchBillingState(): Promise<BillingState> {
+  const { data, error } = await supabase.rpc('my_billing_state');
+  if (error) throw toSupabaseError(error);
+  const row = (data ?? {}) as Record<string, unknown>;
+  return {
+    tier: parseTier(row.tier),
+    entitlements: parseEntitlements(row.entitlements),
+    premiumUntil: typeof row.premiumUntil === 'number' ? row.premiumUntil : null,
+  };
+}
+
+/** Used when there is no session to ask about — a guest has no profile row and
+ *  so no tier, the same way `useBillingSync` already treats them as `free`. */
+export const GUEST_BILLING_STATE: BillingState = {
+  tier: 'freemium',
+  entitlements: ENTITLEMENT_DEFAULTS,
+  premiumUntil: null,
+};
 
 export async function setMyPlan(planId: StoragePlanId, renewsAt: number | null): Promise<void> {
   const { error } = await supabase.rpc('set_my_plan', {
@@ -133,12 +176,36 @@ export async function fetchMySubscription(): Promise<MySubscription | null> {
  * `WebBrowser.openAuthSessionAsync` — the same pattern
  * `features/auth/services/oauth.ts`'s `signInWithGoogle` already uses for
  * Google sign-in, so no new native config is needed.
+ *
+ * ## Why it sends an Idempotency-Key
+ *
+ * This call creates a `checkout_intents` row and, the first time any coupon is
+ * used, a Safepay Plan object at the provider — neither reversible from here. A
+ * key makes a retry replay the first response instead of doing it again.
+ *
+ * The key is minted per *attempt*, not per render, so tapping subscribe twice
+ * with a deliberate pause between sends two different keys and gets two real
+ * checkouts — which is correct, because that is a person who changed their mind
+ * and came back. What it protects is the retry of a request whose response never
+ * arrived: the same key, so the same answer.
+ *
+ * The function synthesizes a key when none is sent (see its header), so this is
+ * the better half of a guard that works either way rather than the only one.
  */
 export async function createCheckout(planId: string, couponCode?: string): Promise<string> {
-  const { data, error } = await supabase.functions.invoke('safepay-checkout', {
+  const {
+    data,
+    error,
+    response: httpResponse,
+  } = await supabase.functions.invoke('safepay-checkout', {
     body: { planId, couponCode: couponCode?.trim() || undefined },
+    headers: { 'Idempotency-Key': Crypto.randomUUID() },
   });
-  if (error) throw toSupabaseError(error);
+  // Not toSupabaseError: `invoke` puts the function's own body on a Response it
+  // hands back separately, so every non-2xx would otherwise classify as
+  // 'unknown' and tell the user to check their connection. See
+  // lib/supabase-error.ts's toEdgeFunctionError.
+  if (error) throw await toEdgeFunctionError(error, httpResponse);
   const url = (data as { checkoutUrl?: string } | null)?.checkoutUrl;
   if (!url) throw new Error((data as { error?: string } | null)?.error ?? 'checkout failed');
   return url;
@@ -148,8 +215,8 @@ export async function createCheckout(planId: string, couponCode?: string): Promi
  *  stays as-is until the resulting webhook flips it (see fetchMySubscription
  *  and useBillingSync). */
 export async function cancelMySubscription(): Promise<void> {
-  const { data, error } = await supabase.functions.invoke('safepay-cancel-subscription');
-  if (error) throw toSupabaseError(error);
+  const { data, error, response } = await supabase.functions.invoke('safepay-cancel-subscription');
+  if (error) throw await toEdgeFunctionError(error, response);
   const err = (data as { error?: string } | null)?.error;
   if (err) throw new Error(err);
 }

@@ -1,5 +1,6 @@
 import {
   buildChecklist,
+  costOfMissToday,
   daysToNextShield,
   daysToNextTier,
   demotionTarget,
@@ -131,7 +132,16 @@ describe("today's checklist", () => {
   it('ticks only what has cleared the write threshold', () => {
     const list = buildChecklist(required, { habits: 2, water: 5 }, 1);
     expect(list.map((i) => i.done)).toEqual([true, true, false]);
-    expect(list[2]).toEqual({ moduleId: 'journal', writes: 0, done: false });
+    expect(list[2]).toEqual({
+      moduleId: 'journal',
+      writes: 0,
+      done: false,
+      // The live-rule fields (0065) default to the pre-rule world, so a caller
+      // that passes neither gets exactly the old behaviour back.
+      attested: false,
+      liveRequired: false,
+      counts: false,
+    });
   });
 
   it('respects a threshold above one', () => {
@@ -170,5 +180,160 @@ describe('what a selection costs per day', () => {
 
   it('never rounds a real commitment down to nothing', () => {
     expect(estimatedDailyMinutes(['water'], estimates)).toBe(1);
+  });
+});
+
+/**
+ * The live-write rule (migration 0065), from the display side.
+ *
+ * The property worth pinning is the *divergence*: `done` and `counts` have to
+ * be the same field when the rule is off and different fields when it is on.
+ * A regression that collapsed them would be invisible in every other test here
+ * — the checklist would look right, the ticks would land, and the day would
+ * silently fail on the server.
+ */
+describe('the live-write rule', () => {
+  const required = ['habits', 'water', 'journal'];
+  const allDone = { habits: 1, water: 1, journal: 1 };
+
+  it('counts local writes when the season does not require live ones', () => {
+    const list = buildChecklist(required, allDone, 1, [], false);
+    expect(list.every((i) => i.counts)).toBe(true);
+    expect(outstandingModules(required, allDone, 1, [], false)).toEqual([]);
+  });
+
+  it('does not count a locally-finished module the server never witnessed', () => {
+    const list = buildChecklist(required, allDone, 1, [], true);
+    // Done on this phone, and counting for nothing — the exact state a user
+    // who worked through the evening offline is in.
+    expect(list.every((i) => i.done)).toBe(true);
+    expect(list.every((i) => i.counts)).toBe(false);
+  });
+
+  it('names the offline modules as outstanding, so the nudge tells the truth', () => {
+    expect(outstandingModules(required, allDone, 1, ['habits'], true)).toEqual([
+      'water',
+      'journal',
+    ]);
+  });
+
+  it('counts only what was attested, whatever the local buffer says', () => {
+    const list = buildChecklist(required, { habits: 9, water: 0, journal: 0 }, 1, ['water'], true);
+    const byId = Object.fromEntries(list.map((i) => [i.moduleId, i]));
+    // Nine local writes and no attestation loses to zero local writes and one
+    // attestation, which is the whole rule in one assertion.
+    expect(byId.habits.counts).toBe(false);
+    expect(byId.water.counts).toBe(true);
+  });
+
+  it('treats an attestation below the write threshold as not done', () => {
+    // The caller filters by `minWrites` before passing `attested` (see
+    // `useChallengeLiveToday`), so an attested module is only listed once it
+    // has cleared the bar — this pins that `counts` does not quietly re-admit
+    // it through the local buffer.
+    const list = buildChecklist(required, { habits: 5 }, 3, [], true);
+    expect(list[0].done).toBe(true);
+    expect(list[0].counts).toBe(false);
+  });
+});
+
+/**
+ * Pricing a miss for the reminder.
+ *
+ * The point of every case below is that the number reaches a notification, and
+ * a notification cannot be corrected. Quoting a fall to somebody holding a
+ * shield, or quoting one at all before the server has sent the ladder, is a
+ * message that is simply wrong on somebody's lock screen — so the function
+ * returns null rather than a plausible-looking zero, and each of the three
+ * reasons is pinned separately.
+ */
+describe('costOfMissToday', () => {
+  const ladder = [7, 30, 60, 90];
+
+  it('prices the fall to the rung below', () => {
+    expect(
+      costOfMissToday({
+        qualifiedDays: 84,
+        shields: 0,
+        recentMisses: 0,
+        maxDemotionDays: 45,
+        tierThresholds: ladder,
+      }),
+    ).toBe(24);
+  });
+
+  it('quotes nothing at all while a shield is held', () => {
+    // The miss is absorbed, so "0 days" beside a warning reads as a bug. The
+    // reminder says the shield will be spent instead, which is a different
+    // sentence and the true cost.
+    expect(
+      costOfMissToday({
+        qualifiedDays: 84,
+        shields: 1,
+        recentMisses: 0,
+        maxDemotionDays: 45,
+        tierThresholds: ladder,
+      }),
+    ).toBeNull();
+  });
+
+  it('quotes nothing before the ladder has arrived', () => {
+    // An empty list means the server has not been heard from, or predates
+    // 0067. Inventing a fall from no ladder is the one thing worse than saying
+    // less than we could.
+    expect(
+      costOfMissToday({
+        qualifiedDays: 84,
+        shields: 0,
+        recentMisses: 0,
+        maxDemotionDays: 45,
+        tierThresholds: [],
+      }),
+    ).toBeNull();
+  });
+
+  it('quotes nothing on day zero, where there is nothing to lose yet', () => {
+    expect(
+      costOfMissToday({
+        qualifiedDays: 0,
+        shields: 0,
+        recentMisses: 0,
+        maxDemotionDays: 45,
+        tierThresholds: ladder,
+      }),
+    ).toBeNull();
+  });
+
+  it('prices a second miss inside the window deeper than the first', () => {
+    const first = costOfMissToday({
+      qualifiedDays: 84,
+      shields: 0,
+      recentMisses: 0,
+      maxDemotionDays: 45,
+      tierThresholds: ladder,
+    });
+    const second = costOfMissToday({
+      qualifiedDays: 84,
+      shields: 0,
+      recentMisses: 1,
+      maxDemotionDays: 45,
+      tierThresholds: ladder,
+    });
+    expect(second).toBeGreaterThan(first as number);
+  });
+
+  it('honours the cap that stops the penalty inverting at the top', () => {
+    // Without max_demotion_days a miss on day 364 costs 64 and a miss on day 8
+    // costs one, which punishes the person who has invested most. The cap is
+    // what fixes that, and the price quoted has to reflect it.
+    expect(
+      costOfMissToday({
+        qualifiedDays: 364,
+        shields: 0,
+        recentMisses: 0,
+        maxDemotionDays: 45,
+        tierThresholds: [7, 30, 60, 90, 365],
+      }),
+    ).toBe(45);
   });
 });

@@ -132,26 +132,59 @@ export function resolveShieldEarnDays(
  * Built from the client's own buffered write counts so the tick lands the
  * instant somebody logs something, with no network in the way. It is display
  * state and nothing more — the day is credited only when the server says so.
+ *
+ * ## Two kinds of done
+ *
+ * `done` is what this phone saw. `attested` is what the server saw (0065's
+ * `challenge_live_writes`). On a season with `require_live_writes` only the
+ * second one can credit a day, so the two are reported separately and `counts`
+ * names which one actually matters here.
+ *
+ * `attested` and `liveRequired` both default to the pre-0065 world — nothing
+ * attested, live not required — so a caller that has not been updated, and a
+ * server that predates the column, both collapse back to the original
+ * behaviour rather than showing every line as failing.
  */
 export function buildChecklist(
   required: string[],
   writes: Record<string, number>,
   minWrites: number,
+  attested: string[] = [],
+  liveRequired = false,
 ): ChecklistItem[] {
   return required.map((moduleId) => {
     const n = writes[moduleId] ?? 0;
-    return { moduleId, writes: n, done: n >= minWrites };
+    const done = n >= minWrites;
+    const isAttested = attested.includes(moduleId);
+    return {
+      moduleId,
+      writes: n,
+      done,
+      attested: isAttested,
+      liveRequired,
+      counts: liveRequired ? isAttested : done,
+    };
   });
 }
 
-/** The committed modules still untouched today. Drives the "one away" nudge. */
+/**
+ * The committed modules that will not count today as things stand. Drives the
+ * "one away" nudge and the at-risk reminder.
+ *
+ * Keyed on `counts`, not `done`, which is what makes the 20:00 reminder tell
+ * the truth under the live rule: a module worked on offline is exactly the one
+ * the user most needs naming, and a nudge that stayed silent because the local
+ * buffer looked finished would be worse than no nudge at all.
+ */
 export function outstandingModules(
   required: string[],
   writes: Record<string, number>,
   minWrites: number,
+  attested: string[] = [],
+  liveRequired = false,
 ): string[] {
-  return buildChecklist(required, writes, minWrites)
-    .filter((item) => !item.done)
+  return buildChecklist(required, writes, minWrites, attested, liveRequired)
+    .filter((item) => !item.counts)
     .map((item) => item.moduleId);
 }
 
@@ -162,4 +195,55 @@ export function estimatedDailyMinutes(
 ): number {
   const seconds = moduleIds.reduce((sum, id) => sum + (estSecondsByModule[id] ?? 60), 0);
   return Math.max(1, Math.round(seconds / 60));
+}
+
+/**
+ * What missing today would actually cost, in days, or `null` when there is
+ * nothing worth quoting.
+ *
+ * The wrapper that makes `demotionTarget` usable from a notification. It takes
+ * the cached standing rather than a tier list, because the caller is the
+ * reminder scheduler — rebuilt outside React on every write, with no query
+ * client and no network.
+ *
+ * Returns null, never zero, in the three cases where a number would mislead:
+ *
+ *  - **A shield is held.** The miss is absorbed and nothing changes, so quoting
+ *    "0 days" next to a warning reads as a bug. The reminder says the shield
+ *    will be spent instead, which is the true cost and a different sentence.
+ *  - **The ladder has not arrived.** An empty threshold list means the server
+ *    has not been heard from yet, or predates 0067. Saying nothing is right;
+ *    inventing a fall is not.
+ *  - **The fall is nothing.** Below the first rung there is no lower rung and
+ *    the floor is already zero, so the honest answer is that today costs
+ *    progress that has not been earned yet.
+ */
+export function costOfMissToday(standing: {
+  qualifiedDays: number;
+  shields: number;
+  recentMisses: number;
+  maxDemotionDays: number;
+  tierThresholds: number[];
+}): number | null {
+  if (standing.shields > 0) return null;
+  if (standing.tierThresholds.length === 0) return null;
+  if (standing.qualifiedDays <= 0) return null;
+
+  const tiers = standing.tierThresholds.map((dayThreshold) => ({
+    dayThreshold,
+    name: '',
+    rewardKind: 'digital' as const,
+    rewardTitle: null,
+    rewardDescription: null,
+  }));
+
+  const target = demotionTarget(
+    tiers,
+    standing.qualifiedDays,
+    standing.recentMisses,
+    standing.maxDemotionDays,
+    standing.shields,
+  );
+  const cost = standing.qualifiedDays - target;
+  return cost > 0 ? cost : null;
 }

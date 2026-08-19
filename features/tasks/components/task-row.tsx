@@ -1,6 +1,6 @@
 import { format, isToday } from 'date-fns';
 import * as Haptics from 'expo-haptics';
-import { Archive, Check, Trash2 } from 'lucide-react-native';
+import { Archive, Check, ListChecks, Trash2 } from 'lucide-react-native';
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
@@ -20,10 +20,19 @@ import type { Task } from '@/features/tasks/types/task.types';
 
 type Props = {
   task: Task;
-  onPress: () => void;
-  onToggleComplete: () => void;
-  onArchive: () => void;
-  onDelete: () => void;
+  /** Checklist totals, passed as two primitives rather than one object: this
+   *  component is memoised, and a fresh `{ done, total }` on every parent
+   *  render would defeat that for every row in the list. */
+  checklistDone?: number;
+  checklistTotal?: number;
+  /** These take the task rather than closing over it, so a list can hold one
+   *  stable handler per action instead of allocating four closures per row on
+   *  every render. That is what makes the `memo` below do anything — see its
+   *  comment. */
+  onPress: (task: Task) => void;
+  onToggleComplete: (task: Task) => void;
+  onArchive: (task: Task) => void;
+  onDelete: (task: Task) => void;
 };
 
 function DueDateLabel({ task }: { task: Task }) {
@@ -43,7 +52,15 @@ function DueDateLabel({ task }: { task: Task }) {
   );
 }
 
-function TaskRowComponent({ task, onPress, onToggleComplete, onArchive, onDelete }: Props) {
+function TaskRowComponent({
+  task,
+  checklistDone = 0,
+  checklistTotal = 0,
+  onPress,
+  onToggleComplete,
+  onArchive,
+  onDelete,
+}: Props) {
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const isCompleted = task.status === 'completed';
@@ -71,7 +88,7 @@ function TaskRowComponent({ task, onPress, onToggleComplete, onArchive, onDelete
     Haptics.impactAsync(
       isCompleted ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium,
     );
-    onToggleComplete();
+    onToggleComplete(task);
   };
 
   return (
@@ -81,13 +98,13 @@ function TaskRowComponent({ task, onPress, onToggleComplete, onArchive, onDelete
         { name: 'delete', label: t('common.delete') },
       ]}
       onAccessibilityAction={(name) =>
-        name === 'archive' ? onArchive() : name === 'delete' ? onDelete() : undefined
+        name === 'archive' ? onArchive(task) : name === 'delete' ? onDelete(task) : undefined
       }
       actions={
         <>
           <Pressable
             accessibilityRole="button"
-            onPress={onArchive}
+            onPress={() => onArchive(task)}
             accessibilityLabel={t('common.archiveNamed', { name: task.title })}
             className="flex-1 items-center justify-center bg-secondary"
           >
@@ -95,7 +112,7 @@ function TaskRowComponent({ task, onPress, onToggleComplete, onArchive, onDelete
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            onPress={onDelete}
+            onPress={() => onDelete(task)}
             accessibilityLabel={t('common.deleteNamed', { name: task.title })}
             className="flex-1 items-center justify-center bg-destructive"
           >
@@ -106,7 +123,7 @@ function TaskRowComponent({ task, onPress, onToggleComplete, onArchive, onDelete
     >
       <Pressable
         accessibilityRole="button"
-        onPress={onPress}
+        onPress={() => onPress(task)}
         className="flex-row items-center gap-3 px-4 py-3.5"
       >
         {accentColor && (
@@ -148,7 +165,17 @@ function TaskRowComponent({ task, onPress, onToggleComplete, onArchive, onDelete
           >
             {task.title}
           </Text>
-          <DueDateLabel task={task} />
+          <View className="flex-row items-center gap-2">
+            <DueDateLabel task={task} />
+            {checklistTotal > 0 && (
+              <View className="flex-row items-center gap-1">
+                <ListChecks size={11} color={colors[scheme].mutedForeground} />
+                <Text variant="micro" className="text-muted-foreground">
+                  {checklistDone}/{checklistTotal}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
       </Pressable>
     </SwipeableRow>
@@ -158,5 +185,12 @@ function TaskRowComponent({ task, onPress, onToggleComplete, onArchive, onDelete
 /**
  * Memoised: these rows carry their own Reanimated hooks, and every keystroke in
  * the list's search field re-rendered all of them.
+ *
+ * The memo only earns that if its props are referentially stable. It was added
+ * while the list still passed `onPress={() => router.push(...)}` and three more
+ * inline arrows per row, so every parent render allocated four fresh functions,
+ * every prop comparison failed, and the memo re-rendered the whole list exactly
+ * as before while looking like it had fixed the problem. The handlers now take
+ * the task, so the list holds one `useCallback` per action.
  */
 export const TaskRow = memo(TaskRowComponent);

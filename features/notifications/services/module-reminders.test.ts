@@ -150,8 +150,14 @@ import {
   unarchiveNote,
   updateNote,
 } from '@/features/notes/services/notes-repository';
+import { resyncAllReminders } from '@/features/notifications/services/reminder-scheduler';
 import { syncTaskReminder } from '@/features/tasks/services/task-reminders';
 import { createTask } from '@/features/tasks/services/tasks-repository';
+import { useJournalReminderStore } from '@/features/journal/store/journal-reminder-store';
+import { useGoalReminderStore } from '@/features/goals/store/goal-reminder-store';
+import { useStudyReminderStore } from '@/features/study/store/study-reminder-store';
+import { useWaterSettingsStore } from '@/features/water-intake/store/water-settings-store';
+import { SCHEDULING_BUDGET } from '@/lib/notifications';
 
 const HOUR = 60 * 60 * 1000;
 
@@ -377,5 +383,104 @@ describe('quiet hours', () => {
     await syncNoteReminder(noteWithReminder(at));
 
     expect(mockQueue[0].date).toBe(at);
+  });
+});
+
+/**
+ * The ceiling, under the load that first run now creates.
+ *
+ * Every assertion above is about one module behaving correctly. This is the one
+ * about all of them behaving correctly *together*, and it exists because
+ * onboarding started switching module reminders on by default
+ * (features/onboarding/services/reminder-defaults.ts). Turning four schedulers
+ * on for a user who also keeps a hundred tasks is exactly the shape that
+ * silently breaks iOS: it accepts every call and then keeps only the soonest
+ * 64, with no error anywhere.
+ *
+ * Note what the failure would look like without this test. Hydration fires
+ * every hour from 08:00, so it is *soonest* far more often than a task due
+ * tomorrow — meaning the reminders iOS keeps under pressure would be the least
+ * consequential ones, and the task due-time would be the thing thrown away.
+ * That is precisely inverted from what the rebuild's ordering intends, and
+ * nothing in the app would report it.
+ */
+describe('the platform ceiling, with every default on', () => {
+  const enableEveryModuleDefault = () => {
+    useJournalReminderStore.setState((s) => ({ settings: { ...s.settings, enabled: true } }));
+    useGoalReminderStore.setState((s) => ({ settings: { ...s.settings, enabled: true } }));
+    useStudyReminderStore.setState((s) => ({ settings: { ...s.settings, enabled: true } }));
+    useWaterSettingsStore.setState((s) => ({ reminders: { ...s.reminders, enabled: true } }));
+  };
+
+  it('never queues more than the platform will keep', async () => {
+    enableEveryModuleDefault();
+    // A heavy but entirely ordinary user: a hundred dated tasks is a year of
+    // one every three days, not a stress test.
+    for (let i = 0; i < 100; i++) {
+      createTask({
+        title: `Task ${i}`,
+        dueDate: Date.now() + (i + 1) * 6 * HOUR,
+        hasDueTime: true,
+        reminderEnabled: true,
+      });
+    }
+
+    await resyncAllReminders();
+
+    // The whole point: stop short of the limit rather than let iOS choose.
+    expect(mockQueue.length).toBeLessThanOrEqual(SCHEDULING_BUDGET);
+  });
+
+  it('spends the ceiling on tasks before hydration', async () => {
+    enableEveryModuleDefault();
+    for (let i = 0; i < 100; i++) {
+      createTask({
+        title: `Task ${i}`,
+        dueDate: Date.now() + (i + 1) * 6 * HOUR,
+        hasDueTime: true,
+        reminderEnabled: true,
+      });
+    }
+
+    await resyncAllReminders();
+
+    const categories = mockQueue.map((entry) => entry.data.category);
+    // Tasks are scheduled first because a missed due-time is a real failure and
+    // a missed hydration nudge is not. Under this much pressure the budget is
+    // gone before water is reached, which is the correct outcome and the exact
+    // inverse of what the platform would have chosen on its own.
+    expect(categories.filter((c) => c === 'tasks').length).toBeGreaterThan(0);
+    expect(categories.filter((c) => c === 'water').length).toBe(0);
+  });
+
+  it('still schedules the module defaults for a user with nothing else', async () => {
+    // The mirror of the test above: the ceiling must not become an excuse for
+    // the defaults never arriving. With nothing competing, the three that are
+    // genuinely time-based all land.
+    enableEveryModuleDefault();
+
+    await resyncAllReminders();
+
+    const categories = new Set(mockQueue.map((entry) => entry.data.category));
+    for (const category of ['journal', 'study', 'water']) {
+      expect(categories.has(category)).toBe(true);
+    }
+  });
+
+  it('leaves goals switched on but queues nothing until a goal has a deadline', async () => {
+    // Goals are not a daily nudge — `syncGoalReminders` schedules one reminder
+    // per goal deadline, so an account with no goals correctly queues nothing
+    // however the switch is set.
+    //
+    // Worth pinning because it is the one module whose default is honest but
+    // invisible: onboarding reports it as switched on, and it is, but nothing
+    // arrives until the user actually sets a goal. Anyone reading a bug report
+    // that says "goal reminders do not work" should land here first.
+    enableEveryModuleDefault();
+
+    await resyncAllReminders();
+
+    expect(useGoalReminderStore.getState().settings.enabled).toBe(true);
+    expect(mockQueue.filter((entry) => entry.data.category === 'goals')).toHaveLength(0);
   });
 });

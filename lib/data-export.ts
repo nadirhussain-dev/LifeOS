@@ -6,7 +6,9 @@ import { getDb } from '@/database/client';
 import { HUB_SECTIONS } from '@/features/hub/config/modules';
 import { privatisedModules } from '@/features/private/store/private-store';
 import {
+  budgetCategoryLimits,
   budgetDebts,
+  budgetRecurring,
   budgetSettings,
   budgetTransactions,
   calendarEvents,
@@ -42,6 +44,8 @@ import {
   studySubjects,
   taskCategories,
   tasks,
+  taskSubtasks,
+  taskTagLinks,
   waterIntakeLogs,
 } from '@/database/schema';
 
@@ -56,6 +60,8 @@ import {
 const EXPORT_TABLES = {
   taskCategories,
   tasks,
+  taskSubtasks,
+  taskTagLinks,
   noteCategories,
   notes,
   noteTags,
@@ -88,7 +94,9 @@ const EXPORT_TABLES = {
   budgetTransactions,
   savingsGoals,
   budgetSettings,
+  budgetCategoryLimits,
   budgetDebts,
+  budgetRecurring,
   galleryAlbums,
   galleryPhotos,
 } as const;

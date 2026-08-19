@@ -25,6 +25,30 @@ export type DayBuffer = {
    *  `min_writes` is a season setting and may be more than one. */
   writes: Record<string, number>;
   activeSeconds: number;
+  /**
+   * Modules the *server* has confirmed seeing a live write for today (0065).
+   *
+   * Distinct from `writes`, and the distinction is the whole live-write rule:
+   * `writes` is what this phone did, `attested` is what the server watched it
+   * do. Under a season with `require_live_writes` only the second one can
+   * credit a day, so the checklist has to be able to draw both.
+   *
+   * Optional because it arrived after the store was already persisted on real
+   * devices — an install carrying days written by the previous build parses
+   * fine and simply has nothing attested, which is the correct reading of a
+   * day recorded before the rule existed.
+   */
+  attested?: string[];
+  /**
+   * Modules whose attestation failed — almost always because the device was
+   * offline at the moment of the write.
+   *
+   * Kept so the checklist can say "this did not count" while the day is still
+   * fixable. Deliberately **not** a retry queue: see
+   * `services/live-writes.ts` for why replaying these would reopen the exact
+   * loophole the rule closes.
+   */
+  attestFailed?: string[];
 };
 
 /** A buffered day, ready to be offered to the server. */
@@ -48,6 +72,31 @@ type ChallengeState = {
    *  offline and on first paint. */
   required: string[];
   minWrites: number;
+  /**
+   * Whether the current season demands server-witnessed writes (0065).
+   *
+   * Mirrored here from `challenge_live_today()` because the at-risk reminder is
+   * rebuilt outside React — `use-challenge-tracking.ts` subscribes to this
+   * store, not to the query cache — and a reminder that named the wrong
+   * outstanding modules would be worse than none. Defaults to false so a fresh
+   * install, or a server that predates the column, gets the old lenient rule.
+   */
+  liveRequired: boolean;
+  /**
+   * Where the run stands, cached from `challenge_today()` (0067).
+   *
+   * Here for one consumer: the at-risk reminder, which is rebuilt outside React
+   * on every write and cannot fetch anything. Without a cache it could only say
+   * which modules were outstanding; with it, it can say what missing them
+   * costs — and that number is the difference between a warning somebody acts
+   * on and one they scroll past.
+   *
+   * Zeroes mean "not known yet", and `costOfMissToday` treats them as "quote no
+   * cost" rather than "quote zero". A server that predates the column, or a
+   * first launch before the query lands, must produce the old reminder rather
+   * than an invented number.
+   */
+  standing: ChallengeStanding;
   days: Record<string, DayBuffer>;
   /**
    * The newest `challenge_events` row the user has been shown.
@@ -77,6 +126,17 @@ type ChallengeState = {
   clearEnrolment: () => void;
   /** One row changed in one module. Called from the database write observer. */
   recordWrite: (module: string, day?: string) => void;
+  /** The server confirmed a live write for this module, on the day it says. */
+  markAttested: (module: string, day: string) => void;
+  /** An attestation did not reach the server. Recorded for the UI only. */
+  markAttestFailed: (module: string, day?: string) => void;
+  /** Replaces today's attested set from `challenge_live_today()` — the server
+   *  is the authority, and a second device's work belongs in this list too. */
+  setAttested: (modules: string[], day: string) => void;
+  /** Records whether the live rule applies, from the same response. */
+  setLiveRequired: (required: boolean) => void;
+  /** Caches the counters the reminder needs to price a miss. */
+  setStanding: (standing: ChallengeStanding) => void;
   /** Foreground time, added in chunks by the session timer. */
   addActiveSeconds: (seconds: number, day?: string) => void;
   /** Everything worth sending, oldest first — a stale day should be offered
@@ -88,7 +148,36 @@ type ChallengeState = {
   dropDay: (day: string) => void;
 };
 
+/** The counters a miss is priced from. See `standing` on the state below. */
+export type ChallengeStanding = {
+  qualifiedDays: number;
+  shields: number;
+  recentMisses: number;
+  maxDemotionDays: number;
+  /** Ascending rung thresholds. Empty until the server has been heard from. */
+  tierThresholds: number[];
+};
+
+const emptyStanding = (): ChallengeStanding => ({
+  qualifiedDays: 0,
+  shields: 0,
+  recentMisses: 0,
+  maxDemotionDays: 0,
+  tierThresholds: [],
+});
+
 const emptyDay = (): DayBuffer => ({ writes: {}, activeSeconds: 0 });
+
+/** Adds one entry to an optional string list, without duplicates. */
+const withItem = (list: string[] | undefined, item: string): string[] =>
+  list?.includes(item) ? list : [...(list ?? []), item];
+
+/** Removes one entry, returning undefined for an empty result so the persisted
+ *  shape stays as small as it was before this field existed. */
+const withoutItem = (list: string[] | undefined, item: string): string[] | undefined => {
+  const next = (list ?? []).filter((x) => x !== item);
+  return next.length > 0 ? next : undefined;
+};
 
 /** The `RETAINED_DAYS` most recent keys, newest first. */
 function recentKeys(days: Record<string, DayBuffer>, today: string): string[] {
@@ -105,6 +194,8 @@ export const useChallengeStore = create<ChallengeState>()(
       seasonId: null,
       required: [],
       minWrites: 1,
+      liveRequired: false,
+      standing: emptyStanding(),
       days: {},
       lastSeenEventId: 0,
       lastClosedDay: null,
@@ -126,6 +217,8 @@ export const useChallengeStore = create<ChallengeState>()(
           enrolled: false,
           seasonId: null,
           required: [],
+          liveRequired: false,
+          standing: emptyStanding(),
           days: {},
           lastSeenEventId: 0,
           lastClosedDay: null,
@@ -146,6 +239,55 @@ export const useChallengeStore = create<ChallengeState>()(
           };
         });
       },
+
+      markAttested: (module, day) =>
+        set((s) => {
+          const buffer = s.days[day] ?? emptyDay();
+          return {
+            days: {
+              ...s.days,
+              [day]: {
+                ...buffer,
+                attested: withItem(buffer.attested, module),
+                // A module that has just been witnessed is no longer failing.
+                attestFailed: withoutItem(buffer.attestFailed, module),
+              },
+            },
+          };
+        }),
+
+      markAttestFailed: (module, day = currentDay()) =>
+        set((s) => {
+          const buffer = s.days[day] ?? emptyDay();
+          // Never contradict a success already recorded today: one dropped
+          // request after the server has seen the module does not un-see it.
+          if (buffer.attested?.includes(module)) return {};
+          return {
+            days: {
+              ...s.days,
+              [day]: { ...buffer, attestFailed: withItem(buffer.attestFailed, module) },
+            },
+          };
+        }),
+
+      setLiveRequired: (liveRequired) => set({ liveRequired }),
+
+      setStanding: (standing) => set({ standing }),
+
+      setAttested: (modules, day) =>
+        set((s) => {
+          const buffer = s.days[day] ?? emptyDay();
+          return {
+            days: {
+              ...s.days,
+              [day]: {
+                ...buffer,
+                attested: modules.length > 0 ? modules : undefined,
+                attestFailed: (buffer.attestFailed ?? []).filter((m) => !modules.includes(m)),
+              },
+            },
+          };
+        }),
 
       addActiveSeconds: (seconds, day = currentDay()) => {
         if (!get().enrolled || seconds <= 0) return;

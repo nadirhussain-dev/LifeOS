@@ -29,6 +29,34 @@ function lastEmail(): Record<string, unknown> {
   return JSON.parse(String(call.init.body));
 }
 
+/**
+ * The invitation RPCs only.
+ *
+ * The function now spends a rate-limit budget before writing anything (0062),
+ * so `rpcCalls` holds two calls per request and indexing into it positionally
+ * asserts the wrong one. Filtered by name rather than offset by one, so adding
+ * a third RPC later does not silently move these assertions onto it.
+ */
+function inviteCalls(): { name: string; params: Record<string, string> }[] {
+  return (globalThis.__supabaseStub.rpcCalls ?? []).filter(
+    (c: { name: string }) => c.name === 'create_group_invitation',
+  );
+}
+
+function rateLimitCalls(): { name: string; params: Record<string, unknown> }[] {
+  return (globalThis.__supabaseStub.rpcCalls ?? []).filter(
+    (c: { name: string }) => c.name === 'consume_rate_limit',
+  );
+}
+
+/** What `consume_rate_limit` returns through PostgREST: `returns table (...)`
+ *  arrives as an array of one row. */
+const allowed = {
+  data: [{ allowed: true, remaining: 19, retry_after_seconds: 3600 }],
+  error: null,
+};
+const refused = { data: [{ allowed: false, remaining: 0, retry_after_seconds: 42 }], error: null };
+
 function post(body: unknown, auth: string | null = 'Bearer caller-jwt'): Request {
   return new Request('https://edge.test/send-invite', {
     method: 'POST',
@@ -79,7 +107,7 @@ beforeEach(() => {
     getUser: async () => ({
       data: { user: { email: 'inviter@example.com', user_metadata: { display_name: 'Ada' } } },
     }),
-    rpc: async () => ({ error: null }),
+    rpc: async (name: string) => (name === 'consume_rate_limit' ? allowed : { error: null }),
   };
 });
 
@@ -120,24 +148,97 @@ describe('request handling', () => {
     const headers = globalThis.__supabaseStub.clientOptions.global.headers;
     expect(headers.Authorization).toBe('Bearer caller-jwt');
     // The token is minted server-side; nothing from the payload chooses it.
-    const { params } = globalThis.__supabaseStub.rpcCalls[0];
+    const { params } = inviteCalls()[0];
     expect(typeof params.p_token).toBe('string');
     expect(params.p_token.length).toBeGreaterThan(20);
   });
 
   it('surfaces an RLS refusal as 403 rather than sending anything', async () => {
-    globalThis.__supabaseStub.rpc = async () => ({ error: { message: 'denied' } });
+    // Only the invitation is refused. Failing the limiter too would prove
+    // nothing here: it fails open (see _shared/rate-limit.ts), so the request
+    // would reach the same 403 by a different route.
+    globalThis.__supabaseStub.rpc = async (name: string) =>
+      name === 'consume_rate_limit' ? allowed : { error: { message: 'denied' } };
     env.RESEND_API_KEY = 'rk-test';
 
     expect((await handler(post(VALID))).status).toBe(403);
     expect(fetchCalls).toHaveLength(0);
   });
 
+  it('spends a rate-limit budget before writing or sending anything', async () => {
+    env.RESEND_API_KEY = 'rk-test';
+    await handler(post(VALID));
+
+    const [limit] = rateLimitCalls();
+    expect(limit.params).toEqual({
+      p_action: 'edge_send_invite',
+      p_limit: 20,
+      p_window_ms: 3600000,
+    });
+    // Order is the property that matters: the budget is spent BEFORE the
+    // invitation exists, so a refusal cannot leave a written invitation behind.
+    const names = globalThis.__supabaseStub.rpcCalls.map((c: { name: string }) => c.name);
+    expect(names.indexOf('consume_rate_limit')).toBeLessThan(
+      names.indexOf('create_group_invitation'),
+    );
+  });
+
+  it('refuses with 429 and Retry-After once the budget is spent', async () => {
+    env.RESEND_API_KEY = 'rk-test';
+    globalThis.__supabaseStub.rpc = async (name: string) =>
+      name === 'consume_rate_limit' ? refused : { error: null };
+
+    const res = await handler(post(VALID));
+
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('42');
+    expect(await res.json()).toEqual({ error: 'rate_limited', retryAfterSeconds: 42 });
+    // The whole point: no invitation row, and no email. A limiter that refuses
+    // after the send has already gone out is decoration.
+    expect(inviteCalls()).toHaveLength(0);
+    expect(fetchCalls).toHaveLength(0);
+  });
+
+  it('carries CORS headers on the 429 too — a preflighted web call must read it', async () => {
+    globalThis.__supabaseStub.rpc = async (name: string) =>
+      name === 'consume_rate_limit' ? refused : { error: null };
+
+    const res = await handler(post(VALID));
+
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
+  });
+
+  it('sends anyway when the limiter itself errors — it fails open, loudly', async () => {
+    // A limiter is a defence, not an authorization gate: the caller is already
+    // authenticated and authorized by this point. Failing closed would turn a
+    // database hiccup into "no invitation can be sent", a worse outage than the
+    // abuse the budget prevents.
+    const logged: unknown[] = [];
+    const consoleError = console.error;
+    console.error = (...args: unknown[]) => logged.push(args);
+    try {
+      env.RESEND_API_KEY = 'rk-test';
+      globalThis.__supabaseStub.rpc = async (name: string) =>
+        name === 'consume_rate_limit'
+          ? { data: null, error: { message: 'relation does not exist' } }
+          : { error: null };
+
+      const res = await handler(post(VALID));
+
+      expect(res.status).toBe(200);
+      expect(inviteCalls()).toHaveLength(1);
+    } finally {
+      console.error = consoleError;
+    }
+    // Silently off is the one way this fails at its job, so it has to say so.
+    expect(JSON.stringify(logged)).toContain('rate limit check failed');
+  });
+
   it('mints an unguessable token: url-safe, and never twice the same', async () => {
     const seen = new Set<string>();
     for (let i = 0; i < 5; i++) {
       await handler(post(VALID));
-      const token = globalThis.__supabaseStub.rpcCalls[i].params.p_token;
+      const token = inviteCalls()[i].params.p_token;
       expect(token).toMatch(/^[A-Za-z0-9_-]+$/);
       seen.add(token);
     }
@@ -173,7 +274,7 @@ describe('the email itself', () => {
   it('includes a text/plain part carrying the same link as the HTML', async () => {
     await handler(post(VALID));
     const email = lastEmail();
-    const link = String(globalThis.__supabaseStub.rpcCalls[0].params.p_token);
+    const link = String(inviteCalls()[0].params.p_token);
 
     expect(typeof email.text).toBe('string');
     expect(String(email.text)).toContain(link);
@@ -265,7 +366,7 @@ describe('degradation — the invitation must survive email failing', () => {
     // domain nobody has bought — correct for every project, unconfigured.
     expect(body.link).toContain('https://project.supabase.co/functions/v1/join/');
     // The invitation was still written — the members screen shares this link.
-    expect(globalThis.__supabaseStub.rpcCalls).toHaveLength(1);
+    expect(inviteCalls()).toHaveLength(1);
   });
 
   it('returns a real link, unemailed, when Resend rejects the send', async () => {

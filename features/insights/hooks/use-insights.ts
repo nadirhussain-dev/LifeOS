@@ -11,6 +11,8 @@ import { buildDailyMetrics } from '@/features/insights/services/daily-metrics';
 import { computeInsights } from '@/features/insights/services/insight-engine';
 import { listEntriesBetween } from '@/features/journal/services/journal-repository';
 import { useSleepSessions } from '@/features/sleep/hooks/use-sleep';
+import { listTasks } from '@/features/tasks/services/tasks-repository';
+import { listDailyTotals } from '@/features/water-intake/services/water-intake-repository';
 import { useStudySessions } from '@/features/study/hooks/use-study';
 
 /**
@@ -73,6 +75,33 @@ export function useLifeInsights(rangeDays: number) {
     queryFn: async () => listEntriesBetween(start, end),
   });
 
+  const {
+    data: tasks = [],
+    isLoading: tasksLoading,
+    isError: tasksError,
+    refetch: refetchTasks,
+  } = useQuery({
+    // Every task, not the filtered list the tasks screen shows: a completion is
+    // filed against the day it happened, and an archived or completed task is
+    // exactly the evidence this needs.
+    queryKey: ['insights', 'tasks'],
+    queryFn: async () => [
+      ...listTasks('active', 'created'),
+      ...listTasks('completed', 'created'),
+      ...listTasks('archived', 'created'),
+    ],
+  });
+
+  const {
+    data: waterTotals = [],
+    isLoading: waterLoading,
+    isError: waterError,
+    refetch: refetchWater,
+  } = useQuery({
+    queryKey: ['insights', 'water', start, end],
+    queryFn: async () => listDailyTotals(start, end),
+  });
+
   const daily = useMemo(
     () =>
       buildDailyMetrics({
@@ -83,8 +112,20 @@ export function useLifeInsights(rangeDays: number) {
         habitLogs,
         transactions,
         journalEntries,
+        tasks,
+        waterTotals,
       }),
-    [rangeDays, sleepSessions, studySessions, habits, habitLogs, transactions, journalEntries],
+    [
+      rangeDays,
+      sleepSessions,
+      studySessions,
+      habits,
+      habitLogs,
+      transactions,
+      journalEntries,
+      tasks,
+      waterTotals,
+    ],
   );
 
   const insights = useMemo(() => computeInsights(daily), [daily]);
@@ -96,9 +137,18 @@ export function useLifeInsights(rangeDays: number) {
       budgetLoading ||
       habitsLoading ||
       habitLogsLoading ||
-      journalLoading,
+      journalLoading ||
+      tasksLoading ||
+      waterLoading,
     isError:
-      sleepError || studyError || budgetError || habitsError || habitLogsError || journalError,
+      sleepError ||
+      studyError ||
+      budgetError ||
+      habitsError ||
+      habitLogsError ||
+      journalError ||
+      tasksError ||
+      waterError,
     refetch: () => {
       void refetchSleep();
       void refetchStudy();
@@ -106,6 +156,8 @@ export function useLifeInsights(rangeDays: number) {
       void refetchHabits();
       void refetchHabitLogs();
       void refetchJournal();
+      void refetchTasks();
+      void refetchWater();
     },
     daily,
     insights,

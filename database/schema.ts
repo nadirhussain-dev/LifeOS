@@ -30,12 +30,23 @@ export const tasks = sqliteTable('tasks', {
   })
     .notNull()
     .default('none'),
+  /** "Every N" — 1 unless the user asked for a fortnightly or quarterly repeat. */
+  recurrenceInterval: integer('recurrence_interval').notNull().default(1),
+  /** Weekly-on-chosen-days, as a JSON int array with 0 = Sunday. Null means
+   *  plain "every N weeks". Same convention as `habits.schedule_days`. */
+  recurrenceDaysOfWeek: text('recurrence_days_of_week'),
+  recurrenceAnchor: text('recurrence_anchor', { enum: ['due_date', 'completion'] })
+    .notNull()
+    .default('due_date'),
   recurrenceParentId: text('recurrence_parent_id'),
   completedAt: integer('completed_at'),
   position: integer('position').notNull().default(0),
   reminderEnabled: integer('reminder_enabled', { mode: 'boolean' }).notNull().default(false),
   reminderNotificationId: text('reminder_notification_id'),
   sourceNoteId: text('source_note_id'),
+  /** The goal this task's completion advances, if any. Only count-mode goals
+   *  can be linked — see features/goals/services/goal-contributions.ts. */
+  goalId: text('goal_id'),
   habitId: text('habit_id'),
   habitLogDate: text('habit_log_date'),
   createdAt: integer('created_at').notNull(),
@@ -45,6 +56,57 @@ export const tasks = sqliteTable('tasks', {
     .notNull()
     .default('pending'),
   serverUpdatedAt: integer('server_updated_at'),
+});
+
+/**
+ * A task's checklist.
+ *
+ * A separate table rather than a `parent_task_id` on `tasks`, which was the
+ * other obvious shape. Subtasks-as-tasks means every existing query that reads
+ * `tasks` — the dashboard, both widgets, search, the digest, challenge tracking
+ * — starts counting checklist items as tasks in their own right unless each one
+ * remembers to filter, and the failure is silent: a slightly wrong number on a
+ * screen nobody thinks to re-check. A checklist item is also a smaller thing
+ * than a task: it has no due date, no reminder, no category, no recurrence.
+ * Making it a row that *could* carry them invites the question of what a
+ * subtask with its own reminder is supposed to mean.
+ */
+export const taskSubtasks = sqliteTable('task_subtasks', {
+  id: text('id').primaryKey(),
+  taskId: text('task_id').notNull(),
+  userId: text('user_id').notNull(),
+  title: text('title').notNull(),
+  isDone: integer('is_done', { mode: 'boolean' }).notNull().default(false),
+  completedAt: integer('completed_at'),
+  position: integer('position').notNull().default(0),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  deletedAt: integer('deleted_at'),
+});
+
+/**
+ * Which tags are on a task.
+ *
+ * The tag *vocabulary* is `note_tags`, shared rather than duplicated. The name
+ * is now a misnomer — it is the app's tag list, not the notes module's — but
+ * renaming a synced table means renaming it on the server too, and every
+ * device's sync cursor is per table, so the rename costs a full re-pull of
+ * every tag on every install to fix a word. The sharing is the point: a task
+ * and a note tagged `#renovation` are on the same tag, so searching it returns
+ * both. Two parallel vocabularies would have made that impossible while
+ * looking, on each screen alone, perfectly correct.
+ *
+ * `id` is derived from the pair (`taskId:tagId`), the same convention 0016 gave
+ * the other join tables: two devices that add the same tag offline produce the
+ * same row and the upsert collapses them, instead of tagging the task twice.
+ */
+export const taskTagLinks = sqliteTable('task_tag_links', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  taskId: text('task_id').notNull(),
+  tagId: text('tag_id').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  deletedAt: integer('deleted_at'),
 });
 
 export const noteCategories = sqliteTable('note_categories', {
@@ -155,6 +217,8 @@ export const habits = sqliteTable('habits', {
     .default('daily'),
   scheduleDays: text('schedule_days'),
   scheduleIntervalDays: integer('schedule_interval_days'),
+  /** The goal each log of this habit advances, if any. */
+  goalId: text('goal_id'),
   reminderTime: text('reminder_time'),
   reminderAdaptive: integer('reminder_adaptive', { mode: 'boolean' }).notNull().default(false),
   reminderNotificationId: text('reminder_notification_id'),
@@ -617,6 +681,66 @@ export const budgetSettings = sqliteTable('budget_settings', {
  * deadline and a reminder scheduled some days before it. `direction` is
  * 'borrowed' (you owe them) or 'lent' (they owe you). All money is integer
  * minor units (cents). */
+/**
+ * A spending cap for one expense category.
+ *
+ * Keyed by `userId:category` rather than a random id, the same derived-id trick
+ * the join tables use: two devices that set a Food cap offline produce the same
+ * row and the upsert collapses them, instead of leaving two caps for one
+ * category and no way to tell which the app should believe.
+ *
+ * One row per category the user has actually capped. Absent means uncapped,
+ * which is different from a cap of zero — zero is "I intend to spend nothing
+ * here" and should show as over budget the moment anything is spent.
+ */
+/**
+ * A transaction that repeats — rent, a subscription, a salary.
+ *
+ * Occurrences are *materialized* into `budget_transactions` rather than being
+ * computed on read, because a budget is a ledger: the rows have to be editable,
+ * deletable and searchable like any other, and a virtual row that vanishes when
+ * a rule changes is not a record of anything.
+ *
+ * `lastPostedDate` is the high-water mark rather than a count, so a rule whose
+ * cadence is edited does not re-post its history. Combined with the derived
+ * occurrence id (see `occurrenceTransactionId`), catching up is replay-proof:
+ * two devices that both come online after a fortnight write the same ids and
+ * the upsert collapses them instead of billing the rent twice.
+ */
+export const budgetRecurring = sqliteTable('budget_recurring', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  type: text('type', { enum: ['income', 'expense', 'savings'] }).notNull(),
+  amountCents: integer('amount_cents').notNull(),
+  category: text('category').notNull(),
+  account: text('account', { enum: ['cash', 'wallet', 'bank'] })
+    .notNull()
+    .default('cash'),
+  note: text('note'),
+  frequency: text('frequency', { enum: ['weekly', 'monthly', 'yearly'] }).notNull(),
+  interval: integer('interval').notNull().default(1),
+  /** `yyyy-MM-dd` of the first occurrence — also the day-of-month every later
+   *  occurrence is derived from, which is why it is kept rather than replaced. */
+  anchorDate: text('anchor_date').notNull(),
+  /** `yyyy-MM-dd` of the most recent occurrence already written. */
+  lastPostedDate: text('last_posted_date'),
+  isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  deletedAt: integer('deleted_at'),
+});
+
+export const budgetCategoryLimits = sqliteTable('budget_category_limits', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  /** Category key from the expense catalog in features/budget/config. */
+  category: text('category').notNull(),
+  limitCents: integer('limit_cents').notNull(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  deletedAt: integer('deleted_at'),
+});
+
 export const budgetDebts = sqliteTable('budget_debts', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
@@ -837,12 +961,16 @@ export const TABLE_BOOTSTRAP_SQL = `
     due_date INTEGER,
     has_due_time INTEGER NOT NULL DEFAULT 0,
     recurrence_frequency TEXT NOT NULL DEFAULT 'none',
+    recurrence_interval INTEGER NOT NULL DEFAULT 1,
+    recurrence_days_of_week TEXT,
+    recurrence_anchor TEXT NOT NULL DEFAULT 'due_date',
     recurrence_parent_id TEXT,
     completed_at INTEGER,
     position INTEGER NOT NULL DEFAULT 0,
     reminder_enabled INTEGER NOT NULL DEFAULT 0,
     reminder_notification_id TEXT,
     source_note_id TEXT,
+    goal_id TEXT,
     habit_id TEXT,
     habit_log_date TEXT,
     created_at INTEGER NOT NULL,
@@ -850,6 +978,28 @@ export const TABLE_BOOTSTRAP_SQL = `
     deleted_at INTEGER,
     sync_status TEXT NOT NULL DEFAULT 'pending',
     server_updated_at INTEGER
+  );
+
+  CREATE TABLE IF NOT EXISTS task_subtasks (
+    id TEXT PRIMARY KEY NOT NULL,
+    task_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    is_done INTEGER NOT NULL DEFAULT 0,
+    completed_at INTEGER,
+    position INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
+  );
+
+  CREATE TABLE IF NOT EXISTS task_tag_links (
+    id TEXT PRIMARY KEY NOT NULL,
+    user_id TEXT NOT NULL,
+    task_id TEXT NOT NULL,
+    tag_id TEXT NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
   );
 
   CREATE TABLE IF NOT EXISTS note_categories (
@@ -940,6 +1090,7 @@ export const TABLE_BOOTSTRAP_SQL = `
     schedule_type TEXT NOT NULL DEFAULT 'daily',
     schedule_days TEXT,
     schedule_interval_days INTEGER,
+    goal_id TEXT,
     reminder_time TEXT,
     reminder_adaptive INTEGER NOT NULL DEFAULT 0,
     reminder_notification_id TEXT,
@@ -1288,6 +1439,34 @@ export const TABLE_BOOTSTRAP_SQL = `
     updated_at INTEGER NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS budget_recurring (
+    id TEXT PRIMARY KEY NOT NULL,
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    amount_cents INTEGER NOT NULL,
+    category TEXT NOT NULL,
+    account TEXT NOT NULL DEFAULT 'cash',
+    note TEXT,
+    frequency TEXT NOT NULL,
+    interval INTEGER NOT NULL DEFAULT 1,
+    anchor_date TEXT NOT NULL,
+    last_posted_date TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
+  );
+
+  CREATE TABLE IF NOT EXISTS budget_category_limits (
+    id TEXT PRIMARY KEY NOT NULL,
+    user_id TEXT NOT NULL,
+    category TEXT NOT NULL,
+    limit_cents INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    deleted_at INTEGER
+  );
+
   CREATE TABLE IF NOT EXISTS budget_debts (
     id TEXT PRIMARY KEY NOT NULL,
     user_id TEXT NOT NULL,
@@ -1431,6 +1610,8 @@ export const INDEX_BOOTSTRAP_SQL = `
   CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(user_id, is_pinned);
   CREATE INDEX IF NOT EXISTS idx_notes_updated ON notes(user_id, updated_at);
   CREATE INDEX IF NOT EXISTS idx_notes_archived ON notes(user_id, is_archived);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_task_tag_links ON task_tag_links(task_id, tag_id);
+  CREATE INDEX IF NOT EXISTS idx_task_tag_links_tag ON task_tag_links(tag_id);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_note_tag_links ON note_tag_links(note_id, tag_id);
   CREATE INDEX IF NOT EXISTS idx_note_attachments_note ON note_attachments(note_id);
   CREATE INDEX IF NOT EXISTS idx_habits_position ON habits(user_id, is_archived, position);
@@ -1452,6 +1633,7 @@ export const INDEX_BOOTSTRAP_SQL = `
   CREATE UNIQUE INDEX IF NOT EXISTS idx_playlist_songs_position ON playlist_songs(playlist_id, position);
   CREATE INDEX IF NOT EXISTS idx_goals_status ON goals(user_id, status, position);
   CREATE INDEX IF NOT EXISTS idx_goals_due ON goals(user_id, due_date);
+  CREATE INDEX IF NOT EXISTS idx_task_subtasks_task ON task_subtasks(task_id, position);
   CREATE INDEX IF NOT EXISTS idx_goal_milestones_goal ON goal_milestones(goal_id, position);
   CREATE INDEX IF NOT EXISTS idx_goal_progress_logs_goal ON goal_progress_logs(goal_id, logged_at);
   CREATE UNIQUE INDEX IF NOT EXISTS idx_sleep_sessions_date ON sleep_sessions(user_id, log_date) WHERE deleted_at IS NULL;
@@ -1493,7 +1675,9 @@ export const INDEX_BOOTSTRAP_SQL = `
   CREATE UNIQUE INDEX IF NOT EXISTS idx_playlist_songs_id ON playlist_songs(id);
 
   CREATE INDEX IF NOT EXISTS idx_sync_tasks ON tasks(user_id, updated_at, id);
+  CREATE INDEX IF NOT EXISTS idx_sync_task_subtasks ON task_subtasks(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_notes ON notes(user_id, updated_at, id);
+  CREATE INDEX IF NOT EXISTS idx_sync_task_tag_links ON task_tag_links(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_note_tag_links ON note_tag_links(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_note_attachments
     ON note_attachments(user_id, updated_at, id);
@@ -1516,6 +1700,10 @@ export const INDEX_BOOTSTRAP_SQL = `
   CREATE INDEX IF NOT EXISTS idx_sync_study_sessions ON study_sessions(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_water_intake_logs
     ON water_intake_logs(user_id, updated_at, id);
+  CREATE INDEX IF NOT EXISTS idx_sync_budget_recurring
+    ON budget_recurring(user_id, updated_at, id);
+  CREATE INDEX IF NOT EXISTS idx_sync_budget_category_limits
+    ON budget_category_limits(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_budget_transactions
     ON budget_transactions(user_id, updated_at, id);
   CREATE INDEX IF NOT EXISTS idx_sync_gallery_photos ON gallery_photos(user_id, updated_at, id);
@@ -1600,8 +1788,24 @@ export const ADDITIVE_COLUMNS: Record<string, { name: string; ddl: string }[]> =
       name: 'recurrence_frequency',
       ddl: "ALTER TABLE tasks ADD COLUMN recurrence_frequency TEXT NOT NULL DEFAULT 'none'",
     },
+    // Richer repeat rules. Existing rows keep the behaviour they already had:
+    // interval 1 with a due-date anchor is exactly the old four-case switch,
+    // so unlike the history tables above there is nothing to backfill.
+    {
+      name: 'recurrence_interval',
+      ddl: 'ALTER TABLE tasks ADD COLUMN recurrence_interval INTEGER NOT NULL DEFAULT 1',
+    },
+    {
+      name: 'recurrence_days_of_week',
+      ddl: 'ALTER TABLE tasks ADD COLUMN recurrence_days_of_week TEXT',
+    },
+    {
+      name: 'recurrence_anchor',
+      ddl: "ALTER TABLE tasks ADD COLUMN recurrence_anchor TEXT NOT NULL DEFAULT 'due_date'",
+    },
     { name: 'recurrence_parent_id', ddl: 'ALTER TABLE tasks ADD COLUMN recurrence_parent_id TEXT' },
     { name: 'source_note_id', ddl: 'ALTER TABLE tasks ADD COLUMN source_note_id TEXT' },
+    { name: 'goal_id', ddl: 'ALTER TABLE tasks ADD COLUMN goal_id TEXT' },
     { name: 'habit_id', ddl: 'ALTER TABLE tasks ADD COLUMN habit_id TEXT' },
     { name: 'habit_log_date', ddl: 'ALTER TABLE tasks ADD COLUMN habit_log_date TEXT' },
     {
@@ -1629,6 +1833,7 @@ export const ADDITIVE_COLUMNS: Record<string, { name: string; ddl: string }[]> =
     },
   ],
   habits: [
+    { name: 'goal_id', ddl: 'ALTER TABLE habits ADD COLUMN goal_id TEXT' },
     {
       name: 'reminder_notification_id',
       ddl: 'ALTER TABLE habits ADD COLUMN reminder_notification_id TEXT',
@@ -1795,3 +2000,63 @@ export const ADDITIVE_COLUMNS: Record<string, { name: string; ddl: string }[]> =
     { name: 'deleted_at', ddl: 'ALTER TABLE playlist_songs ADD COLUMN deleted_at INTEGER' },
   ],
 };
+
+/**
+ * Full-text search over notes, as a separate and individually-guarded step.
+ *
+ * NOT part of TABLE_BOOTSTRAP_SQL, and that is the whole design. A failing
+ * statement aborts an entire `execSync`, which is how this app once spent a
+ * release unable to open its database at all (see bootstrap.ts). FTS5 is a
+ * compile-time SQLite option: it is present in `node:sqlite` and expected in
+ * op-sqlite, but "expected" is not "verified on every device this ships to", and
+ * the cost of being wrong inside the main blob would be every screen in the app
+ * failing rather than one search being slower.
+ *
+ * So this runs on its own, its failure is caught, and `search-index.ts` falls
+ * back to LIKE when the table is absent.
+ *
+ * A standalone table rather than FTS5's external-content mode: external content
+ * keys on an INTEGER rowid, while `notes.id` is TEXT, so the coupling would rest
+ * on SQLite's implicit rowid staying stable across a vacuum. Storing the id
+ * UNINDEXED costs a little space and removes the assumption.
+ *
+ * `remove_diacritics 2` matches the existing search's behaviour, where "cafe"
+ * finds "café" — see features/search/services/global-search.ts.
+ */
+export const SEARCH_INDEX_SQL = `
+  CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
+    note_id UNINDEXED,
+    title,
+    body,
+    tokenize = 'unicode61 remove_diacritics 2'
+  );
+
+  CREATE TRIGGER IF NOT EXISTS notes_fts_insert AFTER INSERT ON notes BEGIN
+    INSERT INTO notes_fts (note_id, title, body)
+    VALUES (new.id, new.title, COALESCE(new.body, ''));
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS notes_fts_update AFTER UPDATE ON notes BEGIN
+    DELETE FROM notes_fts WHERE note_id = old.id;
+    INSERT INTO notes_fts (note_id, title, body)
+    VALUES (new.id, new.title, COALESCE(new.body, ''));
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS notes_fts_delete AFTER DELETE ON notes BEGIN
+    DELETE FROM notes_fts WHERE note_id = old.id;
+  END;
+`;
+
+/**
+ * Fills the index for notes written before it existed.
+ *
+ * Separate from the DDL because it must run after it and be re-runnable: the
+ * NOT EXISTS makes it a no-op once every note is indexed, so it can sit in the
+ * same guarded step on every launch without rebuilding anything.
+ */
+export const SEARCH_INDEX_BACKFILL_SQL = `
+  INSERT INTO notes_fts (note_id, title, body)
+  SELECT n.id, n.title, COALESCE(n.body, '')
+  FROM notes n
+  WHERE NOT EXISTS (SELECT 1 FROM notes_fts f WHERE f.note_id = n.id);
+`;

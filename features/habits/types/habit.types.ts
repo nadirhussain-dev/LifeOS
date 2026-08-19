@@ -18,6 +18,8 @@ export type Habit = {
   /** Weekday ints, 0 = Sunday, only meaningful when scheduleType is 'custom_days'. */
   scheduleDays: number[] | null;
   scheduleIntervalDays: number | null;
+  /** The count-mode goal each log of this habit advances, if any. */
+  goalId: string | null;
   reminderTime: string | null;
   reminderAdaptive: boolean;
   reminderNotificationId: string | null;
@@ -61,6 +63,7 @@ export type CreateHabitInput = {
   scheduleType: HabitScheduleType;
   scheduleDays?: number[] | null;
   scheduleIntervalDays?: number | null;
+  goalId?: string | null;
   reminderTime?: string | null;
   reminderAdaptive?: boolean;
 };

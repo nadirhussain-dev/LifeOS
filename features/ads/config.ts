@@ -1,3 +1,5 @@
+import type { MaxAdContentRating } from 'react-native-google-mobile-ads';
+
 /**
  * Ad placements — real Google Mobile Ads SDK, Google's own TEST ad units.
  *
@@ -54,3 +56,19 @@ export type AdPlacement = (typeof AD_PLACEMENTS)[number];
  * kept as a constant so they can't drift into two different strings.
  */
 export const ADS_MODULE_ID = 'ads';
+
+/**
+ * The strongest content rating an ad is allowed to carry, applied globally in
+ * `initAds()` before the SDK is initialised.
+ *
+ * `T` ("Teen"), not the `MA` the SDK defaults to when unset. `MA` admits
+ * gambling, alcohol and sexual content, and the surfaces ads actually appear
+ * on include Budget and Habits — a debt tracker serving betting ads to
+ * someone reading their own overdraft is the single most obviously wrong ad
+ * this app could show, whatever it pays. `T` still allows the health,
+ * fitness and finance advertisers that fit these screens.
+ *
+ * Not env-driven, deliberately: unlike the ad unit ids, this is a product
+ * decision that should not differ between a staging build and a store build.
+ */
+export const AD_MAX_CONTENT_RATING: keyof typeof MaxAdContentRating = 'T';

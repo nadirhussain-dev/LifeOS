@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { CheckCircle2, Search } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, TextInput, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { EmptyState } from '@/components/ui/empty-state';
@@ -17,6 +17,8 @@ import { colors } from '@/constants/theme';
 import { AdSlot } from '@/features/ads/components/ad-slot';
 import { TaskRow } from '@/features/tasks/components/task-row';
 import { useTaskMutations } from '@/features/tasks/hooks/use-task-mutations';
+import { useNoteTags } from '@/features/notes/hooks/use-notes';
+import { useSubtaskCounts } from '@/features/tasks/hooks/use-subtasks';
 import { useTasks } from '@/features/tasks/hooks/use-tasks';
 import { groupTasksByDueDate } from '@/features/tasks/services/task-grouping';
 import { useTasksFilterStore } from '@/features/tasks/store/tasks-filter-store';
@@ -38,9 +40,49 @@ export default function TasksScreen() {
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
 
-  const { filter, setFilter, searchQuery, setSearchQuery } = useTasksFilterStore();
+  const { filter, setFilter, searchQuery, setSearchQuery, tagId, setTagId } = useTasksFilterStore();
+  const { data: allTags = [] } = useNoteTags();
   const { data: tasks = [], isLoading, isError, refetch } = useTasks();
+  const taskIds = useMemo(() => tasks.map((task) => task.id), [tasks]);
+  const { data: subtaskCounts = {} } = useSubtaskCounts(taskIds);
+
   const { complete, reopen, archive, remove, restore } = useTaskMutations();
+
+  // Hoisted, one per action, rather than four closures per row per render.
+  // TaskRow is memoised and inline arrows made that memo inert — see its
+  // comment. Each takes the task so the identity never has to change.
+  const openTask = useCallback((task: Task) => router.push(`/task/${task.id}`), [router]);
+
+  const toggleTask = useCallback(
+    (task: Task) =>
+      task.status === 'completed' ? reopen.mutate(task.id) : complete.mutate(task.id),
+    [complete, reopen],
+  );
+
+  const archiveTask = useCallback(
+    ({ id, title }: Task) =>
+      archive.mutate(id, {
+        onSuccess: () =>
+          toast.undo(t('tasks.archivedToast', { title }), t('common.undo'), () =>
+            reopen.mutate(id),
+          ),
+      }),
+    [archive, reopen, t],
+  );
+
+  // Deletes are tombstones, so the row can come straight back. An undo window
+  // beats a confirmation dialog here: dialogs get dismissed reflexively, undo
+  // does not.
+  const deleteTask = useCallback(
+    ({ id, title }: Task) =>
+      remove.mutate(id, {
+        onSuccess: () =>
+          toast.undo(t('tasks.deletedToast', { title }), t('common.undo'), () =>
+            restore.mutate(id),
+          ),
+      }),
+    [remove, restore, t],
+  );
 
   // Pull-to-refresh existed on the dashboard and nowhere else, so the reflex
   // gesture did nothing on every list in the app.
@@ -121,6 +163,47 @@ export default function TasksScreen() {
         </View>
       </View>
 
+      {allTags.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerClassName="items-center gap-2 px-5 pb-3"
+        >
+          {allTags.map((tag) => {
+            const selected = tag.id === tagId;
+            return (
+              <Pressable
+                key={tag.id}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                // Tapping the selected tag clears it. A filter row with no way
+                // out but a second control is how people end up believing they
+                // have lost their tasks.
+                onPress={() => setTagId(selected ? null : tag.id)}
+                style={
+                  selected
+                    ? { backgroundColor: colors[scheme].accent, borderColor: colors[scheme].accent }
+                    : undefined
+                }
+                className={
+                  selected
+                    ? 'rounded-full border px-3 py-1.5'
+                    : 'rounded-full border border-border px-3 py-1.5'
+                }
+              >
+                <Text
+                  variant="micro"
+                  className={selected ? 'font-sora-semibold' : 'text-muted-foreground'}
+                  style={selected ? { color: colors[scheme].accentForeground } : undefined}
+                >
+                  {tag.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      )}
+
       {isError ? (
         <QueryError onRetry={() => refetch()} message={t('tasks.loadError')} />
       ) : isLoading ? (
@@ -132,14 +215,28 @@ export default function TasksScreen() {
       ) : items.length === 0 ? (
         <EmptyState
           icon={CheckCircle2}
+          // A tag filter that matches nothing must say so. "Nothing to do —
+          // enjoy the calm" over a filtered list reads as "your tasks are
+          // gone", and the control that caused it is a chip the user may not
+          // remember tapping.
           title={
-            filter === 'active'
-              ? t('tasks.emptyTitle')
-              : filter === 'completed'
-                ? t('tasks.emptyCompleted')
-                : t('tasks.emptyArchived')
+            tagId
+              ? t('tasks.emptyTagTitle')
+              : filter === 'active'
+                ? t('tasks.emptyTitle')
+                : filter === 'completed'
+                  ? t('tasks.emptyCompleted')
+                  : t('tasks.emptyArchived')
           }
-          description={filter === 'active' ? t('tasks.emptyActive') : t('tasks.emptyOther')}
+          description={
+            tagId
+              ? t('tasks.emptyTagBody', {
+                  tag: allTags.find((tag) => tag.id === tagId)?.name ?? '',
+                })
+              : filter === 'active'
+                ? t('tasks.emptyActive')
+                : t('tasks.emptyOther')
+          }
         />
       ) : (
         <FlashList
@@ -167,33 +264,12 @@ export default function TasksScreen() {
             ) : (
               <TaskRow
                 task={item.task}
-                onPress={() => router.push(`/task/${item.task.id}`)}
-                onToggleComplete={() =>
-                  item.task.status === 'completed'
-                    ? reopen.mutate(item.task.id)
-                    : complete.mutate(item.task.id)
-                }
-                onArchive={() => {
-                  const { id, title } = item.task;
-                  archive.mutate(id, {
-                    onSuccess: () =>
-                      toast.undo(t('tasks.archivedToast', { title }), t('common.undo'), () =>
-                        reopen.mutate(id),
-                      ),
-                  });
-                }}
-                onDelete={() => {
-                  // Deletes are tombstones, so the row can come straight back.
-                  // An undo window beats a confirmation dialog here: dialogs get
-                  // dismissed reflexively, undo does not.
-                  const { id, title } = item.task;
-                  remove.mutate(id, {
-                    onSuccess: () =>
-                      toast.undo(t('tasks.deletedToast', { title }), t('common.undo'), () =>
-                        restore.mutate(id),
-                      ),
-                  });
-                }}
+                checklistDone={subtaskCounts[item.task.id]?.done}
+                checklistTotal={subtaskCounts[item.task.id]?.total}
+                onPress={openTask}
+                onToggleComplete={toggleTask}
+                onArchive={archiveTask}
+                onDelete={deleteTask}
               />
             )
           }

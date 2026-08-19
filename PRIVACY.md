@@ -1,6 +1,6 @@
 # Daykeep — Privacy Policy
 
-_Last updated: 2026-08-10_
+_Last updated: 2026-08-19_
 
 Daykeep ("the app", "we") is a personal life-organization app. Your privacy is
 central to how it's built: **Daykeep is local-first — your data lives on your
@@ -50,8 +50,9 @@ it are worth building on, the app reports a small daily count:
   your device. It is not linked to an account, an email, an advertising ID, or
   your device's identifiers, and it cannot be.
 
-We do **not** use advertising identifiers, we do **not** track you across other
-apps or websites, and we do **not** sell your data.
+**None of the above uses advertising identifiers**, and we do **not** sell your
+data. Advertising is a separate system with separate rules — see
+"Advertising" below.
 
 ## Where cloud data is stored
 
@@ -221,6 +222,34 @@ account can send in an hour) and can restrict or block an account manually.
   reason, and gives you a way to appeal.
 - These decisions are made from account-level counts — how often an action was
   taken — never from the content of anything you have written.
+
+## Advertising
+
+The free plan shows ads, supplied by Google AdMob. A Daykeep Plus subscription
+removes them entirely — no ad is requested for a subscriber at all.
+
+**Where ads never appear.** No ad is shown anywhere in the private space. That
+surface holds cycle, recovery, intimacy and vault data, and no advertising SDK
+runs on any screen inside it.
+
+**What ads can use.** To show ads, Google receives your device's IP address,
+general device information, and — if you allow it — an advertising identifier
+(the IDFA on iOS, the Advertising ID on Android). That identifier is not linked
+to your account, your email, or anything you have written in Daykeep. Google's
+own handling of it is covered by
+[Google's Privacy Policy](https://policies.google.com/privacy) and
+[how Google uses information from sites or apps that use its services](https://policies.google.com/technologies/partner-sites).
+
+**Your choice, and changing it.** On iOS, the system asks once whether Daykeep
+may use the advertising identifier; declining does not remove ads, it makes
+them less relevant. Where local law requires it — the EEA, the UK and some
+other regions — we show a Google-certified consent form before any ad is
+requested, and declining means no ad is requested at all. You can reopen that
+form and change your answer at any time under **Settings → Privacy → Ad privacy
+choices**. Where that row does not appear, no such consent is being relied on.
+
+**What ads we allow.** Ad content is capped at Google's "Teen" rating, which
+excludes gambling, alcohol and sexual content.
 
 ## Crash reporting
 

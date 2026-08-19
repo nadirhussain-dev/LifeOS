@@ -7,6 +7,7 @@ import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
+import { AdFreeOffer } from '@/features/ads/components/ad-free-offer';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
@@ -309,6 +310,12 @@ export default function MediaSettingsScreen() {
             <Sparkles size={16} color={c.accent} />
             <Text variant="micro">{t('billing.plans')}</Text>
           </View>
+
+          {/* Offered above the plans, not beside a banner: stacking a control
+              next to an ad creative is what the placement policies exist to
+              prevent, and "remove ads with Plus" already routes here. It hides
+              itself when there is nothing to offer. */}
+          <AdFreeOffer />
 
           {!isPlus ? (
             <TextInput

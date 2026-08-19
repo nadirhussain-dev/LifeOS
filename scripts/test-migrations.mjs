@@ -13,6 +13,8 @@
  *
  * Run with `npm run test:sql`.
  */
+import { readFileSync } from 'node:fs';
+
 import {
   asAnon,
   asUser,
@@ -35,6 +37,11 @@ const VANDAL = '77777777-7777-7777-7777-777777777777';
 // 0018: a subject with no report history, so the report gate is tested from a
 // clean slate — ALICE already collects reports in the 0010 rate-limit tests.
 const SUBJECT = '88888888-8888-8888-8888-888888888888';
+// 0062/0063: accounts with no counters and no billing history of their own, for
+// the same reason SUBJECT exists — the edge-function budgets are asserted at
+// their exact boundary, and any earlier test spending one would move it.
+const SPENDER = '99999999-9999-9999-9999-999999999999';
+const SPENDER2 = 'aaaaaaaa-9999-9999-9999-999999999999';
 
 const { db, files } = await bootDatabase();
 const one = async (sql, params = []) => (await db.query(sql, params)).rows[0];
@@ -6035,9 +6042,1103 @@ await test('0048 operator actions land in the shared audit log', async () => {
 });
 
 // ---------------------------------------------------------------------------
+console.log('\nseason state and the operator console (0055)');
+// ---------------------------------------------------------------------------
+//
+// `challenge_season_state()` is the single derivation both consoles quote, and
+// the reason it exists is a bug that no unit test could have caught: the app
+// decided "is it open" from the module list, the operator screen decided it
+// from `enabled` and two dates, both were right, and they disagreed for weeks
+// with nothing on either screen able to show the other's answer.
+//
+// So the states are exercised here, against real rows, one condition at a time
+// — and in the order the function checks them, because the first failure is the
+// one it is supposed to report.
+
+const STATE_SEASON = (
+  await one(
+    `insert into public.challenge_seasons (name, enabled, required_modules)
+     values ('State Season', false, 3) returning id`,
+  )
+).id;
+
+// Its own runner. `challenge_enrollments` allows one active run per account and
+// the 0048 accounts are already spending theirs, so borrowing one here would
+// fail on the unique index rather than on anything this section is testing.
+const STATE_RUNNER = 'aaaaaaaa-0000-4000-8000-000000000003';
+await createUser(db, STATE_RUNNER, 'state-runner@example.com');
+
+const stateOf = async (season) =>
+  (await one(`select public.challenge_season_state($1::uuid) as v`, [season])).v;
+
+const setSeason = async (sets, params) =>
+  db.query(`update public.challenge_seasons set ${sets} where id = $1`, [STATE_SEASON, ...params]);
+
+await test('0055 a season nobody switched on is closed, whatever its dates say', async () => {
+  expectEqual(await stateOf(STATE_SEASON), 'closed', 'the season’s own switch comes first');
+});
+
+await test('0055 a season with no modules is not open, however enabled it is', async () => {
+  // The exact shape staging was in: enabled, inside its window, and impossible
+  // to join. The old console called this Open.
+  await setSeason(`enabled = true`, []);
+  expectEqual(await stateOf(STATE_SEASON), 'notReady', 'nothing to commit to');
+});
+
+await test('0055 too few eligible modules is as unjoinable as none at all', async () => {
+  // `required_modules` is 3. Two eligible modules fails the picker just as
+  // surely as zero, only further along, which is why the check is a comparison
+  // rather than an emptiness test.
+  for (const m of ['habits', 'water']) {
+    await db.query(`insert into public.challenge_modules (season_id, module_id) values ($1, $2)`, [
+      STATE_SEASON,
+      m,
+    ]);
+  }
+  expectEqual(await stateOf(STATE_SEASON), 'notReady', 'two of the three it asks for');
+
+  await db.query(
+    `insert into public.challenge_modules (season_id, module_id) values ($1, 'tasks')`,
+    [STATE_SEASON],
+  );
+  expectEqual(await stateOf(STATE_SEASON), 'open', 'the third one opens it');
+});
+
+await test('0055 an ineligible module does not count toward the requirement', async () => {
+  await db.query(
+    `update public.challenge_modules set eligible = false
+      where season_id = $1 and module_id = 'tasks'`,
+    [STATE_SEASON],
+  );
+  expectEqual(await stateOf(STATE_SEASON), 'notReady', 'curation is subtraction');
+  await db.query(
+    `update public.challenge_modules set eligible = true
+      where season_id = $1 and module_id = 'tasks'`,
+    [STATE_SEASON],
+  );
+});
+
+await test('0055 a season that has not started reads as upcoming, not as nothing', async () => {
+  await setSeason(`starts_at = now() + interval '10 days'`, []);
+  expectEqual(await stateOf(STATE_SEASON), 'upcoming', 'waiting, not missing');
+  await setSeason(`starts_at = null`, []);
+});
+
+await test('0055 a season past its end date reads as ended', async () => {
+  await setSeason(`ends_at = now() - interval '1 day'`, []);
+  expectEqual(await stateOf(STATE_SEASON), 'ended', 'finished, not broken');
+  await setSeason(`ends_at = null`, []);
+});
+
+await test('0055 the switch outranks the dates', async () => {
+  // A season both closed and out of window is reported closed, because that is
+  // the one an operator has to act on first.
+  await setSeason(`enabled = false, starts_at = now() + interval '5 days'`, []);
+  expectEqual(await stateOf(STATE_SEASON), 'closed', 'first failure wins');
+  await setSeason(`enabled = true, starts_at = null`, []);
+});
+
+await test('0055 a season reaching its cap reads as full, and only then', async () => {
+  await setSeason(`max_enrollments = 1`, []);
+  expectEqual(await stateOf(STATE_SEASON), 'open', 'a cap nobody has reached changes nothing');
+
+  await asUser(db, STATE_RUNNER, async () => {
+    await db.query(
+      `select public.enroll_in_challenge($1::uuid, 0, $2::text[], '{}'::text[], 'dev-state')`,
+      [STATE_SEASON, ['habits', 'water', 'tasks']],
+    );
+  });
+  expectEqual(await stateOf(STATE_SEASON), 'full', 'the cap bites once it is met');
+});
+
+await test('0055 the app is told which season it could join, and why not', async () => {
+  // 0048's season is enabled and older, so it wins the pick. Switched off for
+  // the length of this assertion so the answer is about the season under test.
+  await db.query(`update public.challenge_seasons set enabled = false where id = $1`, [SEASON]);
+  const status = (await one(`select public.challenge_season_status() as v`)).v;
+  // Reported rather than hidden: a full season is still the season, and the
+  // screen has a sentence for it. Returning nothing is what produced the dead
+  // end this whole migration is about.
+  expectEqual(status.state, 'full', 'the state travels to the client');
+  expectEqual(status.seatsLeft, 0, 'zero seats is an answer, not an absence');
+  expectEqual(status.requiredModules, 3, 'the picker’s rule comes with it');
+  expectEqual(Array.isArray(status.modules), true, 'and the modules to pick from');
+  await db.query(`update public.challenge_seasons set enabled = true where id = $1`, [SEASON]);
+});
+
+await test('0055 a run inside a paused season is told so, rather than failing quietly', async () => {
+  // The symptom this fixes: `record_challenge_day` refuses with 'season paused'
+  // and the checklist, having no field for a reason, renders an ordinary
+  // unfinished day forever.
+  await setSeason(`enabled = false`, []);
+  await asUser(db, STATE_RUNNER, async () => {
+    const today = (await one(`select public.challenge_today() as v`)).v;
+    expectEqual(today.enrolled, true, 'still enrolled — a pause is not an eviction');
+    expectEqual(today.seasonState, 'closed', 'and told what the season is doing');
+    expectEqual(today.seasonName, 'State Season', 'by name, so it is clear which one');
+  });
+  await setSeason(`enabled = true`, []);
+});
+
+await test('0055 seeding fills an empty season and leaves a curated one alone', async () => {
+  const empty = (
+    await one(`insert into public.challenge_seasons (name) values ('Seed Me') returning id`)
+  ).id;
+
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_seed_challenge_season($1::uuid)`, [empty]);
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.challenge_modules where season_id = $1`, [
+      empty,
+    ]),
+    8,
+    'the naturally-daily set',
+  );
+  expectEqual(
+    await count(`select count(*)::int n from public.challenge_tiers where season_id = $1`, [empty]),
+    9,
+    'and the reference ladder',
+  );
+
+  // The curated season already has three modules and no ladder. Seeding must
+  // add the ladder and touch nothing else — an operator pressing this button is
+  // usually not the person who made the curation.
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_seed_challenge_season($1::uuid)`, [STATE_SEASON]);
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.challenge_modules where season_id = $1`, [
+      STATE_SEASON,
+    ]),
+    3,
+    'the curation survives the button',
+  );
+});
+
+await test('0055 a patch changes only what it names', async () => {
+  // The reason the patch exists: 0048's upsert coalesces every absent setting
+  // to a factory default, so moving an end date would quietly reset the shield
+  // economy of a season people are two hundred days into.
+  await db.query(
+    `update public.challenge_seasons set shield_cap = 2, min_writes = 4 where id = $1`,
+    [STATE_SEASON],
+  );
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_update_challenge_season($1::uuid, $2::jsonb)`, [
+      STATE_SEASON,
+      JSON.stringify({ endsAt: '2027-01-01T00:00:00Z' }),
+    ]);
+  });
+  const row = await one(
+    `select shield_cap, min_writes, ends_at from public.challenge_seasons where id = $1`,
+    [STATE_SEASON],
+  );
+  expectEqual(row.shield_cap, 2, 'untouched');
+  expectEqual(row.min_writes, 4, 'untouched');
+  expectEqual(row.ends_at !== null, true, 'and the one named key did change');
+});
+
+await test('0055 an explicit null clears a date, while an absent key leaves it', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_update_challenge_season($1::uuid, $2::jsonb)`, [
+      STATE_SEASON,
+      JSON.stringify({ endsAt: null }),
+    ]);
+  });
+  expectEqual(
+    (await one(`select ends_at from public.challenge_seasons where id = $1`, [STATE_SEASON]))
+      .ends_at,
+    null,
+    'clearing is a thing a patch can express',
+  );
+});
+
+await test('0055 closing a season is one call that cannot change anything else', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_set_challenge_season_enabled($1::uuid, false)`, [
+      STATE_SEASON,
+    ]);
+  });
+  expectEqual(await stateOf(STATE_SEASON), 'closed', 'the switch that actually closes it');
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_set_challenge_season_enabled($1::uuid, true)`, [
+      STATE_SEASON,
+    ]);
+  });
+});
+
+await test('0055 a season somebody has joined is refused deletion, not silently emptied', async () => {
+  // Every challenge table cascades from this row. Deleting one with runs in it
+  // would take the ledger and event history of everybody in it.
+  await asUser(db, ADMIN, async () => {
+    await expectRejection(
+      () => db.query(`select public.admin_delete_challenge_season($1::uuid)`, [STATE_SEASON]),
+      'close it instead',
+    );
+  });
+});
+
+await test('0055 an ordinary account can read the programme but not change it', async () => {
+  await asUser(db, RUNNER, async () => {
+    // Readable, like the tables underneath it — it describes the programme, not
+    // a person, which is what lets a signed-out visitor see what is on offer.
+    const status = (await one(`select public.challenge_season_status() as v`)).v;
+    expectEqual(typeof status.state, 'string', 'anyone may ask what is running');
+
+    await expectRejection(
+      () => db.query(`select public.admin_challenge_seasons()`),
+      'not an administrator',
+    );
+    await expectRejection(
+      () =>
+        db.query(`select public.admin_set_challenge_season_enabled($1::uuid, false)`, [
+          STATE_SEASON,
+        ]),
+      'not an administrator',
+    );
+    await expectRejection(
+      () =>
+        db.query(`select public.admin_update_challenge_season($1::uuid, '{}'::jsonb)`, [
+          STATE_SEASON,
+        ]),
+      'not an administrator',
+    );
+  });
+});
+
+await test('0055 a signed-out visitor is told what is on offer', async () => {
+  await asAnon(db, async () => {
+    const status = (await one(`select public.challenge_season_status() as v`)).v;
+    expectEqual(typeof status.state, 'string', 'the join screen can show the pitch first');
+  });
+});
+
+await test('0055 every console write lands in the shared audit log', async () => {
+  expectEqual(
+    (await count(
+      `select count(*)::int n from public.admin_audit_log
+        where action in ('challenge_season_enabled', 'challenge_season_patch',
+                         'challenge_season_seed')`,
+    )) > 0,
+    true,
+    'the same timeline as every other operator action',
+  );
+});
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+console.log('\ntask subtasks (0057)');
+// ---------------------------------------------------------------------------
+
+/** Its own account, because by this point in the suite the shared fixtures have
+ *  been blocked, reported and unblocked by the moderation sections, and
+ *  `may_access_own_data()` is exactly what those leave behind. A table's
+ *  isolation should be asserted against a plain user, not against whatever
+ *  state an unrelated test finished in. */
+const CHECKLIST_OWNER = '7ac57a5c-0000-4000-8000-00000000c001';
+const CHECKLIST_OTHER = '7ac57a5c-0000-4000-8000-00000000c002';
+await createUser(db, CHECKLIST_OWNER, 'checklist-owner@example.com');
+await createUser(db, CHECKLIST_OTHER, 'checklist-other@example.com');
+
+await test('0057 a checklist item belongs to the account that wrote it', async () => {
+  await asUser(db, CHECKLIST_OWNER, async () => {
+    await db.query(
+      `insert into public.task_subtasks
+         (id, task_id, user_id, title, created_at, updated_at)
+       values ('st-1', 'task-1', $1::uuid, 'Buy the paint', 1, 1)`,
+      [CHECKLIST_OWNER],
+    );
+    expectEqual(
+      await count(`select count(*)::int n from public.task_subtasks`),
+      1,
+      'owner sees it',
+    );
+  });
+
+  await asUser(db, CHECKLIST_OTHER, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.task_subtasks`),
+      0,
+      "another account's view",
+    );
+  });
+});
+
+await test('0057 one account cannot file a checklist item under another', async () => {
+  await asUser(db, CHECKLIST_OTHER, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.task_subtasks
+             (id, task_id, user_id, title, created_at, updated_at)
+           values ('st-forged', 'task-1', $1::uuid, 'Not mine to write', 1, 1)`,
+          [CHECKLIST_OWNER],
+        ),
+      'row-level security',
+    );
+  });
+});
+
+await test('0057 a signed-out visitor sees no checklist at all', async () => {
+  await asAnon(db, async () => {
+    expectEqual(await count(`select count(*)::int n from public.task_subtasks`), 0, 'anon rows');
+  });
+});
+
+await test('0057 deleting the account takes its checklist with it', async () => {
+  // The 0020 contract, asserted at birth rather than after a sweep: the
+  // reference is in the CREATE, so this table can never join the list of
+  // tables that had to be de-orphaned before they could get one.
+  await db.query(`delete from auth.users where id = $1::uuid`, [CHECKLIST_OWNER]);
+  expectEqual(
+    await count(`select count(*)::int n from public.task_subtasks where id = 'st-1'`),
+    0,
+    'rows surviving the account',
+  );
+});
+
+await test('0057 an operator can reach the checklist of a task they are handling', async () => {
+  // A whitelist miss does not error — it makes the moderation surface show a
+  // task whose checklist is silently absent, which reads as "nothing here".
+  const tables = (await one(`select public.operator_readable_tables() as t`)).t;
+  if (!tables.includes('task_subtasks')) {
+    throw new Error('task_subtasks missing from operator_readable_tables()');
+  }
+});
+
+// ---------------------------------------------------------------------------
+console.log('\ntask tags (0058)');
+// ---------------------------------------------------------------------------
+
+const TAGGER = '7ac57a5c-0000-4000-8000-00000000c003';
+const TAG_ONLOOKER = '7ac57a5c-0000-4000-8000-00000000c004';
+await createUser(db, TAGGER, 'tagger@example.com');
+await createUser(db, TAG_ONLOOKER, 'tag-onlooker@example.com');
+
+await test('0058 the same tag row can be reached from a note and a task', async () => {
+  // The whole reason there is no `task_tags` table. Two vocabularies would make
+  // this query return one of the two and look correct on either screen alone.
+  await asUser(db, TAGGER, async () => {
+    await db.query(
+      `insert into public.note_tags (id, user_id, name, created_at, updated_at)
+         values ('tag-reno', $1::uuid, 'renovation', 1, 1)`,
+      [TAGGER],
+    );
+    await db.query(
+      `insert into public.note_tag_links (id, user_id, note_id, tag_id, updated_at)
+         values ('note-1:tag-reno', $1::uuid, 'note-1', 'tag-reno', 1)`,
+      [TAGGER],
+    );
+    await db.query(
+      `insert into public.task_tag_links (id, user_id, task_id, tag_id, updated_at)
+         values ('task-1:tag-reno', $1::uuid, 'task-1', 'tag-reno', 1)`,
+      [TAGGER],
+    );
+
+    expectEqual(
+      await count(
+        `select count(*)::int n from public.task_tag_links l
+           join public.note_tags g on g.id = l.tag_id
+          where g.name = 'renovation'`,
+      ),
+      1,
+      'tasks under the shared tag',
+    );
+  });
+});
+
+await test('0058 the derived id makes the same tag applied twice one row', async () => {
+  // Two devices tagging the same task offline both compute `task:tag`, so the
+  // upsert collapses them instead of tagging it twice.
+  await asUser(db, TAGGER, async () => {
+    await db.query(
+      `insert into public.task_tag_links (id, user_id, task_id, tag_id, updated_at)
+         values ('task-1:tag-reno', $1::uuid, 'task-1', 'tag-reno', 2)
+       on conflict (id) do update set updated_at = excluded.updated_at`,
+      [TAGGER],
+    );
+    expectEqual(
+      await count(`select count(*)::int n from public.task_tag_links where task_id = 'task-1'`),
+      1,
+      'rows after re-tagging',
+    );
+  });
+});
+
+await test('0058 the pair is unique even under a forged id', async () => {
+  await asUser(db, TAGGER, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.task_tag_links (id, user_id, task_id, tag_id, updated_at)
+             values ('something-else', $1::uuid, 'task-1', 'tag-reno', 3)`,
+          [TAGGER],
+        ),
+      'task_tag_links_pair_idx',
+    );
+  });
+});
+
+await test('0058 another account sees none of it', async () => {
+  await asUser(db, TAG_ONLOOKER, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.task_tag_links`),
+      0,
+      "another account's view",
+    );
+  });
+  await asAnon(db, async () => {
+    expectEqual(await count(`select count(*)::int n from public.task_tag_links`), 0, 'anon rows');
+  });
+});
+
+await test("0058 an operator can reach a task's tags", async () => {
+  const tables = (await one(`select public.operator_readable_tables() as t`)).t;
+  if (!tables.includes('task_tag_links')) {
+    throw new Error('task_tag_links missing from operator_readable_tables()');
+  }
+});
+
+// ---------------------------------------------------------------------------
+console.log('\nthe live-write rule (0065)');
+// ---------------------------------------------------------------------------
+//
+// 0048 promised that a day counts only when the work happened "while online",
+// and did not enforce it: `record_challenge_day` read the client's own write
+// map and accepted yesterday or today, so a full checklist completed in
+// airplane mode and synced the next morning credited in full.
+//
+// The behaviour these tests are about is one specific cheat, because it is the
+// one real users actually perform: finish everything offline in two minutes,
+// close the app, turn the connection back on. Every assertion below is
+// ultimately about that sequence being worth nothing.
+
+const LIVE_SEASON = (
+  await one(
+    `insert into public.challenge_seasons (name, enabled, required_modules, min_active_seconds)
+     values ('Live Season', true, 3, 0) returning id`,
+  )
+).id;
+
+for (const m of ['habits', 'water', 'journal', 'tasks']) {
+  await db.query(`insert into public.challenge_modules (season_id, module_id) values ($1, $2)`, [
+    LIVE_SEASON,
+    m,
+  ]);
+}
+
+// Its own runner: one active run per account, and the 0048/0055 accounts are
+// already spending theirs.
+const LIVE_RUNNER = 'aaaaaaaa-0000-4000-8000-000000000004';
+await createUser(db, LIVE_RUNNER, 'live-runner@example.com');
+
+await asUser(db, LIVE_RUNNER, async () => {
+  await db.query(
+    `select public.enroll_in_challenge($1::uuid, 0, $2::text[], $3::text[], 'dev-live')`,
+    [LIVE_SEASON, '{habits,water,journal}', '{}'],
+  );
+});
+
+const setLiveRule = (on) =>
+  db.query(`update public.challenge_seasons set require_live_writes = $2 where id = $1`, [
+    LIVE_SEASON,
+    on,
+  ]);
+
+/** The full client-side map for a finished day — what an offline session builds. */
+const FULL_MAP = JSON.stringify({ habits: 1, water: 1, journal: 1 });
+
+const recordDay = async (map) =>
+  (await one(`select public.record_challenge_day(current_date, $1::jsonb, 60, null) as v`, [map]))
+    .v;
+
+const clearDay = () =>
+  db.query(`delete from public.challenge_days where user_id = $1 and season_id = $2`, [
+    LIVE_RUNNER,
+    LIVE_SEASON,
+  ]);
+
+const clearAttestations = () =>
+  db.query(`delete from public.challenge_live_writes where user_id = $1`, [LIVE_RUNNER]);
+
+await test('0065 the rule is off by default, so applying the migration breaks nobody', async () => {
+  // The failure this guards against is the worst one available: every enrolled
+  // user on the previous build stops qualifying the moment the migration lands,
+  // and the first anybody hears of it is a support ticket about a lost run.
+  const on = (
+    await one(`select require_live_writes as v from public.challenge_seasons where id = $1`, [
+      LIVE_SEASON,
+    ])
+  ).v;
+  expectEqual(on, false, 'require_live_writes defaults off');
+});
+
+await test('0065 without the rule, the client map still credits the day', async () => {
+  await asUser(db, LIVE_RUNNER, async () => {
+    const result = await recordDay(FULL_MAP);
+    expectEqual(result.qualified, true, 'the pre-0065 path is untouched');
+  });
+  await clearDay();
+});
+
+await test('0065 with the rule on, a full client map and no attestations does not count', async () => {
+  // THE test. This is the offline-then-reconnect cheat, expressed exactly: the
+  // client claims all three modules, the server witnessed none of them, and the
+  // day must not be credited.
+  await setLiveRule(true);
+  await asUser(db, LIVE_RUNNER, async () => {
+    const result = await recordDay(FULL_MAP);
+    expectEqual(result.qualified, false, 'an unwitnessed day is not a day');
+    expectEqual(
+      [...result.outstanding].sort().join(','),
+      'habits,journal,water',
+      'every module is still owed, whatever the client says',
+    );
+    expectEqual(result.liveRequired, true, 'the response says which rule applied');
+  });
+});
+
+await test('0065 an attestation is recorded against the server clock', async () => {
+  await asUser(db, LIVE_RUNNER, async () => {
+    const result = (await one(`select public.attest_challenge_write('habits') as v`)).v;
+    expectEqual(result.ok, true, 'a committed module is accepted');
+  });
+  const row = await one(
+    `select writes, first_at, last_at,
+            (first_at <= now() and first_at > now() - interval '1 minute') as fresh
+       from public.challenge_live_writes
+      where user_id = $1 and module_id = 'habits'`,
+    [LIVE_RUNNER],
+  );
+  expectEqual(row.writes, 1, 'one witnessed write');
+  // The whole value of the row is that the caller could not choose this value:
+  // there is no timestamp parameter anywhere in the function's signature.
+  expectEqual(row.fresh, true, 'stamped from now(), not from anything sent');
+});
+
+await test('0065 repeat attestations coalesce onto one row and move last_at', async () => {
+  await asUser(db, LIVE_RUNNER, async () => {
+    await db.query(`select public.attest_challenge_write('habits')`);
+    await db.query(`select public.attest_challenge_write('habits')`);
+  });
+  const row = await one(
+    `select writes, (last_at >= first_at) as ordered
+       from public.challenge_live_writes where user_id = $1 and module_id = 'habits'`,
+    [LIVE_RUNNER],
+  );
+  expectEqual(row.writes, 3, 'counted, not duplicated');
+  expectEqual(row.ordered, true, 'last_at never precedes first_at');
+});
+
+await test('0065 a module the user never committed to is refused, not stored', async () => {
+  await asUser(db, LIVE_RUNNER, async () => {
+    const result = (await one(`select public.attest_challenge_write('tasks') as v`)).v;
+    expectEqual(result.ok, false, 'refused');
+    expectEqual(result.reason, 'not committed', 'and says why');
+  });
+  // Refused rather than stored, so the table cannot be grown by activity that
+  // could never affect a day.
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.challenge_live_writes
+        where user_id = $1 and module_id = 'tasks'`,
+      [LIVE_RUNNER],
+    ),
+    0,
+    'nothing written for an uncommitted module',
+  );
+});
+
+await test('0065 attesting every committed module credits the day with an EMPTY client map', async () => {
+  // The mirror of the headline test, and the proof that the server is now the
+  // authority rather than a second opinion: the client claims nothing at all
+  // and the day still counts, because the server watched it happen.
+  await asUser(db, LIVE_RUNNER, async () => {
+    await db.query(`select public.attest_challenge_write('water')`);
+    await db.query(`select public.attest_challenge_write('journal')`);
+    const result = await recordDay('{}');
+    expectEqual(result.qualified, true, 'witnessed work counts on its own');
+  });
+  await clearDay();
+  await clearAttestations();
+});
+
+await test('0065 a partly-witnessed day names only the modules that were missed', async () => {
+  await asUser(db, LIVE_RUNNER, async () => {
+    await db.query(`select public.attest_challenge_write('habits')`);
+    const result = await recordDay(FULL_MAP);
+    expectEqual(result.qualified, false, 'two of three is not a day');
+    expectEqual(
+      [...result.outstanding].sort().join(','),
+      'journal,water',
+      'the witnessed one drops off the list',
+    );
+  });
+  await clearAttestations();
+});
+
+await test('0065 min_writes is measured in witnessed writes, not claimed ones', async () => {
+  await db.query(`update public.challenge_seasons set min_writes = 2 where id = $1`, [LIVE_SEASON]);
+  await asUser(db, LIVE_RUNNER, async () => {
+    await db.query(`select public.attest_challenge_write('habits')`);
+    // One witnessed write against a threshold of two, while the client claims
+    // plenty. The claim must not make up the difference.
+    const result = await recordDay(JSON.stringify({ habits: 9, water: 9, journal: 9 }));
+    expectEqual(result.outstanding.includes('habits'), true, 'one witnessed write is not two');
+  });
+  await db.query(`update public.challenge_seasons set min_writes = 1 where id = $1`, [LIVE_SEASON]);
+  await clearAttestations();
+});
+
+await test('0065 the ledger is readable by its owner and writable by nobody', async () => {
+  await asUser(db, LIVE_RUNNER, async () => {
+    await db.query(`select public.attest_challenge_write('habits')`);
+    expectEqual(
+      await count(`select count(*)::int n from public.challenge_live_writes`),
+      1,
+      'the owner can read their own evidence',
+    );
+    // The entire design rests on this: evidence a client can INSERT is not
+    // evidence, and there is deliberately no policy that would allow it.
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.challenge_live_writes (user_id, season_id, local_day, module_id)
+             values ($1::uuid, $2::uuid, current_date, 'journal')`,
+          [LIVE_RUNNER, LIVE_SEASON],
+        ),
+      'row-level security',
+    );
+  });
+  // An UPDATE with no policy matches no rows rather than raising — the same
+  // shape 0048's "cannot change their own counters" test asserts, and the
+  // reason that one checks the value instead of expecting a rejection. Asserted
+  // by outcome, because "it did not error" and "it did not change anything" are
+  // very different guarantees and only the second one is worth having.
+  await asUser(db, LIVE_RUNNER, async () => {
+    await db.query(`update public.challenge_live_writes set writes = 999`);
+  });
+  expectEqual(
+    (await one(`select writes from public.challenge_live_writes where user_id = $1`, [LIVE_RUNNER]))
+      .writes,
+    1,
+    'the count is untouched by a client update',
+  );
+  await clearAttestations();
+});
+
+await test('0065 another account cannot see or attest into this run', async () => {
+  // Its own account, with no run at all. STATE_RUNNER and the 0048 accounts are
+  // each mid-season by this point, and an enrolled onlooker would test a
+  // different thing — "attests into their own run" rather than "cannot reach
+  // this one".
+  const ONLOOKER = 'aaaaaaaa-0000-4000-8000-000000000005';
+  await createUser(db, ONLOOKER, 'onlooker@example.com');
+  await asUser(db, LIVE_RUNNER, async () => {
+    await db.query(`select public.attest_challenge_write('habits')`);
+  });
+  await asUser(db, ONLOOKER, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.challenge_live_writes`),
+      0,
+      "somebody else's evidence is invisible",
+    );
+    // Not enrolled in this season at all, so there is no contract to attest
+    // against — and the function reads auth.uid() rather than taking a user id,
+    // so there is no parameter to point at somebody else's run.
+    const result = (await one(`select public.attest_challenge_write('habits') as v`)).v;
+    expectEqual(result.ok, false, 'refused for an account with no active run');
+  });
+  await clearAttestations();
+  await setLiveRule(false);
+});
+
+// ---------------------------------------------------------------------------
+console.log('\ntask recurrence rules (0056)');
+// ---------------------------------------------------------------------------
+
+await test('0056 the recurrence columns exist with the types the engine pushes', async () => {
+  const columns = Object.fromEntries(
+    (
+      await db.query(
+        `select column_name, data_type from information_schema.columns
+          where table_schema = 'public' and table_name = 'tasks'`,
+      )
+    ).rows.map((row) => [row.column_name, row.data_type]),
+  );
+  // The engine builds its upsert from the local column names, so a column
+  // missing here is a failed push for the whole tasks table rather than one
+  // absent field.
+  for (const [column, type] of Object.entries({
+    recurrence_interval: 'bigint',
+    recurrence_days_of_week: 'text',
+    recurrence_anchor: 'text',
+  })) {
+    expectEqual(columns[column] ?? 'nothing', type, `tasks.${column}`);
+  }
+});
+
+await test('0056 a row from an older build describes the behaviour it actually had', async () => {
+  // An older client does not send these columns. What its rows land on must be
+  // the rule it was really following — every N=1, counted from the due date —
+  // because any other default rewrites the user's cadence on their behalf while
+  // two app versions are pushing to this table at once.
+  //
+  // Deliberately NOT run through asUser: this asserts a column default, not a
+  // policy, and by this point in the suite ALICE's write path is shaped by
+  // every moderation migration that has run since 0001. Those are asserted
+  // where they belong; borrowing them here would only make the default's
+  // failure mode look like an RLS failure.
+  await db.query(
+    `insert into public.tasks (id, user_id, title, created_at, updated_at)
+       values ('t-legacy-recurrence', $1::uuid, 'Weekly review', 1, 1)`,
+    [ALICE],
+  );
+  const row = await one(
+    `select recurrence_interval, recurrence_days_of_week, recurrence_anchor
+       from public.tasks where id = 't-legacy-recurrence'`,
+  );
+  expectEqual(Number(row.recurrence_interval), 1, 'interval');
+  expectEqual(row.recurrence_days_of_week, null, 'chosen weekdays');
+  expectEqual(row.recurrence_anchor, 'due_date', 'anchor');
+});
+
 console.log('\nowner bootstrap (0033, continued — destructive, kept last)');
 // ---------------------------------------------------------------------------
 //
+// ---------------------------------------------------------------------------
+console.log('\nplan tiers + entitlements (0059)');
+// ---------------------------------------------------------------------------
+//
+// ADMIN is the owner by this point in the suite (see the 0033 section above),
+// which is what the owner-only RPCs below need.
+
+const TIER_FREE = '9a000000-0000-0000-0000-000000000001';
+const TIER_STD = '9a000000-0000-0000-0000-000000000002';
+const TIER_GRANTED = '9a000000-0000-0000-0000-000000000003';
+const TIER_BOTH = '9a000000-0000-0000-0000-000000000004';
+
+await createUser(db, TIER_FREE, 'tier-free@example.com');
+await createUser(db, TIER_STD, 'tier-std@example.com');
+await createUser(db, TIER_GRANTED, 'tier-granted@example.com');
+await createUser(db, TIER_BOTH, 'tier-both@example.com');
+
+// plus_monthly backfilled to tier `standard` — see 0059's section 4.
+await db.query(`update public.profiles set plan_id = 'plus_monthly' where id = any($1::uuid[])`, [
+  [TIER_STD, TIER_BOTH],
+]);
+
+await test('0059 tier_rank orders the ladder and floors anything unknown', async () => {
+  const r = await one(`
+    select public.tier_rank('freemium') f,
+           public.tier_rank('standard') s,
+           public.tier_rank('premium') p,
+           public.tier_rank('enterprise') u
+  `);
+  expectEqual(r.f < r.s && r.s < r.p, true, 'freemium < standard < premium');
+  // The safe direction: a tier this build has never heard of must be the
+  // weakest, never accidentally the strongest.
+  expectEqual(r.u, 0, 'unknown ranks 0');
+});
+
+await test('0059 every tier defines every entitlement key', async () => {
+  // A missing cell resolves to null and a null entitlement denies, so the
+  // failure mode of a typo in the seed is a paying customer silently refused.
+  const gaps = await count(`
+    select count(*)::int n
+      from (select unnest(array['freemium','standard','premium']) as tier) t
+     cross join (select distinct key from public.plan_entitlements) k
+     where not exists (
+       select 1 from public.plan_entitlements e where e.tier = t.tier and e.key = k.key
+     )
+  `);
+  expectEqual(gaps, 0, 'no missing cells');
+  expectEqual(
+    await count(`select count(distinct key)::int n from public.plan_entitlements`),
+    10,
+    'ten keys',
+  );
+});
+
+await test('0059 a new account is freemium', async () => {
+  await asUser(db, TIER_FREE, async () => {
+    expectEqual((await one(`select public.my_tier() t`)).t, 'freemium', 'defaults freemium');
+    expectEqual((await one(`select public.has_premium() v`)).v, false, 'not paid');
+  });
+});
+
+await test('0059 a legacy Plus subscriber reads as standard', async () => {
+  await asUser(db, TIER_STD, async () => {
+    expectEqual((await one(`select public.my_tier() t`)).t, 'standard', 'plus_monthly -> standard');
+  });
+});
+
+await test('0059 has_premium() still answers true for a Standard subscriber', async () => {
+  // The regression this migration could most easily have shipped. Three
+  // triggers (avatar 0052, album media 0052, voice notes 0054) gate on
+  // has_premium(); narrowing it to `my_tier() = 'premium'` would have stripped
+  // all three from every existing paying customer the moment this ran.
+  await asUser(db, TIER_STD, async () => {
+    expectEqual((await one(`select public.has_premium() v`)).v, true, 'standard is paid');
+  });
+  expectEqual(
+    (await one(`select public.user_has_premium($1) v`, [TIER_STD])).v,
+    true,
+    'and from the outside too',
+  );
+});
+
+await test('0059 a grant lifts a free account to the tier it names', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_grant_premium($1, $2, 'beta tester', 'premium')`, [
+      TIER_GRANTED,
+      Date.now() + 30 * 86400000,
+    ]);
+  });
+  await asUser(db, TIER_GRANTED, async () => {
+    expectEqual((await one(`select public.my_tier() t`)).t, 'premium', 'granted premium');
+    expectEqual((await one(`select public.has_premium() v`)).v, true, 'and counts as paid');
+  });
+  expectEqual(
+    (await one(`select tier from public.premium_grants where user_id = $1`, [TIER_GRANTED])).tier,
+    'premium',
+    'the grant records its tier',
+  );
+});
+
+await test('0059 an expired grant simply stops counting', async () => {
+  // Nothing runs to expire it — an expiry that depends on a sweep having run
+  // is an expiry that does not happen the week the sweep is broken.
+  await db.query(`update public.profiles set premium_until = $1 where id = $2`, [
+    Date.now() - 1000,
+    TIER_GRANTED,
+  ]);
+  await asUser(db, TIER_GRANTED, async () => {
+    expectEqual((await one(`select public.my_tier() t`)).t, 'freemium', 'back to freemium');
+  });
+});
+
+await test('0059 a lapsed grant drops a subscriber to their plan, not to freemium', async () => {
+  // Why my_tier() is a maximum and not an override: an override would silently
+  // cancel the plan they are still paying for.
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_grant_premium($1, $2, 'support gesture', 'premium')`, [
+      TIER_BOTH,
+      Date.now() + 30 * 86400000,
+    ]);
+  });
+  await asUser(db, TIER_BOTH, async () => {
+    expectEqual((await one(`select public.my_tier() t`)).t, 'premium', 'grant wins while live');
+  });
+
+  await db.query(`update public.profiles set premium_until = $1 where id = $2`, [
+    Date.now() - 1000,
+    TIER_BOTH,
+  ]);
+  await asUser(db, TIER_BOTH, async () => {
+    expectEqual((await one(`select public.my_tier() t`)).t, 'standard', 'falls back to the plan');
+  });
+});
+
+await test('0059 a grant weaker than the plan does not demote anyone', async () => {
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_grant_premium($1, $2, 'mistake', 'standard')`, [
+      TIER_BOTH,
+      Date.now() + 30 * 86400000,
+    ]);
+  });
+  await asUser(db, TIER_BOTH, async () => {
+    expectEqual((await one(`select public.my_tier() t`)).t, 'standard', 'still standard');
+  });
+});
+
+await test('0059 revoking clears the granted tier as well as the window', async () => {
+  // Leaving granted_tier set would have my_tier() reading a tier with no
+  // window to live in.
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_revoke_premium($1)`, [TIER_BOTH]);
+  });
+  const row = await one(`select premium_until, granted_tier from public.profiles where id = $1`, [
+    TIER_BOTH,
+  ]);
+  expectEqual(row.premium_until, null, 'window cleared');
+  expectEqual(row.granted_tier, null, 'tier cleared');
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.premium_grants where user_id = $1 and revoked_at is null`,
+      [TIER_BOTH],
+    ),
+    0,
+    'every live grant marked revoked',
+  );
+});
+
+await test('0059 a grant needs a reason, a future end, and a real tier', async () => {
+  await asUser(db, ADMIN, async () => {
+    await expectRejection(
+      () =>
+        db.query(`select public.admin_grant_premium($1, $2, '  ', 'premium')`, [
+          TIER_FREE,
+          Date.now() + 86400000,
+        ]),
+      'a reason is required',
+    );
+    await expectRejection(
+      () =>
+        db.query(`select public.admin_grant_premium($1, $2, 'late', 'premium')`, [
+          TIER_FREE,
+          Date.now() - 86400000,
+        ]),
+      'must end in the future',
+    );
+    // Granting `freemium` is not a grant, it is a demotion wearing a grant's
+    // clothes — refused rather than silently accepted.
+    await expectRejection(
+      () =>
+        db.query(`select public.admin_grant_premium($1, $2, 'nope', 'freemium')`, [
+          TIER_FREE,
+          Date.now() + 86400000,
+        ]),
+      'standard or premium',
+    );
+  });
+});
+
+await test('0059 only the owner may grant, revoke, or change an entitlement', async () => {
+  await asUser(db, TIER_STD, async () => {
+    await expectRejection(
+      () =>
+        db.query(`select public.admin_grant_premium($1, $2, 'self serve', 'premium')`, [
+          TIER_STD,
+          Date.now() + 86400000,
+        ]),
+      'only the owner',
+    );
+    await expectRejection(
+      () => db.query(`select public.admin_revoke_premium($1)`, [TIER_STD]),
+      'only the owner',
+    );
+    await expectRejection(
+      () => db.query(`select public.admin_set_entitlement('freemium', 'ads', 'false'::jsonb)`),
+      'only the owner',
+    );
+    await expectRejection(
+      () => db.query(`select public.admin_list_premium_grants($1)`, [TIER_STD]),
+      'only the owner',
+    );
+  });
+});
+
+await test('0059 my_entitlement answers from the caller’s own tier', async () => {
+  await asUser(db, TIER_FREE, async () => {
+    expectEqual(
+      (await one(`select public.my_entitlement('media_backup') v`)).v,
+      false,
+      'freemium has no backup',
+    );
+    expectEqual((await one(`select public.my_entitlement('album_limit') v`)).v, 1, 'one album');
+  });
+  await asUser(db, TIER_STD, async () => {
+    expectEqual(
+      (await one(`select public.my_entitlement('media_backup') v`)).v,
+      true,
+      'standard does',
+    );
+    expectEqual((await one(`select public.my_entitlement('album_limit') v`)).v, 5, 'five albums');
+  });
+});
+
+await test('0059 an unconfigured key reads null, so a gate refuses', async () => {
+  await asUser(db, TIER_FREE, async () => {
+    expectEqual(
+      (await one(`select public.my_entitlement('teleportation') v`)).v,
+      null,
+      'null, not a default',
+    );
+  });
+});
+
+await test('0059 my_billing_state carries tier, grant expiry and the whole map', async () => {
+  await asUser(db, TIER_STD, async () => {
+    const state = (await one(`select public.my_billing_state() s`)).s;
+    expectEqual(state.tier, 'standard', 'tier');
+    expectEqual(state.premiumUntil, null, 'no grant');
+    expectEqual(Object.keys(state.entitlements).length, 10, 'ten keys in one round trip');
+    expectEqual(state.entitlements.album_limit, 5, 'values are the tier’s');
+  });
+});
+
+await test('0059 an owner can retune a tier without a release', async () => {
+  // The whole point of entitlements being data.
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_set_entitlement('standard', 'album_limit', '9'::jsonb)`);
+  });
+  await asUser(db, TIER_STD, async () => {
+    expectEqual((await one(`select public.my_entitlement('album_limit') v`)).v, 9, 'retuned');
+  });
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_set_entitlement('standard', 'album_limit', '5'::jsonb)`);
+  });
+});
+
+await test('0059 entitlements are readable by any signed-in account but not anonymously', async () => {
+  await asUser(db, TIER_FREE, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.plan_entitlements`),
+      30,
+      'three tiers of ten keys',
+    );
+  });
+  await asAnon(db, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.plan_entitlements`),
+      0,
+      'nothing for a signed-out visitor',
+    );
+  });
+});
+
+await test('0059 the free plan is retiered rather than duplicated', async () => {
+  // Two active free-period rows would show every user the same plan twice and
+  // leave profiles.plan_id with two values meaning one thing.
+  expectEqual(
+    await count(`select count(*)::int n from public.billing_plans where period = 'free'`),
+    1,
+    'exactly one free plan',
+  );
+  const free = await one(`select tier, active from public.billing_plans where id = 'free'`);
+  expectEqual(free.tier, 'freemium', 'retiered');
+  expectEqual(free.active, true, 'still offered');
+  // `name` is deliberately not asserted: the 0037 section above upserts this
+  // row back to 'Free' as its own fixture, and admin_upsert_plan is exactly the
+  // console call an operator would use to rename it anyway. The tier is the
+  // part that has to survive an edit, and it does — admin_upsert_plan (0034)
+  // never writes `tier`.
+});
+
+await test('0059 the new tier plan rows are seeded but not yet offered', async () => {
+  // Unpriced until 0060 — an inactive plan is invisible to the picker
+  // (0034's billing_plans_read is `active or is_admin()`), so seeding them
+  // cannot show anyone a price nobody agreed to.
+  const rows = await db.query(
+    `select id, tier, active from public.billing_plans
+      where id in ('standard_monthly','standard_yearly','premium_monthly','premium_yearly')
+      order by id`,
+  );
+  expectEqual(rows.rows.length, 4, 'four new rows');
+  expectEqual(
+    rows.rows.every((r) => r.active === false),
+    true,
+    'all inactive until priced',
+  );
+  expectEqual(
+    rows.rows.filter((r) => r.tier === 'premium').length,
+    2,
+    'two premium rows, monthly and yearly',
+  );
+});
+
 // Everything above this point in the whole suite needed ADMIN's ordinary
 // admin rights or the roster as already populated. Nothing after this point
 // does — this section empties `admins` entirely to exercise claim_owner()'s
@@ -6074,6 +7175,508 @@ await test('0033 claim_owner succeeds exactly once, for the first caller, on an 
 
   await asUser(db, ROSTER_ADMIN2, async () => {
     await expectRejection(() => db.query(`select public.claim_owner()`), 'already has an owner');
+  });
+});
+
+// ===========================================================================
+// 0062 — the rate limiter the edge functions call
+// ===========================================================================
+console.log('\nedge-function rate limits (0062)');
+
+await createUser(db, SPENDER, 'spender@example.com');
+await createUser(db, SPENDER2, 'spender2@example.com');
+
+/** One call to consume_rate_limit as `who`, returning the decision row. */
+const spend = (who, action, limit = 3, windowMs = 3600000) =>
+  asUser(db, who, () =>
+    one(`select * from public.consume_rate_limit($1, $2, $3)`, [action, limit, windowMs]),
+  );
+
+await test('0062 allows exactly up to the limit and refuses the next call', async () => {
+  for (let i = 1; i <= 3; i++) {
+    const row = await spend(SPENDER, 'edge_safepay_checkout');
+    expectEqual(row.allowed, true, `call ${i} allowed`);
+    expectEqual(row.remaining, 3 - i, `remaining after call ${i}`);
+  }
+  const over = await spend(SPENDER, 'edge_safepay_checkout');
+  expectEqual(over.allowed, false, 'the fourth call');
+  expectEqual(over.remaining, 0, 'remaining never goes negative');
+  expectEqual(over.retry_after_seconds > 0, true, 'a refusal always says when to retry');
+});
+
+await test('0062 keeps each account to its own budget', async () => {
+  // The counter is keyed on auth.uid(), so one account exhausting an action
+  // cannot refuse anybody else's.
+  const row = await spend(SPENDER2, 'edge_safepay_checkout');
+  expectEqual(row.allowed, true, 'a second account is unaffected');
+  expectEqual(row.remaining, 2, 'and starts from a full budget');
+});
+
+await test('0062 keeps each action to its own budget', async () => {
+  const row = await spend(SPENDER, 'edge_send_invite');
+  expectEqual(row.allowed, true, 'a different action for the same account');
+  expectEqual(row.remaining, 2, 'counted separately');
+});
+
+await test('0062 takes no user id — the identity cannot arrive in the request', async () => {
+  // The property that makes this safe to grant to `authenticated`. A signature
+  // taking p_user_id would put the one unforgeable field in the caller's hands.
+  const args = await one(
+    `select pg_get_function_identity_arguments(p.oid) as args
+       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname = 'consume_rate_limit'`,
+  );
+  expectEqual(args.args, 'p_action text, p_limit integer, p_window_ms bigint', 'signature');
+});
+
+await test('0062 refuses an unknown action instead of counting it', async () => {
+  // abuse_counters' primary key includes `action` and nothing constrains it, so a
+  // free-text action reachable from a client session is an invitation to bloat
+  // the table — the limiter becoming the thing that needs limiting.
+  await asUser(db, SPENDER, async () => {
+    await expectRejection(
+      () => db.query(`select * from public.consume_rate_limit('anything_at_all', 5, 60000)`),
+      'unknown rate limit action',
+    );
+  });
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.abuse_counters
+        where user_id = $1::uuid and action = 'anything_at_all'`,
+      [SPENDER],
+    ),
+    0,
+    'rows written for the refused action',
+  );
+});
+
+await test('0062 requires a session', async () => {
+  await asAnon(db, async () => {
+    await expectRejection(
+      () => db.query(`select * from public.consume_rate_limit('edge_send_invite', 5, 60000)`),
+      'permission denied',
+    );
+  });
+});
+
+await test('0062 clamps an absurd window rather than dividing by zero', async () => {
+  // p_limit and p_window_ms are deliberately client-supplied — the limit that
+  // matters is the one the edge function passes — but a window of 0 would divide
+  // by zero computing the bucket.
+  const row = await spend(SPENDER2, 'edge_notify_group', 5, 0);
+  expectEqual(row.allowed, true, 'a zero window is clamped, not fatal');
+});
+
+await test('0062 a client cannot read or clear its own counters', async () => {
+  // The whole point of SECURITY DEFINER here: spend your budget, never see it,
+  // and never reset it.
+  await asUser(db, SPENDER, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.abuse_counters`),
+      0,
+      'rows visible to a client',
+    );
+    await db.query(`delete from public.abuse_counters`);
+  });
+  expectEqual(
+    (await count(`select count(*)::int n from public.abuse_counters where user_id = $1::uuid`, [
+      SPENDER,
+    ])) > 0,
+    true,
+    'the counters survived a client DELETE',
+  );
+});
+
+await test('0062 prune_abuse_counters is service-role only', async () => {
+  await asUser(db, SPENDER, async () => {
+    await expectRejection(
+      () => db.query(`select public.prune_abuse_counters()`),
+      'permission denied',
+    );
+  });
+});
+
+await test('0062 pruning drops stale windows and keeps live ones', async () => {
+  const now = Date.now();
+  await db.query(
+    `insert into public.abuse_counters (user_id, action, window_start, count)
+     values ($1::uuid, 'edge_send_invite', $2, 9)
+     on conflict (user_id, action, window_start) do update set count = 9`,
+    [SPENDER, now - 30 * 24 * 3600 * 1000],
+  );
+  const before = await count(
+    `select count(*)::int n from public.abuse_counters where user_id = $1::uuid`,
+    [SPENDER],
+  );
+  const deleted = Number((await one(`select public.prune_abuse_counters() as n`)).n);
+  expectEqual(deleted >= 1, true, 'the month-old window was deleted');
+  expectEqual(
+    (await count(`select count(*)::int n from public.abuse_counters where user_id = $1::uuid`, [
+      SPENDER,
+    ])) < before,
+    true,
+    'fewer rows than before',
+  );
+});
+
+await test('0062 every action the shared helper names is allowlisted', async () => {
+  // The two lists have to agree, and nothing at runtime would notice if they
+  // stopped: a missing action raises, so the edge function would fail open on a
+  // path no test covers. Read from the TypeScript rather than restated here, so
+  // adding one to either side without the other fails.
+  const source = readFileSync('supabase/functions/_shared/rate-limit.ts', 'utf8');
+  const declared = [...source.matchAll(/^\s{2}(edge_[a-z_]+):\s*\{/gm)].map((m) => m[1]);
+  expectEqual(declared.length > 0, true, 'actions found in rate-limit.ts');
+  const allowlisted = (await one(`select public.rate_limited_actions() as a`)).a;
+  for (const action of declared) {
+    expectEqual(allowlisted.includes(action), true, `${action} is allowlisted in 0062`);
+  }
+});
+
+// ===========================================================================
+// 0063 — claiming a checkout intent
+// ===========================================================================
+console.log('\ncheckout idempotency (0063)');
+
+await test('0063 an idempotency key cannot be reused by the same account', async () => {
+  await db.query(
+    `insert into public.checkout_intents (user_id, plan_id, idempotency_key, created_at)
+     values ($1::uuid, 'free', 'c:key-one', $2)`,
+    [SPENDER, Date.now()],
+  );
+  await expectRejection(
+    () =>
+      db.query(
+        `insert into public.checkout_intents (user_id, plan_id, idempotency_key, created_at)
+         values ($1::uuid, 'free', 'c:key-one', $2)`,
+        [SPENDER, Date.now()],
+      ),
+    'duplicate key',
+  );
+});
+
+await test('0063 but the same key belongs to each account separately', async () => {
+  // A globally unique key would let one account's key refuse another's
+  // legitimate checkout.
+  await db.query(
+    `insert into public.checkout_intents (user_id, plan_id, idempotency_key, created_at)
+     values ($1::uuid, 'free', 'c:key-one', $2)`,
+    [SPENDER2, Date.now()],
+  );
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.checkout_intents where idempotency_key = 'c:key-one'`,
+    ),
+    2,
+    'one row per account',
+  );
+});
+
+await test('0063 intents with no key at all do not collide', async () => {
+  // The index is partial, so the pre-0063 rows and any future keyless insert are
+  // unconstrained rather than all colliding on one NULL.
+  for (let i = 0; i < 3; i++) {
+    await db.query(
+      `insert into public.checkout_intents (user_id, plan_id, created_at)
+       values ($1::uuid, 'free', $2)`,
+      [SPENDER, Date.now() + i],
+    );
+  }
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.checkout_intents
+        where user_id = $1::uuid and idempotency_key is null`,
+      [SPENDER],
+    ),
+    3,
+    'keyless rows',
+  );
+});
+
+await test('0063 claim_checkout_intent returns the row and consumes it, exactly once', async () => {
+  const row = await one(
+    `insert into public.checkout_intents (user_id, plan_id, idempotency_key, created_at)
+     values ($1::uuid, 'free', 'c:claim-me', $2) returning reference`,
+    [SPENDER, Date.now()],
+  );
+  const now = Date.now();
+
+  const first = await one(`select * from public.claim_checkout_intent($1::uuid, $2)`, [
+    row.reference,
+    now,
+  ]);
+  expectEqual(first.plan_id, 'free', 'the claimed plan');
+  expectEqual(first.user_id, SPENDER, 'the claimed owner');
+
+  // The second claim gets nothing — `where consumed_at is null` in the UPDATE is
+  // what makes this a claim rather than a read, so two concurrent webhook
+  // deliveries cannot both act on one intent.
+  const again = await db.query(`select * from public.claim_checkout_intent($1::uuid, $2)`, [
+    row.reference,
+    now,
+  ]);
+  expectEqual(again.rows.length, 0, 'rows returned by the second claim');
+
+  const stored = await one(
+    `select consumed_at from public.checkout_intents where reference = $1::uuid`,
+    [row.reference],
+  );
+  expectEqual(Number(stored.consumed_at), now, 'consumed_at was stamped');
+});
+
+await test('0063 claiming a reference that does not exist is not an error', async () => {
+  const result = await db.query(
+    `select * from public.claim_checkout_intent('00000000-0000-0000-0000-000000000000'::uuid, $1)`,
+    [Date.now()],
+  );
+  expectEqual(result.rows.length, 0, 'rows returned');
+});
+
+await test('0063 a client cannot claim an intent, including its own', async () => {
+  // A client able to claim its own intent could attach an arbitrary plan to
+  // itself — the webhook is the only thing that gets to say a checkout converted.
+  const row = await one(
+    `insert into public.checkout_intents (user_id, plan_id, idempotency_key, created_at)
+     values ($1::uuid, 'free', 'c:mine', $2) returning reference`,
+    [SPENDER, Date.now()],
+  );
+  await asUser(db, SPENDER, async () => {
+    await expectRejection(
+      () =>
+        db.query(`select * from public.claim_checkout_intent($1::uuid, $2)`, [
+          row.reference,
+          Date.now(),
+        ]),
+      'permission denied',
+    );
+  });
+});
+
+await test('0063 a client cannot read or write checkout_intents directly either', async () => {
+  await asUser(db, SPENDER, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.checkout_intents`),
+      0,
+      'intents visible to their own owner',
+    );
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.checkout_intents (user_id, plan_id, created_at)
+           values ($1::uuid, 'free', $2)`,
+          [SPENDER, Date.now()],
+        ),
+      'row-level security',
+    );
+  });
+});
+
+// ===========================================================================
+// 0064 — the webhook's freshness column
+// ===========================================================================
+console.log('\nwebhook replay window (0064)');
+
+await test('0064 payment_events records both when it was signed and when it arrived', async () => {
+  const signed = Date.now() - 30000;
+  const received = Date.now();
+  await db.query(
+    `insert into public.payment_events (id, type, payload, received_at, signed_at)
+     values ('evt-window-1', 'subscription.payment_succeeded', '{}'::jsonb, $1, $2)`,
+    [received, signed],
+  );
+  const row = await one(
+    `select received_at - signed_at as lag from public.payment_events where id = 'evt-window-1'`,
+  );
+  expectEqual(Number(row.lag), received - signed, 'the delivery lag is derivable');
+});
+
+await test('0064 signed_at is nullable, so an undated delivery is still recordable', async () => {
+  // The function tolerates a delivery whose timestamp field it does not
+  // recognise rather than refusing every payment. NOT NULL here would turn that
+  // tolerance into a crash.
+  await db.query(
+    `insert into public.payment_events (id, type, payload, received_at)
+     values ('evt-window-2', 'subscription.created', '{}'::jsonb, $1)`,
+    [Date.now()],
+  );
+  const row = await one(`select signed_at from public.payment_events where id = 'evt-window-2'`);
+  expectEqual(row.signed_at, null, 'signed_at');
+});
+
+// ---------------------------------------------------------------------------
+console.log('\nfunnel metrics (0066)');
+// ---------------------------------------------------------------------------
+//
+// Every go/no-go gate in docs/GROWTH_PLAN.md was unanswerable before this:
+// usage_daily says what people do once they are in the app and nothing about
+// whether they got there. The two properties worth holding are that it counts
+// without a session — the population being measured largely has not got one —
+// and that a client cannot turn it into an unbounded event log.
+
+// The 0033 section immediately above empties the roster and then hands
+// ownership to ROSTER_OUTSIDER, so ADMIN is no longer an administrator by the
+// time this suite runs. It puts one back rather than depending on the order of
+// two sections that have nothing to do with each other — as a plain 'admin',
+// because `admins_single_owner_idx` allows exactly one owner and that seat is
+// taken by the test above.
+await db.query(
+  `insert into public.admins (user_id, role) values ($1::uuid, 'admin')
+     on conflict (user_id) do update set role = 'admin'`,
+  [ADMIN],
+);
+
+const INSTALL_A = '11111111-2222-4333-8444-555555555555';
+const INSTALL_B = '99999999-2222-4333-8444-555555555555';
+
+const funnelRow = async (install, metric) =>
+  one(
+    `select count from public.funnel_daily
+      where install_id = $1 and metric = $2 and day = current_date`,
+    [install, metric],
+  );
+
+await test('0066 counts a milestone for an install with no session at all', async () => {
+  // The whole reason this is keyed to an install rather than auth.uid(): the
+  // account step is one of the things being measured, and guests never sign in.
+  // A metric requiring a session would report a completion rate computed only
+  // over the people who completed the account step.
+  await asAnon(db, async () => {
+    await db.query(`select public.record_funnel($1, $2::jsonb)`, [
+      INSTALL_A,
+      JSON.stringify([{ day: TODAY, metric: 'onboarding_started', count: 1 }]),
+    ]);
+  });
+  expectEqual(Number((await funnelRow(INSTALL_A, 'onboarding_started')).count), 1, 'counted');
+});
+
+await test('0066 accumulates rather than replacing', async () => {
+  await asAnon(db, async () => {
+    await db.query(`select public.record_funnel($1, $2::jsonb)`, [
+      INSTALL_A,
+      JSON.stringify([{ day: TODAY, metric: 'onboarding_started', count: 4 }]),
+    ]);
+  });
+  expectEqual(Number((await funnelRow(INSTALL_A, 'onboarding_started')).count), 5, 'summed');
+});
+
+await test('0066 skips a metric nobody allowlisted rather than storing it', async () => {
+  // Reachable unauthenticated with a free-text name, this would be an
+  // invitation to insert a million distinct metrics and bloat the table —
+  // turning the thing that measures the app into the thing that needs watching.
+  await asAnon(db, async () => {
+    await db.query(`select public.record_funnel($1, $2::jsonb)`, [
+      INSTALL_A,
+      JSON.stringify([{ day: TODAY, metric: 'whatever_i_like', count: 1 }]),
+    ]);
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.funnel_daily where metric = 'whatever_i_like'`),
+    0,
+    'nothing stored',
+  );
+});
+
+await test('0066 refuses a malformed install id', async () => {
+  await asAnon(db, async () => {
+    await expectRejection(
+      () =>
+        db.query(`select public.record_funnel($1, $2::jsonb)`, [
+          'not-a-uuid',
+          JSON.stringify([{ day: TODAY, metric: 'onboarding_started', count: 1 }]),
+        ]),
+      'invalid install id',
+    );
+  });
+});
+
+await test('0066 clamps a count and refuses a day outside the window', async () => {
+  await asAnon(db, async () => {
+    await db.query(`select public.record_funnel($1, $2::jsonb)`, [
+      INSTALL_B,
+      JSON.stringify([
+        { day: TODAY, metric: 'notif_prompt_shown', count: 99999999 },
+        // A device with a wrong clock must not be able to write history.
+        { day: '2001-01-01', metric: 'notif_prompt_shown', count: 1 },
+      ]),
+    ]);
+  });
+  expectEqual(Number((await funnelRow(INSTALL_B, 'notif_prompt_shown')).count), 10000, 'clamped');
+  expectEqual(
+    await count(`select count(*)::int n from public.funnel_daily where day = '2001-01-01'::date`),
+    0,
+    'no backdated row',
+  );
+});
+
+await test('0066 a client cannot read the table, its own rows included', async () => {
+  // Unlike usage_daily, whose owner may read their own row, there is no owner
+  // here to show anything to — the id resolves to no account by design.
+  await asAnon(db, async () => {
+    expectEqual(
+      await count(`select count(*)::int n from public.funnel_daily`),
+      0,
+      'anon sees none',
+    );
+  });
+  await asUser(db, ALICE, async () => {
+    expectEqual(await count(`select count(*)::int n from public.funnel_daily`), 0, 'nor a user');
+  });
+});
+
+await test('0066 the summary reports totals and distinct installs separately', async () => {
+  await asUser(db, ADMIN, async () => {
+    const summary = (await one(`select public.admin_funnel_summary(30) as v`)).v;
+    // Five from INSTALL_A across two calls. `total` counts the events and
+    // `installs` counts the devices, and only the second one is a funnel.
+    expectEqual(Number(summary.onboarding_started.total), 5, 'total');
+    expectEqual(Number(summary.onboarding_started.installs), 1, 'distinct installs');
+  });
+});
+
+await test('0066 only an administrator may read the funnel or the retention split', async () => {
+  await asUser(db, ALICE, async () => {
+    await expectRejection(
+      () => db.query(`select public.admin_funnel_summary(30)`),
+      'not an administrator',
+    );
+    await expectRejection(
+      () => db.query(`select public.admin_challenge_retention($1::uuid)`, [SEASON]),
+      'not an administrator',
+    );
+  });
+});
+
+await test('0066 retention reports no rate at all rather than zero for an empty cohort', async () => {
+  // A cohort younger than thirty days and a cohort where nobody survived are
+  // very different readings, and a dashboard that renders both as 0% will be
+  // believed. Null is the only honest answer to "what fraction of nobody".
+  const EMPTY_SEASON = (
+    await one(
+      `insert into public.challenge_seasons (name, enabled) values ('Nobody Season', false)
+       returning id`,
+    )
+  ).id;
+  await asUser(db, ADMIN, async () => {
+    const r = (await one(`select public.admin_challenge_retention($1::uuid) as v`, [EMPTY_SEASON]))
+      .v;
+    expectEqual(r.cohort, 0, 'nobody is thirty days in');
+    expectEqual(r.rate, null, 'and so there is no rate to quote');
+    expectEqual(r.controlRate, null, 'nor a control rate');
+  });
+});
+
+await test('0066 retention counts a cohort that is genuinely thirty days in', async () => {
+  // The 0048 suite plays a full year through the state machine, so its runner
+  // is long past day thirty — which makes this the arithmetic case rather than
+  // the empty one, and worth asserting separately from the null above.
+  await asUser(db, ADMIN, async () => {
+    const r = (await one(`select public.admin_challenge_retention($1::uuid) as v`, [SEASON])).v;
+    expectEqual(r.cohort > 0, true, 'there is a cohort to measure');
+    expectEqual(
+      r.rate !== null && Number(r.rate) >= 0 && Number(r.rate) <= 1,
+      true,
+      'the rate is a real fraction',
+    );
   });
 });
 

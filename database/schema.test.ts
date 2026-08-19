@@ -357,3 +357,71 @@ function stripColumns(sql: string, additive: Record<string, { name: string }[]>)
   }
   return out;
 }
+
+describe('full-text search index', () => {
+  /**
+   * FTS5 is a compile-time SQLite option, so these assertions are as much about
+   * the *guard* as the feature: the index lives outside TABLE_BOOTSTRAP_SQL
+   * precisely so that a build without FTS5 loses search rather than the whole
+   * database.
+   */
+  it('indexes notes that already existed', () => {
+    const db = open();
+    bootstrapDatabase(db);
+    db.exec(`
+      INSERT INTO notes (id, user_id, title, body, created_at, updated_at)
+      VALUES ('n1', 'local', 'Kitchen renovation', 'quotes from three builders', 1, 1);
+    `);
+    // Re-running bootstrap is what a relaunch does, and the backfill has to pick
+    // up a note written before the index existed.
+    bootstrapDatabase(db);
+
+    const rows = db
+      .prepare(`SELECT note_id FROM notes_fts WHERE notes_fts MATCH ?`)
+      .all('"builders"*') as { note_id: string }[];
+    expect(rows.map((row) => row.note_id)).toEqual(['n1']);
+  });
+
+  it('keeps the index in step with writes', () => {
+    const db = open();
+    bootstrapDatabase(db);
+    db.exec(`
+      INSERT INTO notes (id, user_id, title, body, created_at, updated_at)
+      VALUES ('n2', 'local', 'Draft', 'aardvark', 1, 1);
+    `);
+
+    const matches = (term: string) =>
+      (
+        db.prepare(`SELECT note_id FROM notes_fts WHERE notes_fts MATCH ?`).all(term) as {
+          note_id: string;
+        }[]
+      ).length;
+
+    expect(matches('"aardvark"*')).toBe(1);
+
+    db.exec(`UPDATE notes SET body = 'buffalo' WHERE id = 'n2';`);
+    expect(matches('"aardvark"*')).toBe(0);
+    expect(matches('"buffalo"*')).toBe(1);
+
+    db.exec(`DELETE FROM notes WHERE id = 'n2';`);
+    expect(matches('"buffalo"*')).toBe(0);
+  });
+
+  it('does not double-index a note on a second launch', () => {
+    // The backfill runs every launch, so its NOT EXISTS clause is the only thing
+    // stopping every note appearing twice in search after a week of use.
+    const db = open();
+    bootstrapDatabase(db);
+    db.exec(`
+      INSERT INTO notes (id, user_id, title, body, created_at, updated_at)
+      VALUES ('n3', 'local', 'Once', 'unique-term', 1, 1);
+    `);
+    bootstrapDatabase(db);
+    bootstrapDatabase(db);
+
+    const rows = db
+      .prepare(`SELECT note_id FROM notes_fts WHERE notes_fts MATCH ?`)
+      .all('"unique-term"*') as { note_id: string }[];
+    expect(rows).toHaveLength(1);
+  });
+});

@@ -268,7 +268,7 @@ starts, without making completion a race between participants.
 
 ---
 
-## 4. Server design (0048–0050)
+## 4. Server design (0048–0055)
 
 Seven tables, all with RLS, and **no client-side insert or update policy
 anywhere**. A streak the client can `UPDATE` is a streak anyone can `UPDATE` with
@@ -287,6 +287,75 @@ an anon key and one `curl`.
 Operator actions write to the existing `admin_audit_log` (0010) rather than a
 private audit table, so they read in the same timeline as every other operator
 action.
+
+### 4.1 One season state, quoted everywhere (0055)
+
+`challenge_season_state(season)` returns exactly one of seven words, and every
+surface reads it rather than deriving its own:
+
+| State      | Meaning                                                     |
+| ---------- | ----------------------------------------------------------- |
+| `none`     | No season a user has any business hearing about.            |
+| `closed`   | Exists, switched off. No joins, and running streaks paused. |
+| `upcoming` | Switched on, before its start date.                         |
+| `ended`    | Switched on, past its end date.                             |
+| `notReady` | In window, with fewer eligible modules than it asks for.    |
+| `full`     | Joinable, but `max_enrollments` is met.                     |
+| `open`     | Joinable now.                                               |
+
+It is checked in that order, and the first failure wins — a season that is both
+closed and empty needs switching on before its modules matter.
+
+**This exists because the two consoles disagreed.** The operator screen called a
+season open when it was `enabled` inside its dates; the app called it open when
+`challenge_modules` had rows to pick from. Both were right. Staging sat from
+2026-08-16 with an enabled, in-window season and an empty module table, showing
+_Open_ to staff and _"No season is open right now"_ to every user, and no screen
+anywhere could show both facts at once. Two derivations of the same fact will
+always eventually disagree, and the disagreement is invisible from either side.
+
+`notReady` is `eligible < required_modules`, not `eligible = 0`: a season asking
+for three commitments with two eligible modules is exactly as unjoinable, the
+picker just fails further along.
+
+Three readers, one derivation:
+
+- `challenge_season_status()` — the app's single read, public like the tables it
+  covers, carrying the state, the dates, the seats left, the modules and the
+  ladder. It replaced three round trips **and** the client-side inference that
+  threw the reason away.
+- `admin_challenge_seasons()` — the console, with the counts that explain the
+  word (`eligibleModules` against `requiredModules`, rungs, runs).
+- `challenge_today()` — extended to carry `seasonState`, so somebody already in
+  a run learns the programme was paused instead of watching `record_challenge_day`
+  refuse with `season paused` into a checklist with no field for a reason.
+
+The client maps the word onto sentences in
+`features/challenge/services/season-state.ts`, and the operator console renders
+the user's sentence with the app's own component — so an operator never has to
+take the console's word for what users can see.
+
+### 4.2 The console writes (0055)
+
+| Function                             | Why it is separate                                                  |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| `admin_set_challenge_season_enabled` | The switch reached for under pressure. Cannot change anything else. |
+| `admin_update_challenge_season`      | Patches only the keys present in its jsonb.                         |
+| `admin_seed_challenge_season`        | Fills an empty season with the default modules and ladder.          |
+| `admin_delete_challenge_tier`        | 0048 could add a rung and never take one back.                      |
+| `admin_delete_challenge_season`      | Refused once anybody has joined — close it instead.                 |
+
+The patch shape is the important one. 0048's `admin_upsert_challenge_season`
+takes the whole settings object and coalesces every absent key to its factory
+default, so a console calling it to move an end date would silently reset
+`shield_cap`, `min_writes` and nine other knobs for a season people are two
+hundred days into. An absent key in the patch means "leave it"; an explicit null
+means "clear it" — a distinction jsonb can make and eighteen nullable arguments
+cannot.
+
+Seeding only ever fills gaps: a season with one curated module keeps exactly
+that one module. The operator pressing the button is usually not the person who
+made the curation.
 
 **The maths is split from the clock.** `challenge_credit_day` and
 `challenge_settle_missed_day` take the day as an argument and never ask what time
@@ -372,3 +441,6 @@ until the first season's shape has settled.
   extras buying faster shield regeneration.
 - **as built** — this document, reconciled against migrations 0048–0050 and the
   shipped client.
+- **rev 5 (0055)** — one server-side season state that both consoles quote; a
+  season console covering dates, rules, eligible modules and the ladder; the app
+  says which season and why rather than "no season is open".

@@ -40,6 +40,8 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+import { consumeRateLimit, tooManyRequests } from '../_shared/rate-limit.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -62,6 +64,17 @@ Deno.serve(async (req: Request) => {
     const { data: userData, error: userError } = await authClient.auth.getUser();
     if (userError || !userData.user) return json({ error: 'Invalid session' }, 401);
     const userId = userData.user.id;
+
+    // Three an hour. Before the preflight below, which walks every table in the
+    // schema counting rows — the most expensive single query any of these
+    // functions runs, and the one a retry loop would be hitting.
+    //
+    // A rate limit on account deletion is not there to slow the user down: it
+    // is there because a client that retries a request whose response was lost
+    // would otherwise re-run that walk on every attempt against a uid whose
+    // rows are already gone.
+    const budget = await consumeRateLimit(authClient, 'edge_delete_account');
+    if (!budget.allowed) return tooManyRequests(budget, corsHeaders);
 
     // Service-role admin client: deletes the auth user and reads the catalog.
     const admin = createClient(supabaseUrl, serviceKey);

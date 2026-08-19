@@ -15,9 +15,11 @@ import type { Note } from '@/features/notes/types/note.types';
 type Props = {
   note: Note;
   categoryColor?: string;
-  onPress: () => void;
-  onDelete: () => void;
-  onToggleArchive: () => void;
+  /** Take the note rather than closing over it, so the list can hold one stable
+   *  handler per action. See the `memo` at the bottom of this file. */
+  onPress: (note: Note) => void;
+  onDelete: (note: Note) => void;
+  onToggleArchive: (note: Note) => void;
 };
 
 function NoteCardComponent({ note, categoryColor, onPress, onDelete, onToggleArchive }: Props) {
@@ -33,12 +35,12 @@ function NoteCardComponent({ note, categoryColor, onPress, onDelete, onToggleArc
         { name: 'delete', label: t('common.delete') },
       ]}
       onAccessibilityAction={(name) =>
-        name === 'archive' ? onToggleArchive() : name === 'delete' ? onDelete() : undefined
+        name === 'archive' ? onToggleArchive(note) : name === 'delete' ? onDelete(note) : undefined
       }
       actions={
         <>
           <Pressable
-            onPress={onToggleArchive}
+            onPress={() => onToggleArchive(note)}
             accessibilityRole="button"
             accessibilityLabel={t(
               note.isArchived ? 'notes.unarchiveNamed' : 'common.archiveNamed',
@@ -55,7 +57,7 @@ function NoteCardComponent({ note, categoryColor, onPress, onDelete, onToggleArc
             )}
           </Pressable>
           <Pressable
-            onPress={onDelete}
+            onPress={() => onDelete(note)}
             accessibilityRole="button"
             accessibilityLabel={t('common.deleteNamed', {
               name: note.title || t('notes.untitled'),
@@ -68,7 +70,7 @@ function NoteCardComponent({ note, categoryColor, onPress, onDelete, onToggleArc
       }
     >
       <Pressable
-        onPress={onPress}
+        onPress={() => onPress(note)}
         accessibilityRole="button"
         accessibilityLabel={note.title || t('notes.untitled')}
         className="gap-1.5 px-4 py-3.5"

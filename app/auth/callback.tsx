@@ -8,6 +8,7 @@ import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { exchangeOAuthCode } from '@/features/auth/services/oauth';
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { onboardingScope } from '@/features/onboarding/services/onboarding-scope';
 import { useProfileStore } from '@/features/profile/store/profile-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -61,9 +62,18 @@ export default function AuthCallbackScreen() {
       // for a moment after sign-in, so a returning user can briefly look new.
       // The gate corrects that as soon as it arrives — it redirects out of
       // onboarding the moment the account turns out to be onboarded.
-      const deviceOnboarded = useProfileStore.getState().onboardingComplete;
-      const accountOnboarded = useAuthStore.getState().profile?.onboardingCompletedAt != null;
-      router.replace(deviceOnboarded || accountOnboarded ? '/(tabs)' : '/(onboarding)');
+      // Same decision as the gate's, from the same function — a second
+      // hand-rolled version of it here is how the two drifted before, and the
+      // symptom was a sign-in that landed somewhere the gate then bounced.
+      const auth = useAuthStore.getState();
+      const profileState = useProfileStore.getState();
+      const { onboarded } = onboardingScope({
+        userId: auth.session?.user.id ?? null,
+        onboardedUserIds: profileState.onboardedUserIds,
+        deviceOnboarded: profileState.onboardingComplete,
+        accountOnboardedAt: auth.profile?.onboardingCompletedAt ?? null,
+      });
+      router.replace(onboarded ? '/(tabs)' : '/(onboarding)');
     };
 
     void (async () => {
