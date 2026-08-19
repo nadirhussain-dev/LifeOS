@@ -21,7 +21,7 @@ const DAY = 24 * 60 * 60 * 1000;
 
 const base: AdPacingInput = {
   segments: ['(tabs)', 'hub'],
-  breakpoint: 'hub-return',
+  breakpoint: 'study-session-end',
   installAgeMs: 30 * DAY,
   shownThisSession: 0,
   lastShownAt: null,
@@ -87,9 +87,15 @@ describe('mayShowFullScreenAd', () => {
 
   it('treats a breakpoint reached seconds into a session as a launch', () => {
     // A reminder deep-linking straight into the study timer is a cold start,
-    // and an ad in front of a cold start is the placement policy exists to
+    // and an ad in front of a cold start is what the placement policy exists to
     // prevent — whatever the breakpoint is called.
-    expect(refusal({ sessionAgeMs: 3_000, breakpoint: 'study-session-end' })).toBe('launch');
+    expect(refusal({ sessionAgeMs: 3_000 })).toBe('launch');
+  });
+
+  it('refuses a breakpoint that was removed from the allowlist', () => {
+    // 'hub-return' was considered and dropped: arriving somewhere is not the
+    // same as having finished something. A stale call site must fail closed.
+    expect(refusal({ breakpoint: 'hub-return' })).toBe('not-a-breakpoint');
   });
 
   it('stops at the session cap', () => {

@@ -2734,7 +2734,12 @@
     "removeWithPlus": "Remove ads with Plus",
     "privacyOptions": "Ad privacy choices",
     "privacyOptionsSubtitle": "Change what ads may use your data for",
-    "privacyOptionsFailed": "Couldn't open your ad privacy choices. Check your connection and try again."
+    "privacyOptionsFailed": "Couldn't open your ad privacy choices. Check your connection and try again.",
+    "watchForAdFree": "Watch an ad, lose the ads",
+    "watchForAdFreeHint": "One short video buys you 24 hours without any.",
+    "adFreeActive": "No ads right now",
+    "adFreeRemaining_one": "{{count}} hour left.",
+    "adFreeRemaining_other": "{{count}} hours left."
   },
   "challenge": {
     "eyebrow": "Challenge",

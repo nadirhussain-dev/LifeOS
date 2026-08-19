@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { format } from 'date-fns';
 import { useKeepAwake } from 'expo-keep-awake';
-import { useRouter } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
 import { BellOff, Moon, Pause, Play, Square, SkipForward } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ import { CelebrationOverlay } from '@/components/ui/celebration-overlay';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
+import { showInterstitial } from '@/features/ads/services/interstitial';
 import { ReflectionSheet } from '@/features/study/components/reflection-sheet';
 import {
   canOpenSystemDoNotDisturb,
@@ -39,6 +40,7 @@ const BREAK_TINT = '#22c55e';
 
 export default function StudyTimerScreen() {
   const router = useRouter();
+  const segments = useSegments();
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
@@ -156,6 +158,12 @@ export default function StudyTimerScreen() {
     setReflectOpen(false);
     store.reset();
     router.back();
+    // A finished study session is one of the few genuine breakpoints in this
+    // app: the work is done, saved, and the user is on their way out. Every
+    // gate is in `showInterstitial` — this call site decides nothing except
+    // that this moment is a break, and it does not await the result because
+    // nothing here depends on whether an ad appeared.
+    void showInterstitial({ segments, breakpoint: 'study-session-end' });
   };
 
   const promptSystemDnd = () => {

@@ -52,6 +52,7 @@ import { useAuthGate } from '@/features/auth/hooks/use-auth-gate';
 import { useDeviceSessionSync } from '@/features/auth/hooks/use-device-session';
 import { DeviceGateOverlay } from '@/features/auth/components/device-gate-overlay';
 import { useUsageReporter } from '@/features/analytics/hooks/use-usage-reporter';
+import { useAdSession } from '@/features/ads/hooks/use-ad-session';
 import { useChallengeTracking } from '@/features/challenge/hooks/use-challenge-tracking';
 import { AmbientBackground } from '@/components/ui/ambient-background';
 import { DialogHost } from '@/components/ui/dialog-host';
@@ -179,6 +180,14 @@ function UsageReporter() {
  *  does anything once somebody is actually in a run. Renders nothing. */
 function ChallengeTracking() {
   useChallengeTracking();
+  return null;
+}
+
+/** Marks ad-session boundaries and keeps one interstitial preloaded, so the
+ *  session cap and the launch guard share one idea of when a session began.
+ *  Renders nothing. */
+function AdSession() {
+  useAdSession();
   return null;
 }
 
@@ -494,6 +503,7 @@ export default function RootLayout() {
               <BillingSyncBridge />
               <UsageReporter />
               <ChallengeTracking />
+              <AdSession />
               <WidgetSync />
               <LanguageBridge />
               <PushRegistrationBridge />

@@ -100,6 +100,25 @@ export const env = {
     process.env.EXPO_PUBLIC_ADMOB_BANNER_UNIT_ID_ANDROID,
   ),
   EXPO_PUBLIC_ADMOB_BANNER_UNIT_ID_IOS: read(process.env.EXPO_PUBLIC_ADMOB_BANNER_UNIT_ID_IOS),
+  /**
+   * The same arrangement for the full-screen formats. Separate units rather
+   * than one, because AdMob prices and reports them separately and a single id
+   * would make "is the interstitial worth the retention cost" unanswerable —
+   * which is the only question worth asking about it.
+   *
+   * Unset keeps Google's own test creative for that format, so a build with
+   * these blank still runs and still shows a real, self-labeled test ad.
+   */
+  EXPO_PUBLIC_ADMOB_INTERSTITIAL_UNIT_ID_ANDROID: read(
+    process.env.EXPO_PUBLIC_ADMOB_INTERSTITIAL_UNIT_ID_ANDROID,
+  ),
+  EXPO_PUBLIC_ADMOB_INTERSTITIAL_UNIT_ID_IOS: read(
+    process.env.EXPO_PUBLIC_ADMOB_INTERSTITIAL_UNIT_ID_IOS,
+  ),
+  EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID_ANDROID: read(
+    process.env.EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID_ANDROID,
+  ),
+  EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID_IOS: read(process.env.EXPO_PUBLIC_ADMOB_REWARDED_UNIT_ID_IOS),
 };
 
 export type AppEnvironment = 'development' | 'staging' | 'production';

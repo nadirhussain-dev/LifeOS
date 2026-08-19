@@ -9,6 +9,7 @@ import { useAuthStore } from '@/features/auth/services/auth-store';
 import { useEntitlement } from '@/features/billing/hooks/use-billing';
 import { useBillingStore } from '@/features/billing/store/billing-store';
 import { ADS_MODULE_ID, type AdPlacement } from '@/features/ads/config';
+import { useAdFreeStore } from '@/features/ads/store/ad-free-store';
 import { loadAdsModule } from '@/features/ads/services/ads-module';
 import { useAdsConsentStore } from '@/features/ads/store/ads-consent-store';
 import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
@@ -84,10 +85,16 @@ export function AdSlot({ placement }: Props) {
   // this launch, so the very first render of a cold start cannot put an ad
   // request on the wire ahead of the consent form.
   const canRequestAds = useAdsConsentStore((s) => s.canRequestAds);
+  // The rewarded window (features/ads/store/ad-free-store.ts). Subscribed
+  // rather than read once, so the banners on screen disappear the moment the
+  // reward lands rather than at the next navigation — the whole value of the
+  // trade is that it is visibly immediate.
+  const adFreeUntil = useAdFreeStore((s) => s.until);
+  const adFree = adFreeUntil !== null && adFreeUntil > Date.now();
 
   const mod = loadAdsModule();
 
-  if (!showAds || failed || !mod || !adsEnabled || !canRequestAds) return null;
+  if (!showAds || adFree || failed || !mod || !adsEnabled || !canRequestAds) return null;
   if (session && checkedAt === null) return null;
 
   const { BannerAd, BannerAdSize, TestIds } = mod;

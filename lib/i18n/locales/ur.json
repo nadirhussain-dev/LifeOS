@@ -2734,7 +2734,12 @@
     "removeWithPlus": "Plus کے ساتھ اشتہارات ہٹائیں",
     "privacyOptions": "اشتہارات کی پرائیویسی کے اختیارات",
     "privacyOptionsSubtitle": "تبدیل کریں کہ اشتہارات آپ کے ڈیٹا کو کس لیے استعمال کر سکتے ہیں",
-    "privacyOptionsFailed": "اشتہارات کی پرائیویسی کے اختیارات نہیں کھل سکے۔ اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔"
+    "privacyOptionsFailed": "اشتہارات کی پرائیویسی کے اختیارات نہیں کھل سکے۔ اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔",
+    "watchForAdFree": "ایک اشتہار دیکھیں، اشتہارات ہٹائیں",
+    "watchForAdFreeHint": "ایک مختصر ویڈیو آپ کو 24 گھنٹے بغیر اشتہار دیتی ہے۔",
+    "adFreeActive": "ابھی کوئی اشتہار نہیں",
+    "adFreeRemaining_one": "{{count}} گھنٹہ باقی۔",
+    "adFreeRemaining_other": "{{count}} گھنٹے باقی۔"
   },
   "challenge": {
     "eyebrow": "چیلنج",

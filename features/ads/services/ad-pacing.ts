@@ -86,13 +86,19 @@ export const MIN_GAP_SECONDS = 180;
  * has *finished* something and is not mid-thought.
  */
 export const AD_BREAKPOINTS = [
-  /** A study timer ran to completion. */
+  /** A study timer ran to completion and the session was saved. */
   'study-session-end',
   /** A sleep entry was saved from the log screen. */
   'sleep-log-saved',
-  /** Returning to the Hub from a module, at most once a session. */
-  'hub-return',
 ] as const;
+
+// "Returning to the Hub from a module" was the obvious third and is
+// deliberately absent. It is a weaker break than the two above — arriving
+// somewhere is not the same as having finished something — and wiring it needs
+// a navigation observer, which is a second way for an ad to be triggered by
+// something other than a completed flow. An allowlist entry with no call site
+// is also the kind of thing that rots: it reads as supported, and the first
+// person to use it inherits a placement nobody chose.
 
 export type AdBreakpoint = (typeof AD_BREAKPOINTS)[number];
 

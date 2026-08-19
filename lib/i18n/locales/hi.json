@@ -2734,7 +2734,12 @@
     "removeWithPlus": "Plus के साथ विज्ञापन हटाएं",
     "privacyOptions": "विज्ञापन गोपनीयता विकल्प",
     "privacyOptionsSubtitle": "बदलें कि विज्ञापन आपके डेटा का किस लिए उपयोग कर सकते हैं",
-    "privacyOptionsFailed": "विज्ञापन गोपनीयता विकल्प नहीं खुल सके। अपना कनेक्शन जाँचें और फिर कोशिश करें।"
+    "privacyOptionsFailed": "विज्ञापन गोपनीयता विकल्प नहीं खुल सके। अपना कनेक्शन जाँचें और फिर कोशिश करें।",
+    "watchForAdFree": "एक विज्ञापन देखें, विज्ञापन हटाएँ",
+    "watchForAdFreeHint": "एक छोटा वीडियो आपको 24 घंटे बिना विज्ञापन देता है।",
+    "adFreeActive": "अभी कोई विज्ञापन नहीं",
+    "adFreeRemaining_one": "{{count}} घंटा बाकी।",
+    "adFreeRemaining_other": "{{count}} घंटे बाकी।"
   },
   "challenge": {
     "eyebrow": "चैलेंज",

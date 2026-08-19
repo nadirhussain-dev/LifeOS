@@ -2906,7 +2906,12 @@
     "removeWithPlus": "إزالة الإعلانات مع Plus",
     "privacyOptions": "خيارات خصوصية الإعلانات",
     "privacyOptionsSubtitle": "غيّر ما يمكن للإعلانات استخدام بياناتك من أجله",
-    "privacyOptionsFailed": "تعذّر فتح خيارات خصوصية الإعلانات. تحقّق من اتصالك وحاول مرة أخرى."
+    "privacyOptionsFailed": "تعذّر فتح خيارات خصوصية الإعلانات. تحقّق من اتصالك وحاول مرة أخرى.",
+    "watchForAdFree": "شاهد إعلانًا، وتخلّص من الإعلانات",
+    "watchForAdFreeHint": "مقطع قصير واحد يمنحك 24 ساعة بلا إعلانات.",
+    "adFreeActive": "لا إعلانات الآن",
+    "adFreeRemaining_one": "بقيت {{count}} ساعة.",
+    "adFreeRemaining_other": "بقيت {{count}} ساعة."
   },
   "challenge": {
     "eyebrow": "التحدي",

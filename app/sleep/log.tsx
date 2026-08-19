@@ -1,12 +1,13 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format, set, subDays } from 'date-fns';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { CalendarDays, Moon, Sun, Trash2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
+import { showInterstitial } from '@/features/ads/services/interstitial';
 import { Button } from '@/components/ui/button';
 import { StarRating } from '@/components/ui/star-rating';
 import { SheetHeader } from '@/components/ui/sheet-header';
@@ -53,6 +54,7 @@ export default function SleepLogScreen() {
     wakeTs?: string;
   }>();
   const router = useRouter();
+  const segments = useSegments();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const sleepTint = moduleTint('sleep', scheme);
@@ -145,6 +147,9 @@ export default function SleepLogScreen() {
       });
     }
     router.back();
+    // Same reasoning as the study timer: a saved entry is a finished flow, not
+    // a moment in the middle of one. `showInterstitial` owns every gate.
+    void showInterstitial({ segments, breakpoint: 'sleep-log-saved' });
   };
 
   const confirmDelete = () => {

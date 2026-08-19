@@ -67,21 +67,28 @@ mandatory version would cost, in case that trade ever looks worth making.
 
 ### 1.1 What is built now
 
-Everything in the original §1.1, plus all five blockers that used to sit here.
-The ad stack is compliant and earning-shaped; what is left is new formats.
+Everything in the original §1.1, plus all five blockers that used to sit here,
+plus the full-screen formats. What is left is native in-feed ads and a device
+build to confirm any of it.
 
-| Piece                    | Where                                     | State                                                      |
-| ------------------------ | ----------------------------------------- | ---------------------------------------------------------- |
-| SDK init, crash-safe     | `lib/ads-init.ts`                         | Lazy `require` in try/catch, survives the New Arch bug     |
-| Module loader, shared    | `features/ads/services/ads-module.ts`     | One cached `require` for init, consent and every slot      |
-| UMP consent + ATT        | `features/ads/services/consent.ts`        | UMP first, ATT second — the order Google documents         |
-| Consent state            | `features/ads/store/ads-consent-store.ts` | Unpersisted on purpose; stale "may serve" is the bad cache |
-| Content rating           | `AD_MAX_CONTENT_RATING` in `config.ts`    | `T`, set before `initialize()`                             |
-| Banner, adaptive         | `features/ads/components/ad-slot.tsx`     | `ANCHORED_ADAPTIVE_BANNER`, chrome waits for `onAdLoaded`  |
-| Tier gate                | `useEntitlement('ads')`                   | Reads `plan_entitlements.ads` — the operator lever is live |
-| Operator kill switch     | `module_flags` under id `ads`             | Fail-open                                                  |
-| Env-driven unit ids      | `app.config.js`, `lib/env.ts`             | Going live is config, not code                             |
-| Full-screen pacing rules | `features/ads/services/ad-pacing.ts`      | Pure and tested; no format uses it yet                     |
+| Piece                       | Where                                     | State                                                      |
+| --------------------------- | ----------------------------------------- | ---------------------------------------------------------- |
+| SDK init, crash-safe        | `lib/ads-init.ts`                         | Lazy `require` in try/catch, survives the New Arch bug     |
+| Module loader, shared       | `features/ads/services/ads-module.ts`     | One cached `require` for init, consent and every slot      |
+| UMP consent + ATT           | `features/ads/services/consent.ts`        | UMP first, ATT second — the order Google documents         |
+| Consent state               | `features/ads/store/ads-consent-store.ts` | Unpersisted on purpose; stale "may serve" is the bad cache |
+| Content rating              | `AD_MAX_CONTENT_RATING` in `config.ts`    | `T`, set before `initialize()`                             |
+| Banner, adaptive            | `features/ads/components/ad-slot.tsx`     | `ANCHORED_ADAPTIVE_BANNER`, chrome waits for `onAdLoaded`  |
+| Tier gate                   | `useEntitlement('ads')`                   | Reads `plan_entitlements.ads` — the operator lever is live |
+| Operator kill switch        | `module_flags` under id `ads`             | Fail-open                                                  |
+| Env-driven unit ids         | `app.config.js`, `lib/env.ts`             | Going live is config, not code                             |
+| Full-screen pacing rules    | `features/ads/services/ad-pacing.ts`      | Pure, 15 tests; the rules only, no runtime state           |
+| Runtime ad gate             | `features/ads/services/ad-gate.ts`        | Composes pacing + entitlement + consent + kill switch      |
+| Ad session bookkeeping      | `features/ads/store/ad-session-store.ts`  | Persists the cooldown, deliberately not the session cap    |
+| Interstitial                | `features/ads/services/interstitial.ts`   | Preloaded on foreground, two allowlisted breakpoints       |
+| Rewarded video              | `features/ads/services/rewarded.ts`       | Buys 24h ad-free; granted only on `EARNED_REWARD`          |
+| Ad-free window              | `features/ads/store/ad-free-store.ts`     | Local, non-stacking; respected by the banner and the gate  |
+| Impression + refusal counts | `funnel_daily` (0066)                     | Every pacing refusal is named and counted                  |
 
 ### 1.2 What each of the five blockers turned into
 
@@ -115,55 +122,50 @@ whose network dropped.
 picks its own height. The fixed 320×50 unit was leaving fill and price on the
 table on every screen wider than a 2016 phone.
 
-### 1.3 The format ladder
+### 1.3 The format ladder, and where it landed
 
-You have one of five formats. Here is what I would add, in order, and what I
-would not.
+**Anchored adaptive banner — done.** Eight placements is already the sensible
+ceiling for a banner-only app; none were added.
 
-**Anchored adaptive banner — have it, fix it.** Eight placements is already
-close to the sensible ceiling for a banner-only app. Do not add more.
+**Interstitial — done, narrowly.** Two breakpoints, both a _completed_ flow:
+a saved study session and a saved sleep entry. Not on app launch, not on tab
+switches, and never after a journal entry — an interstitial on top of somebody
+who has just written something private is the fastest way to earn an uninstall.
 
-**Native ads in the feed — build this second.** `NativeAd` / `NativeAdView` ship
-in v16. Daykeep's long scrolling lists — Tasks, Habits, Notes, Gallery, the
-Hub grid — are exactly where a native unit outperforms a banner, because it can
-be styled to the design system instead of sitting under it in a box. Rules: one
-per screen, never above the fold, never in the first eight rows, always labelled.
-This is the highest-value _new_ format for this app specifically.
+A third candidate, "returning to the Hub", was considered and dropped: arriving
+somewhere is not the same as having finished something, and it would have needed
+a navigation observer — a second route by which an ad could fire without a flow
+completing.
 
-**Interstitial — build this third, narrowly.** There are precisely two moments
-in Daykeep that are natural interstitial breakpoints, and they are the only two
-I would use:
+**Rewarded video — done, and it does not touch the streak.** Per §0.2 it cannot
+buy a shield or a day. It buys **24 hours without ads**, which is honestly the
+app's to give and costs nobody anything: it trades one impression for the eight
+or so it suppresses, which is a bad deal on paper and a good one in practice —
+the people who take it were never going to subscribe and were going to resent
+the banners either way.
 
-- Leaving a completed multi-step flow — `study/timer` finishing a session,
-  `sleep/log` after a save.
-- Returning to the Hub from a module, at most once per session.
+The window deliberately **does not stack**. Four views in a row buy one day, not
+four. A reward that accumulates is a currency, a currency gets farmed, and a
+farmed reward is incentivised traffic whatever the app calls it.
 
-Not on app launch. Not on tab switches. Not after a journal entry — an
-interstitial on top of somebody who has just written something private is the
-single fastest way to make them uninstall.
+The other four candidates from the original list are still available and still
+better long-term sells, and four of the five are already typed entitlement keys
+(`album_limit`, `insights`, `on_this_day_years`, plus a cosmetic): the plumbing
+is "grant this entitlement for N hours", which is a `premium_grants`-shaped
+problem this repo has already solved once.
 
-**Rewarded video — build this fourth, and be careful what it buys.** Per §0.2 it
-cannot buy shields or days. What it _can_ buy, all of which is real value in
-this app:
+**Native ads in the feed — still the biggest unclaimed win, still not built.**
+`NativeAd` / `NativeAdView` ship in v16, and Daykeep's long lists (Tasks,
+Habits, Notes, Gallery) are exactly where a native unit beats a banner because
+it can be styled to the design system instead of sitting under it in a box. It
+is a per-screen design job rather than a service, though — each list needs the
+unit laid out to match its own row — and a generic version would look precisely
+like the boxed banner it exists to replace. Rules when it is built: one per
+screen, never above the fold, never in the first eight rows, always labelled.
 
-- **24 hours ad-free.** Trades an impression for eight, and is the honest
-  version of "remove ads" for someone who will never subscribe.
-- **One extra shared-album slot for a week** (`album_limit` in `plan_entitlements`).
-- **A one-off insights unlock** — `insights` is already an entitlement key.
-- **Extra `on_this_day_years`** for a session — already an entitlement key.
-- **A cosmetic**: a theme, an app icon, a notification tone from
-  `notification-sounds.ts`.
-
-Note that four of these five are already typed entitlement keys. The rewarded
-plumbing is mostly "grant this entitlement for N hours" — which is a
-`premium_grants`-shaped problem (migration 0052) that you have already solved
-once.
-
-**App-open ads — I would not.** They fire on every foreground. Daykeep's core
-loop is "open, tick a habit, close" — often several times a day, often from a
-reminder. An ad in front of every one of those turns the app's best habit into
-its most annoying. If you disagree, cap it at once per twelve hours and never on
-a notification-launched cold start.
+**App-open ads — still no.** They fire on every foreground, and Daykeep's core
+loop is "open, tick a habit, close", often from a reminder. An ad in front of
+every one of those turns the app's best habit into its most annoying.
 
 ### 1.4 The pacing rules that decide whether this works
 
@@ -574,13 +576,27 @@ alone is thirteen modules × three lines × four languages. Budget for it, and c
 the RTL layouts — `components/ui/directional-icon.tsx` exists because this has
 bitten before.
 
-**5.4 The analytics to evaluate any of this does not exist yet.**
-`features/analytics/` has an install id, a usage reporter and a consent card —
-the transport is there, the events are not. Before shipping §1–§4 you want, at
-minimum: onboarding step completion and drop-off, notification permission
-grant/deny rate, module first-open, challenge enrolment and day-30 survival, and
-ad impression counts per placement. Without these, §6's gates are unanswerable
-and `REWARDS_STRATEGY.md`'s six metrics are unmeasurable.
+**5.4 The analytics to evaluate any of this — DONE.** Migration 0066 adds
+`funnel_daily`: the onboarding funnel step by step, the notification permission
+grant/deny split, ad impressions, and a named counter for every pacing refusal.
+`admin_challenge_retention()` answers Gate A's D30 question from tables that
+already held the data.
+
+Two design calls worth knowing about. It is **counters, not an event log** — the
+same shape `usage_daily` uses, because nothing here needs to know the order two
+things happened in and an event log gives up the "incapable of answering
+anything about content" property for questions nobody asked. And it is keyed to
+an **install, never an account**, because onboarding largely happens before
+there is one — a metric requiring `auth.uid()` would report a completion rate
+computed only over people who completed the account step.
+
+The consent timing needed a narrow, explicit compromise: `usage-consent-card`
+deliberately waits for onboarding to end, so the onboarding funnel necessarily
+accrues before anybody has been asked. Those specific metrics — listed by name
+in `PRE_CONSENT_METRICS`, ads excluded — buffer locally, nothing is transmitted
+until the question has an answer, and refusing erases the buffer. **This is a
+judgement call and worth overruling if you disagree**: the alternative is
+accepting that onboarding drop-off is permanently unmeasurable.
 
 **5.5 The challenge reporter's offline comment is wrong** (§2.1). Small, but it
 is the kind of comment that makes a future reader trust the wrong thing.
@@ -651,27 +667,63 @@ _Gate: onboarding completion rate has not dropped, and notification permission
 grant rate is above 60%. If completion drops, the knowledge step is too long —
 cut cards, do not cut the permission ask._
 
-### Phase 5 — Punishment made visible (about 3 days)
+### Phase 5 — Punishment made visible — DONE
 
-- Cost-of-miss in the at-risk reminder, from `demotionTarget()`
-- 22:00 second nudge for zero-shield users
-- Settlement screen wired to `challenge_events`
-- 48-hour win-back
+Migration 0067 sends the three values `demotionTarget()` needed and never had.
+The 20:00 reminder now prices the miss; a 22:00 last call goes only to runs with
+no shields left; the win-back fires 48 hours after a fall, framed as the next
+rung, and cancels itself the moment another day completes.
+
+The settlement screen needed nothing — `DemotionSheet` has been wired to
+`challenge_events` since it shipped. Arming the win-back hangs off the same
+unseen event, so it fires exactly once per fall.
+
+`costOfMissToday` returns null rather than a plausible zero whenever a number
+would mislead (a shield is held, the ladder has not arrived, nothing to lose
+yet) and the copy branches instead of interpolating — this lands on a lock
+screen, and a notification cannot be corrected.
 
 _Gate: the share of runs that spend at least one shield lands in the 40–70% band
 `REWARDS_STRATEGY.md` §9 calls green._
 
-### Phase 6 — New ad formats (about 1 week)
+### Phase 6 — New ad formats — MOSTLY DONE
 
-`ad-pacing.ts` is already built and tested, so this is now formats against an
-existing rule set rather than both at once.
+**Built:** the runtime gate (`ad-gate.ts`) composing the pure pacing rules with
+entitlement, consent, the operator switch and the rewarded ad-free window;
+session bookkeeping (`ad-session-store.ts`) that persists the cooldown but not
+the session cap, so force-quitting cannot reset the floor between two ads;
+interstitials preloaded at foreground and shown at two allowlisted breakpoints;
+rewarded video buying 24 hours ad-free.
 
-- Native ads in two list screens
-- Interstitial at the allowlisted breakpoints only
-- Rewarded video, buying one of the §1.3 currencies — never a shield
+**Three shapes that are policy rather than taste.** The rewarded ad is only ever
+triggered by a button somebody pressed, discloses the reward before playing, and
+grants only on `EARNED_REWARD` — never on close, never on anything
+click-derived. The offer lives in Settings rather than beside a banner, because
+stacking a control next to an ad creative is what the placement policies exist
+to prevent. And the ad-free window **does not stack**: four views in a row buy
+one day, not four, because a reward that accumulates is a currency and a
+currency gets farmed.
 
-_Gate: ARPDAU up, and day-7 retention flat or better. If retention moves down,
-the pacing constants were too loose; tighten before adding a format._
+**`hub-return` was dropped from the breakpoint allowlist.** Arriving somewhere is
+not the same as having finished something, and wiring it needs a navigation
+observer — a second way for an ad to be triggered by something other than a
+completed flow. An allowlist entry with no call site also rots: it reads as
+supported, and the first person to use it inherits a placement nobody chose.
+
+**Not built: native in-feed ads.** They are the highest-value new format for
+this app and they are a per-screen design job, not a service — `NativeAdView`
+has to be laid out inside Tasks, Habits, Notes and Gallery to match each list's
+own row, and a generic one would look exactly like the boxed banner it is meant
+to replace. Worth doing next; not worth faking now.
+
+**None of this has run on a device.** Everything above typechecks and the pure
+layers are tested, but interstitial fill, rewarded playback and the ad-free
+window's effect on a live banner can only be confirmed in a dev-client build.
+
+_Gate: ARPDAU up, and day-7 retention flat or better. Both are now measurable —
+`ad_impression` and the refusal counters land in `funnel_daily`. If retention
+moves down, the pacing constants were too loose; tighten before adding a
+format._
 
 Layer-3 module intro cards and the Hub "What is this?" affordance are copy work
 that can run in parallel with any phase.
