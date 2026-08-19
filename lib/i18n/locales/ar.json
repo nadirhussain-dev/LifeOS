@@ -3014,7 +3014,17 @@
     "seatsLeft_few": "بقيت {{count}} مقاعد.",
     "seatsLeft_many": "بقي {{count}} مقعدًا.",
     "seatsLeft_other": "بقي {{count}} مقعد.",
-    "progressSafe": "سلسلتك ودروعك ومراتبك محفوظة كما هي تمامًا."
+    "progressSafe": "سلسلتك ودروعك ومراتبك محفوظة كما هي تمامًا.",
+    "reminderCost": "المتبقي: {{modules}}. تفويت اليوم يُنزلك من {{from}} يومًا إلى {{to}}.",
+    "reminderShielded": "المتبقي: {{modules}}. سيغطي درعٌ ليلتك — لكنه خط دفاعك الأخير.",
+    "lastCallTitle": "النداء الأخير",
+    "lastCallCost_one": "لا دروع متبقية. الليلة تكلفك {{count}} يومًا.",
+    "lastCallCost_other": "لا دروع متبقية. الليلة تكلفك {{count}} يومًا.",
+    "winBackTitle": "ابدأ من جديد",
+    "winBackNext_one": "{{count}} يوم حتى الدرجة التالية. اليوم هو اليوم الأول.",
+    "winBackNext_other": "{{count}} يومًا حتى الدرجة التالية. اليوم هو اليوم الأول.",
+    "winBackPlain_one": "أنت على {{count}} يوم. جاهز للتالي؟",
+    "winBackPlain_other": "أنت على {{count}} يومًا. جاهز للتالي؟"
   },
   "env": {
     "staging": "نسخة اختبارية",

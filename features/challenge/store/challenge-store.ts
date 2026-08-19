@@ -82,6 +82,21 @@ type ChallengeState = {
    * install, or a server that predates the column, gets the old lenient rule.
    */
   liveRequired: boolean;
+  /**
+   * Where the run stands, cached from `challenge_today()` (0067).
+   *
+   * Here for one consumer: the at-risk reminder, which is rebuilt outside React
+   * on every write and cannot fetch anything. Without a cache it could only say
+   * which modules were outstanding; with it, it can say what missing them
+   * costs — and that number is the difference between a warning somebody acts
+   * on and one they scroll past.
+   *
+   * Zeroes mean "not known yet", and `costOfMissToday` treats them as "quote no
+   * cost" rather than "quote zero". A server that predates the column, or a
+   * first launch before the query lands, must produce the old reminder rather
+   * than an invented number.
+   */
+  standing: ChallengeStanding;
   days: Record<string, DayBuffer>;
   /**
    * The newest `challenge_events` row the user has been shown.
@@ -120,6 +135,8 @@ type ChallengeState = {
   setAttested: (modules: string[], day: string) => void;
   /** Records whether the live rule applies, from the same response. */
   setLiveRequired: (required: boolean) => void;
+  /** Caches the counters the reminder needs to price a miss. */
+  setStanding: (standing: ChallengeStanding) => void;
   /** Foreground time, added in chunks by the session timer. */
   addActiveSeconds: (seconds: number, day?: string) => void;
   /** Everything worth sending, oldest first — a stale day should be offered
@@ -130,6 +147,24 @@ type ChallengeState = {
   /** Forgets one specific day, once the server has said it will never take it. */
   dropDay: (day: string) => void;
 };
+
+/** The counters a miss is priced from. See `standing` on the state below. */
+export type ChallengeStanding = {
+  qualifiedDays: number;
+  shields: number;
+  recentMisses: number;
+  maxDemotionDays: number;
+  /** Ascending rung thresholds. Empty until the server has been heard from. */
+  tierThresholds: number[];
+};
+
+const emptyStanding = (): ChallengeStanding => ({
+  qualifiedDays: 0,
+  shields: 0,
+  recentMisses: 0,
+  maxDemotionDays: 0,
+  tierThresholds: [],
+});
 
 const emptyDay = (): DayBuffer => ({ writes: {}, activeSeconds: 0 });
 
@@ -160,6 +195,7 @@ export const useChallengeStore = create<ChallengeState>()(
       required: [],
       minWrites: 1,
       liveRequired: false,
+      standing: emptyStanding(),
       days: {},
       lastSeenEventId: 0,
       lastClosedDay: null,
@@ -182,6 +218,7 @@ export const useChallengeStore = create<ChallengeState>()(
           seasonId: null,
           required: [],
           liveRequired: false,
+          standing: emptyStanding(),
           days: {},
           lastSeenEventId: 0,
           lastClosedDay: null,
@@ -234,6 +271,8 @@ export const useChallengeStore = create<ChallengeState>()(
         }),
 
       setLiveRequired: (liveRequired) => set({ liveRequired }),
+
+      setStanding: (standing) => set({ standing }),
 
       setAttested: (modules, day) =>
         set((s) => {

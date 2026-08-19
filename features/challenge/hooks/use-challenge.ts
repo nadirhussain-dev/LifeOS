@@ -45,6 +45,12 @@ export type ChallengeTodayResponse = {
   swapsLeft?: number;
   /** Local date from which the module picker unlocks, `YYYY-MM-DD`. */
   swapsUnlockDay?: string;
+  /** Unshielded misses already inside the escalation window (0067). */
+  recentMisses?: number;
+  maxDemotionDays?: number;
+  /** Every rung's day threshold, ascending — the ladder `demotionTarget()`
+   *  reads the fall off. */
+  tierThresholds?: number[];
 };
 
 /**
@@ -59,6 +65,7 @@ export function useChallengeToday() {
   const session = useAuthStore((s) => s.session);
   const setEnrolment = useChallengeStore((s) => s.setEnrolment);
   const clearEnrolment = useChallengeStore((s) => s.clearEnrolment);
+  const setStanding = useChallengeStore((s) => s.setStanding);
 
   return useQuery({
     queryKey: ['challenge', 'today', session?.user.id ?? null],
@@ -77,6 +84,18 @@ export function useChallengeToday() {
           seasonId: response.seasonId,
           required: response.required ?? [],
           minWrites: response.minWrites ?? 1,
+        });
+        // Cached for the reminder, which is rebuilt outside React on every
+        // write and cannot fetch anything. Absent fields fall back to values
+        // that make `demotionTarget` quote no cost at all rather than a wrong
+        // one — a server that predates 0067 should produce the old reminder,
+        // not an invented number.
+        setStanding({
+          qualifiedDays: response.qualifiedDays ?? 0,
+          shields: response.shields ?? 0,
+          recentMisses: response.recentMisses ?? 0,
+          maxDemotionDays: response.maxDemotionDays ?? 0,
+          tierThresholds: response.tierThresholds ?? [],
         });
       } else {
         clearEnrolment();

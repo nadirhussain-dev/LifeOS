@@ -2830,7 +2830,17 @@
     "stateOpenUntil_other": "{{date}} تک چلے گا — {{count}} دن باقی ہیں۔",
     "seatsLeft_one": "ایک نشست باقی ہے۔",
     "seatsLeft_other": "{{count}} نشستیں باقی ہیں۔",
-    "progressSafe": "آپ کی سٹریک، شیلڈز اور مدارج سب جوں کے توں محفوظ ہیں۔"
+    "progressSafe": "آپ کی سٹریک، شیلڈز اور مدارج سب جوں کے توں محفوظ ہیں۔",
+    "reminderCost": "باقی: {{modules}}۔ آج چھوٹنے پر آپ {{from}} دن سے {{to}} پر آ جائیں گے۔",
+    "reminderShielded": "باقی: {{modules}}۔ ایک ڈھال آج رات بچا لے گی — مگر یہی آخری ہے۔",
+    "lastCallTitle": "آخری موقع",
+    "lastCallCost_one": "کوئی ڈھال باقی نہیں۔ آج رات آپ کو {{count}} دن کی قیمت چکانی ہوگی۔",
+    "lastCallCost_other": "کوئی ڈھال باقی نہیں۔ آج رات آپ کو {{count}} دن کی قیمت چکانی ہوگی۔",
+    "winBackTitle": "دوبارہ شروع کریں",
+    "winBackNext_one": "اگلے درجے تک {{count}} دن۔ آج پہلا دن ہے۔",
+    "winBackNext_other": "اگلے درجے تک {{count}} دن۔ آج پہلا دن ہے۔",
+    "winBackPlain_one": "آپ {{count}} دن پر ہیں۔ اگلے کے لیے تیار؟",
+    "winBackPlain_other": "آپ {{count}} دن پر ہیں۔ اگلے کے لیے تیار؟"
   },
   "env": {
     "staging": "اسٹیجنگ بلڈ",

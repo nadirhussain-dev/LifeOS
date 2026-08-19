@@ -196,3 +196,54 @@ export function estimatedDailyMinutes(
   const seconds = moduleIds.reduce((sum, id) => sum + (estSecondsByModule[id] ?? 60), 0);
   return Math.max(1, Math.round(seconds / 60));
 }
+
+/**
+ * What missing today would actually cost, in days, or `null` when there is
+ * nothing worth quoting.
+ *
+ * The wrapper that makes `demotionTarget` usable from a notification. It takes
+ * the cached standing rather than a tier list, because the caller is the
+ * reminder scheduler — rebuilt outside React on every write, with no query
+ * client and no network.
+ *
+ * Returns null, never zero, in the three cases where a number would mislead:
+ *
+ *  - **A shield is held.** The miss is absorbed and nothing changes, so quoting
+ *    "0 days" next to a warning reads as a bug. The reminder says the shield
+ *    will be spent instead, which is the true cost and a different sentence.
+ *  - **The ladder has not arrived.** An empty threshold list means the server
+ *    has not been heard from yet, or predates 0067. Saying nothing is right;
+ *    inventing a fall is not.
+ *  - **The fall is nothing.** Below the first rung there is no lower rung and
+ *    the floor is already zero, so the honest answer is that today costs
+ *    progress that has not been earned yet.
+ */
+export function costOfMissToday(standing: {
+  qualifiedDays: number;
+  shields: number;
+  recentMisses: number;
+  maxDemotionDays: number;
+  tierThresholds: number[];
+}): number | null {
+  if (standing.shields > 0) return null;
+  if (standing.tierThresholds.length === 0) return null;
+  if (standing.qualifiedDays <= 0) return null;
+
+  const tiers = standing.tierThresholds.map((dayThreshold) => ({
+    dayThreshold,
+    name: '',
+    rewardKind: 'digital' as const,
+    rewardTitle: null,
+    rewardDescription: null,
+  }));
+
+  const target = demotionTarget(
+    tiers,
+    standing.qualifiedDays,
+    standing.recentMisses,
+    standing.maxDemotionDays,
+    standing.shields,
+  );
+  const cost = standing.qualifiedDays - target;
+  return cost > 0 ? cost : null;
+}

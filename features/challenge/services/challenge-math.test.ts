@@ -1,5 +1,6 @@
 import {
   buildChecklist,
+  costOfMissToday,
   daysToNextShield,
   daysToNextTier,
   demotionTarget,
@@ -233,5 +234,106 @@ describe('the live-write rule', () => {
     const list = buildChecklist(required, { habits: 5 }, 3, [], true);
     expect(list[0].done).toBe(true);
     expect(list[0].counts).toBe(false);
+  });
+});
+
+/**
+ * Pricing a miss for the reminder.
+ *
+ * The point of every case below is that the number reaches a notification, and
+ * a notification cannot be corrected. Quoting a fall to somebody holding a
+ * shield, or quoting one at all before the server has sent the ladder, is a
+ * message that is simply wrong on somebody's lock screen — so the function
+ * returns null rather than a plausible-looking zero, and each of the three
+ * reasons is pinned separately.
+ */
+describe('costOfMissToday', () => {
+  const ladder = [7, 30, 60, 90];
+
+  it('prices the fall to the rung below', () => {
+    expect(
+      costOfMissToday({
+        qualifiedDays: 84,
+        shields: 0,
+        recentMisses: 0,
+        maxDemotionDays: 45,
+        tierThresholds: ladder,
+      }),
+    ).toBe(24);
+  });
+
+  it('quotes nothing at all while a shield is held', () => {
+    // The miss is absorbed, so "0 days" beside a warning reads as a bug. The
+    // reminder says the shield will be spent instead, which is a different
+    // sentence and the true cost.
+    expect(
+      costOfMissToday({
+        qualifiedDays: 84,
+        shields: 1,
+        recentMisses: 0,
+        maxDemotionDays: 45,
+        tierThresholds: ladder,
+      }),
+    ).toBeNull();
+  });
+
+  it('quotes nothing before the ladder has arrived', () => {
+    // An empty list means the server has not been heard from, or predates
+    // 0067. Inventing a fall from no ladder is the one thing worse than saying
+    // less than we could.
+    expect(
+      costOfMissToday({
+        qualifiedDays: 84,
+        shields: 0,
+        recentMisses: 0,
+        maxDemotionDays: 45,
+        tierThresholds: [],
+      }),
+    ).toBeNull();
+  });
+
+  it('quotes nothing on day zero, where there is nothing to lose yet', () => {
+    expect(
+      costOfMissToday({
+        qualifiedDays: 0,
+        shields: 0,
+        recentMisses: 0,
+        maxDemotionDays: 45,
+        tierThresholds: ladder,
+      }),
+    ).toBeNull();
+  });
+
+  it('prices a second miss inside the window deeper than the first', () => {
+    const first = costOfMissToday({
+      qualifiedDays: 84,
+      shields: 0,
+      recentMisses: 0,
+      maxDemotionDays: 45,
+      tierThresholds: ladder,
+    });
+    const second = costOfMissToday({
+      qualifiedDays: 84,
+      shields: 0,
+      recentMisses: 1,
+      maxDemotionDays: 45,
+      tierThresholds: ladder,
+    });
+    expect(second).toBeGreaterThan(first as number);
+  });
+
+  it('honours the cap that stops the penalty inverting at the top', () => {
+    // Without max_demotion_days a miss on day 364 costs 64 and a miss on day 8
+    // costs one, which punishes the person who has invested most. The cap is
+    // what fixes that, and the price quoted has to reflect it.
+    expect(
+      costOfMissToday({
+        qualifiedDays: 364,
+        shields: 0,
+        recentMisses: 0,
+        maxDemotionDays: 45,
+        tierThresholds: [7, 30, 60, 90, 365],
+      }),
+    ).toBe(45);
   });
 });

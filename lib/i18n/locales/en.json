@@ -2830,7 +2830,17 @@
     "stateOpenUntil_other": "Runs until {{date}} — {{count}} days left.",
     "seatsLeft_one": "One place left.",
     "seatsLeft_other": "{{count}} places left.",
-    "progressSafe": "Your streak, shields and rungs are all kept exactly as they are."
+    "progressSafe": "Your streak, shields and rungs are all kept exactly as they are.",
+    "reminderCost": "Still to do: {{modules}}. Missing today drops you from {{from}} days to {{to}}.",
+    "reminderShielded": "Still to do: {{modules}}. A shield would cover tonight — but it is your last line.",
+    "lastCallTitle": "Last call",
+    "lastCallCost_one": "No shields left. Tonight costs you {{count}} day.",
+    "lastCallCost_other": "No shields left. Tonight costs you {{count}} days.",
+    "winBackTitle": "Pick it back up",
+    "winBackNext_one": "{{count}} day to the next rung. Today is day one.",
+    "winBackNext_other": "{{count}} days to the next rung. Today is day one.",
+    "winBackPlain_one": "You are on {{count}} day. Ready for the next?",
+    "winBackPlain_other": "You are on {{count}} days. Ready for the next?"
   },
   "env": {
     "staging": "Staging build",

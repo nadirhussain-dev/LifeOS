@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
@@ -14,6 +14,7 @@ import { useAuthStore } from '@/features/auth/services/auth-store';
 import { ChallengeLadder } from '@/features/challenge/components/challenge-ladder';
 import { Braid } from '@/features/challenge/components/braid';
 import { DemotionSheet } from '@/features/challenge/components/demotion-sheet';
+import { scheduleWinBack } from '@/features/challenge/services/challenge-reminders';
 import { ShareButton, ShareCard } from '@/features/challenge/components/share-card';
 import { ShieldSlots } from '@/features/challenge/components/shield-slots';
 import { TodayChecklist } from '@/features/challenge/components/today-checklist';
@@ -75,7 +76,13 @@ export default function ChallengeScreen() {
   // for the not-enrolled case, where there is no run yet to belong to.
   const runSeasonId = today.data?.seasonId ?? status.seasonId;
   const seasonTiers = useChallengeTiers(runSeasonId);
-  const tiers = seasonTiers.data ?? status.tiers ?? [];
+  // Memoised because the `??` chain builds a fresh array on every render, and
+  // the win-back effect below depends on it — without this it would re-arm the
+  // notification on every re-render rather than once per demotion.
+  const tiers = useMemo(
+    () => seasonTiers.data ?? status.tiers ?? [],
+    [seasonTiers.data, status.tiers],
+  );
   const next = nextTier(tiers, qualifiedDays);
 
   /**
@@ -93,6 +100,26 @@ export default function ChallengeScreen() {
     if (unseenDemotion) markEventsSeen(unseenDemotion.id);
     setDismissed(true);
   };
+
+  /**
+   * Queues the win-back when a fall is first seen.
+   *
+   * Keyed off the same unseen event the sheet is, so it is armed exactly once
+   * per demotion — `markEventsSeen` moves the watermark on acknowledgement, and
+   * the effect does not run again for that event. Scheduled on sight rather
+   * than on dismissal, because closing the sheet is not the moment that matters
+   * and somebody who force-quits on it should still hear from us.
+   *
+   * It cancels itself the moment another day completes
+   * (`syncChallengeReminder`), so carrying straight on means never receiving
+   * it.
+   */
+  useEffect(() => {
+    if (!unseenDemotion) return;
+    const toDays = Number(unseenDemotion.detail.toDays ?? 0);
+    const next = nextTier(tiers, toDays);
+    void scheduleWinBack(toDays, next ? next.dayThreshold - toDays : null);
+  }, [unseenDemotion, tiers]);
 
   const body = () => {
     if (today.isError || season.isError) {

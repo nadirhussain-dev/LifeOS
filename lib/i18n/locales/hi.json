@@ -2830,7 +2830,17 @@
     "stateOpenUntil_other": "{{date}} तक चलेगा — {{count}} दिन बचे हैं।",
     "seatsLeft_one": "एक जगह बची है।",
     "seatsLeft_other": "{{count}} जगहें बची हैं।",
-    "progressSafe": "आपकी स्ट्रीक, शील्ड और पायदान सब जैसे थे वैसे ही सुरक्षित हैं।"
+    "progressSafe": "आपकी स्ट्रीक, शील्ड और पायदान सब जैसे थे वैसे ही सुरक्षित हैं।",
+    "reminderCost": "बाकी: {{modules}}. आज चूकने पर आप {{from}} दिन से {{to}} पर आ जाएँगे।",
+    "reminderShielded": "बाकी: {{modules}}. एक कवच आज रात बचा लेगा — पर यही आख़िरी है।",
+    "lastCallTitle": "आख़िरी मौका",
+    "lastCallCost_one": "कोई कवच नहीं बचा। आज रात आपको {{count}} दिन की कीमत चुकानी होगी।",
+    "lastCallCost_other": "कोई कवच नहीं बचा। आज रात आपको {{count}} दिन की कीमत चुकानी होगी।",
+    "winBackTitle": "फिर से शुरू करें",
+    "winBackNext_one": "अगली सीढ़ी तक {{count}} दिन। आज पहला दिन है।",
+    "winBackNext_other": "अगली सीढ़ी तक {{count}} दिन। आज पहला दिन है।",
+    "winBackPlain_one": "आप {{count}} दिन पर हैं। अगले के लिए तैयार?",
+    "winBackPlain_other": "आप {{count}} दिन पर हैं। अगले के लिए तैयार?"
   },
   "env": {
     "staging": "स्टेजिंग बिल्ड",
