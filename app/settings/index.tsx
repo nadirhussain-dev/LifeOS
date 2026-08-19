@@ -15,6 +15,7 @@ import {
   Languages,
   LayoutGrid,
   LifeBuoy,
+  Megaphone,
   Scale,
   ShieldAlert,
   Target,
@@ -50,6 +51,8 @@ import {
   hasOwner,
   isOperator as checkOperator,
 } from '@/features/operator/services/operator-repository';
+import { showAdPrivacyOptions } from '@/features/ads/services/consent';
+import { useAdsConsentStore } from '@/features/ads/store/ads-consent-store';
 import { ModuleManagerSheet } from '@/features/hub/components/module-manager-sheet';
 import type { VisibilityContext } from '@/features/hub/services/module-visibility';
 import { useModuleCurationStore } from '@/features/hub/store/module-curation-store';
@@ -183,6 +186,27 @@ export default function SettingsScreen() {
       toast.success(t('operator.claimOwnerDone'));
       router.push('/settings/operator');
     });
+
+  /**
+   * Whether the UMP SDK says this user is entitled to revisit their ad
+   * consent — broadly, whether they are in the EEA/UK. Everyone else has no
+   * form to reopen, and `showPrivacyOptionsForm()` would no-op for them, so
+   * the row below does not exist rather than existing and doing nothing.
+   *
+   * Shown regardless of plan. A Plus subscriber has no ads requested for
+   * them at all, which makes the row arguably moot — but consent may already
+   * have been collected before they subscribed, and "you may withdraw
+   * consent" is not a promise to withdraw the moment it stops mattering to
+   * us.
+   */
+  const adPrivacyRequired = useAdsConsentStore((s) => s.privacyOptionsRequired);
+
+  const handleAdPrivacyOptions = async () => {
+    // Failure here means the form could not be presented (no network to
+    // fetch it, or the SDK never finished its info update) — say so, rather
+    // than leaving a tapped row that looks inert.
+    if (!(await showAdPrivacyOptions())) toast.error(t('ads.privacyOptionsFailed'));
+  };
 
   const toggleAppLock = async (next: boolean) => {
     if (next) {
@@ -457,6 +481,15 @@ export default function SettingsScreen() {
                 onPress={openPrivateSpace}
               />
             )}
+            {adPrivacyRequired ? (
+              <SettingsRow
+                icon={Megaphone}
+                label={t('ads.privacyOptions')}
+                subtitle={t('ads.privacyOptionsSubtitle')}
+                onPress={() => void handleAdPrivacyOptions()}
+                chevron={false}
+              />
+            ) : null}
           </View>
         </View>
 

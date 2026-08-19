@@ -2666,6 +2666,8 @@
     "seasonRequiredModulesHint": "How many a person picks at the start",
     "seasonMinWrites": "Writes per module",
     "seasonMinWritesHint": "Per committed module, per day",
+    "seasonLiveWrites": "Require live writes",
+    "seasonLiveWritesHint": "Work logged offline doesn't count, even if the phone connects later. Only turn this on once the app version that supports it has shipped.",
     "seasonMinSeconds": "Active seconds",
     "seasonMinSecondsHint": "An anti-bot floor, not an effort test",
     "seasonGrace": "Grace hours",
@@ -2714,7 +2716,10 @@
   },
   "ads": {
     "eyebrow": "Ad",
-    "removeWithPlus": "Remove ads with Plus"
+    "removeWithPlus": "Remove ads with Plus",
+    "privacyOptions": "Ad privacy choices",
+    "privacyOptionsSubtitle": "Change what ads may use your data for",
+    "privacyOptionsFailed": "Couldn't open your ad privacy choices. Check your connection and try again."
   },
   "challenge": {
     "eyebrow": "Challenge",
@@ -2740,6 +2745,9 @@
     "todayToGo": "{{count}} to go",
     "todayConfirming": "All done — confirming",
     "todayConfirmingBody": "Waiting for the server to record it.",
+    "liveNotCounted": "Didn't count — you were offline",
+    "liveOfflineBody": "You were offline for {{modules}}, so it doesn't count yet. Open it again now that you're connected.",
+    "liveRuleNotice": "You have to be online while you do the work. Anything logged offline doesn't count toward the day, even if you connect later.",
     "toNextRung": "{{count}} to {{name}}",
     "finalRung": "Every rung climbed",
     "shieldsTitle": "Shields",

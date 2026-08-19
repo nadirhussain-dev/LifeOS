@@ -2826,6 +2826,8 @@
     "seasonRequiredModulesHint": "كم وحدة يختار الشخص في البداية",
     "seasonMinWrites": "إدخالات لكل وحدة",
     "seasonMinWritesHint": "لكل وحدة ملتزم بها، يوميًا",
+    "seasonLiveWrites": "اشتراط التسجيل أثناء الاتصال",
+    "seasonLiveWritesHint": "ما يُسجَّل دون اتصال لا يُحتسب، حتى لو اتصل الهاتف لاحقًا. لا تُفعّل هذا إلا بعد إصدار نسخة التطبيق التي تدعمه.",
     "seasonMinSeconds": "ثوانٍ من النشاط",
     "seasonMinSecondsHint": "حدّ لمنع الآليات، لا اختبار جهد",
     "seasonGrace": "ساعات السماح",
@@ -2886,7 +2888,10 @@
   },
   "ads": {
     "eyebrow": "إعلان",
-    "removeWithPlus": "إزالة الإعلانات مع Plus"
+    "removeWithPlus": "إزالة الإعلانات مع Plus",
+    "privacyOptions": "خيارات خصوصية الإعلانات",
+    "privacyOptionsSubtitle": "غيّر ما يمكن للإعلانات استخدام بياناتك من أجله",
+    "privacyOptionsFailed": "تعذّر فتح خيارات خصوصية الإعلانات. تحقّق من اتصالك وحاول مرة أخرى."
   },
   "challenge": {
     "eyebrow": "التحدي",
@@ -2912,6 +2917,9 @@
     "todayToGo": "بقي {{count}}",
     "todayConfirming": "اكتمل — جارٍ التأكيد",
     "todayConfirmingBody": "في انتظار تسجيل الخادم.",
+    "liveNotCounted": "لم يُحتسب — كنت دون اتصال",
+    "liveOfflineBody": "كنت دون اتصال أثناء {{modules}}، لذلك لم يُحتسب بعد. افتحه مرة أخرى الآن بعد اتصالك.",
+    "liveRuleNotice": "يجب أن تكون متصلًا بالإنترنت أثناء العمل. ما يُسجَّل دون اتصال لا يُحتسب لليوم، حتى لو اتصلت لاحقًا.",
     "toNextRung": "{{count}} حتى {{name}}",
     "finalRung": "اكتملت كل الدرجات",
     "shieldsTitle": "الدروع",

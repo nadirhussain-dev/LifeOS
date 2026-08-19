@@ -2,45 +2,19 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, View } from 'react-native';
-import type * as GoogleMobileAdsModule from 'react-native-google-mobile-ads';
 
 import { Text } from '@/components/ui/text';
 import { useAuthStore } from '@/features/auth/services/auth-store';
-import { usePlan } from '@/features/billing/hooks/use-billing';
+import { useEntitlement } from '@/features/billing/hooks/use-billing';
 import { useBillingStore } from '@/features/billing/store/billing-store';
 import { ADS_MODULE_ID, type AdPlacement } from '@/features/ads/config';
+import { loadAdsModule } from '@/features/ads/services/ads-module';
+import { useAdsConsentStore } from '@/features/ads/store/ads-consent-store';
 import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 import { useTheme } from '@/hooks/use-theme';
 import { env } from '@/lib/env';
 
 type Props = { placement: AdPlacement };
-
-// Loaded lazily via `require()`, guarded by try/catch, rather than a static
-// ES `import` at the top of this file — a static import is evaluated (and
-// can throw) the instant anything imports this file, which would crash the
-// whole app rather than just this ad slot. That's not hypothetical: a still
-// -open upstream bug (the JS spec calls `TurboModuleRegistry.getEnforcing`,
-// but the Android native module is a legacy bridge module, not a real
-// TurboModule) throws on New Architecture today —
-// https://github.com/invertase/react-native-google-mobile-ads/issues/676
-// Resolved once, cached, so every AdSlot instance shares one outcome.
-let adsModule: typeof GoogleMobileAdsModule | null | undefined;
-function loadAdsModule(): typeof GoogleMobileAdsModule | null {
-  if (adsModule === undefined) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      adsModule = require('react-native-google-mobile-ads');
-    } catch {
-      adsModule = null;
-    }
-  }
-  // TS can't carry the narrowing on a module-scope `let` across the
-  // try/catch above out to here, even though both branches always leave it
-  // `typeof GoogleMobileAdsModule | null` — never `undefined` — by the time
-  // execution reaches this line. `?? null` says so explicitly instead of
-  // widening the return type to admit a value this function never returns.
-  return adsModule ?? null;
-}
 
 /**
  * One ad slot — see config.ts for the placement list, the "never in
@@ -53,11 +27,14 @@ function loadAdsModule(): typeof GoogleMobileAdsModule | null {
  * everything else here (initialization, layout, the Plus gate) doesn't
  * change.
  *
- * Renders nothing for a Plus account, nothing before a signed-in account's
- * plan cache has been checked once (never flash an ad at a paying
- * subscriber while `useBillingSync`'s first round trip is in flight), and
- * nothing if the ad itself fails to load (a dev environment without the
- * native module, or no network) — never an empty grey box.
+ * Renders nothing for a tier whose `ads` entitlement is off, nothing until
+ * the UMP consent flow has
+ * granted `canRequestAds` (see features/ads/services/consent.ts — an EEA user
+ * who declines never has an ad requested for them at all), nothing before a
+ * signed-in account's plan cache has been checked once (never flash an ad at
+ * a paying subscriber while `useBillingSync`'s first round trip is in
+ * flight), and nothing if the ad itself fails to load (a dev environment
+ * without the native module, or no network) — never an empty grey box.
  *
  * "Fails to load" was too narrow a condition for that promise. A banner that
  * is still fetching — or that quietly never fills without ever calling
@@ -83,7 +60,17 @@ export function AdSlot({ placement }: Props) {
   const { t } = useTranslation();
   const { c } = useTheme();
   const session = useAuthStore((s) => s.session);
-  const { isPlus } = usePlan();
+  // The entitlement, not `isPlus`. `plan_entitlements.ads` (0059) is the
+  // operator-editable answer to "does this tier see ads", and reading the tier
+  // ladder instead left that column doing nothing: turning ads off for the
+  // standard tier changed no behaviour anywhere. Named for what it grants —
+  // true means ads are shown — so the row reads the same way in the table.
+  //
+  // Its fallback is the freemium row (`ENTITLEMENT_DEFAULTS`), so a cache miss
+  // shows an ad to somebody who may have paid. That is the deliberate direction:
+  // the correction is one refresh away, whereas defaulting the other way hands
+  // out a paid capability to anyone whose network dropped.
+  const showAds = useEntitlement('ads');
   const checkedAt = useBillingStore((s) => s.checkedAt);
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -92,10 +79,14 @@ export function AdSlot({ placement }: Props) {
   // so a network blip never strips ads *back in* for someone who turned
   // their limited data on to avoid them.
   const adsEnabled = useModuleFlagsStore((s) => s.flags[ADS_MODULE_ID]?.enabled !== false);
+  // Consent (features/ads/services/consent.ts). False until UMP has answered
+  // this launch, so the very first render of a cold start cannot put an ad
+  // request on the wire ahead of the consent form.
+  const canRequestAds = useAdsConsentStore((s) => s.canRequestAds);
 
   const mod = loadAdsModule();
 
-  if (isPlus || failed || !mod || !adsEnabled) return null;
+  if (!showAds || failed || !mod || !adsEnabled || !canRequestAds) return null;
   if (session && checkedAt === null) return null;
 
   const { BannerAd, BannerAdSize, TestIds } = mod;
@@ -115,7 +106,13 @@ export function AdSlot({ placement }: Props) {
       {loaded && <Text variant="micro">{t('ads.eyebrow')}</Text>}
       <BannerAd
         unitId={realUnitId || TestIds.BANNER}
-        size={BannerAdSize.BANNER}
+        // Anchored adaptive, not the fixed 320x50 `BANNER`. It fills the
+        // device width and picks its own height, which is the format Google
+        // optimises fill and price for — the fixed unit leaves both on the
+        // table on every screen wider than a 2016 phone. The `loaded` gate
+        // below already handles the variable height: nothing is drawn around
+        // the banner until it reports a real ad on screen.
+        size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
         onAdLoaded={() => setLoaded(true)}
         onAdFailedToLoad={() => setFailed(true)}
       />
