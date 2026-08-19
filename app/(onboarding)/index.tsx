@@ -10,6 +10,7 @@ import { useAuthStore } from '@/features/auth/services/auth-store';
 import { AboutYouStep } from '@/features/onboarding/components/about-you-step';
 import { AccountStep } from '@/features/onboarding/components/account-step';
 import { FocusStep } from '@/features/onboarding/components/focus-step';
+import { LearnStep } from '@/features/onboarding/components/learn-step';
 import { LockStep } from '@/features/onboarding/components/lock-step';
 import { ReadyStep } from '@/features/onboarding/components/ready-step';
 import { ShapeStep, hasAnythingToShape } from '@/features/onboarding/components/shape-step';
@@ -18,6 +19,10 @@ import {
   applyOnboardingSeed,
   type SeedResult,
 } from '@/features/onboarding/services/seed-from-onboarding';
+import {
+  applyReminderDefaults,
+  type DefaultedReminder,
+} from '@/features/onboarding/services/reminder-defaults';
 import { useOnboardingDraftStore } from '@/features/onboarding/store/onboarding-draft-store';
 import { useProfileStore } from '@/features/profile/store/profile-store';
 import {
@@ -28,6 +33,7 @@ import {
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useTheme } from '@/hooks/use-theme';
 import { deviceCurrencyCode } from '@/lib/locale';
+import { requestNotificationPermission } from '@/lib/notifications';
 
 /**
  * First-run setup.
@@ -61,7 +67,7 @@ import { deviceCurrencyCode } from '@/lib/locale';
  * areas. Hardcoding indices around conditional screens is how a back button ends
  * up on a screen that no longer exists.
  */
-type StepId = 'welcome' | 'account' | 'about' | 'focus' | 'shape' | 'lock' | 'ready';
+type StepId = 'welcome' | 'account' | 'about' | 'focus' | 'shape' | 'learn' | 'lock' | 'ready';
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -138,6 +144,10 @@ export default function OnboardingScreen() {
     if (!authed) list.push('account');
     list.push('about', 'focus');
     if (hasAnythingToShape(focusAreas)) list.push('shape');
+    // After the answers, before the finish. It needs the focus areas to name
+    // which reminders it is about to switch on, and it has to come before
+    // `ready` so the receipt there can confirm what actually landed.
+    list.push('learn');
     list.push('lock', 'ready');
     return list;
   }, [authed, focusAreas]);
@@ -207,6 +217,26 @@ export default function OnboardingScreen() {
   );
 
   const [lockChoice, setLockChoice] = useState(false);
+  const [remindersOn, setRemindersOn] = useState<DefaultedReminder[]>([]);
+
+  /**
+   * The one permission ask, in front of the sentence explaining it.
+   *
+   * Everything the app schedules is dead without this, and iOS gives one
+   * chance per install — which is why it is here rather than fired from
+   * whichever scheduling call happens to run first, with no context at all.
+   */
+  const allowReminders = useCallback(async () => {
+    const granted = await requestNotificationPermission();
+    if (granted) {
+      // Only now. Every scheduling call below no-ops without permission, and a
+      // set of switches flipped on for reminders that cannot fire is exactly
+      // the "settings screen describing something that does not happen" bug
+      // this whole area already has.
+      setRemindersOn(await applyReminderDefaults(focusAreas));
+    }
+    return granted;
+  }, [focusAreas]);
 
   const enableLock = useCallback(async () => {
     const ok = await authenticate(t('onboarding.confirmMethod', { method: bioLabel }));
@@ -278,6 +308,10 @@ export default function OnboardingScreen() {
           <FocusStep selected={focusAreas} onToggle={toggleFocus} onNext={goNext} />
         ) : null}
 
+        {current === 'learn' ? (
+          <LearnStep focusAreas={focusAreas} onAllowReminders={allowReminders} onNext={goNext} />
+        ) : null}
+
         {current === 'shape' ? (
           <ShapeStep
             focusAreas={focusAreas}
@@ -302,7 +336,12 @@ export default function OnboardingScreen() {
         ) : null}
 
         {current === 'ready' ? (
-          <ReadyStep name={name} seed={seed} onFinish={() => finish(lockChoice)} />
+          <ReadyStep
+            name={name}
+            seed={seed}
+            remindersOn={remindersOn}
+            onFinish={() => finish(lockChoice)}
+          />
         ) : null}
       </Animated.View>
     </View>

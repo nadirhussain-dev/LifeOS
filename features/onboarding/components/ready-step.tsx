@@ -32,10 +32,14 @@ import { alpha } from '@/lib/color';
 export function ReadyStep({
   name,
   seed,
+  remindersOn,
   onFinish,
 }: {
   name: string;
   seed: SeedResult;
+  /** Module reminders switched on during setup, as reported by
+   *  `applyReminderDefaults` — what landed, never what was requested. */
+  remindersOn: string[];
   onFinish: () => void;
 }) {
   const { t } = useTranslation();
@@ -43,6 +47,16 @@ export function ReadyStep({
   const reducedMotion = useReducedMotion();
 
   const lines: string[] = [];
+  // Named here because turning reminders on is something the app did *to* the
+  // user's phone without them asking for each one. The same posture the app
+  // already takes with quiet hours: say what was set, and where to change it.
+  if (remindersOn.length > 0) {
+    lines.push(
+      t('onboarding.readyReminders', {
+        modules: remindersOn.map((id) => t(`syncModule.${id}`)).join(', '),
+      }),
+    );
+  }
   if (seed.habitsCreated > 0) {
     lines.push(t('onboarding.readyHabits', { count: seed.habitsCreated }));
   }

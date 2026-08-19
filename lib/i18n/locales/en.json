@@ -163,7 +163,22 @@
     "readyCurrency": "Budget set to {{currency}}",
     "openDaykeep": "Open Daykeep",
     "genderQuestion": "How do you describe yourself?",
-    "genderWhy": "Only used to decide which private modules to offer first. Never synced, never sent anywhere."
+    "genderWhy": "Only used to decide which private modules to offer first. Never synced, never sent anywhere.",
+    "learnEyebrow": "How it works",
+    "learnTitle": "Four things worth knowing",
+    "learnBody": "Thirty seconds, then you are in.",
+    "learnLayoutTitle": "Five tabs, everything else in the Hub",
+    "learnLayoutBody": "Today, Tasks, Habits and Journal sit along the bottom. The Hub holds the rest — money, sleep, study, photos and more.",
+    "learnOfflineTitle": "Works with no signal",
+    "learnOfflineBody": "Everything is stored on your phone first. An account is optional, and only needed to sync between devices.",
+    "learnPrivateTitle": "The private space is separate",
+    "learnPrivateBody": "It has its own lock, and what you put in it is encrypted on your phone before it goes anywhere.",
+    "learnRemindersTitle": "Reminders are how we reach you",
+    "learnRemindersBody": "One nudge per module, at a sensible hour, quiet between 10pm and 7am. Change or switch off any of them in Settings.",
+    "learnRemindersList": "We will set these up: {{modules}}",
+    "learnAllow": "Allow reminders",
+    "learnNotNow": "Not now",
+    "readyReminders": "Reminders on for {{modules}}"
   },
   "fields": {
     "priority": "Priority",
