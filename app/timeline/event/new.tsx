@@ -177,6 +177,7 @@ export default function NewCalendarEventScreen() {
                 const selected = swatch === colorToken;
                 return (
                   <Pressable
+                    hitSlop={8}
                     accessibilityRole="button"
                     key={swatch}
                     onPress={() => {

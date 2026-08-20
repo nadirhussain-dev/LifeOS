@@ -153,6 +153,7 @@ export const AlbumCommentSheet = forwardRef<BottomSheetModal, Props>(function Al
               style={{ flex: 1, color: theme.foreground, maxHeight: 90 }}
             />
             <Pressable
+              hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={t('private.postComment')}
               disabled={!draft.trim() || mutations.addComment.isPending}

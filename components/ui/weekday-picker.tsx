@@ -59,6 +59,7 @@ export function WeekdayPicker({ value, onChange, tint }: Props) {
         const isSelected = selected.has(day);
         return (
           <Pressable
+            hitSlop={8}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: isSelected }}
             // The initial alone is meaningless to a screen reader, and in

@@ -139,6 +139,7 @@ function ScaleRow({ icon: Icon, label, value, levelLabels, tint, onChange }: Sca
           const isCurrent = value === level;
           return (
             <Pressable
+              hitSlop={8}
               key={level}
               onPress={() => {
                 Haptics.selectionAsync();

@@ -48,6 +48,7 @@ function HourStepper({
       <Text variant="caption">{label}</Text>
       <View className="flex-row items-center gap-2">
         <Pressable
+          hitSlop={8}
           accessibilityRole="button"
           onPress={() => onChange(Math.max(0, hour - 1))}
           className="h-8 w-8 items-center justify-center rounded-full border border-border"
@@ -56,6 +57,7 @@ function HourStepper({
         </Pressable>
         <Text className="w-20 text-center font-sora-semibold">{formatHour(hour)}</Text>
         <Pressable
+          hitSlop={8}
           accessibilityRole="button"
           onPress={() => onChange(Math.min(23, hour + 1))}
           className="h-8 w-8 items-center justify-center rounded-full border border-border"

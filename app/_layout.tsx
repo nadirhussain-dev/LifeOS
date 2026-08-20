@@ -411,6 +411,12 @@ function AppNavigator({ background }: { background: string }) {
       <Stack.Screen name="budget/savings/new" options={{ presentation: 'modal' }} />
       <Stack.Screen name="budget/debts/new" options={{ presentation: 'modal' }} />
       <Stack.Screen name="gallery/album/new" options={{ presentation: 'modal' }} />
+      {/* These two were declared in no layout at all, so they inherited the
+          default push while all sixteen sibling creation screens presented as
+          modals — the same task with different physics. A push says "you have
+          navigated deeper"; a modal says "finish this or cancel it", which is
+          what a new-thing form actually is. */}
+      <Stack.Screen name="budget/recurring/new" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }

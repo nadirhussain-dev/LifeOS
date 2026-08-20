@@ -88,6 +88,7 @@ export default function AlbumNotesScreen() {
               style={{ maxHeight: 90 }}
             />
             <Pressable
+              hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={t('private.postComment')}
               disabled={!draft.trim() || addNote.isPending}

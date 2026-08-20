@@ -53,6 +53,7 @@ export default function NewPlaylistScreen() {
               const selected = swatch === colorToken;
               return (
                 <Pressable
+                  hitSlop={8}
                   accessibilityRole="button"
                   key={swatch}
                   onPress={() => {
