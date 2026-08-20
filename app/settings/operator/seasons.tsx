@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { ListSkeleton } from '@/components/ui/list-skeleton';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { QueryError } from '@/components/ui/query-error';
@@ -105,6 +106,7 @@ export default function OperatorSeasonsScreen() {
           <Text variant="muted">{t('operator.seasonsEmpty')}</Text>
         ) : null}
 
+        {seasons.isLoading ? <ListSkeleton rows={3} /> : null}
         {rows.map((season) => (
           <SeasonRow
             key={season.id}

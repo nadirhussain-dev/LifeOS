@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { ListSkeleton } from '@/components/ui/list-skeleton';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
@@ -126,6 +127,7 @@ export default function OperatorRosterScreen() {
 
       <ScrollView contentContainerClassName="gap-6 px-5 pb-10" showsVerticalScrollIndicator={false}>
         <View className={cardClass({ padding: 'none' }, 'px-4')}>
+          {roster.isLoading ? <ListSkeleton rows={3} /> : null}
           {(roster.data?.ok ? roster.data.data : []).map((op, index) => {
             const label = op.displayName ?? op.email ?? op.userId;
             return (

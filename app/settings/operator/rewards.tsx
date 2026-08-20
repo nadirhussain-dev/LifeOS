@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Switch, View } from 'react-native';
 
+import { ListSkeleton } from '@/components/ui/list-skeleton';
 import { cardClass } from '@/components/ui/card';
 import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -223,7 +224,12 @@ export default function OperatorRewardsScreen() {
               />
             </Section>
           </>
-        ) : null}
+        ) : (
+          // The chain used to end in `null`, so the whole console was blank
+          // while the season and its stats were in flight — and these screens
+          // hit the network unconditionally, so that is the common case.
+          <ListSkeleton rows={4} />
+        )}
       </ScrollView>
     </View>
   );

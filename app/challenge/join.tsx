@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { ListSkeleton } from '@/components/ui/list-skeleton';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { QueryError } from '@/components/ui/query-error';
@@ -123,6 +124,7 @@ export default function ChallengeJoinScreen() {
 
             <View className={cardClass({ padding: 'md' }, 'gap-1')}>
               <Text variant="micro">{t('challenge.joinRequired')}</Text>
+              {season.isLoading ? <ListSkeleton rows={3} /> : null}
               {(status.modules ?? []).map((module, index) => {
                 const picked = chosen.includes(module.moduleId);
                 const rank = chosen.indexOf(module.moduleId);

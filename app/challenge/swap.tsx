@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { ListSkeleton } from '@/components/ui/list-skeleton';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -124,6 +125,7 @@ export default function ChallengeSwapScreen() {
 
         <View className={cardClass({ padding: 'md' }, 'gap-1')}>
           <Text variant="micro">{t('challenge.swapOut')}</Text>
+          {today.isLoading ? <ListSkeleton rows={3} /> : null}
           {committed.map((moduleId) => (
             <Row
               key={moduleId}
@@ -140,6 +142,7 @@ export default function ChallengeSwapScreen() {
 
         <View className={cardClass({ padding: 'md' }, 'gap-1')}>
           <Text variant="micro">{t('challenge.swapIn')}</Text>
+          {season.isLoading ? <ListSkeleton rows={3} /> : null}
           {available.map((moduleId) => (
             <Row
               key={moduleId}

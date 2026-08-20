@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { ListSkeleton } from '@/components/ui/list-skeleton';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
@@ -146,6 +147,7 @@ export default function OperatorCouponsScreen() {
       </View>
 
       <ScrollView contentContainerClassName="gap-3 px-5 pb-10" showsVerticalScrollIndicator={false}>
+        {coupons.isLoading ? <ListSkeleton rows={3} /> : null}
         {list.map((coupon) => (
           <View
             key={coupon.id}
