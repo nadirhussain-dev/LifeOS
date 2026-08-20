@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
-import { colors as dsColors } from '@/constants/design-tokens';
+import { chartSeries, colors as dsColors } from '@/constants/design-tokens';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 /**
@@ -14,10 +14,14 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
  * both themes and for being distinguishable side by side.
  */
 
-const PALETTE = {
-  light: ['#0d9488', '#3b82f6', '#8b5cf6', '#f97316', '#e11d48', '#0891b2'],
-  dark: ['#2dd4bf', '#60a5fa', '#a78bfa', '#fb923c', '#fb7185', '#22d3ee'],
-} as const;
+/*
+ * `chartSeries`, which is what the note above always claimed this was — but it
+ * had been re-typed as a near-copy that drifted: six entries against the
+ * series' seven, a different first colour and a different last, and ten of the
+ * twelve values were characters-identical to a registered module tint. Reading
+ * the real thing makes the comment true and deletes the copy.
+ */
+const PALETTE = chartSeries;
 
 /** Stable per-name colour: same string always lands on the same swatch. */
 function colorFor(name: string, scheme: 'light' | 'dark'): string {

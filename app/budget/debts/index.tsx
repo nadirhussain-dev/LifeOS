@@ -12,15 +12,15 @@ import { Segmented } from '@/components/ui/segmented';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
+import { DEBT_TINT } from '@/features/budget/config/budget-config';
 import { DebtCard } from '@/features/budget/components/debt-card';
 import { formatMoney } from '@/features/budget/services/money';
 import { useBudgetSettings } from '@/features/budget/hooks/use-budget';
 import { useDebts } from '@/features/budget/hooks/use-debts';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/hooks/use-theme';
 import { alpha } from '@/lib/color';
 import type { DebtDirection, DebtWithStatus } from '@/features/budget/types/budget.types';
-
-const DEBT_TINT = '#6366f1';
 
 /** Urgency ordering for the active list: overdue → due soon → upcoming → no date. */
 const STATUS_ORDER: Record<string, number> = { overdue: 0, due_soon: 1, upcoming: 2, no_date: 3 };
@@ -35,6 +35,7 @@ function sortByUrgency(a: DebtWithStatus, b: DebtWithStatus): number {
 export default function DebtsScreen() {
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
+  const debtTint = useTheme().resolve(DEBT_TINT);
   const { t } = useTranslation();
   const { data: settings } = useBudgetSettings();
   const { debts, totals, isLoading } = useDebts();
@@ -75,7 +76,7 @@ export default function DebtsScreen() {
           icon={HandCoins}
           title={t('budget.trackWhoOwes')}
           description={t('budget.debtsEmptyBody')}
-          tint={DEBT_TINT}
+          tint={debtTint}
           actionLabel={t('budget.addAnIou')}
           onAction={() => router.push('/budget/debts/new')}
         />
@@ -85,7 +86,7 @@ export default function DebtsScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Net position hero */}
-          <HeroCard tint={DEBT_TINT}>
+          <HeroCard tint={debtTint}>
             <View className="gap-4">
               <View className="items-center gap-1">
                 <Text
@@ -127,7 +128,7 @@ export default function DebtsScreen() {
             options={filterOptions}
             value={filter}
             onChange={setFilter}
-            activeColor={DEBT_TINT}
+            activeColor={debtTint}
           />
 
           {active.length === 0 ? (

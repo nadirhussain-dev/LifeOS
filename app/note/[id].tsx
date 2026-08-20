@@ -26,6 +26,7 @@ import { AttributeRow } from '@/components/ui/attribute-row';
 import { ReminderPicker } from '@/components/ui/reminder-picker';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { VoiceNoteRecorder } from '@/components/ui/voice-note-recorder';
+import { moduleTints } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { BacklinksPanel } from '@/features/notes/components/backlinks-panel';
 import { GeneratedTasksPanel } from '@/features/notes/components/generated-tasks-panel';
@@ -144,7 +145,7 @@ export default function NoteDetailScreen() {
     return (
       <View className="flex-1 bg-background">
         <Stack.Screen options={{ headerShown: false }} />
-        <ScreenHeader eyebrow={t('notes.title')} tint="#eab308" />
+        <ScreenHeader eyebrow={t('notes.title')} tint={moduleTints.notes} />
         {noteLoading ? (
           <View className="gap-3 px-5 pt-2">
             <Skeleton className="h-8 w-2/3" />
@@ -203,7 +204,7 @@ export default function NoteDetailScreen() {
 
       <ScreenHeader
         eyebrow={t('notes.title')}
-        tint="#eab308"
+        tint={moduleTints.notes}
         right={
           <View className="flex-row gap-4">
             <Pressable

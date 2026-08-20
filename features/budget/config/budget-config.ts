@@ -36,6 +36,18 @@ export type CategoryMeta<T extends string> = {
 };
 
 /** Fixed expense catalog — each drives an icon + tint in lists and the donut. */
+/**
+ * Debts — a budget sub-area rather than a category the user picks, so it sits
+ * here beside the categories rather than in `moduleTints` (Budget's own teal
+ * belongs to the module; this is one screen inside it).
+ *
+ * Indigo, which is the `#6366f1` the three debt screens each hardcoded — so
+ * light is unchanged. It had no dark column, and note that the literal was
+ * character-identical to the Sleep module's light tint, which is the kind of
+ * collision a shared name prevents and a copied hex does not.
+ */
+export const DEBT_TINT: TintPair = contentTints.indigo;
+
 export const EXPENSE_CATEGORIES: CategoryMeta<ExpenseCategoryId>[] = [
   { id: 'food', label: 'Food', icon: Utensils, tint: contentTints.orange },
   { id: 'shopping', label: 'Shopping', icon: ShoppingBag, tint: contentTints.pink },

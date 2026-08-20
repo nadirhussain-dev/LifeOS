@@ -14,9 +14,8 @@ import { formatStudyDuration } from '@/features/study/services/study-stats';
 import { useStudyMutations } from '@/features/study/hooks/use-study-mutations';
 import { useStudySettings, useStudySubjects } from '@/features/study/hooks/use-study';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/hooks/use-theme';
 import { confirm } from '@/lib/dialog-store';
-
-const STUDY_TINT = '#8b5cf6';
 
 type StepperProps = {
   label: string;
@@ -27,6 +26,7 @@ type StepperProps = {
 
 function Stepper({ label, value, onDecrease, onIncrease }: StepperProps) {
   const scheme = useColorScheme() ?? 'light';
+  const { tint } = useTheme();
   return (
     <View className={cardClass({ padding: 'row' }, 'flex-row items-center justify-between')}>
       <Text className="font-sora-medium text-foreground">{label}</Text>
@@ -50,7 +50,7 @@ function Stepper({ label, value, onDecrease, onIncrease }: StepperProps) {
           onPress={onIncrease}
           hitSlop={6}
           className="h-9 w-9 items-center justify-center rounded-xl"
-          style={{ backgroundColor: STUDY_TINT }}
+          style={{ backgroundColor: tint('study') }}
         >
           <Plus size={16} color="#ffffff" />
         </Pressable>
@@ -61,6 +61,7 @@ function Stepper({ label, value, onDecrease, onIncrease }: StepperProps) {
 
 export default function StudySettingsScreen() {
   const router = useRouter();
+  const { tint } = useTheme();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const { data: settings } = useStudySettings();
@@ -180,7 +181,7 @@ export default function StudySettingsScreen() {
               className="flex-1 text-foreground"
             />
             <Pressable accessibilityRole="button" onPress={addNewSubject} hitSlop={8}>
-              <Plus size={18} color={STUDY_TINT} />
+              <Plus size={18} color={tint('study')} />
             </Pressable>
           </View>
         </View>

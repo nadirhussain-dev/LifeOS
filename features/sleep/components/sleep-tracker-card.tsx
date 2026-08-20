@@ -11,13 +11,13 @@ import { Text } from '@/components/ui/text';
 import { formatClock, formatDuration, minutesOfDay } from '@/features/sleep/services/sleep-stats';
 import { useSleepTrackerStore } from '@/features/sleep/store/sleep-tracker-store';
 import { alpha } from '@/lib/color';
-
-const SLEEP_TINT = '#6366f1';
+import { useTheme } from '@/hooks/use-theme';
 
 /** The live bedtime tracker: tap "Going to bed" to stamp the start of sleep,
  * then "I'm awake" on waking — it hands the captured bed→wake span straight to
  * the log form so the user never has to remember or calculate their times. */
 export function SleepTrackerCard() {
+  const { tint } = useTheme();
   const router = useRouter();
   const { t } = useTranslation();
   const { sleepingSince, startSleep, cancelSleep } = useSleepTrackerStore();
@@ -39,7 +39,7 @@ export function SleepTrackerCard() {
     };
 
     return (
-      <HeroCard tint={SLEEP_TINT}>
+      <HeroCard tint={tint('sleep')}>
         <View className="gap-4">
           <View className="flex-row items-center gap-2">
             <Moon size={16} color="#ffffff" />
@@ -82,9 +82,9 @@ export function SleepTrackerCard() {
       <View className="flex-row items-center gap-3">
         <View
           className="h-11 w-11 items-center justify-center rounded-2xl"
-          style={{ backgroundColor: alpha(SLEEP_TINT, 0.14) }}
+          style={{ backgroundColor: alpha(tint('sleep'), 0.14) }}
         >
-          <Moon size={22} color={SLEEP_TINT} />
+          <Moon size={22} color={tint('sleep')} />
         </View>
         <View className="flex-1">
           <Text className="font-sora-semibold text-foreground">{t('sleep.goingToSleep')}</Text>
@@ -93,7 +93,7 @@ export function SleepTrackerCard() {
       </View>
       <GradientButton
         label={t('sleep.goingToBed')}
-        tint={SLEEP_TINT}
+        tint={tint('sleep')}
         icon={Moon}
         onPress={startSleep}
       />

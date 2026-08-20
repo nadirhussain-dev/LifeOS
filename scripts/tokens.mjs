@@ -11,7 +11,7 @@
  * scripts/gen-design-doc.mjs (the doc generator) so the guard and the docs
  * can never disagree about what the tokens are.
  */
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -138,4 +138,18 @@ export function hslMatches(a, b, tolerance = { h: 2, s: 2, l: 2 }) {
   // Hue is meaningless at very low saturation, so don't judge it there.
   const hueOk = a.s < 8 || b.s < 8 || dh <= tolerance.h;
   return hueOk && Math.abs(a.s - b.s) <= tolerance.s && Math.abs(a.l - b.l) <= tolerance.l;
+}
+
+/** Every `.tsx` under the given directories. */
+export function sourceFiles(...directories) {
+  const out = [];
+  const walk = (directory) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (entry.name.endsWith('.tsx') && !entry.name.includes('.test.')) out.push(path);
+    }
+  };
+  for (const directory of directories) walk(join(ROOT, directory));
+  return out;
 }

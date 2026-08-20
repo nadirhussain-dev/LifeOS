@@ -13,15 +13,15 @@ import { Segmented } from '@/components/ui/segmented';
 import { SheetHeader } from '@/components/ui/sheet-header';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
+import { DEBT_TINT } from '@/features/budget/config/budget-config';
 import { REMINDER_DAY_OPTIONS } from '@/features/budget/services/debt-status';
 import { formatMoney, parseAmountToCents } from '@/features/budget/services/money';
 import { useBudgetSettings } from '@/features/budget/hooks/use-budget';
 import { useDebtMutations, useDebts } from '@/features/budget/hooks/use-debts';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/hooks/use-theme';
 import { notificationsAvailable } from '@/lib/notifications';
 import type { DebtDirection } from '@/features/budget/types/budget.types';
-
-const DEBT_TINT = '#6366f1';
 
 function reminderLabel(days: number, t: TFunction): string {
   if (days === 0) return t('budget.onTheDay');
@@ -33,6 +33,7 @@ export default function DebtFormScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
+  const debtTint = useTheme().resolve(DEBT_TINT);
   const { t } = useTranslation();
   const { data: settings } = useBudgetSettings();
   const { debts } = useDebts();
@@ -121,7 +122,7 @@ export default function DebtFormScreen() {
             options={directionOptions}
             value={direction}
             onChange={setDirection}
-            activeColor={DEBT_TINT}
+            activeColor={debtTint}
           />
         )}
 
@@ -140,7 +141,7 @@ export default function DebtFormScreen() {
             {t('budget.amount')}
           </Text>
           <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
-            <Text className="font-sora-bold text-xl" style={{ color: DEBT_TINT }}>
+            <Text className="font-sora-bold text-xl" style={{ color: debtTint }}>
               {currency}
             </Text>
             <TextInput
@@ -221,7 +222,7 @@ export default function DebtFormScreen() {
                     key={days ?? 'off'}
                     onPress={() => setReminderDaysBefore(days)}
                     style={
-                      selected ? { backgroundColor: DEBT_TINT, borderColor: DEBT_TINT } : undefined
+                      selected ? { backgroundColor: debtTint, borderColor: debtTint } : undefined
                     }
                     className="rounded-full border border-border px-3.5 py-2"
                   >

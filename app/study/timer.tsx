@@ -31,18 +31,34 @@ import {
   targetSeconds,
   useStudyTimerStore,
 } from '@/features/study/store/study-timer-store';
+import { contentTints, moduleTints, type TintPair } from '@/constants/design-tokens';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/hooks/use-theme';
 import { confirm } from '@/lib/dialog-store';
 import { toast } from '@/lib/toast-store';
 
-const FOCUS_TINT = '#8b5cf6';
-const BREAK_TINT = '#22c55e';
+/**
+ * The two phases.
+ *
+ * `focus` is the Study module's own tint, so a focus session looks like Study —
+ * it used to be `#8b5cf6`, which is Study's *dark* value and Journal's *light*
+ * one, so on light theme the timer wore Journal's violet. `break` is content
+ * green (the `#22c55e` that was hardcoded, so unchanged on light) rather than
+ * `success`: finishing a break is not an achievement, it is a phase.
+ *
+ * Pairs, not hexes, so both retune for dark like everything else.
+ */
+const PHASE_TINT = {
+  focus: moduleTints.study,
+  break: contentTints.green,
+} as const satisfies Record<string, TintPair>;
 
 export default function StudyTimerScreen() {
   const router = useRouter();
   const segments = useSegments();
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme() ?? 'light';
+  const { resolve } = useTheme();
   const { t } = useTranslation();
   const store = useStudyTimerStore();
   const { logSession } = useStudyMutations();
@@ -206,7 +222,7 @@ export default function StudyTimerScreen() {
 
   const isStopwatch = store.mode === 'stopwatch';
   const isFocus = store.phase === 'focus';
-  const tint = isFocus ? FOCUS_TINT : BREAK_TINT;
+  const tint = resolve(PHASE_TINT[isFocus ? 'focus' : 'break']);
   const target = targetSeconds(store);
   const elapsed = elapsedInPhaseNow(store, now);
   const remaining = remainingSeconds(store, now);

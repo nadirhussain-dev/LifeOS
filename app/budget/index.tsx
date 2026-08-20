@@ -21,7 +21,7 @@ import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { AdSlot } from '@/features/ads/components/ad-slot';
-import { ACCOUNTS } from '@/features/budget/config/budget-config';
+import { ACCOUNTS, DEBT_TINT } from '@/features/budget/config/budget-config';
 import { ExpenseDonut } from '@/features/budget/components/expense-donut';
 import { SavingsGoalCard } from '@/features/budget/components/savings-goal-card';
 import { TransactionRow } from '@/features/budget/components/transaction-row';
@@ -33,13 +33,13 @@ import {
 } from '@/features/budget/hooks/use-budget';
 import { useDebts } from '@/features/budget/hooks/use-debts';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/hooks/use-theme';
 import { alpha } from '@/lib/color';
-
-const DEBT_TINT = '#6366f1';
 
 export default function BudgetScreen() {
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
+  const debtTint = useTheme().resolve(DEBT_TINT);
   const { t } = useTranslation();
   const budgetTint = moduleTint('budget', scheme);
   const [anchorTime, setAnchorTime] = useState(() => Date.now());
@@ -210,9 +210,9 @@ export default function BudgetScreen() {
           >
             <View
               className="h-11 w-11 items-center justify-center rounded-xl"
-              style={{ backgroundColor: alpha(DEBT_TINT, 0.14) }}
+              style={{ backgroundColor: alpha(debtTint, 0.14) }}
             >
-              <HandCoins size={20} color={DEBT_TINT} />
+              <HandCoins size={20} color={debtTint} />
             </View>
             <View className="flex-1">
               <Text className="font-sora-semibold text-foreground">{t('budget.borrowLend')}</Text>

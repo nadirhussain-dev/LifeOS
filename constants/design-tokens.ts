@@ -266,6 +266,14 @@ export function resolveTint(pair: TintPair, theme: ThemeName): string {
  */
 export const contentTints = {
   orange: { light: '#f97316', dark: '#fb923c' },
+  /**
+   * Amber, between orange and yellow. Earns its place because the two screens
+   * that used it (study insights, sleep) place it directly BESIDE yellow — a
+   * sunrise tile next to a star tile — so folding it into `yellow` would render
+   * two distinct stats in one colour. It was `#f59e0b` hardcoded in four places
+   * with no dark column; that light value is unchanged here.
+   */
+  amber: { light: '#f59e0b', dark: '#fbbf24' },
   yellow: { light: '#eab308', dark: '#facc15' },
   green: { light: '#22c55e', dark: '#4ade80' },
   sky: { light: '#0ea5e9', dark: '#38bdf8' },

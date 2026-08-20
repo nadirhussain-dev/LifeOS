@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/hooks/use-theme';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import Animated, {
   useAnimatedStyle,
@@ -16,7 +17,12 @@ import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { moduleTint, resolveTint, type TintPair } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
-import { MOOD_EMOJI, MOOD_LABEL_KEY, MOOD_TINT } from '@/features/journal/constants';
+import {
+  MOOD_DIMENSION_TINT,
+  MOOD_EMOJI,
+  MOOD_LABEL_KEY,
+  MOOD_TINT,
+} from '@/features/journal/constants';
 import { alpha } from '@/lib/color';
 import { MOOD_REASONS, type MoodOption } from '@/features/journal/types/journal.types';
 
@@ -33,11 +39,6 @@ const ENERGY_LABELS = ['mood.energy1', 'mood.energy2', 'mood.energy3', 'mood.ene
 const STRESS_LABELS = ['mood.stress1', 'mood.stress2', 'mood.stress3', 'mood.stress4', 'mood.stress5'] as const; // prettier-ignore
 const FOCUS_LABELS = ['mood.focus1', 'mood.focus2', 'mood.focus3', 'mood.focus4', 'mood.focus5'] as const; // prettier-ignore
 const SLEEP_QUALITY_LABELS = ['mood.sleep1', 'mood.sleep2', 'mood.sleep3', 'mood.sleep4', 'mood.sleep5'] as const; // prettier-ignore
-
-const ENERGY_TINT = '#22c55e';
-const STRESS_TINT = '#f97316';
-const FOCUS_TINT = '#0ea5e9';
-const SLEEP_TINT = '#8b5cf6';
 
 function MoodButton({
   option,
@@ -201,6 +202,7 @@ export function MoodCheckin({
   onToggleReason,
 }: Props) {
   const scheme = useColorScheme() ?? 'light';
+  const { resolve } = useTheme();
   const { t } = useTranslation();
   const [sleepHoursText, setSleepHoursText] = useState(
     sleepHours !== null ? String(sleepHours) : '',
@@ -228,7 +230,7 @@ export function MoodCheckin({
         label={t('mood.energyLabel')}
         value={energy}
         levelLabels={ENERGY_LABELS}
-        tint={ENERGY_TINT}
+        tint={resolve(MOOD_DIMENSION_TINT.energy)}
         onChange={onChangeEnergy}
       />
       <ScaleRow
@@ -236,7 +238,7 @@ export function MoodCheckin({
         label={t('mood.stressLabel')}
         value={stress}
         levelLabels={STRESS_LABELS}
-        tint={STRESS_TINT}
+        tint={resolve(MOOD_DIMENSION_TINT.stress)}
         onChange={onChangeStress}
       />
       <ScaleRow
@@ -244,7 +246,7 @@ export function MoodCheckin({
         label={t('mood.focusLabel')}
         value={focus}
         levelLabels={FOCUS_LABELS}
-        tint={FOCUS_TINT}
+        tint={resolve(MOOD_DIMENSION_TINT.focus)}
         onChange={onChangeFocus}
       />
       <ScaleRow
@@ -252,12 +254,12 @@ export function MoodCheckin({
         label={t('mood.sleepQualityLabel')}
         value={sleepQuality}
         levelLabels={SLEEP_QUALITY_LABELS}
-        tint={SLEEP_TINT}
+        tint={resolve(MOOD_DIMENSION_TINT.sleep)}
         onChange={onChangeSleepQuality}
       />
 
       <View className="flex-row items-center gap-2">
-        <Moon size={13} color={SLEEP_TINT} />
+        <Moon size={13} color={resolve(MOOD_DIMENSION_TINT.sleep)} />
         <Text variant="micro" className="font-sora-semibold">
           {t('mood.hoursSlept')}
         </Text>
