@@ -74,6 +74,10 @@ import { syncCycleReminders } from '@/features/private/services/cycle-reminders'
 // comment on why.
 import '@/features/private/services/register-reminders';
 import '@/features/insights/services/register-reminders';
+// Likewise for the streak reminders, which were the one scheduler the launch
+// rebuild could not see — so its cancel-all deleted them and nothing put them
+// back. See features/challenge/services/register-reminders.ts.
+import '@/features/challenge/services/register-reminders';
 import { usePrivateStore } from '@/features/private/store/private-store';
 import { useSplashStore } from '@/hooks/use-splash-store';
 import { useSyncTrigger } from '@/features/sync/hooks/use-sync';
@@ -444,15 +448,24 @@ export default function RootLayout() {
     // is open. This effect re-runs once `dbReady` flips.
     if (!dbReady) return;
     init();
-    // Reconcile scheduled reminders with the delivery mode and refresh the
-    // morning digest with today's counts on every launch — local notifications
-    // carry fixed text, so this is how it stays current.
-    applyDeliveryMode();
-    // Rebuild every reminder from the database. Scheduling can silently produce
-    // nothing (permission not yet granted, category off, digest mode, master
-    // switch), and nothing ever retried — so a reminder lost that way stayed
-    // lost until its item happened to be edited again. No-ops without permission.
-    void resyncAllReminders();
+    // Reconcile scheduled reminders with the delivery mode, then rebuild every
+    // reminder from the database.
+    //
+    // Strictly in that order, and that is the reason for the `void
+    // (async () => …)` rather than two bare calls. Both are async and both
+    // rewrite the OS queue: `applyDeliveryMode` cancels whole categories, the
+    // rebuild re-creates them. Started concurrently they interleave, and the
+    // cancel lands in the middle of the rebuild — silently deleting reminders
+    // that had just been re-queued, on a launch that looked completely normal.
+    //
+    // The rebuild exists because scheduling can silently produce nothing
+    // (permission not yet granted, category off, digest mode, master switch)
+    // and nothing ever retried — so a reminder lost that way stayed lost until
+    // its item happened to be edited again. It no-ops without permission.
+    void (async () => {
+      await applyDeliveryMode();
+      await resyncAllReminders();
+    })();
     // Refresh the home-screen widget's snapshot with today's counts (Android).
     syncTodayWidget();
   }, [init, dbReady]);

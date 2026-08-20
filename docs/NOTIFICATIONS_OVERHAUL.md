@@ -1,0 +1,301 @@
+# Notifications overhaul — diagnosis and implementation plan
+
+Status: **Phase 1 shipped** on `fix/notification-duplicates`; Phases 2–3 proposed.
+Supersedes the open items at TODO.md:527 and TODO.md:533.
+
+The reported symptom is four identical "Do not lose today" notifications firing at
+the same instant, with four matching inbox rows. That is not a challenge-feature
+bug that happens to be visible; it is the first place a structural gap in the
+scheduling layer became load-bearing enough to be noticed. This document names
+the root cause, the systemic gap behind it, and the work to close both.
+
+---
+
+## 1. Why four notifications fired
+
+`features/challenge/services/challenge-reminders.ts` is the only reminder module
+in the app that keeps its OS notification ids in **module-level memory**:
+
+```ts
+let scheduledId: string | null = null; // challenge-reminders.ts:64
+let lastCallId: string | null = null; // challenge-reminders.ts:65
+let winBackId: string | null = null; // challenge-reminders.ts:189
+```
+
+Every other module persists its ids durably — a DB column (`tasks`, `notes`,
+`habits`, `debts`, `calendar_events`) or a persisted zustand store
+(`goal-reminder-store`, `journal-reminder-store`, `study-reminder-store`,
+`water-settings-store`). Challenge is the outlier, and it is the outlier on
+three counts at once. Each produces duplicates on its own.
+
+### 1a. The concurrency race — this is what produced the four
+
+`syncChallengeReminder` is a cancel-then-schedule sequence with four `await`
+points in it (`cancelNotification`, `requestNotificationPermission`,
+`channelsSettled`, `scheduleNotificationAsync`). It has **no serialization**.
+
+It is invoked fire-and-forget from a store subscription:
+
+```ts
+// features/challenge/hooks/use-challenge-tracking.ts:95
+void syncChallengeReminder(outstandingModules(...));
+```
+
+…which re-fires on every change to `days`, `required`, or `liveRequired`
+(use-challenge-tracking.ts:104-112). `flushChallenge()` runs on every foreground
+transition and applies the server response through several separate `set()`
+calls — `challenge-store.ts` has ten distinct set sites touching those keys.
+
+So a single foreground can produce N overlapping invocations. All of them read
+the same `scheduledId`, all no-op the cancel, all await, all schedule. Only the
+last assignment sticks. **N − 1 notifications become orphans that nothing holds
+a reference to and nothing can ever cancel.** They all carry the same 20:00
+trigger, so they all fire in the same instant.
+
+That is the screenshot: four copies at 20:00, four inbox rows (one per
+`logScheduledNotification` call), differing read state because a tap marks only
+the row whose `logId` rode in that particular payload.
+
+### 1b. The cold-start leak
+
+`scheduledId` is `null` after every process start. So the first sync of every
+launch calls `cancelNotification(null)` — a no-op — and queues a _fresh_ 20:00
+notification alongside whatever survived from the previous launch. Orphans
+accumulate across launches, not just within one.
+
+### 1c. Challenge is not in the resync
+
+`resyncAllReminders()` rebuilds every module's reminders from durable state and
+is the app's only self-healing mechanism. Challenge appears in it zero times and
+does not register via `registerReminderStep`, unlike `insights` and `private`.
+
+Worse, `runResync()` calls `cancelAllScheduled()`, which wipes **all** queued
+notifications including challenge's — while the in-memory ids go on pointing at
+them. Both run in independent effects on launch (`app/_layout.tsx:455` vs. the
+challenge tracking effect), so which wins is nondeterministic. The observable
+outcomes are "duplicates" and "the reminder silently vanished", from the same
+race, on the same launch.
+
+---
+
+## 2. The systemic gap
+
+The duplicate is a symptom. The cause is that **notification identity is a
+convention, not a mechanism.**
+
+`lib/notifications.ts` hands back an opaque OS id and asks every caller to
+remember it, store it durably, and cancel it before scheduling again. Twenty-odd
+call sites each get one chance to implement that correctly. Nineteen did.
+Nothing in the type system, the tests, or the scheduler makes the twentieth
+impossible — and nothing detects it afterwards, because there is no notion of
+"this notification and that notification are the same reminder."
+
+Related weaknesses that follow from the same gap:
+
+| #   | Issue                                                                               | Location                       | Effect                                                                                                              |
+| --- | ----------------------------------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| 1   | No mutex on any per-entity sync (only `resyncAllReminders` has an `inFlight` guard) | all `sync*Reminder` fns        | any double-call duplicates                                                                                          |
+| 2   | Slot ledger is an in-process counter, reseeded only by a resync                     | `scheduling-budget.ts`         | duplicates inflate it; on iOS `hasHeadroom` then silently declines _real_ reminders                                 |
+| 3   | `applyDeliveryMode()` is not awaited and races `resyncAllReminders()`               | `app/_layout.tsx:448-455`      | cancels categories mid-rebuild                                                                                      |
+| 4   | Digest mode destroys reminders instead of deferring them                            | `delivery.ts` header           | switching back leaves them gone until each item is re-saved                                                         |
+| 5   | `recordMissedRepeatingDeliveries` must precede `cancelAllScheduled`                 | `reminder-scheduler.ts`        | correct today, guarded only by a comment                                                                            |
+| 6   | `SCHEDULE_EXACT_ALARM` declared                                                     | `app.json` android.permissions | Play restricts this to alarm-clock apps; reminders should tolerate inexact delivery rather than depend on the grant |
+| 7   | Repeating deliveries only register while the process is alive                       | —                              | inbox/badge under-count, partially patched by `missed-occurrences.ts`                                               |
+
+---
+
+## 3. The fix: keyed scheduling
+
+Replace "remember your id" with a **stable dedupe key carried in the payload**,
+and make the OS queue the source of truth. The OS queue is the only store that
+cannot disagree with what will actually fire — it survives process restarts, JS
+reloads, and OTA updates.
+
+### 3.1 Add a key to the payload
+
+`features/notifications/types/notification.types.ts` — extend
+`NotificationPayload` with `key?: string`. Keys are stable and derived, never
+random:
+
+```
+challenge:at-risk      task:<id>          habit:<id>:<weekday>
+challenge:last-call    note:<id>          water:<slotMinute>
+challenge:win-back     goal:<id>          debt:<id>
+digest:daily           review:weekly      cycle:<phase>
+```
+
+A new `features/notifications/services/notification-keys.ts` owns the
+constructors so keys are never spelled by hand at a call site.
+
+### 3.2 One keyed primitive
+
+In `lib/notifications.ts`, add `scheduleKeyed(...)` wrapping the three existing
+schedulers. It does, per call:
+
+1. **Serialize on the key.** A `Map<string, Promise<unknown>>` where each call
+   chains onto the previous promise for that key. This is a real mutex, not a
+   boolean flag, and it makes cancel→schedule atomic per key. §1a dies here.
+2. **Cancel by key.** Read the queue, cancel _every_ entry whose
+   `data.key` matches — not one remembered id, all of them. This reaps orphans
+   left by previous versions of the bug, and makes §1b impossible: a cold start
+   finds the previous notification because it looks in the queue, not in memory.
+3. Schedule, spend a slot, write the inbox row (unchanged).
+
+The existing `scheduleOneTimeNotification` / `scheduleDailyNotification` /
+`scheduleWeeklyNotification` stay as the unkeyed path during migration, then
+become internals.
+
+**Cost control.** `getAllScheduledNotificationsAsync()` is a native round-trip
+and the resync schedules dozens in a row. Keep a module-level snapshot of the
+queue, invalidated on every schedule/cancel and rebuilt lazily. Because all
+scheduling flows through this one module, the snapshot is authoritative; seed it
+from the real queue in `runResync()` where `seedSlots` already does.
+
+### 3.3 Sweep orphans on launch
+
+In `runResync()`, after `cancelAllScheduled()`, nothing is queued — so add a
+reconcile step that also runs on _foreground_ (not just launch): group the queue
+by `data.key` and cancel all but the soonest of each group. This is the net that
+catches any future regression rather than trusting every call site again, and it
+retroactively cleans up devices already carrying duplicate 20:00 entries.
+
+### 3.4 Make omission a test failure
+
+The structural fix. Add a coverage test in the shape the repo already uses for
+the `features/private` import guard: enumerate every module that calls a
+`schedule*` primitive and assert each is reachable from `resyncAllReminders()`
+(directly or via `registerReminderStep`). "Someone shipped a scheduler and forgot
+the resync" becomes a red test, not a production incident.
+
+---
+
+## 4. Work items
+
+### Phase 1 — stop the bleeding — **done**
+
+1. ✅ Serialize `syncChallengeReminder` / `scheduleWinBack` /
+   `cancelChallengeReminder` behind one per-module promise chain, plus
+   trailing-collapse of queued resyncs.
+2. ✅ ~~Persist the three challenge ids in a persisted zustand store~~ —
+   **superseded, and the change is better for it.** A persisted store swaps one
+   source of truth for another and still has to be right; worse, zustand
+   hydrates asynchronously, so a sync racing hydration reads nulls and
+   reintroduces the exact cold-start duplicate it was meant to fix. Pulling
+   `key` + `cancelScheduledByKey` forward from Phase 2 removes the need to
+   remember an id at all, and — unlike a store — it **reaps the duplicates
+   already queued on users' devices**, because it reads the OS queue rather than
+   app state. No migration, no hydration race, self-healing.
+3. ✅ `registerReminderStep('challenge', …)` from a new
+   `features/challenge/services/register-reminders.ts`, imported at module level
+   in `app/_layout.tsx` alongside the existing two.
+4. ✅ Debounce the store subscription in `use-challenge-tracking.ts` (250 ms
+   trailing) so a burst of `set()` calls produces one sync.
+5. ✅ `await applyDeliveryMode()` before `resyncAllReminders()` in
+   `app/_layout.tsx`.
+6. ✅ Regression suite — `challenge-reminder-identity.test.ts`, 11 cases
+   covering all three failure modes. Verified non-vacuous: neutering the mutex
+   fails the concurrency cases with exactly the reported four-notification
+   symptom.
+
+### Phase 2 — keyed scheduler
+
+7. ✅ `key` on `NotificationPayload`; `notification-keys.ts`;
+   `cancelScheduledByKey` in `lib/notifications.ts` — landed early with Phase 1.
+8. `scheduleKeyed` + per-key mutex + queue snapshot in `lib/notifications.ts`,
+   generalising what challenge now does by hand.
+9. Migrate call sites module by module (tasks → calendar → habits → water →
+   notes → goals → study → journal → sleep → debts → digest → review →
+   private). Each is a one-line change at the call site once the key exists;
+   challenge is already done.
+10. Orphan sweep on launch and foreground (§3.3).
+11. Delete the now-redundant per-module id columns/stores **last**, once every
+    module is keyed and one release has shipped — the ids are still what cancels
+    notifications queued by the previous build.
+
+### Phase 3 — hardening
+
+12. Reseed the slot ledger from the real queue on foreground, not only on
+    resync, so drift cannot silently decline iOS reminders.
+13. Digest mode: defer rather than destroy — with keys, switching back can
+    rebuild from the resync instead of waiting for each item to be re-saved.
+14. Reconsider `SCHEDULE_EXACT_ALARM` in `app.json`. Treat exact delivery as an
+    enhancement; verify every reminder still reads correctly ±15 min.
+15. The resync-coverage test (§3.4) — the remaining piece of the Phase 1 test
+    work, deferred because it should assert over the migrated call sites rather
+    than the current mix of keyed and unkeyed ones.
+
+---
+
+## 5. Push notifications — what they can and cannot do here
+
+### The premise needs correcting first
+
+Push is not the answer to "what if the internet is off." It is the exact
+opposite: **local notifications are the ones that work with no connectivity**,
+because the OS holds the trigger on-device. A push requires a live FCM/APNs
+path. Turning the internet off is the scenario local scheduling already handles
+and push does not.
+
+So the question worth answering is not "offline?" but "what can a device-local
+trigger never know?" There are exactly three answers:
+
+1. **Reaching someone who has stopped opening the app.** A local notification
+   can only be scheduled while the process runs. `challenge-reminders.ts:180`
+   already concedes this about the win-back nudge — it reaches people who came
+   back, never the ones who left, which inverts its entire purpose.
+2. **Server-computed content.** Season end, standing changes, leaderboard
+   movement, another person's action. The device cannot compute these.
+3. **Remotely correcting or cancelling a local reminder** — the "you already
+   finished today, stand down" case that TODO.md:527 flags as the reason the
+   streak category went unscheduled for so long.
+
+Everything else in the app — every time-based reminder — should stay local.
+Local is more reliable, works offline, costs nothing per send, and needs no
+token lifecycle.
+
+### What already exists
+
+- `features/split/services/push-registration.ts` — Expo token registration via
+  the `register_push_token` RPC
+- `push_tokens` table, migration `0005_push_and_invites.sql`
+- `supabase/functions/notify-group`, `supabase/functions/notify-album`
+- `daykeep-general-v3` channel as the fixed remote-push target (`app.json`)
+
+The backbone is there. It is used only for shared features.
+
+### Gaps to close before push is trustworthy
+
+| Gap                                             | Detail                                                                                                                                                                                                                                                                                                              |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **FCM credentials**                             | No `android.googleServicesFile` anywhere in `app.json` / `app.config.js` / `eas.json`. Without FCM V1 credentials in the native build, remote push does not deliver on Android in a standalone build at all. **Verify against EAS credentials before assuming push works today** — nothing in the repo provides it. |
+| **No receipt handling**                         | `notify-group` treats HTTP 200 as delivered. Expo returns per-message _tickets_; `DeviceNotRegistered`, `MessageTooBig` and `MessageRateExceeded` only appear when receipts are fetched from `/push/getReceipts` afterwards. Nothing does.                                                                          |
+| **Dead tokens are never pruned**                | Follows from the above. `push_tokens` grows unboundedly and fan-out cost grows with it.                                                                                                                                                                                                                             |
+| **`lastRegistered` is in-memory**               | The same bug class as §1: a wasted RPC on every cold start, and a token rotated while the app was closed is noticed only on next launch. There is no `addPushTokenListener` for rotation.                                                                                                                           |
+| **`unregisterPushToken` early-returns on null** | Sign-out after a launch where registration didn't complete leaves the token attached to that account on a shared phone.                                                                                                                                                                                             |
+| **No `collapseId` / `priority` / `ttl`**        | A collapse id is precisely the server-side answer to "four sent, one shown", and the natural counterpart to §3's dedupe key.                                                                                                                                                                                        |
+| **One channel for all pushes**                  | A user cannot silence album chatter without silencing group updates.                                                                                                                                                                                                                                                |
+
+### Recommendation
+
+Do **not** add push for reminders. Add it for the three cases above, and make
+push and local share one identity so they can never double-fire:
+
+- A push carries the same `key` as the local notification it replaces or
+  cancels, plus `collapseId = key`. The arrival handler in
+  `use-notification-center.ts` cancels the matching local notification on
+  receipt, and `scheduleKeyed` refuses to queue one whose key was recently
+  satisfied by a push.
+- Without that shared key, adding push _adds a second duplicate source_ on top
+  of the one this document exists to fix. Phase 2 is a prerequisite, not a
+  parallel track.
+
+**Sequencing:** Phases 1–2 first. Then push work in this order — verify FCM
+credentials → receipts + token pruning → token rotation listener → collapse ids
+and per-purpose channels → the win-back / season-end senders.
+
+---
+
+## 6. What to do first
+
+Phase 1, items 1–4. They are contained, need no migration, fix the reported
+symptom, and do not conflict with any of the structural work that follows.

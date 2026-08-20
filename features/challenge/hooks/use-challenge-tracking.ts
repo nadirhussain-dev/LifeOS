@@ -3,13 +3,12 @@ import { AppState } from 'react-native';
 
 import {
   cancelChallengeReminder,
-  syncChallengeReminder,
+  resyncChallengeReminder,
 } from '@/features/challenge/services/challenge-reminders';
 import { flushChallenge } from '@/features/challenge/services/challenge-reporter';
-import { outstandingModules } from '@/features/challenge/services/challenge-math';
 import { startChallengeWriteTracking } from '@/features/challenge/services/challenge-tracking';
 import { REWARDS_MODULE_ID } from '@/features/challenge/config/rewards-flag';
-import { currentDay, useChallengeStore } from '@/features/challenge/store/challenge-store';
+import { useChallengeStore } from '@/features/challenge/store/challenge-store';
 import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 
 /**
@@ -17,6 +16,11 @@ import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-
  * this, the user checked the time on a notification.
  */
 const MIN_SESSION_SECONDS = 3;
+
+/** How long the checklist has to stop changing before the reminder is rebuilt.
+ *  Long enough to swallow a flush's worth of consecutive `set()` calls, short
+ *  enough to be invisible against a reminder that fires at 20:00. */
+const RESYNC_DEBOUNCE_MS = 250;
 
 /**
  * Mounted once at the root. Observes writes, accrues foreground time, and hands
@@ -88,25 +92,28 @@ export function useChallengeTracking(): void {
      * which is what lets a local notification carry text that is true when it
      * fires — see challenge-reminders.ts. Subscribed to the store rather than
      * called from each write site, so nothing has to remember to do it.
+     *
+     * Debounced on the trailing edge, because "every change" is burstier than
+     * it looks: a single foreground flush applies the server's response through
+     * several separate `set()` calls, and each one lands here. The rebuild is
+     * safe to run that often — it serialises and cancels by key — but it is
+     * several OS round-trips per call, and the only state worth acting on is
+     * the one left standing when the burst settles.
      */
+    let resyncTimer: ReturnType<typeof setTimeout> | null = null;
     const resync = () => {
-      const state = useChallengeStore.getState();
-      const today = state.days[currentDay()];
-      void syncChallengeReminder(
-        outstandingModules(
-          state.required,
-          today?.writes ?? {},
-          state.minWrites,
-          // Under the live rule a module is only off the list once the server
-          // has witnessed it, so the 20:00 nudge names work that was done
-          // offline rather than falling silent on a locally-complete day that
-          // is not going to count.
-          today?.attested ?? [],
-          state.liveRequired,
-        ),
-      );
+      if (resyncTimer) clearTimeout(resyncTimer);
+      resyncTimer = setTimeout(() => {
+        resyncTimer = null;
+        void resyncChallengeReminder();
+      }, RESYNC_DEBOUNCE_MS);
     };
-    resync();
+
+    // Not debounced: the first build should be queued now rather than a beat
+    // after mount, or a launch short enough to miss the timer leaves the
+    // evening reminder resting on whatever the previous session queued.
+    void resyncChallengeReminder();
+
     const unsubscribe = useChallengeStore.subscribe((state, previous) => {
       if (
         state.days !== previous.days ||
@@ -120,6 +127,7 @@ export function useChallengeTracking(): void {
     return () => {
       bank();
       stopWriteTracking();
+      if (resyncTimer) clearTimeout(resyncTimer);
       unsubscribe();
       subscription.remove();
       void cancelChallengeReminder();

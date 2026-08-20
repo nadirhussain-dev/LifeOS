@@ -711,6 +711,31 @@ export async function cancelScheduledInCategory(category: NotificationCategory):
   );
 }
 
+/**
+ * Cancels every OS-queued notification carrying `key`, and clears their inbox
+ * rows. Returns how many were cancelled.
+ *
+ * The durable alternative to remembering an id. A caller that cancels by key
+ * before scheduling cannot leave a duplicate behind, because it is not relying
+ * on a variable that a process restart empties or a concurrent call overwrites
+ * — it is asking the OS what is actually queued. See
+ * `NotificationPayload['key']` for the full argument.
+ *
+ * Returning a count rather than void so a caller can tell "there was nothing"
+ * from "there were four", which is the difference between a healthy queue and
+ * one carrying orphans from an older build.
+ */
+export async function cancelScheduledByKey(key: string): Promise<number> {
+  const Notifications = getNotifications();
+  if (!Notifications) return 0;
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync().catch(() => []);
+  const matches = scheduled.filter(
+    (n) => (n.content.data as NotificationPayload | undefined)?.key === key,
+  );
+  await Promise.all(matches.map((n) => cancelNotification(n.identifier)));
+  return matches.length;
+}
+
 /** Posts a notification right now, bypassing the category gate, quiet hours and
  * the inbox log. Backs the "Send a test notification" button in Notification
  * Settings: when reminders aren't arriving, this separates "Daykeep never

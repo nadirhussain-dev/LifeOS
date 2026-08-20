@@ -1,9 +1,16 @@
 import { setHours, setMinutes, setSeconds, startOfDay } from 'date-fns';
 
-import { costOfMissToday } from '@/features/challenge/services/challenge-math';
-import { useChallengeStore } from '@/features/challenge/store/challenge-store';
+import { REWARDS_MODULE_ID } from '@/features/challenge/config/rewards-flag';
+import { costOfMissToday, outstandingModules } from '@/features/challenge/services/challenge-math';
+import { currentDay, useChallengeStore } from '@/features/challenge/store/challenge-store';
+import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
+import {
+  CHALLENGE_AT_RISK_KEY,
+  CHALLENGE_LAST_CALL_KEY,
+  CHALLENGE_WIN_BACK_KEY,
+} from '@/features/notifications/services/notification-keys';
 import i18n from '@/lib/i18n';
-import { cancelNotification, scheduleOneTimeNotification } from '@/lib/notifications';
+import { cancelScheduledByKey, scheduleOneTimeNotification } from '@/lib/notifications';
 
 /**
  * The at-risk reminder, and why it is re-scheduled rather than scheduled.
@@ -44,6 +51,16 @@ import { cancelNotification, scheduleOneTimeNotification } from '@/lib/notificat
  *
  * Both are cancelled outright the moment the day is complete, so neither can
  * fire at somebody who has already finished.
+ *
+ * ## How "the" reminder is identified
+ *
+ * Every schedule here carries a stable key and is cancelled **by that key**,
+ * read back off the OS queue — never by an id held in a variable. Holding ids
+ * in module-level memory is what produced the four identical 20:00 alerts this
+ * file was reported for: memory is empty after a restart, and it is shared by
+ * concurrent callers who each cancelled what the last one recorded. The queue
+ * is the only record that survives both. See `serialize` and
+ * notification-keys.ts.
  */
 
 /** Fixed hour, late enough to be a last call and early enough to be actionable. */
@@ -59,10 +76,70 @@ const REMINDER_HOUR = 20;
  */
 const LAST_CALL_HOUR = 22;
 
-/** Where the ids are kept. Not database columns: this is bookkeeping about one
- *  phone's queue, exactly like `notification_log`, and it must not sync. */
-let scheduledId: string | null = null;
-let lastCallId: string | null = null;
+/**
+ * Everything here runs one at a time.
+ *
+ * `syncChallengeReminder` is a cancel-then-schedule with several `await` points
+ * in it, and it is called — fire-and-forget — from a store subscription that
+ * fires on every change to the day's checklist. A single foreground flush
+ * applies the server's response through several separate `set()` calls, so
+ * overlapping invocations are the normal case, not a rare interleaving.
+ *
+ * Unserialised, each of those invocations cancelled whatever the *previous* one
+ * had recorded and then scheduled its own, so N concurrent syncs left N
+ * notifications queued for the same instant and a single remembered id — the
+ * other N-1 were orphans nothing could ever cancel. That is the four identical
+ * 20:00 alerts this file was reported for.
+ *
+ * A promise chain rather than a boolean `inFlight` flag: a flag makes the
+ * second caller give up, which is wrong here, because the second caller is the
+ * one holding the newer checklist. Chaining makes it wait its turn instead.
+ * `catch` on both sides so one failed sync cannot wedge the queue forever.
+ */
+let queue: Promise<unknown> = Promise.resolve();
+
+function serialize<T>(work: () => Promise<T>): Promise<T> {
+  const run = queue.then(work, work);
+  queue = run.catch(() => undefined);
+  return run;
+}
+
+/**
+ * A resync that has been queued but has not started yet.
+ *
+ * Every resync reads the checklist at the moment it runs, so two of them
+ * waiting in line compute the same answer and the second is pure waste — a
+ * cancel and a reschedule of something identical. Collapsing them is only an
+ * optimisation, but it is the difference between one OS round-trip per burst of
+ * writes and one per write.
+ *
+ * Cleared the moment the work begins, not when it finishes: a change landing
+ * while a resync is mid-flight must queue a fresh one, because that resync has
+ * already read its state.
+ */
+let queuedResync: Promise<void> | null = null;
+
+/** Whether the operator has switched the whole programme off. Absence means
+ *  enabled — the fail-open rule the rest of the flag system follows. */
+function programmeDisabled(): boolean {
+  return useModuleFlagsStore.getState().flags[REWARDS_MODULE_ID]?.enabled === false;
+}
+
+/** The modules still outstanding today, read from current state. */
+export function currentOutstanding(): string[] {
+  const state = useChallengeStore.getState();
+  const today = state.days[currentDay()];
+  return outstandingModules(
+    state.required,
+    today?.writes ?? {},
+    state.minWrites,
+    // Under the live rule a module is only off the list once the server has
+    // witnessed it, so the 20:00 nudge names work that was done offline rather
+    // than falling silent on a locally-complete day that is not going to count.
+    today?.attested ?? [],
+    state.liveRequired,
+  );
+}
 
 /** The moment a reminder at `hour` should fire, or null if it has passed. */
 function fireAtHour(hour: number, now: Date): number | null {
@@ -83,20 +160,49 @@ export function atRiskReminderDate(now: Date = new Date()): number | null {
  * and the alternative — trying to be clever about when it is worth updating —
  * is how the schedule drifts out of step with the checklist.
  */
-export async function syncChallengeReminder(outstanding: string[]): Promise<void> {
-  await cancelNotification(scheduledId);
-  await cancelNotification(lastCallId);
-  scheduledId = null;
-  lastCallId = null;
+export function syncChallengeReminder(outstanding: string[]): Promise<void> {
+  return serialize(() => applyReminder(() => outstanding));
+}
+
+/**
+ * The same thing, reading the checklist itself.
+ *
+ * Preferred over passing `outstanding` in, because the read then happens when
+ * the work runs rather than when it was queued — a sync that waited behind
+ * three others cannot act on a checklist that has since moved on. It is also
+ * what lets the launch rebuild call this without knowing anything about the
+ * challenge's internals.
+ */
+export function resyncChallengeReminder(): Promise<void> {
+  if (queuedResync) return queuedResync;
+  const run = serialize(() => {
+    queuedResync = null;
+    return applyReminder(currentOutstanding);
+  });
+  queuedResync = run;
+  return run;
+}
+
+async function applyReminder(readOutstanding: () => string[]): Promise<void> {
+  // Cancel by key, not by remembered id. The OS queue is the only record that
+  // survives a process restart, so this is what stops a cold start from
+  // scheduling a second copy next to the one already queued — and it reaps
+  // whatever duplicates an older build of this file left on the device.
+  await cancelScheduledByKey(CHALLENGE_AT_RISK_KEY);
+  await cancelScheduledByKey(CHALLENGE_LAST_CALL_KEY);
 
   const state = useChallengeStore.getState();
-  if (!state.enrolled) return;
+  // Checked here as well as at the tracking hook, so the launch rebuild cannot
+  // revive reminders for a programme the operator has switched off.
+  if (!state.enrolled || programmeDisabled()) return;
+
+  const outstanding = readOutstanding();
   // Nothing outstanding means the day is done, or as done as this phone can
   // tell. Either way there is nothing to warn about — and somebody who has just
   // kept a day has already answered the question a pending win-back was going
   // to ask them in two days' time.
   if (outstanding.length === 0) {
-    await cancelWinBack();
+    await cancelScheduledByKey(CHALLENGE_WIN_BACK_KEY);
     return;
   }
 
@@ -122,14 +228,14 @@ export async function syncChallengeReminder(outstanding: string[]): Promise<void
 
   const fireAt = fireAtHour(REMINDER_HOUR, now);
   if (fireAt !== null) {
-    scheduledId = await scheduleOneTimeNotification({
+    await scheduleOneTimeNotification({
       title: i18n.t('challenge.reminderTitle'),
       body,
       date: fireAt,
       // `bypassQuietHours` is true for this category — a last call at 20:00 that
       // quiet hours swallowed would be a reminder that only ever fires for people
       // who did not need it.
-      data: { category: 'streak', route: '/challenge' },
+      data: { category: 'streak', route: '/challenge', key: CHALLENGE_AT_RISK_KEY },
     });
   }
 
@@ -140,23 +246,24 @@ export async function syncChallengeReminder(outstanding: string[]): Promise<void
   const lastCallAt = fireAtHour(LAST_CALL_HOUR, now);
   if (lastCallAt === null) return;
 
-  lastCallId = await scheduleOneTimeNotification({
+  await scheduleOneTimeNotification({
     title: i18n.t('challenge.lastCallTitle'),
     body:
       cost !== null
         ? i18n.t('challenge.lastCallCost', { count: cost })
         : i18n.t('challenge.reminderOne', { modules }),
     date: lastCallAt,
-    data: { category: 'streak', route: '/challenge' },
+    data: { category: 'streak', route: '/challenge', key: CHALLENGE_LAST_CALL_KEY },
   });
 }
 
-/** Drops the pending reminders — on sign-out, or on leaving a run. */
-export async function cancelChallengeReminder(): Promise<void> {
-  await cancelNotification(scheduledId);
-  await cancelNotification(lastCallId);
-  scheduledId = null;
-  lastCallId = null;
+/** Drops the pending reminders — on sign-out, or on leaving a run. Queued
+ *  behind any sync already in flight, so it cannot be undone by one. */
+export function cancelChallengeReminder(): Promise<void> {
+  return serialize(async () => {
+    await cancelScheduledByKey(CHALLENGE_AT_RISK_KEY);
+    await cancelScheduledByKey(CHALLENGE_LAST_CALL_KEY);
+  });
 }
 
 /**
@@ -186,22 +293,21 @@ export async function cancelChallengeReminder(): Promise<void> {
  */
 const WIN_BACK_DELAY_MS = 48 * 60 * 60 * 1000;
 
-let winBackId: string | null = null;
+export function scheduleWinBack(toDays: number, nextRungDays: number | null): Promise<void> {
+  return serialize(async () => {
+    await cancelScheduledByKey(CHALLENGE_WIN_BACK_KEY);
 
-export async function scheduleWinBack(toDays: number, nextRungDays: number | null): Promise<void> {
-  await cancelNotification(winBackId);
-  winBackId = null;
+    if (!useChallengeStore.getState().enrolled || programmeDisabled()) return;
 
-  if (!useChallengeStore.getState().enrolled) return;
-
-  winBackId = await scheduleOneTimeNotification({
-    title: i18n.t('challenge.winBackTitle'),
-    body:
-      nextRungDays !== null && nextRungDays > 0
-        ? i18n.t('challenge.winBackNext', { count: nextRungDays })
-        : i18n.t('challenge.winBackPlain', { count: toDays }),
-    date: Date.now() + WIN_BACK_DELAY_MS,
-    data: { category: 'streak', route: '/challenge' },
+    await scheduleOneTimeNotification({
+      title: i18n.t('challenge.winBackTitle'),
+      body:
+        nextRungDays !== null && nextRungDays > 0
+          ? i18n.t('challenge.winBackNext', { count: nextRungDays })
+          : i18n.t('challenge.winBackPlain', { count: toDays }),
+      date: Date.now() + WIN_BACK_DELAY_MS,
+      data: { category: 'streak', route: '/challenge', key: CHALLENGE_WIN_BACK_KEY },
+    });
   });
 }
 
@@ -213,7 +319,8 @@ export async function scheduleWinBack(toDays: number, nextRungDays: number | nul
  * anyway, two days after getting back on the horse, reads as the app not
  * paying attention.
  */
-export async function cancelWinBack(): Promise<void> {
-  await cancelNotification(winBackId);
-  winBackId = null;
+export function cancelWinBack(): Promise<void> {
+  return serialize(async () => {
+    await cancelScheduledByKey(CHALLENGE_WIN_BACK_KEY);
+  });
 }

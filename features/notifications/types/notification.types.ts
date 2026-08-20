@@ -267,6 +267,29 @@ export type NotificationPayload = {
   params?: Record<string, string>;
   /** Row id in notification_log, set when logging is enabled. */
   logId?: string;
+  /**
+   * Stable identity for "the same reminder", e.g. `challenge:at-risk`.
+   *
+   * Scheduling has always handed back an opaque OS id and asked each caller to
+   * remember it, store it durably, and cancel it before scheduling again. That
+   * makes identity a convention rather than a mechanism: every call site gets
+   * one chance to implement it correctly, nothing makes a mistake impossible,
+   * and nothing detects one afterwards. `challenge-reminders.ts` held its ids
+   * in module-level memory and got all three of the resulting failure modes at
+   * once — duplicates within a session (concurrent syncs both finding no id to
+   * cancel), duplicates across launches (memory is empty after a restart), and
+   * reminders silently wiped by a resync that had no idea they existed.
+   *
+   * A key moves identity into the payload, where `cancelScheduledByKey` can
+   * read it back off the OS queue. The queue is the only store that cannot
+   * disagree with what will actually fire: it survives process restarts, JS
+   * reloads and OTA updates, and it already contains whatever a previous buggy
+   * build left behind — so cancelling by key reaps existing orphans instead of
+   * only preventing new ones.
+   *
+   * Keys are derived and stable, never random. See notification-keys.ts.
+   */
+  key?: string;
 };
 
 export type NotificationRepeat = 'none' | 'daily' | 'weekly';
