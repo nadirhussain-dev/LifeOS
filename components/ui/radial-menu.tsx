@@ -1,6 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { type LucideIcon } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   runOnJS,
@@ -69,6 +70,7 @@ export function RadialMenu({
   startAngle = 182,
   endAngle = 268,
 }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
   const progress = useSharedValue(0);
@@ -114,7 +116,7 @@ export function RadialMenu({
         style={StyleSheet.absoluteFill}
         onPress={onClose}
         accessibilityRole="button"
-        accessibilityLabel="Close quick actions"
+        accessibilityLabel={t('dashboard.closeQuickActions')}
       >
         <Animated.View style={[StyleSheet.absoluteFill, scrim, { backgroundColor: '#000' }]} />
       </Pressable>

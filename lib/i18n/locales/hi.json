@@ -105,7 +105,8 @@
     "percentTasksCompleted": "{{percent}}% कार्य पूर्ण",
     "yourFocus": "आपका फोकस",
     "forYou": "आपके लिए",
-    "wellbeing": "कल्याण"
+    "wellbeing": "कल्याण",
+    "closeQuickActions": "क्विक ऐक्शन बंद करें"
   },
   "focus": {
     "habits": "आदतें",
@@ -1228,7 +1229,9 @@
     "unfavoriteA11y": "\"{{title}}\" को पसंदीदा से हटाएँ",
     "playCount_one": "{{count}} बार बजाया गया",
     "playCount_other": "{{count}} बार बजाया गया",
-    "lastPlayed": "आख़िरी बार {{time}} बजाया गया"
+    "lastPlayed": "आख़िरी बार {{time}} बजाया गया",
+    "seekBar": "सीक करें",
+    "percentPlayed": "{{percent}}% चला"
   },
   "albumCategory": {
     "gym": "जिम प्रगति",

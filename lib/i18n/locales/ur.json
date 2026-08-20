@@ -105,7 +105,8 @@
     "percentTasksCompleted": "{{percent}}% کام مکمل",
     "yourFocus": "آپ کی توجہ",
     "forYou": "آپ کے لیے",
-    "wellbeing": "فلاح و بہبود"
+    "wellbeing": "فلاح و بہبود",
+    "closeQuickActions": "فوری اقدامات بند کریں"
   },
   "focus": {
     "habits": "عادات",
@@ -1228,7 +1229,9 @@
     "unfavoriteA11y": "\"{{title}}\" کو پسندیدہ سے ہٹائیں",
     "playCount_one": "{{count}} بار بجایا گیا",
     "playCount_other": "{{count}} بار بجایا گیا",
-    "lastPlayed": "آخری بار {{time}} بجایا گیا"
+    "lastPlayed": "آخری بار {{time}} بجایا گیا",
+    "seekBar": "سیک کریں",
+    "percentPlayed": "{{percent}}% چل چکا"
   },
   "albumCategory": {
     "gym": "جم کی پیش رفت",

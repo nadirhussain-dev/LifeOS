@@ -109,7 +109,8 @@
     "thingsNeedYou_zero": "لا شيء يحتاج إليك",
     "thingsNeedYou_two": "أمران يحتاجان إليك",
     "thingsNeedYou_few": "{{count}} أمور تحتاج إليك",
-    "thingsNeedYou_many": "{{count}} أمرًا يحتاج إليك"
+    "thingsNeedYou_many": "{{count}} أمرًا يحتاج إليك",
+    "closeQuickActions": "إغلاق الإجراءات السريعة"
   },
   "focus": {
     "habits": "العادات",
@@ -1312,7 +1313,9 @@
     "playCount_few": "شُغِّلت {{count}} مرات",
     "playCount_many": "شُغِّلت {{count}} مرة",
     "playCount_other": "شُغِّلت {{count}} مرة",
-    "lastPlayed": "آخر تشغيل {{time}}"
+    "lastPlayed": "آخر تشغيل {{time}}",
+    "seekBar": "التقديم",
+    "percentPlayed": "تم تشغيل {{percent}}%"
   },
   "albumCategory": {
     "gym": "تقدّم الجيم",

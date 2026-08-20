@@ -105,7 +105,8 @@
     "percentTasksCompleted": "{{percent}}% of tasks completed",
     "yourFocus": "Your focus",
     "forYou": "For you",
-    "wellbeing": "Wellbeing"
+    "wellbeing": "Wellbeing",
+    "closeQuickActions": "Close quick actions"
   },
   "focus": {
     "habits": "Habits",
@@ -1228,7 +1229,9 @@
     "unfavoriteA11y": "Remove \"{{title}}\" from favorites",
     "playCount_one": "Played {{count}} time",
     "playCount_other": "Played {{count}} times",
-    "lastPlayed": "Last played {{time}}"
+    "lastPlayed": "Last played {{time}}",
+    "seekBar": "Seek",
+    "percentPlayed": "{{percent}}% played"
   },
   "albumCategory": {
     "gym": "Gym Progress",
