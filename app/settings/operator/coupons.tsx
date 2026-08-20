@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
-import { Archive, ChevronLeft, RotateCcw } from 'lucide-react-native';
+import { Archive, RotateCcw } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { ListSkeleton } from '@/components/ui/list-skeleton';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
@@ -51,7 +51,6 @@ const blankForm = (): FormState => ({
  * at the moment of subscribing — it cannot touch anyone already subscribed.
  */
 export default function OperatorCouponsScreen() {
-  const router = useRouter();
   const { t } = useTranslation();
   const { c } = useTheme();
   const queryClient = useQueryClient();
@@ -131,20 +130,12 @@ export default function OperatorCouponsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <View className="flex-row items-center gap-3 px-5 pb-3 pt-14">
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          hitSlop={10}
-          className="h-10 w-10 items-center justify-center rounded-full border border-border bg-surface"
-        >
-          <ChevronLeft size={20} color={c.foreground} />
-        </Pressable>
-        <View className="flex-1">
-          <Text className="font-sora-extrabold text-xl">{t('operator.couponsTitle')}</Text>
-          <Text variant="caption">{t('operator.couponsSubtitle')}</Text>
-        </View>
-      </View>
+      <ScreenHeader
+        eyebrow={t('operator.eyebrow')}
+        title={t('operator.couponsTitle')}
+        subtitle={t('operator.couponsSubtitle')}
+        tint={c.error}
+      />
 
       <ScrollView contentContainerClassName="gap-3 px-5 pb-10" showsVerticalScrollIndicator={false}>
         {coupons.isLoading ? <ListSkeleton rows={3} /> : null}

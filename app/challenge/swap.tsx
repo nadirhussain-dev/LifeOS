@@ -1,10 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { ArrowRight } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { ArrowForward } from '@/components/ui/directional-icon';
 import { ListSkeleton } from '@/components/ui/list-skeleton';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
@@ -137,7 +137,7 @@ export default function ChallengeSwapScreen() {
         </View>
 
         <View className="items-center">
-          <ArrowRight size={18} color={c.mutedForeground} />
+          <ArrowForward size={18} color={c.mutedForeground} />
         </View>
 
         <View className={cardClass({ padding: 'md' }, 'gap-1')}>

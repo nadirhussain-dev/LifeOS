@@ -1,10 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Trash2 } from 'lucide-react-native';
+import { Trash2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { QueryError } from '@/components/ui/query-error';
@@ -119,22 +120,12 @@ export default function OperatorSeasonScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <View className="flex-row items-center gap-3 px-5 pb-3 pt-14">
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          hitSlop={10}
-          className="h-10 w-10 items-center justify-center rounded-full border border-border bg-surface"
-        >
-          <ChevronLeft size={20} color={c.foreground} />
-        </Pressable>
-        <View className="flex-1">
-          <Text className="font-sora-extrabold text-xl" numberOfLines={1}>
-            {season?.name ?? t('operator.seasonsTitle')}
-          </Text>
-          <Text variant="caption">{t('operator.seasonSubtitle')}</Text>
-        </View>
-      </View>
+      <ScreenHeader
+        eyebrow={t('operator.eyebrow')}
+        title={season?.name ?? t('operator.seasonsTitle')}
+        subtitle={t('operator.seasonSubtitle')}
+        tint={c.error}
+      />
 
       {!season || !draft ? (
         <View className="px-5">

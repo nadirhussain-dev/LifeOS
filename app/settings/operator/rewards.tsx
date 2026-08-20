@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { ChevronRight } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Switch, View } from 'react-native';
 
+import { ChevronForward } from '@/components/ui/directional-icon';
 import { ListSkeleton } from '@/components/ui/list-skeleton';
 import { cardClass } from '@/components/ui/card';
 import { QueryError } from '@/components/ui/query-error';
@@ -162,7 +162,7 @@ export default function OperatorRewardsScreen() {
             <Text className="font-sora-medium text-foreground">{t('operator.seasonsTitle')}</Text>
             <Text variant="caption">{t('operator.seasonsSubtitle')}</Text>
           </View>
-          <ChevronRight size={16} color={c.mutedForeground} />
+          <ChevronForward size={16} color={c.mutedForeground} />
         </Pressable>
 
         {season.isError || stats.isError ? (

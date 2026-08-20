@@ -1,10 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
-import { ChevronLeft, Crown, Trash2 } from 'lucide-react-native';
+import { Crown, Trash2 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { ListSkeleton } from '@/components/ui/list-skeleton';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
@@ -34,7 +34,6 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * RPC's own refusal, not a client-side illusion of having done something.
  */
 export default function OperatorRosterScreen() {
-  const router = useRouter();
   const { t } = useTranslation();
   const { c } = useTheme();
   const queryClient = useQueryClient();
@@ -110,20 +109,12 @@ export default function OperatorRosterScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <View className="flex-row items-center gap-3 px-5 pb-3 pt-14">
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          hitSlop={10}
-          className="h-10 w-10 items-center justify-center rounded-full border border-border bg-surface"
-        >
-          <ChevronLeft size={20} color={c.foreground} />
-        </Pressable>
-        <View className="flex-1">
-          <Text className="font-sora-extrabold text-xl">{t('operator.operatorsTitle')}</Text>
-          <Text variant="caption">{t('operator.operatorsSubtitle')}</Text>
-        </View>
-      </View>
+      <ScreenHeader
+        eyebrow={t('operator.eyebrow')}
+        title={t('operator.operatorsTitle')}
+        subtitle={t('operator.operatorsSubtitle')}
+        tint={c.error}
+      />
 
       <ScrollView contentContainerClassName="gap-6 px-5 pb-10" showsVerticalScrollIndicator={false}>
         <View className={cardClass({ padding: 'none' }, 'px-4')}>

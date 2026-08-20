@@ -2,11 +2,12 @@ import DateTimePicker, { type DateTimePickerEvent } from '@react-native-communit
 import { format, set } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { AlarmClock, BellRing, ChevronRight, Music4, Send, Stethoscope } from 'lucide-react-native';
+import { AlarmClock, BellRing, Music4, Send, Stethoscope } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, Platform, Pressable, ScrollView, Switch, View } from 'react-native';
 
+import { ChevronForward } from '@/components/ui/directional-icon';
 import { cardClass } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { moduleTints } from '@/constants/design-tokens';
@@ -350,7 +351,7 @@ export default function NotificationSettingsScreen() {
                   {selectedSound.labelKey ? t(selectedSound.labelKey) : selectedSound.name}
                 </Text>
               </View>
-              <ChevronRight size={18} color={theme.mutedForeground} />
+              <ChevronForward size={18} color={theme.mutedForeground} />
             </Pressable>
           </View>
         </View>
