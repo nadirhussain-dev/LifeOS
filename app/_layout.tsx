@@ -42,6 +42,7 @@ import { useWidgetSync } from '@/features/widgets/hooks/use-widget-sync';
 import { useProfileStore } from '@/features/profile/store/profile-store';
 import {
   registerPushToken,
+  startPushTokenRotationWatch,
   unregisterPushToken,
 } from '@/features/split/services/push-registration';
 import { useLanguageStore } from '@/features/settings/store/language-store';
@@ -227,6 +228,13 @@ function PushRegistrationBridge() {
     if (session) void registerPushToken();
     else void unregisterPushToken();
   }, [session]);
+
+  // A push token can be rotated by the service mid-session, and until it is
+  // re-registered every notification aimed at this device goes to an address
+  // that no longer exists. Watched for the whole life of the app rather than
+  // per session: the rotation does not wait for a sign-in to happen.
+  useEffect(() => startPushTokenRotationWatch(), []);
+
   return null;
 }
 
