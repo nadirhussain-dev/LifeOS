@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 
+import { Chip } from '@/components/ui/chip';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { InlineError } from '@/components/ui/query-error';
@@ -311,29 +312,20 @@ export default function SplitExpenseScreen() {
                 // the payer of the expense being edited.
                 if (former && !selected) return null;
                 return (
-                  <Pressable
+                  <Chip
                     key={m.id}
+                    label={memberName(m.id)}
+                    selected={selected}
+                    tint={tint}
                     onPress={() => {
                       void Haptics.selectionAsync();
                       setPaidBy(m.id);
                     }}
+                    // One of a set, so radio rather than button.
                     accessibilityRole="radio"
                     accessibilityState={{ selected, checked: selected }}
-                    accessibilityLabel={memberName(m.id)}
-                    style={{
-                      minHeight: 44,
-                      justifyContent: 'center',
-                      borderColor: selected ? tint : colors[scheme].border,
-                      backgroundColor: selected ? tint : 'transparent',
-                    }}
-                    className="rounded-full border px-3.5 py-1.5"
-                  >
-                    <Text
-                      className={selected ? 'font-sora-medium text-white' : 'text-muted-foreground'}
-                    >
-                      {memberName(m.id)}
-                    </Text>
-                  </Pressable>
+                    className="min-h-[44px] justify-center"
+                  />
                 );
               })}
             </View>

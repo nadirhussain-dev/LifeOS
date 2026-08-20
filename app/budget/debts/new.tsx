@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { Chip } from '@/components/ui/chip';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Segmented } from '@/components/ui/segmented';
@@ -217,21 +218,14 @@ export default function DebtFormScreen() {
               {[null, ...REMINDER_DAY_OPTIONS].map((days) => {
                 const selected = reminderDaysBefore === days;
                 return (
-                  <Pressable
-                    accessibilityRole="button"
+                  <Chip
                     key={days ?? 'off'}
+                    label={days == null ? t('budget.off') : reminderLabel(days, t)}
+                    selected={selected}
+                    tint={debtTint}
                     onPress={() => setReminderDaysBefore(days)}
-                    style={
-                      selected ? { backgroundColor: debtTint, borderColor: debtTint } : undefined
-                    }
-                    className="rounded-full border border-border px-3.5 py-2"
-                  >
-                    <Text
-                      className={selected ? 'font-sora-medium text-white' : 'text-muted-foreground'}
-                    >
-                      {days == null ? t('budget.off') : reminderLabel(days, t)}
-                    </Text>
-                  </Pressable>
+                    className="py-2"
+                  />
                 );
               })}
             </View>

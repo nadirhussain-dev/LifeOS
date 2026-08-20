@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { Chip } from '@/components/ui/chip';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Segmented } from '@/components/ui/segmented';
@@ -197,25 +198,14 @@ export default function TransactionScreen() {
                 {savingsGoals.map((goal) => {
                   const selected = goal.id === savingsGoalId;
                   return (
-                    <Pressable
-                      accessibilityRole="button"
+                    <Chip
                       key={goal.id}
+                      label={goal.name}
+                      selected={selected}
+                      tint={goal.colorToken}
                       onPress={() => setSavingsGoalId(selected ? null : goal.id)}
-                      style={
-                        selected
-                          ? { backgroundColor: goal.colorToken, borderColor: goal.colorToken }
-                          : undefined
-                      }
-                      className="rounded-full border border-border px-3 py-2"
-                    >
-                      <Text
-                        className={
-                          selected ? 'font-sora-medium text-white' : 'text-muted-foreground'
-                        }
-                      >
-                        {goal.name}
-                      </Text>
-                    </Pressable>
+                      className="px-3 py-2"
+                    />
                   );
                 })}
               </View>

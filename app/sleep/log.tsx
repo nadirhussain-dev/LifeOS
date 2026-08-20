@@ -6,13 +6,14 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { Chip } from '@/components/ui/chip';
 import { cardClass } from '@/components/ui/card';
 import { showInterstitial } from '@/features/ads/services/interstitial';
 import { Button } from '@/components/ui/button';
 import { StarRating } from '@/components/ui/star-rating';
 import { SheetHeader } from '@/components/ui/sheet-header';
 import { Text } from '@/components/ui/text';
-import { moduleTint } from '@/constants/design-tokens';
+import { moduleTint, moduleTints } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { TimeField } from '@/features/sleep/components/time-field';
 import { durationBetween, formatDuration } from '@/features/sleep/services/sleep-stats';
@@ -271,18 +272,16 @@ export default function SleepLogScreen() {
             {FELL_ASLEEP_OPTIONS.map((minutes) => {
               const selected = fellAsleep === minutes;
               return (
-                <Pressable
-                  accessibilityRole="button"
+                <Chip
                   key={minutes}
+                  label={
+                    minutes === 0 ? t('sleep.instantly') : t('sleep.minutesShort', { minutes })
+                  }
+                  selected={selected}
+                  tint={moduleTints.sleep}
                   onPress={() => setFellAsleep(selected ? null : minutes)}
-                  className={`rounded-full border px-3.5 py-2 ${selected ? 'border-sleep bg-sleep' : 'border-border'}`}
-                >
-                  <Text
-                    className={selected ? 'font-sora-semibold text-white' : 'text-muted-foreground'}
-                  >
-                    {minutes === 0 ? t('sleep.instantly') : t('sleep.minutesShort', { minutes })}
-                  </Text>
-                </Pressable>
+                  className="py-2"
+                />
               );
             })}
           </View>
