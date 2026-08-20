@@ -1,7 +1,8 @@
 import { listAlbums, listMilestones } from '@/features/private/services/album-repository';
 import { nextMilestone, TOGETHER_MILESTONES } from '@/features/private/services/together';
+import { TOGETHER_REMINDER_KEY } from '@/features/notifications/services/notification-keys';
 import i18n from '@/lib/i18n';
-import { scheduleOneTimeNotification } from '@/lib/notifications';
+import { cancelScheduledByKey, scheduleOneTimeNotification } from '@/lib/notifications';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -37,6 +38,16 @@ function nextDayCountMilestone(startDate: number, now: number): number | null {
  * step in reminder-scheduler.ts.
  */
 export async function syncTogetherReminders(): Promise<void> {
+  // Unconditionally, and before any of the early returns below.
+  //
+  // This function scheduled without ever cancelling, which was survivable only
+  // because its one caller is the launch rebuild and that clears the queue on
+  // the way in. Every early return — no hub, no milestone in range, a milestone
+  // that has since passed — therefore left the previous nudge queued about a
+  // date that is gone. Cancelling by key first makes "nothing to say" mean
+  // nothing is queued, from any caller.
+  await cancelScheduledByKey(TOGETHER_REMINDER_KEY);
+
   const albums = await listAlbums();
   const hub = albums.find((a) => a.isTogetherHub);
   if (!hub) return;
@@ -63,6 +74,6 @@ export async function syncTogetherReminders(): Promise<void> {
     title: i18n.t('notif.redactedTitle'),
     body: i18n.t('notif.redactedBody'),
     date: fireAt,
-    data: { category: 'together', route: '/private/together' },
+    data: { category: 'together', route: '/private/together', key: TOGETHER_REMINDER_KEY },
   });
 }

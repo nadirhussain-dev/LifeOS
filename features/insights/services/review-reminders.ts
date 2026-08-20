@@ -1,3 +1,4 @@
+import { REVIEW_REMINDER_KEY } from '@/features/notifications/services/notification-keys';
 import { cancelNotifications, scheduleWeeklyNotification } from '@/lib/notifications';
 import i18n from '@/lib/i18n';
 import {
@@ -31,7 +32,7 @@ export async function syncReviewReminder(
     weekday: settings.weekday,
     hour: settings.hour,
     minute: settings.minute,
-    data: { category: 'review', route: '/review' },
+    data: { category: 'review', route: '/review', key: REVIEW_REMINDER_KEY },
   });
 
   store.setReminder(settings, id ?? null);

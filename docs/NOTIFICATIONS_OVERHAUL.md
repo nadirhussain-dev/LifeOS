@@ -1,7 +1,9 @@
 # Notifications overhaul — diagnosis and implementation plan
 
-Status: **Phase 1 shipped** on `fix/notification-duplicates`; Phases 2–3 proposed.
-Supersedes the open items at TODO.md:527 and TODO.md:533.
+Status: **Phases 1–3 complete** on `fix/notification-duplicates`, except item 11
+(deleting the now-redundant per-module id storage), which is deliberately held
+back until a release has shipped. Supersedes the open items at TODO.md:527 and
+TODO.md:533. Section 5 (push) remains a proposal — no push work has been done.
 
 The reported symptom is four identical "Do not lose today" notifications firing at
 the same instant, with four matching inbox rows. That is not a challenge-feature
@@ -92,15 +94,15 @@ impossible — and nothing detects it afterwards, because there is no notion of
 
 Related weaknesses that follow from the same gap:
 
-| #   | Issue                                                                               | Location                       | Effect                                                                                                              |
-| --- | ----------------------------------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| 1   | No mutex on any per-entity sync (only `resyncAllReminders` has an `inFlight` guard) | all `sync*Reminder` fns        | any double-call duplicates                                                                                          |
-| 2   | Slot ledger is an in-process counter, reseeded only by a resync                     | `scheduling-budget.ts`         | duplicates inflate it; on iOS `hasHeadroom` then silently declines _real_ reminders                                 |
-| 3   | `applyDeliveryMode()` is not awaited and races `resyncAllReminders()`               | `app/_layout.tsx:448-455`      | cancels categories mid-rebuild                                                                                      |
-| 4   | Digest mode destroys reminders instead of deferring them                            | `delivery.ts` header           | switching back leaves them gone until each item is re-saved                                                         |
-| 5   | `recordMissedRepeatingDeliveries` must precede `cancelAllScheduled`                 | `reminder-scheduler.ts`        | correct today, guarded only by a comment                                                                            |
-| 6   | `SCHEDULE_EXACT_ALARM` declared                                                     | `app.json` android.permissions | Play restricts this to alarm-clock apps; reminders should tolerate inexact delivery rather than depend on the grant |
-| 7   | Repeating deliveries only register while the process is alive                       | —                              | inbox/badge under-count, partially patched by `missed-occurrences.ts`                                               |
+| #   | Issue                                                                               | Location                       | Effect                                                                                                |
+| --- | ----------------------------------------------------------------------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| 1   | No mutex on any per-entity sync (only `resyncAllReminders` has an `inFlight` guard) | all `sync*Reminder` fns        | any double-call duplicates                                                                            |
+| 2   | Slot ledger is an in-process counter, reseeded only by a resync                     | `scheduling-budget.ts`         | duplicates inflate it; on iOS `hasHeadroom` then silently declines _real_ reminders                   |
+| 3   | `applyDeliveryMode()` is not awaited and races `resyncAllReminders()`               | `app/_layout.tsx:448-455`      | cancels categories mid-rebuild                                                                        |
+| 4   | Digest mode destroys reminders instead of deferring them                            | `delivery.ts` header           | switching back leaves them gone until each item is re-saved                                           |
+| 5   | `recordMissedRepeatingDeliveries` must precede `cancelAllScheduled`                 | `reminder-scheduler.ts`        | correct today, guarded only by a comment                                                              |
+| 6   | `SCHEDULE_EXACT_ALARM` declared                                                     | `app.json` android.permissions | Investigated and **kept** — see Phase 3 item 14; removing it degrades every timed reminder to inexact |
+| 7   | Repeating deliveries only register while the process is alive                       | —                              | inbox/badge under-count, partially patched by `missed-occurrences.ts`                                 |
 
 ---
 
@@ -129,8 +131,10 @@ constructors so keys are never spelled by hand at a call site.
 
 ### 3.2 One keyed primitive
 
-In `lib/notifications.ts`, add `scheduleKeyed(...)` wrapping the three existing
-schedulers. It does, per call:
+In `lib/notifications.ts`, wrap the three existing schedulers so that passing a
+key changes what they do. (Built as `withKey`, an internal wrapper, rather than
+the fourth public entry point this section originally imagined — see Phase 2
+item 8 for why.) Per call:
 
 1. **Serialize on the key.** A `Map<string, Promise<unknown>>` where each call
    chains onto the previous promise for that key. This is a real mutex, not a
@@ -197,32 +201,58 @@ the resync" becomes a red test, not a production incident.
    fails the concurrency cases with exactly the reported four-notification
    symptom.
 
-### Phase 2 — keyed scheduler
+### Phase 2 — keyed scheduler — **done**
 
 7. ✅ `key` on `NotificationPayload`; `notification-keys.ts`;
    `cancelScheduledByKey` in `lib/notifications.ts` — landed early with Phase 1.
-8. `scheduleKeyed` + per-key mutex + queue snapshot in `lib/notifications.ts`,
-   generalising what challenge now does by hand.
-9. Migrate call sites module by module (tasks → calendar → habits → water →
-   notes → goals → study → journal → sleep → debts → digest → review →
-   private). Each is a one-line change at the call site once the key exists;
-   challenge is already done.
-10. Orphan sweep on launch and foreground (§3.3).
+8. ✅ Per-key mutex + queue snapshot in `lib/notifications.ts`. Implemented as
+   `withKey`, wrapping the three **existing** schedulers rather than a fourth
+   `scheduleKeyed` entry point — the twenty call sites already use those three
+   with different trigger shapes, so a new signature would have meant rewriting
+   every one of them in a single commit. As built, a key is opt-in: passing one
+   makes the schedule idempotent, omitting one leaves behaviour untouched, and
+   the modules migrated one at a time. Added `cancelScheduledByKeyPrefix` for
+   the schedules that are a _set_.
+9. ✅ All 14 scheduling modules migrated — tasks, notes, calendar, debts, sleep,
+   journal, review, digest, habits, water, study, goals, together, cycle.
+   Set-based ones (habits, water, study, goals) clear their prefix first, so a
+   member the new set drops is reaped rather than orphaned.
+10. ✅ Orphan sweep (`sweepDuplicateKeys`) at the end of every rebuild and on
+    every foreground.
 11. Delete the now-redundant per-module id columns/stores **last**, once every
     module is keyed and one release has shipped — the ids are still what cancels
-    notifications queued by the previous build.
+    notifications queued by the previous build. **Deliberately not done here.**
 
-### Phase 3 — hardening
+**Found while migrating:** `together-reminders.ts` scheduled without ever
+cancelling, and returned early — leaving the previous nudge queued — whenever
+there was no hub, no milestone in range, or the milestone had passed. Survivable
+only because its one caller is the rebuild, which clears the queue on the way
+in. Now cancels by key first, unconditionally.
 
-12. Reseed the slot ledger from the real queue on foreground, not only on
-    resync, so drift cannot silently decline iOS reminders.
-13. Digest mode: defer rather than destroy — with keys, switching back can
-    rebuild from the resync instead of waiting for each item to be re-saved.
-14. Reconsider `SCHEDULE_EXACT_ALARM` in `app.json`. Treat exact delivery as an
-    enhancement; verify every reminder still reads correctly ±15 min.
-15. The resync-coverage test (§3.4) — the remaining piece of the Phase 1 test
-    work, deferred because it should assert over the migrated call sites rather
-    than the current mix of keyed and unkeyed ones.
+### Phase 3 — hardening — **done**
+
+12. ✅ Slot ledger reseeded from the real queue on every foreground, alongside
+    the queue-cache drop and the sweep.
+13. ✅ Digest mode defers rather than destroys: leaving digest mode triggers a
+    full rebuild, so the nudges come back instead of waiting to be re-saved
+    item by item. (`delivery.ts` claimed the Settings screen warned users about
+    the old behaviour. It never did — there is no such string in any locale, so
+    the limitation was undocumented as well as unfixed. Nothing to update.)
+14. ✅ Reconsidered — **and the answer is to keep it.** The concern was Play's
+    restriction of `SCHEDULE_EXACT_ALARM` to alarm/calendar apps on Android
+    14+. But the Expo SDK 54 docs are explicit that expo-notifications needs it
+    on Android 12+ (API 31+) for a notification to fire at an exact time, and
+    without it every timed reminder in the app silently degrades to whatever
+    Doze allows — which for a task due-time is the difference between a
+    reminder and a rumour. Daykeep's core function is reminders, so the
+    declaration is defensible at review. The real work is the second half of
+    the item: the app must read correctly when the grant is absent, which is
+    what `openExactAlarmSettings()` already exists for. No manifest change.
+15. ✅ Resync-coverage test — `resync-coverage.test.ts` walks the import graph
+    from the rebuild's roots and fails if any module that calls a scheduling
+    primitive is unreachable. Verified non-vacuous: removing the challenge
+    registration reports `challenge-reminders.ts` as an orphan, which is
+    precisely the bug that shipped.
 
 ---
 

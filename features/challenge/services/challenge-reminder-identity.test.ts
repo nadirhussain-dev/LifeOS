@@ -158,7 +158,7 @@ import {
 } from '@/features/notifications/services/notification-keys';
 import { seedSlots } from '@/features/notifications/services/scheduling-budget';
 import { useNotificationsStore } from '@/features/notifications/store/notifications-store';
-import { cancelScheduledByKey } from '@/lib/notifications';
+import { cancelScheduledByKey, invalidateScheduledQueueCache } from '@/lib/notifications';
 
 const notificationDefaults = useNotificationsStore.getState();
 const challengeDefaults = useChallengeStore.getState();
@@ -199,6 +199,11 @@ beforeEach(() => {
   mockNextNotificationId = 1;
   seedSlots(0);
   atAfternoon();
+  // lib/notifications caches its view of the OS queue, and these tests reach
+  // past it to seed `mockQueue` directly — which is exactly what an older build
+  // leaving entries behind looks like. The app drops the cache on launch and on
+  // every foreground for the same reason.
+  invalidateScheduledQueueCache();
 
   useNotificationsStore.setState({
     masterEnabled: true,

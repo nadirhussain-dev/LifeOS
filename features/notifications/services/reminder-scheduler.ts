@@ -24,6 +24,8 @@ import {
   cancelAllScheduled,
   getScheduledCount,
   hasNotificationPermission,
+  invalidateScheduledQueueCache,
+  sweepDuplicateKeys,
 } from '@/lib/notifications';
 
 /**
@@ -138,6 +140,9 @@ async function runResync(): Promise<ResyncResult> {
   }
   setLastArrivalCheckAt(checkedAt);
 
+  // Nothing about the cached view of the queue is trustworthy at the start of a
+  // rebuild — the process may have been alive for days.
+  invalidateScheduledQueueCache();
   // Clears the OS queue and the inbox rows that mirror it, so orphans from a
   // deleted item or a previous install cannot survive the rebuild.
   await cancelAllScheduled();
@@ -231,6 +236,15 @@ async function runResync(): Promise<ResyncResult> {
   for (const extra of extraSteps) {
     await step(extra.name, extra.run);
   }
+
+  /**
+   * Belt and braces. Every keyed schedule above already replaces its own key,
+   * so this should find nothing — and that is the point: it is the assertion
+   * that they did, running in production rather than only in the test suite.
+   * A module that regresses shows up as a duplicate swept here instead of as a
+   * second buzz on somebody's phone.
+   */
+  await step('sweep', sweepDuplicateKeys);
 
   return { ran: true, scheduled, failed };
 }

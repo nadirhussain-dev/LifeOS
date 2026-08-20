@@ -8,6 +8,7 @@ import {
 } from '@/features/private/services/cycle-math';
 import { useCycleSettingsStore } from '@/features/private/store/cycle-settings-store';
 import i18n from '@/lib/i18n';
+import { CYCLE_REMINDER_KEY } from '@/features/notifications/services/notification-keys';
 import { cancelNotification, scheduleOneTimeNotification } from '@/lib/notifications';
 
 /** Fires this many days before the predicted start — enough notice to be
@@ -70,7 +71,7 @@ export async function syncCycleReminders(): Promise<void> {
     title: i18n.t('notif.redactedTitle'),
     body: i18n.t('notif.redactedBody'),
     date: fireAt.getTime(),
-    data: { category: 'cycle', route: '/private/cycle' },
+    data: { category: 'cycle', route: '/private/cycle', key: CYCLE_REMINDER_KEY },
   });
   store.setReminderNotificationId(id);
 }

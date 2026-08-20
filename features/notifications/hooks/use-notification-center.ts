@@ -13,8 +13,15 @@ import {
   type NotificationCategory,
 } from '@/features/notifications/types/notification.types';
 import { useNotificationsStore } from '@/features/notifications/store/notifications-store';
+import { seedSlots } from '@/features/notifications/services/scheduling-budget';
 import { reportError } from '@/lib/error-reporting';
-import { addNotificationReceivedListener, hasNotificationPermission } from '@/lib/notifications';
+import {
+  addNotificationReceivedListener,
+  getScheduledCount,
+  hasNotificationPermission,
+  invalidateScheduledQueueCache,
+  sweepDuplicateKeys,
+} from '@/lib/notifications';
 
 /**
  * Turns an arriving notification into something the app itself can show.
@@ -69,6 +76,32 @@ export function useNotificationCenter(): void {
       void hasNotificationPermission()
         .then(useNotificationsStore.getState().setSystemPermissionGranted)
         .catch(() => undefined);
+
+      /**
+       * Re-read the OS queue on the same beat, and settle two things that drift
+       * while the app is backgrounded.
+       *
+       * The slot ledger is an in-process counter that only a rebuild reseeds
+       * (see scheduling-budget.ts). Notifications that fired overnight left the
+       * queue without telling it, so it over-counts — and on iOS, where the
+       * ceiling is real, an over-counting ledger makes `hasHeadroom` decline
+       * reminders there is actually room for. Returning to the foreground is
+       * both when the answer has changed and when it is cheap to ask.
+       *
+       * The sweep is the other half: cancel-by-key only runs when something
+       * schedules, so a key nothing touched this session keeps whatever it has
+       * — including duplicates from a build that predates keys. This is what
+       * cleans those up without waiting for the user to edit the item.
+       */
+      void (async () => {
+        try {
+          invalidateScheduledQueueCache();
+          await sweepDuplicateKeys();
+          seedSlots(await getScheduledCount());
+        } catch (error) {
+          reportError(error, { scope: 'notification-queue-reconcile' });
+        }
+      })();
     };
 
     catchUp();

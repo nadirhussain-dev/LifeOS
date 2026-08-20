@@ -3,6 +3,7 @@ import { format, setHours, setMinutes, setSeconds, startOfDay, subDays } from 'd
 import { setDebtReminderNotificationId } from '@/features/budget/services/debts-repository';
 import { formatMoney } from '@/features/budget/services/money';
 import i18n from '@/lib/i18n';
+import { debtReminderKey } from '@/features/notifications/services/notification-keys';
 import { cancelNotification, scheduleOneTimeNotification } from '@/lib/notifications';
 import type { Debt } from '@/features/budget/types/budget.types';
 
@@ -47,7 +48,12 @@ export async function syncDebtReminder(debt: Debt): Promise<void> {
     title,
     body: body.trim(),
     date: fireAt,
-    data: { category: 'budget', route: '/budget/debts/[id]', params: { id: debt.id } },
+    data: {
+      category: 'budget',
+      route: '/budget/debts/[id]',
+      params: { id: debt.id },
+      key: debtReminderKey(debt.id),
+    },
   });
   setDebtReminderNotificationId(debt.id, id);
 }

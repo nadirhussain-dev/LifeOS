@@ -1,5 +1,6 @@
 import { setNoteReminderNotificationId } from '@/features/notes/services/notes-repository';
 import i18n from '@/lib/i18n';
+import { noteReminderKey } from '@/features/notifications/services/notification-keys';
 import { cancelNotification, scheduleOneTimeNotification } from '@/lib/notifications';
 import type { Note } from '@/features/notes/types/note.types';
 
@@ -21,7 +22,12 @@ export async function syncNoteReminder(note: Note): Promise<void> {
     title: note.title || i18n.t('notes.reminderTitle'),
     body: i18n.t('notes.reminderBody'),
     date: note.reminderAt,
-    data: { category: 'notes', route: '/note/[id]', params: { id: note.id } },
+    data: {
+      category: 'notes',
+      route: '/note/[id]',
+      params: { id: note.id },
+      key: noteReminderKey(note.id),
+    },
   });
   setNoteReminderNotificationId(note.id, id);
 }

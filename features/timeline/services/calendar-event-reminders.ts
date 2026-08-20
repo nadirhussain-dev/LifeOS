@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 
 import { setCalendarEventReminderNotificationId } from '@/features/timeline/services/calendar-events-repository';
 import i18n from '@/lib/i18n';
+import { calendarEventReminderKey } from '@/features/notifications/services/notification-keys';
 import { cancelNotification, scheduleOneTimeNotification } from '@/lib/notifications';
 import type { CalendarEvent } from '@/features/timeline/types/timeline.types';
 
@@ -27,6 +28,7 @@ export async function scheduleCalendarEventReminder(event: CalendarEvent): Promi
       category: 'calendar',
       route: '/timeline/[date]',
       params: { date: format(event.startAt, 'yyyy-MM-dd') },
+      key: calendarEventReminderKey(event.id),
     },
   });
   setCalendarEventReminderNotificationId(event.id, id);
