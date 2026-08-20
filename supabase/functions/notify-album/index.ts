@@ -34,11 +34,12 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+import { pruneDeadTokens, recordTickets, sendExpoPush } from '../_shared/expo-push.ts';
 import { consumeRateLimit, tooManyRequests } from '../_shared/rate-limit.ts';
 
-const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
-/** Expo rejects batches larger than this. */
-const CHUNK = 100;
+/** Shared updates land on the one channel whose id never moves — see
+ *  PUSH_CHANNEL_ID in lib/notifications.ts and app.json's `defaultChannel`. */
+const PUSH_CHANNEL_ID = 'daykeep-general-v3';
 
 type Payload = {
   albumId: string;
@@ -57,38 +58,43 @@ const json = (body: unknown, status = 200) =>
     headers: { 'Content-Type': 'application/json' },
   });
 
-async function sendExpoPush(
+/**
+ * One send, plus the bookkeeping every send owes.
+ *
+ * Both branches below (an invite to one person, a message to the album) do
+ * exactly the same three things, and doing them in one place is what stops the
+ * two drifting — which is how this file ended up with its own copy of a sender
+ * in the first place.
+ *
+ * `accepted`, not "sent". A ticket means Expo took the message; only the
+ * receipt fetched later says a device did. Reporting the first as the second is
+ * what let `push_tokens` fill with dead entries and still look healthy.
+ */
+async function deliver(
+  admin: ReturnType<typeof createClient>,
   tokens: string[],
-  message: { title: string; body: string; route: string },
-): Promise<{ sent: number; failures: number }> {
-  const expoToken = Deno.env.get('EXPO_ACCESS_TOKEN');
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (expoToken) headers.Authorization = `Bearer ${expoToken}`;
+  payload: Payload,
+  route: string,
+): Promise<{ accepted: number; rejected: number }> {
+  const outcome = await sendExpoPush(
+    tokens,
+    {
+      title: payload.title,
+      body: payload.body,
+      channelId: PUSH_CHANNEL_ID,
+      // One notification per album rather than one per message. A fast
+      // back-and-forth should not be twenty separate buzzes about the same
+      // conversation — the device replaces the previous one.
+      collapseId: `album:${payload.albumId}`,
+      data: { route, category: 'private' },
+    },
+    { fetch, accessToken: Deno.env.get('EXPO_ACCESS_TOKEN') },
+  );
 
-  let sent = 0;
-  const failures: unknown[] = [];
+  await pruneDeadTokens(admin as never, outcome.deadTokens);
+  await recordTickets(admin as never, outcome, Date.now());
 
-  for (let i = 0; i < tokens.length; i += CHUNK) {
-    const messages = tokens.slice(i, i + CHUNK).map((to) => ({
-      to,
-      title: message.title,
-      body: message.body,
-      sound: 'default',
-      data: { route: message.route, category: 'private' },
-    }));
-    try {
-      const res = await fetch(EXPO_PUSH_URL, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(messages),
-      });
-      if (res.ok) sent += messages.length;
-      else failures.push(await res.text());
-    } catch (error) {
-      failures.push(String(error));
-    }
-  }
-  return { sent, failures: failures.length };
+  return { accepted: outcome.accepted, rejected: outcome.rejected };
 }
 
 Deno.serve(async (req: Request) => {
@@ -177,7 +183,7 @@ Deno.serve(async (req: Request) => {
     const tokens = (tokenRows ?? []).map((r: { token: string }) => r.token);
     if (tokens.length === 0) return json({ sent: 0, reason: 'no_tokens' });
 
-    const result = await sendExpoPush(tokens, { title: payload.title, body: payload.body, route });
+    const result = await deliver(admin, tokens, payload, route);
     return json(result);
   }
 
@@ -198,6 +204,6 @@ Deno.serve(async (req: Request) => {
 
   // A partial failure is still reported 200: the write it accompanies already
   // succeeded, and the client must not retry it because a push bounced.
-  const result = await sendExpoPush(tokens, { title: payload.title, body: payload.body, route });
+  const result = await deliver(admin, tokens, payload, route);
   return json(result);
 });
