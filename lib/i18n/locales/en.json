@@ -784,7 +784,9 @@
     "usernameJustTaken": "Someone just took that name — try another.",
     "usernameClaimFailed": "Your account was created, but the username couldn't be saved. You can set it in Settings.",
     "usernameCheckFailed": "Couldn't check that name right now — you can still continue.",
-    "continueWithGoogle": "Continue with Google"
+    "continueWithGoogle": "Continue with Google",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "language": {
     "en": "English",

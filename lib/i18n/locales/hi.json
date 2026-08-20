@@ -784,7 +784,9 @@
     "usernameJustTaken": "यह नाम अभी किसी ने ले लिया — कोई और आज़माएँ।",
     "usernameClaimFailed": "आपका खाता बन गया, पर उपयोगकर्ता नाम सहेजा नहीं जा सका। आप इसे सेटिंग्स में सेट कर सकते हैं।",
     "usernameCheckFailed": "अभी यह नाम जाँचा नहीं जा सका — आप फिर भी आगे बढ़ सकते हैं।",
-    "continueWithGoogle": "Google से जारी रखें"
+    "continueWithGoogle": "Google से जारी रखें",
+    "showPassword": "पासवर्ड दिखाएँ",
+    "hidePassword": "पासवर्ड छिपाएँ"
   },
   "language": {
     "en": "English",

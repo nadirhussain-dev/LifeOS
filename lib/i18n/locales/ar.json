@@ -816,7 +816,9 @@
     "usernameJustTaken": "أخذ أحدهم هذا الاسم للتو — جرّب اسمًا آخر.",
     "usernameClaimFailed": "أُنشئ حسابك، لكن تعذّر حفظ اسم المستخدم. يمكنك ضبطه من الإعدادات.",
     "usernameCheckFailed": "تعذّر التحقق من هذا الاسم الآن — يمكنك المتابعة على أي حال.",
-    "continueWithGoogle": "المتابعة باستخدام Google"
+    "continueWithGoogle": "المتابعة باستخدام Google",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور"
   },
   "language": {
     "en": "English",
