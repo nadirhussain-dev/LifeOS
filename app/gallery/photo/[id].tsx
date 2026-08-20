@@ -5,7 +5,7 @@ import { CalendarDays, Heart, Trash2, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image } from 'expo-image';
-import { Dimensions, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Dimensions, Platform, Pressable, ScrollView, View } from 'react-native';
 
 import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
@@ -209,11 +209,11 @@ export default function PhotoDetailScreen() {
                 </Pressable>
               ))}
               <View className="flex-row items-center rounded-full border border-dashed border-border px-3 py-1.5">
-                <TextInput
+                <Input
+                  surface="bare"
                   value={tagDraft}
                   onChangeText={setTagDraft}
                   placeholder={t('gallery.addTag')}
-                  placeholderTextColor={colors[scheme].mutedForeground}
                   onSubmitEditing={addTag}
                   returnKeyType="done"
                   autoCapitalize="none"

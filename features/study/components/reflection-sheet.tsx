@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, TextInput, View } from 'react-native';
+import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Input } from '@/components/ui/input';
 import { GradientButton } from '@/components/ui/gradient-button';
 import { StarRating } from '@/components/ui/star-rating';
 import { Text } from '@/components/ui/text';
@@ -77,12 +78,12 @@ export function ReflectionSheet({ visible, focusSeconds, onSave }: Props) {
               <StarRating value={rating} onChange={setRating} />
             </View>
 
-            <TextInput
+            <Input
+              surface="bare"
               value={note}
               onChangeText={setNote}
               accessibilityLabel={t('study.sessionReflection')}
               placeholder={t('study.notePlaceholder')}
-              placeholderTextColor={colors[scheme].mutedForeground}
               className="rounded-2xl border border-border px-4 py-3 text-foreground"
             />
 

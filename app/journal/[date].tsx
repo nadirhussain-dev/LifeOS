@@ -6,10 +6,10 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Clock3, MapPin, Trash2 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-import { cardClass } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { AttachmentStrip } from '@/components/ui/attachment-strip';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
@@ -176,15 +176,16 @@ export default function JournalEntryScreen() {
           onToggleReason={toggleReason}
         />
 
-        <TextInput
+        <Input
           value={body}
           onChangeText={setBody}
           multiline
           accessibilityLabel={t('journal.journalEntry')}
           placeholder={t('journal.howWasToday')}
-          placeholderTextColor={colors[scheme].mutedForeground}
           style={{ fontFamily: 'Literata_400Regular', fontSize: 17, lineHeight: 25 }}
-          className={cardClass({ padding: 'md' }, 'min-h-32 text-foreground')}
+          surface="card"
+          cardPadding="md"
+          className="min-h-32"
           textAlignVertical="top"
         />
 

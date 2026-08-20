@@ -11,6 +11,7 @@ import { forwardRef, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, Pressable, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -256,7 +257,9 @@ export const CycleEntrySheet = forwardRef<BottomSheetModal, Props>(function Cycl
         <View className="flex-row gap-3">
           <View className="flex-1 gap-2">
             <Text variant="micro">{t('private.basalTemp')}</Text>
-            <BottomSheetTextInput
+            <Input
+              surface="bare"
+              as={BottomSheetTextInput}
               value={fields.basalTempC === null ? '' : String(fields.basalTempC)}
               onChangeText={(text) => {
                 const parsed = parseFloat(text);
@@ -264,7 +267,6 @@ export const CycleEntrySheet = forwardRef<BottomSheetModal, Props>(function Cycl
               }}
               keyboardType="decimal-pad"
               placeholder="36.6"
-              placeholderTextColor={theme.mutedForeground}
               style={{
                 color: theme.foreground,
                 borderWidth: 1,
@@ -277,7 +279,9 @@ export const CycleEntrySheet = forwardRef<BottomSheetModal, Props>(function Cycl
           </View>
           <View className="flex-1 gap-2">
             <Text variant="micro">{t('private.weight')}</Text>
-            <BottomSheetTextInput
+            <Input
+              surface="bare"
+              as={BottomSheetTextInput}
               value={fields.weightKg === null ? '' : String(fields.weightKg)}
               onChangeText={(text) => {
                 const parsed = parseFloat(text);
@@ -285,7 +289,6 @@ export const CycleEntrySheet = forwardRef<BottomSheetModal, Props>(function Cycl
               }}
               keyboardType="decimal-pad"
               placeholder="60"
-              placeholderTextColor={theme.mutedForeground}
               style={{
                 color: theme.foreground,
                 borderWidth: 1,
@@ -353,11 +356,12 @@ export const CycleEntrySheet = forwardRef<BottomSheetModal, Props>(function Cycl
 
         <View className="gap-2">
           <Text variant="micro">{t('private.notes')}</Text>
-          <BottomSheetTextInput
+          <Input
+            surface="bare"
+            as={BottomSheetTextInput}
             value={fields.note}
             onChangeText={(text) => set('note', text)}
             placeholder={t('private.notePlaceholder')}
-            placeholderTextColor={theme.mutedForeground}
             multiline
             style={{
               color: theme.foreground,

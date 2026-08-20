@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { TextInput, View } from 'react-native';
+import { View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { EXPENSE_CATEGORIES, expenseCategoryMeta } from '@/features/budget/config/budget-config';
@@ -46,7 +47,8 @@ export function CategoryCapEditor({ limits, currencyCode, monthlyBudgetCents, on
             <Icon size={16} color={meta.tint} />
             <Text className="flex-1 font-sora-medium">{meta.label}</Text>
             <Text variant="caption">{symbol}</Text>
-            <TextInput
+            <Input
+              surface="bare"
               defaultValue={cents != null ? String(cents / 100) : ''}
               onChangeText={(text) => {
                 const trimmed = text.trim();
@@ -61,7 +63,6 @@ export function CategoryCapEditor({ limits, currencyCode, monthlyBudgetCents, on
               accessibilityLabel={t('budget.categoryCapFor', { category: meta.label })}
               placeholder="—"
               keyboardType="decimal-pad"
-              placeholderTextColor={colors[scheme].mutedForeground}
               className="w-20 rounded-lg border border-border px-2 py-1.5 text-right text-foreground"
             />
           </View>

@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TextInput, View } from 'react-native';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import { colors } from '@/constants/theme';
 import type { JournalPrompt, JournalReflection } from '@/features/journal/types/journal.types';
 
 const AUTOSAVE_DELAY_MS = 500;
@@ -18,7 +17,6 @@ function PromptField({
   initialAnswer: string;
   onSave: (text: string) => void;
 }) {
-  const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const [answer, setAnswer] = useState(initialAnswer);
 
@@ -33,13 +31,13 @@ function PromptField({
   return (
     <View className="gap-2">
       <Text className="font-journal-italic text-[15px] text-muted-foreground">{prompt.text}</Text>
-      <TextInput
+      <Input
+        surface="bare"
         value={answer}
         onChangeText={setAnswer}
         multiline
         accessibilityLabel={prompt.text}
         placeholder={t('journal.writeAFewWords')}
-        placeholderTextColor={colors[scheme].mutedForeground}
         style={{ fontFamily: 'Literata_400Regular', fontSize: 16, lineHeight: 23 }}
         className="min-h-11 rounded-xl border border-border bg-card p-3 text-foreground"
         textAlignVertical="top"

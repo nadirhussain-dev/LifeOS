@@ -3,8 +3,9 @@ import * as WebBrowser from 'expo-web-browser';
 import { Check, CloudUpload, HardDrive, Sparkles, Smartphone, Wifi, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Switch, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { AdFreeOffer } from '@/features/ads/components/ad-free-offer';
@@ -318,14 +319,15 @@ export default function MediaSettingsScreen() {
           <AdFreeOffer />
 
           {!isPlus ? (
-            <TextInput
+            <Input
               value={couponCode}
               onChangeText={setCouponCode}
               placeholder={t('billing.couponPlaceholder')}
-              placeholderTextColor={c.mutedForeground}
               autoCapitalize="characters"
               autoCorrect={false}
-              className={cardClass({ padding: 'none' }, 'px-4 py-3 text-foreground')}
+              surface="card"
+              cardPadding="none"
+              className="px-4 py-3"
               style={{ fontFamily: 'Sora_400Regular' }}
             />
           ) : null}

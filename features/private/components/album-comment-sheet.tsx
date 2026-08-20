@@ -12,6 +12,7 @@ import { forwardRef, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useAuthStore } from '@/features/auth/services/auth-store';
@@ -143,11 +144,12 @@ export const AlbumCommentSheet = forwardRef<BottomSheetModal, Props>(function Al
 
         {target?.canCompose ? (
           <View className="mt-2 flex-row items-center gap-2 rounded-2xl border border-border px-3 py-2">
-            <BottomSheetTextInput
+            <Input
+              surface="bare"
+              as={BottomSheetTextInput}
               value={draft}
               onChangeText={setDraft}
               placeholder={t('private.addComment')}
-              placeholderTextColor={theme.mutedForeground}
               multiline
               maxLength={500}
               style={{ flex: 1, color: theme.foreground, maxHeight: 90 }}

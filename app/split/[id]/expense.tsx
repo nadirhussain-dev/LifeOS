@@ -5,14 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { CalendarDays, Check, Trash2 } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  TextInput,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
 import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/chip';
@@ -419,13 +412,13 @@ export default function SplitExpenseScreen() {
                     </Pressable>
 
                     {included && mode === 'exact' ? (
-                      <TextInput
+                      <Input
+                        surface="bare"
                         value={exact[m.id] ?? ''}
                         onChangeText={(v) => setExact((prev) => ({ ...prev, [m.id]: v }))}
                         accessibilityLabel={`${memberName(m.id)} — ${t('split.amount')}`}
                         placeholder="0.00"
                         keyboardType="decimal-pad"
-                        placeholderTextColor={colors[scheme].mutedForeground}
                         className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-end text-foreground"
                         style={{ minWidth: 84 }}
                       />

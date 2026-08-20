@@ -2,7 +2,7 @@ import { format } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, TextInput, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -115,13 +115,14 @@ export default function NewRecurringScreen() {
           />
         </View>
 
-        <TextInput
+        <Input
           value={note}
           onChangeText={setNote}
           accessibilityLabel={t('fields.notes')}
           placeholder={t('budget.recurringNotePlaceholder')}
-          placeholderTextColor={colors[scheme].mutedForeground}
-          className={cardClass({ padding: 'md' }, 'text-base text-foreground')}
+          surface="card"
+          cardPadding="md"
+          className="text-base"
         />
 
         <Button

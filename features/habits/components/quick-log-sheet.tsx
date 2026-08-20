@@ -8,9 +8,10 @@ import * as Haptics from 'expo-haptics';
 import { Minus, Plus } from 'lucide-react-native';
 import { forwardRef, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -74,7 +75,8 @@ export const QuickLogSheet = forwardRef<BottomSheetModal, Props>(function QuickL
           </Pressable>
 
           <View className="min-w-20 flex-row items-baseline justify-center gap-1.5">
-            <TextInput
+            <Input
+              surface="bare"
               value={String(value)}
               onChangeText={(text) => {
                 const parsed = parseFloat(text);

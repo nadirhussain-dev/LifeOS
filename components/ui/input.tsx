@@ -1,4 +1,4 @@
-import { forwardRef, useState, type ReactNode } from 'react';
+import { forwardRef, useState, type ComponentType, type ReactNode } from 'react';
 import { TextInput, View, type TextInputProps } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
@@ -41,6 +41,21 @@ type Props = Omit<TextInputProps, 'placeholderTextColor'> & {
   surface?: 'field' | 'card' | 'bare';
   /** Padding for `surface="card"`, matching the card scale. */
   cardPadding?: 'none' | 'sm' | 'md' | 'lg' | 'row' | 'rowLg';
+  /**
+   * Elevation for `surface="card"`. Defaults to `flat`, which is `cardClass`'s
+   * own default — most of the card-shaped fields were flat, and defaulting to
+   * `e1` here would have quietly added a shadow to each of them.
+   */
+  cardElevation?: 'flat' | 'e1' | 'e2';
+  /**
+   * The underlying input element. Defaults to React Native's `TextInput`.
+   *
+   * Exists for `BottomSheetTextInput` from @gorhom/bottom-sheet, which the eight
+   * fields inside sheets have to use — a plain `TextInput` in a bottom sheet does
+   * not lift itself above the keyboard. They were the last hold-outs from this
+   * component, and the reason was never the styling; it was the element.
+   */
+  as?: ComponentType<TextInputProps>;
 };
 
 /**
@@ -86,6 +101,8 @@ export const Input = forwardRef<TextInput, Props>(function Input(
     fieldClassName,
     surface = 'field',
     cardPadding = 'md',
+    cardElevation = 'flat',
+    as: Element = TextInput,
     onFocus,
     onBlur,
     ...props
@@ -118,45 +135,52 @@ export const Input = forwardRef<TextInput, Props>(function Input(
 
   const surfaceClass =
     surface === 'card'
-      ? cardClass({ padding: cardPadding, elevation: 'e1' })
+      ? cardClass({ padding: cardPadding, elevation: cardElevation })
       : surface === 'field'
         ? 'rounded-2xl border bg-card px-4'
         : '';
 
-  const input = (
-    <TextInput
-      ref={ref}
-      placeholderTextColor={c.mutedForeground}
-      // Matches components/ui/text.tsx, for the reason given there.
-      maxFontSizeMultiplier={1.4}
-      onFocus={(e) => {
-        setFocused(true);
-        onFocus?.(e);
-      }}
-      onBlur={(e) => {
-        setFocused(false);
-        onBlur?.(e);
-      }}
-      className={cn(
-        bare ? 'text-foreground' : 'flex-1 py-3 font-sans text-base text-foreground',
-        className,
-      )}
-      {...props}
-      /*
-       * After the spread, deliberately.
-       *
-       * React Native has no `invalid` accessibility state (the platform union is
-       * disabled/selected/checked/busy/expanded), so an invalid field is
-       * announced by folding the message into its label. That has to beat a
-       * caller-supplied label rather than lose to it, or the error stays red text
-       * a screen reader only reaches if the user happens to swipe onto it —
-       * "never colour alone" applies to assistive tech first.
-       */
-      accessibilityLabel={
-        [props.accessibilityLabel ?? label, error].filter(Boolean).join(', ') || undefined
-      }
-    />
-  );
+  /*
+   * Built once so the element can be swapped without restating them.
+   *
+   * The ref reaches the default `TextInput` only. `BottomSheetTextInput` types
+   * its own ref as `TextInput | undefined`, which is not assignable to a
+   * `Ref<TextInput>`, and none of the eight sheet fields take one — widening the
+   * `as` contract to `any` to paper over that would be the only `any` here.
+   */
+  const inputProps: TextInputProps & { className?: string } = {
+    placeholderTextColor: c.mutedForeground,
+    // Matches components/ui/text.tsx, for the reason given there.
+    maxFontSizeMultiplier: 1.4,
+    onFocus: (e) => {
+      setFocused(true);
+      onFocus?.(e);
+    },
+    onBlur: (e) => {
+      setFocused(false);
+      onBlur?.(e);
+    },
+    className: cn(
+      bare ? 'text-foreground' : 'flex-1 py-3 font-sans text-base text-foreground',
+      className,
+    ),
+    ...props,
+    /*
+     * After the spread, deliberately.
+     *
+     * React Native has no `invalid` accessibility state (the platform union is
+     * disabled/selected/checked/busy/expanded), so an invalid field is announced
+     * by folding the message into its label. That has to beat a caller-supplied
+     * label rather than lose to it, or the error stays red text a screen reader
+     * only reaches if the user happens to swipe onto it — "never colour alone"
+     * applies to assistive tech first.
+     */
+    accessibilityLabel:
+      [props.accessibilityLabel ?? label, error].filter(Boolean).join(', ') || undefined,
+  };
+
+  const input =
+    Element === TextInput ? <TextInput ref={ref} {...inputProps} /> : <Element {...inputProps} />;
 
   if (unwrapped) return input;
 

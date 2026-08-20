@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { Battery, Moon, Target, Waves } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
@@ -13,6 +13,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { moduleTint, resolveTint, type TintPair } from '@/constants/design-tokens';
@@ -264,7 +265,8 @@ export function MoodCheckin({
         <Text variant="micro" className="font-sora-semibold">
           {t('mood.hoursSlept')}
         </Text>
-        <TextInput
+        <Input
+          surface="bare"
           value={sleepHoursText}
           onChangeText={(text) => {
             setSleepHoursText(text);
@@ -273,7 +275,6 @@ export function MoodCheckin({
           }}
           keyboardType="decimal-pad"
           placeholder="7.5"
-          placeholderTextColor={colors[scheme].mutedForeground}
           className="w-16 rounded-lg border border-border px-2 py-1.5 text-center text-foreground"
         />
       </View>

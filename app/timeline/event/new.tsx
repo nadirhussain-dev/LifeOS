@@ -6,7 +6,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Bell, Clock, Palette, StickyNote } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Input } from '@/components/ui/input';
@@ -241,14 +241,15 @@ export default function NewCalendarEventScreen() {
               {t('timeline.notes')}
             </Text>
           </View>
-          <TextInput
+          <Input
             value={notes}
             onChangeText={setNotes}
             multiline
             accessibilityLabel={t('timeline.eventDetails')}
             placeholder={t('timeline.detailsPlaceholder')}
-            placeholderTextColor={colors[scheme].mutedForeground}
-            className={cardClass({ padding: 'md' }, 'min-h-20 text-base text-foreground')}
+            surface="card"
+            cardPadding="md"
+            className="min-h-20 text-base"
             textAlignVertical="top"
           />
         </View>

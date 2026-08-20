@@ -15,7 +15,7 @@ import {
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Switch, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Input } from '@/components/ui/input';
@@ -276,13 +276,13 @@ export default function TaskDetailScreen() {
               {t('fields.notes')}
             </Text>
           </View>
-          <TextInput
+          <Input
+            surface="bare"
             value={notes}
             onChangeText={setNotes}
             multiline
             accessibilityLabel={t('tasks.taskNotes')}
             placeholder={t('tasks.addNotes')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             className={cardClass(
               { padding: 'md', elevation: 'e1' },
               'min-h-24 text-base text-foreground',

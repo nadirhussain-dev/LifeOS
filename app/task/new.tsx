@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { Bell, CalendarDays, Flag, Repeat, StickyNote, Tag } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Switch, TextInput, View } from 'react-native';
+import { ScrollView, Switch, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -158,13 +158,13 @@ export default function NewTaskScreen() {
               {t('fields.notes')}
             </Text>
           </View>
-          <TextInput
+          <Input
+            surface="bare"
             value={notes}
             onChangeText={setNotes}
             multiline
             accessibilityLabel={t('tasks.taskNotes')}
             placeholder={t('tasks.addNotes')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             className={cardClass(
               { padding: 'md', elevation: 'e1' },
               'min-h-24 text-base text-foreground',

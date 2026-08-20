@@ -11,6 +11,7 @@ import { forwardRef, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -115,11 +116,12 @@ export const PlanSheet = forwardRef<BottomSheetModal, Props>(function PlanSheet(
           <AlbumDateField value={eventDate} onChange={setEventDate} />
         </View>
 
-        <BottomSheetTextInput
+        <Input
+          surface="bare"
+          as={BottomSheetTextInput}
           value={title}
           onChangeText={setTitle}
           placeholder={t('private.planTitlePlaceholder')}
-          placeholderTextColor={theme.mutedForeground}
           style={{
             color: theme.foreground,
             borderWidth: 1,
@@ -130,11 +132,12 @@ export const PlanSheet = forwardRef<BottomSheetModal, Props>(function PlanSheet(
           }}
         />
 
-        <BottomSheetTextInput
+        <Input
+          surface="bare"
+          as={BottomSheetTextInput}
           value={notes}
           onChangeText={setNotes}
           placeholder={t('private.planNotesPlaceholder')}
-          placeholderTextColor={theme.mutedForeground}
           multiline
           style={{
             color: theme.foreground,

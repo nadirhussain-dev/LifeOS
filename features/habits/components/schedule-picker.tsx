@@ -1,8 +1,9 @@
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { WeekdayPicker } from '@/components/ui/weekday-picker';
 import { colors } from '@/constants/theme';
@@ -79,7 +80,8 @@ export function SchedulePicker({
       {scheduleType === 'every_x_days' && (
         <View className="flex-row items-center gap-2">
           <Text variant="muted">{t('schedule.repeatEvery')}</Text>
-          <TextInput
+          <Input
+            surface="bare"
             accessibilityLabel={t('schedule.repeatIntervalDays')}
             value={scheduleIntervalDays ? String(scheduleIntervalDays) : ''}
             onChangeText={(text) => {
@@ -88,7 +90,6 @@ export function SchedulePicker({
             }}
             keyboardType="number-pad"
             placeholder="3"
-            placeholderTextColor={colors[scheme].mutedForeground}
             className="w-14 rounded-lg border border-border px-2 py-1.5 text-center text-foreground"
           />
           <Text variant="muted">{t('schedule.days')}</Text>

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { colors } from '@/constants/design-tokens';
@@ -11,10 +11,24 @@ const readCode = (relative: string) =>
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/\/\/[^\n]*/g, '');
 
+function sourceFiles(...directories: string[]): string[] {
+  const out: string[] = [];
+  const walk = (directory: string) => {
+    for (const entry of readdirSync(directory)) {
+      const path = join(directory, entry);
+      if (statSync(path).isDirectory()) walk(path);
+      else if (/\.tsx$/.test(entry) && !/\.test\.tsx$/.test(entry)) out.push(path);
+    }
+  };
+  for (const directory of directories) walk(join(ROOT, directory));
+  return out;
+}
+
 const input = readCode('components/ui/input.tsx');
 const text = readCode('components/ui/text.tsx');
 
-const capOf = (source: string) => source.match(/maxFontSizeMultiplier=\{([\d.]+)\}/)?.[1];
+/** Matches the JSX form (`={1.4}`) and the props-object form (`: 1.4`). */
+const capOf = (source: string) => source.match(/maxFontSizeMultiplier(?:=\{|:\s*)([\d.]+)/)?.[1];
 
 describe('Input dynamic type', () => {
   it('caps at the same multiplier as Text, so a label and its field scale together', () => {
@@ -25,6 +39,36 @@ describe('Input dynamic type', () => {
     // apart again, that returns silently — nothing else would catch it.
     expect(capOf(input)).toBeDefined();
     expect(capOf(input)).toBe(capOf(text));
+  });
+});
+
+describe('every field in the app goes through Input', () => {
+  const screens = sourceFiles('app', 'features');
+
+  it('leaves no raw TextInput or BottomSheetTextInput', () => {
+    /*
+     * All 110 were hand-assembled, which is why every field-level concern was a
+     * repeated omission rather than one bug. An eleventh-hundred-and-eleventh
+     * hand-rolled field would reintroduce the whole set, so it fails here first.
+     *
+     * `as={BottomSheetTextInput}` covers the eight fields inside sheets: a plain
+     * TextInput in a bottom sheet does not lift itself above the keyboard, so
+     * the element has to differ even though nothing else does.
+     */
+    const offenders = screens.filter((path) =>
+      /<(BottomSheet)?TextInput[\s/>]/.test(readFileSync(path, 'utf8')),
+    );
+    expect(offenders.map((p) => p.slice(ROOT.length + 1))).toEqual([]);
+  });
+
+  it('leaves no hand-typed placeholderTextColor', () => {
+    // It was right in all 117 uses, but only because three cohorts of
+    // copy-paste agreed on `mutedForeground` — spelled three different ways.
+    // Nothing would have caught the 118th.
+    const offenders = screens.filter((path) =>
+      /placeholderTextColor/.test(readFileSync(path, 'utf8')),
+    );
+    expect(offenders.map((p) => p.slice(ROOT.length + 1))).toEqual([]);
   });
 });
 

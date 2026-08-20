@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { Bell, CalendarClock, Ruler, Sparkles, Tag, Target } from 'lucide-react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Switch, TextInput, View } from 'react-native';
+import { ScrollView, Switch, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -69,14 +69,19 @@ export function HabitForm({ defaultValues, submitLabel, onSubmit }: Props) {
           control={control}
           name="emoji"
           render={({ field }) => (
-            <TextInput
+            <Input
               value={field.value ?? ''}
               onChangeText={(text) => field.onChange(text || null)}
               accessibilityLabel={t('habits.habitEmoji')}
               placeholder="🔥"
-              placeholderTextColor={colors[scheme].mutedForeground}
               maxLength={2}
-              className={cardClass({ padding: 'none' }, 'h-12 w-12 text-center text-2xl')}
+              surface="card"
+              cardPadding="none"
+              // Sizing on the bordered row, not the input: the row is what the
+              // border is drawn on now, so a fixed 48pt square has to be set
+              // there or the box ends up 48 plus the border.
+              fieldClassName="h-12 w-12"
+              className="text-center text-2xl"
             />
           )}
         />
@@ -130,12 +135,12 @@ export function HabitForm({ defaultValues, submitLabel, onSubmit }: Props) {
                 control={control}
                 name="unit"
                 render={({ field }) => (
-                  <TextInput
+                  <Input
+                    surface="bare"
                     value={field.value ?? ''}
                     onChangeText={(text) => field.onChange(text || null)}
                     accessibilityLabel={t('fields.unit')}
                     placeholder={t('habits.unitPlaceholder')}
-                    placeholderTextColor={colors[scheme].mutedForeground}
                     className="flex-1 rounded-lg border border-border px-3 py-2 text-foreground"
                   />
                 )}
@@ -144,7 +149,8 @@ export function HabitForm({ defaultValues, submitLabel, onSubmit }: Props) {
                 control={control}
                 name="targetValue"
                 render={({ field }) => (
-                  <TextInput
+                  <Input
+                    surface="bare"
                     value={field.value ? String(field.value) : ''}
                     onChangeText={(text) => {
                       const parsed = parseFloat(text);
@@ -153,7 +159,6 @@ export function HabitForm({ defaultValues, submitLabel, onSubmit }: Props) {
                     accessibilityLabel={t('habits.targetGoal')}
                     placeholder={t('habits.goal')}
                     keyboardType="decimal-pad"
-                    placeholderTextColor={colors[scheme].mutedForeground}
                     className="w-20 rounded-lg border border-border px-3 py-2 text-center text-foreground"
                   />
                 )}
@@ -215,12 +220,12 @@ export function HabitForm({ defaultValues, submitLabel, onSubmit }: Props) {
               control={control}
               name="reminderTime"
               render={({ field }) => (
-                <TextInput
+                <Input
+                  surface="bare"
                   value={field.value ?? ''}
                   onChangeText={(text) => field.onChange(text || null)}
                   accessibilityLabel={t('habits.reminderTime')}
                   placeholder="20:00"
-                  placeholderTextColor={colors[scheme].mutedForeground}
                   className="w-20 rounded-lg border border-border px-3 py-2 text-center text-foreground"
                 />
               )}

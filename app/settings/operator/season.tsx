@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Trash2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { Input } from '@/components/ui/input';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -656,7 +656,6 @@ type NumberFieldProps = {
 function NumberField(props: NumberFieldProps) {
   const { label, hint, value } = props;
   const { t } = useTranslation();
-  const { c } = useTheme();
   const [text, setText] = useState(value === null ? '' : String(value));
 
   const commit = (next: string) => {
@@ -679,12 +678,12 @@ function NumberField(props: NumberFieldProps) {
         <Text className="font-sora-medium text-foreground">{label}</Text>
         <Text variant="caption">{hint}</Text>
       </View>
-      <TextInput
+      <Input
+        surface="bare"
         value={text}
         onChangeText={commit}
         keyboardType="numeric"
         placeholder={props.nullable ? t('operator.seasonNoLimit') : ''}
-        placeholderTextColor={c.mutedForeground}
         className="w-20 rounded-xl border border-border px-3 py-2 text-right text-foreground"
       />
     </View>
@@ -710,7 +709,6 @@ function DateField({
   onChange: (value: string | null) => void;
 }) {
   const { t } = useTranslation();
-  const { c } = useTheme();
   const iso = value ? new Date(value).toISOString().slice(0, 10) : '';
   const [text, setText] = useState(iso);
 
@@ -732,11 +730,11 @@ function DateField({
   return (
     <View className="flex-row items-center gap-3 py-2.5">
       <Text className="flex-1 font-sora-medium text-foreground">{label}</Text>
-      <TextInput
+      <Input
+        surface="bare"
         value={shown}
         onChangeText={commit}
         placeholder={t('operator.seasonDatePlaceholder')}
-        placeholderTextColor={c.mutedForeground}
         autoCapitalize="none"
         autoCorrect={false}
         className="w-36 rounded-xl border border-border px-3 py-2 text-right text-foreground"

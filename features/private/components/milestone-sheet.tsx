@@ -11,6 +11,7 @@ import { forwardRef, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, Switch, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -118,11 +119,12 @@ export const MilestoneSheet = forwardRef<BottomSheetModal, Props>(function Miles
             <Text variant="micro">{t('private.newMilestone')}</Text>
             <AlbumDateField value={date} onChange={setDate} />
           </View>
-          <BottomSheetTextInput
+          <Input
+            surface="bare"
+            as={BottomSheetTextInput}
             value={title}
             onChangeText={setTitle}
             placeholder={t('private.milestoneTitlePlaceholder')}
-            placeholderTextColor={theme.mutedForeground}
             style={{
               color: theme.foreground,
               borderWidth: 1,
