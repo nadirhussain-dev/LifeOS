@@ -153,10 +153,35 @@ function channelIdFor(urgency: Urgency, soundId: NotificationSoundId): string {
  */
 const PUSH_CHANNEL_ID = `daykeep-general-v${CHANNEL_VERSION}`;
 
+/**
+ * The two kinds of shared update, separated so they can be silenced separately.
+ *
+ * Everything remote landed on `PUSH_CHANNEL_ID`, which meant a user who wanted
+ * to mute a chatty album had to mute expense-group updates with it — Android
+ * hands channel importance to the user, and one channel is one decision.
+ *
+ * Fixed ids, deliberately not tone-suffixed like the reminder channels: a
+ * server composing a push knows nothing about this device's chosen tone, which
+ * is the same reason `PUSH_CHANNEL_ID` is fixed.
+ *
+ * **These exist before anything sends to them.** Android drops a notification
+ * naming a channel that does not exist, so the edge functions must keep using
+ * `daykeep-general-v3` until a build carrying these has actually rolled out —
+ * see the note in notify-group/notify-album. Creating them a release early is
+ * what makes that switch safe rather than a coin toss on install base.
+ */
+const GROUPS_CHANNEL_ID = `daykeep-groups-v${CHANNEL_VERSION}`;
+const ALBUMS_CHANNEL_ID = `daykeep-albums-v${CHANNEL_VERSION}`;
+
 /** Every channel this app should own right now. Anything else of ours that
  *  Android is still holding is from an older version or an older tone. */
 function currentChannelIds(soundId: NotificationSoundId): string[] {
-  return [PUSH_CHANNEL_ID, ...URGENCIES.map((urgency) => channelIdFor(urgency, soundId))];
+  return [
+    PUSH_CHANNEL_ID,
+    GROUPS_CHANNEL_ID,
+    ALBUMS_CHANNEL_ID,
+    ...URGENCIES.map((urgency) => channelIdFor(urgency, soundId)),
+  ];
 }
 
 function selectedSoundId(): NotificationSoundId {
@@ -250,6 +275,18 @@ async function createAndroidChannels(soundId: NotificationSoundId): Promise<void
     sound: 'default',
     name: 'Shared updates',
     description: 'Activity in expense groups and albums you share with others.',
+  });
+  await Notifications.setNotificationChannelAsync(GROUPS_CHANNEL_ID, {
+    ...shared,
+    sound: 'default',
+    name: 'Expense groups',
+    description: 'Expenses, settlements and members in groups you share.',
+  });
+  await Notifications.setNotificationChannelAsync(ALBUMS_CHANNEL_ID, {
+    ...shared,
+    sound: 'default',
+    name: 'Shared albums',
+    description: 'Messages and invitations in albums you share.',
   });
 
   await pruneForeignChannels(currentChannelIds(soundId));
@@ -785,6 +822,10 @@ export function addNotificationReceivedListener(
       body: content.body ?? '',
       payload: (content.data ?? {}) as NotificationPayload,
       notificationId: notification.request.identifier,
+      // Cast because the trigger union includes shapes with no `type` at all
+      // (ChannelAwareTriggerInput), and a narrow on the union would have to
+      // enumerate every member to ask one question of it.
+      remote: (notification.request.trigger as { type?: string } | null)?.type === 'push',
     });
   });
   return () => sub.remove();
@@ -795,6 +836,18 @@ export type ReceivedNotification = {
   body: string;
   payload: NotificationPayload;
   notificationId: string | null;
+  /**
+   * True when this came from the server rather than from this device's own
+   * queue.
+   *
+   * Load-bearing, not informational. A keyed push means "this supersedes the
+   * local reminder under that key", and acting on it means cancelling that
+   * reminder — but a *local* repeating reminder arrives through this same
+   * listener carrying the same key, and cancelling on that would delete the
+   * daily habit reminder the moment it first fired. The trigger type is the
+   * only thing that tells the two apart.
+   */
+  remote: boolean;
 };
 
 /** Cancels every OS-queued notification belonging to a category (matched via

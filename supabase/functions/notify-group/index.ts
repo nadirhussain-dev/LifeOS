@@ -26,8 +26,15 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { pruneDeadTokens, recordTickets, sendExpoPush } from '../_shared/expo-push.ts';
 import { consumeRateLimit, tooManyRequests } from '../_shared/rate-limit.ts';
 
-/** Shared updates land on the one channel whose id never moves — see
- *  PUSH_CHANNEL_ID in lib/notifications.ts and app.json's `defaultChannel`. */
+/**
+ * Shared updates land on the one channel whose id never moves.
+ *
+ * Deliberately still the general channel, not the purpose-specific
+ * `daykeep-groups-v3` that lib/notifications.ts now creates. Android silently
+ * drops a notification naming a channel the device does not have, so naming it
+ * here would lose every push to anybody who has not updated yet. Switch this
+ * one release after the build carrying that channel has rolled out.
+ */
 const PUSH_CHANNEL_ID = 'daykeep-general-v3';
 
 type Payload = {

@@ -17,6 +17,7 @@ import { seedSlots } from '@/features/notifications/services/scheduling-budget';
 import { reportError } from '@/lib/error-reporting';
 import {
   addNotificationReceivedListener,
+  cancelScheduledByKey,
   getScheduledCount,
   hasNotificationPermission,
   invalidateScheduledQueueCache,
@@ -118,6 +119,26 @@ export function useNotificationCenter(): void {
       // an uncategorised arrival still deserves a row rather than vanishing.
       const category: NotificationCategory =
         payload.category && payload.category in CATEGORY_META ? payload.category : 'split';
+
+      /**
+       * A keyed push supersedes the local reminder under that key.
+       *
+       * The contract that lets push and local coexist without becoming a new
+       * duplicate source. A local reminder carries fixed text chosen when it
+       * was scheduled and cannot evaluate anything at fire time; a server can.
+       * So the server saying something about `challenge:at-risk` has to be able
+       * to stand the local one down, or the user gets both — which is exactly
+       * the bug this whole body of work exists to remove, reintroduced from the
+       * other side.
+       *
+       * Guarded on `remote`, and that guard is the important part: a local
+       * repeating reminder arrives here too, carrying its own key, and
+       * cancelling on that would delete a daily habit reminder the first time
+       * it fired.
+       */
+      if (received.remote && payload.key) {
+        void cancelScheduledByKey(payload.key).catch(() => undefined);
+      }
 
       try {
         recordNotificationDelivery({
