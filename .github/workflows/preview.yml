@@ -1,6 +1,6 @@
 name: Preview
 
-# Builds an installable staging APK for every branch that is not main.
+# Builds an installable staging APK for a branch, on demand only.
 #
 # The counterpart to release.yml, and the division between them is the whole
 # point: a branch produces a build that talks to the STAGING database, and only
@@ -22,14 +22,19 @@ name: Preview
 # one's data touching the other's (scripts/build-env.js).
 
 on:
-  push:
-    branches-ignore: [main]
-  # So a preview can be produced for a branch on demand without an empty commit.
+  # Manual only, and that is the point. Every EAS build spends from a small
+  # monthly free-tier allowance, so a preview is something you ask for — Actions
+  # -> Preview -> Run workflow, picking the branch — rather than something every
+  # push to every branch spends on your behalf. There is exactly one automatic
+  # build in this repository and it is release.yml, on merge into main.
+  #
+  # This used to be `push: branches-ignore: [main]`. If you ever put that back,
+  # put a paths-ignore alongside it, or a docs-only commit queues an APK.
   workflow_dispatch:
 
-# One preview per branch. A second push supersedes the first rather than racing
-# it — otherwise a burst of commits queues a build for each and the later APK
-# might finish before the earlier one.
+# One preview per branch. A second run supersedes the first rather than racing
+# it — otherwise two dispatches on the same branch queue a build each and the
+# later APK might finish before the earlier one.
 #
 # Worth knowing: this cancels the GitHub job, which is not the same as
 # cancelling the EAS build. Once `eas build` has queued work, killing the runner
