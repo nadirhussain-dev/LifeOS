@@ -3,15 +3,9 @@ import * as Haptics from 'expo-haptics';
 import { Briefcase, Home, Plane, Shapes, Users, type LucideIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  TextInput,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { InlineError } from '@/components/ui/query-error';
 import { SheetHeader } from '@/components/ui/sheet-header';
@@ -78,12 +72,12 @@ export default function NewSplitGroupScreen() {
           contentContainerClassName="gap-6 px-5 pt-3 pb-10"
           keyboardShouldPersistTaps="handled"
         >
-          <TextInput
+          <Input
+            surface="bare"
             value={name}
             onChangeText={setName}
             accessibilityLabel={t('split.groupName')}
             placeholder={t('split.groupNamePlaceholder')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             autoFocus
             returnKeyType="done"
             onSubmitEditing={save}

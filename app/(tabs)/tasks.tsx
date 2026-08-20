@@ -3,9 +3,10 @@ import { useRouter } from 'expo-router';
 import { CheckCircle2, Search } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QueryError } from '@/components/ui/query-error';
 import { Fab } from '@/components/ui/fab';
@@ -122,12 +123,12 @@ export default function TasksScreen() {
       <View className="gap-5 px-5 pb-2 pt-3">
         <View className="flex-row items-center gap-2 rounded-full border border-border bg-surface px-4 py-2.5">
           <Search size={16} color={colors[scheme].mutedForeground} />
-          <TextInput
+          <Input
+            surface="bare"
             value={searchQuery}
             onChangeText={setSearchQuery}
             accessibilityLabel={t('tasks.searchTasks')}
             placeholder={t('tasks.searchTasks')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             className="flex-1 text-foreground"
           />
         </View>

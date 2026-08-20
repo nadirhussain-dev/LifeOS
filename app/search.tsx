@@ -3,8 +3,9 @@ import { useRouter } from 'expo-router';
 import { Search, X } from 'lucide-react-native';
 import { useDeferredValue, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Keyboard, Pressable, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SheetHeader } from '@/components/ui/sheet-header';
 import { Text } from '@/components/ui/text';
@@ -52,12 +53,12 @@ export default function SearchScreen() {
       <View className="px-5 pb-2 pt-1">
         <View className="flex-row items-center gap-2 rounded-full border border-border bg-surface px-4 py-2.5">
           <Search size={16} color={colors[scheme].mutedForeground} />
-          <TextInput
+          <Input
+            surface="bare"
             value={query}
             onChangeText={setQuery}
             accessibilityLabel={t('search.placeholder')}
             placeholder={t('search.placeholder')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             autoFocus
             autoCorrect={false}
             returnKeyType="search"

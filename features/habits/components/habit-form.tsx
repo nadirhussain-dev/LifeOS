@@ -7,6 +7,7 @@ import { ScrollView, Switch, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { AttributeRow } from '@/components/ui/attribute-row';
 import { Button } from '@/components/ui/button';
@@ -85,12 +86,12 @@ export function HabitForm({ defaultValues, submitLabel, onSubmit }: Props) {
             control={control}
             name="name"
             render={({ field }) => (
-              <TextInput
+              <Input
+                surface="bare"
                 value={field.value}
                 onChangeText={field.onChange}
                 accessibilityLabel={t('habits.habitName')}
                 placeholder={t('habits.nameYourHabit')}
-                placeholderTextColor={colors[scheme].mutedForeground}
                 autoFocus
                 onFocus={() => {
                   focusProgress.value = withTiming(1, { duration: 220 });

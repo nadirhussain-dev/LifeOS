@@ -7,6 +7,7 @@ import { ScrollView, Switch, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SheetHeader } from '@/components/ui/sheet-header';
@@ -89,12 +90,12 @@ export default function NewTaskScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-2">
-          <TextInput
+          <Input
+            surface="bare"
             value={title}
             onChangeText={setTitle}
             accessibilityLabel={t('tasks.taskTitle')}
             placeholder={t('tasks.titlePlaceholder')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             autoFocus
             multiline
             onFocus={() => {

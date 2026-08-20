@@ -3,9 +3,10 @@ import * as Haptics from 'expo-haptics';
 import { ChevronDown, ChevronUp, Plus, Trash2, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
@@ -81,12 +82,12 @@ export default function RoutineDetailScreen() {
         contentContainerClassName="gap-6 px-5 pt-3 pb-10"
         keyboardShouldPersistTaps="handled"
       >
-        <TextInput
+        <Input
+          surface="bare"
           value={name}
           onChangeText={setName}
           accessibilityLabel={t('habits.routineName')}
           placeholder={t('habits.routineName')}
-          placeholderTextColor={colors[scheme].mutedForeground}
           style={{ fontSize: 24, fontFamily: 'Sora_700Bold', color: colors[scheme].foreground }}
         />
 

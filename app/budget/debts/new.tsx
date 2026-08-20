@@ -5,7 +5,7 @@ import type { TFunction } from 'i18next';
 import { BellRing, CalendarDays, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
 
 import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/chip';
@@ -128,12 +128,12 @@ export default function DebtFormScreen() {
           />
         )}
 
-        <TextInput
+        <Input
+          surface="bare"
           value={counterparty}
           onChangeText={setCounterparty}
           accessibilityLabel={t('budget.person')}
           placeholder={t('budget.personName')}
-          placeholderTextColor={colors[scheme].mutedForeground}
           autoFocus={!isEdit}
           style={{ fontSize: 22, fontFamily: 'Sora_700Bold', color: colors[scheme].foreground }}
         />
@@ -146,13 +146,13 @@ export default function DebtFormScreen() {
             <Text className="font-sora-bold text-xl" style={{ color: debtTint }}>
               {currency}
             </Text>
-            <TextInput
+            <Input
+              surface="bare"
               value={amount}
               onChangeText={setAmount}
               accessibilityLabel={t('budget.amount')}
               placeholder="0"
               keyboardType="decimal-pad"
-              placeholderTextColor={colors[scheme].mutedForeground}
               className="flex-1 text-foreground"
               style={{ fontSize: 20, fontFamily: 'Sora_600SemiBold' }}
             />

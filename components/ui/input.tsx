@@ -14,10 +14,10 @@ type Props = Omit<TextInputProps, 'placeholderTextColor'> & {
   error?: string;
   /** Quiet helper line below the field. Hidden while `error` is showing. */
   hint?: string;
-  /** Accessory inside the border, after the input — eye toggle, unit, clear. */
-  trailing?: ReactNode;
   /** Accessory inside the border, before the input — currency, search icon. */
   leading?: ReactNode;
+  /** Accessory inside the border, after the input — eye toggle, unit, clear. */
+  trailing?: ReactNode;
   /** Classes for the input itself. */
   className?: string;
   /** Classes for the label + field + message stack. */
@@ -29,18 +29,18 @@ type Props = Omit<TextInputProps, 'placeholderTextColor'> & {
    *
    * `field` is the app's existing field shape, which is exactly
    * `cardClass({ padding: 'row' })` — 29 of the hand-rolled inputs already drew
-   * themselves that way, so they migrate with no visual change at all.
+   * themselves that way, so they migrated with no visual change at all.
    *
    * `card` is for the fields drawn as content cards (a note body, a long
    * description) — the case `components/ui/card.tsx` calls out in its own
    * docstring as "a few are TextInput (fields drawn as cards)".
    *
-   * `bare` draws no surface, for an input that sits inside a row its parent has
-   * already bordered. It still gets the placeholder colour, the dynamic-type
-   * cap and the invalid announcement; it cannot get the halo, because the
-   * border it would ring belongs to something else.
+   * `bare` draws no surface, for an input sitting inside a row its parent has
+   * already bordered and laid out.
    */
   surface?: 'field' | 'card' | 'bare';
+  /** Padding for `surface="card"`, matching the card scale. */
+  cardPadding?: 'none' | 'sm' | 'md' | 'lg' | 'row' | 'rowLg';
 };
 
 /**
@@ -85,6 +85,7 @@ export const Input = forwardRef<TextInput, Props>(function Input(
     containerClassName,
     fieldClassName,
     surface = 'field',
+    cardPadding = 'md',
     onFocus,
     onBlur,
     ...props
@@ -97,12 +98,67 @@ export const Input = forwardRef<TextInput, Props>(function Input(
   const borderColor = error ? c.error : focused ? c.ring : c.input;
   const bare = surface === 'bare';
 
+  /*
+   * A bare field with nothing around it renders as just the `TextInput`, with no
+   * wrapper views at all.
+   *
+   * 42 of the hand-rolled inputs sit inside a row their parent has already
+   * bordered and laid out, usually as `flex-1` beside an icon. Wrapping those in
+   * two extra views to migrate them would risk a layout shift on every one for
+   * no gain — the surface, the border and the spacing are the parent's. This
+   * path gives them the placeholder token, the dynamic-type cap and the invalid
+   * announcement, and changes nothing about where anything sits.
+   *
+   * They do not get the focus halo. That is honest rather than ideal: the border
+   * it would ring belongs to the parent, so indicating focus properly means
+   * lifting the whole row in here — worth doing per screen, as AuthField did,
+   * and not something a bulk migration should decide.
+   */
+  const unwrapped = bare && !label && !error && !hint && !leading && !trailing;
+
   const surfaceClass =
     surface === 'card'
-      ? cardClass({ padding: 'md', elevation: 'e1' })
+      ? cardClass({ padding: cardPadding, elevation: 'e1' })
       : surface === 'field'
         ? 'rounded-2xl border bg-card px-4'
         : '';
+
+  const input = (
+    <TextInput
+      ref={ref}
+      placeholderTextColor={c.mutedForeground}
+      // Matches components/ui/text.tsx, for the reason given there.
+      maxFontSizeMultiplier={1.4}
+      onFocus={(e) => {
+        setFocused(true);
+        onFocus?.(e);
+      }}
+      onBlur={(e) => {
+        setFocused(false);
+        onBlur?.(e);
+      }}
+      className={cn(
+        bare ? 'text-foreground' : 'flex-1 py-3 font-sans text-base text-foreground',
+        className,
+      )}
+      {...props}
+      /*
+       * After the spread, deliberately.
+       *
+       * React Native has no `invalid` accessibility state (the platform union is
+       * disabled/selected/checked/busy/expanded), so an invalid field is
+       * announced by folding the message into its label. That has to beat a
+       * caller-supplied label rather than lose to it, or the error stays red text
+       * a screen reader only reaches if the user happens to swipe onto it —
+       * "never colour alone" applies to assistive tech first.
+       */
+      accessibilityLabel={
+        [props.accessibilityLabel ?? label, error].filter(Boolean).join(', ') || undefined
+      }
+    />
+  );
+
+  if (unwrapped) return input;
 
   const field = (
     <View
@@ -110,36 +166,7 @@ export const Input = forwardRef<TextInput, Props>(function Input(
       style={bare ? undefined : { borderColor }}
     >
       {leading}
-      <TextInput
-        ref={ref}
-        placeholderTextColor={c.mutedForeground}
-        // Matches components/ui/text.tsx, for the reason given there.
-        maxFontSizeMultiplier={1.4}
-        onFocus={(e) => {
-          setFocused(true);
-          onFocus?.(e);
-        }}
-        onBlur={(e) => {
-          setFocused(false);
-          onBlur?.(e);
-        }}
-        className={cn('flex-1 py-3 font-sans text-base text-foreground', className)}
-        {...props}
-        /*
-         * After the spread, deliberately.
-         *
-         * React Native has no `invalid` accessibility state (the platform
-         * union is disabled/selected/checked/busy/expanded), so an invalid
-         * field is announced by folding the message into its label. That
-         * has to beat a caller-supplied label rather than lose to it, or
-         * the error stays red text a screen reader only reaches if the user
-         * happens to swipe onto it — "never colour alone" applies to
-         * assistive tech first.
-         */
-        accessibilityLabel={
-          [props.accessibilityLabel ?? label, error].filter(Boolean).join(', ') || undefined
-        }
-      />
+      {input}
       {trailing}
     </View>
   );

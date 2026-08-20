@@ -3,8 +3,9 @@ import { useRouter } from 'expo-router';
 import { ArrowUpDown, Search, Target } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, TextInput, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QueryError } from '@/components/ui/query-error';
@@ -88,11 +89,11 @@ export default function GoalsScreen() {
       {showSearch && (
         <View className="flex-row items-center gap-2 rounded-full border border-border bg-surface px-4 py-2.5">
           <Search size={16} color={colors[scheme].mutedForeground} />
-          <TextInput
+          <Input
+            surface="bare"
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholder={t('goals.searchGoals')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             autoFocus
             className="flex-1 text-foreground"
           />

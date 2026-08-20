@@ -1,8 +1,9 @@
 import { AtSign, Check, LoaderCircle, TriangleAlert, X } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TextInput, View } from 'react-native';
+import { View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { colors as semanticColors } from '@/constants/design-tokens';
@@ -94,12 +95,12 @@ export function UsernameField({ value, onChangeText, onStatusChange }: Props) {
     <View className="gap-1.5">
       <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
         <AtSign size={16} color={colors[scheme].mutedForeground} />
-        <TextInput
+        <Input
+          surface="bare"
           value={value}
           onChangeText={onChangeText}
           accessibilityLabel={t('auth.username')}
           placeholder={t('auth.usernamePlaceholder')}
-          placeholderTextColor={colors[scheme].mutedForeground}
           autoCapitalize="none"
           autoCorrect={false}
           maxLength={20}

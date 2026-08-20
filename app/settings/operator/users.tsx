@@ -3,8 +3,9 @@ import { useRouter } from 'expo-router';
 import { Search } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
@@ -61,11 +62,11 @@ export default function OperatorUsersScreen() {
       <View className="px-5 pb-3">
         <View className={cardClass({ padding: 'none' }, 'flex-row items-center gap-2 px-4 py-3')}>
           <Search size={16} color={c.mutedForeground} />
-          <TextInput
+          <Input
+            surface="bare"
             value={query}
             onChangeText={setQuery}
             placeholder={t('operator.accountsSearchPlaceholder')}
-            placeholderTextColor={c.mutedForeground}
             autoCapitalize="none"
             autoCorrect={false}
             className="flex-1 text-foreground"

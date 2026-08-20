@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CalendarDays, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
 
 import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/chip';
@@ -168,11 +168,11 @@ export default function TransactionScreen() {
             <Text className="font-sora-bold text-3xl" style={{ color: tint, marginBottom: 6 }}>
               {currency}
             </Text>
-            <TextInput
+            <Input
+              surface="bare"
               value={amount}
               onChangeText={setAmount}
               placeholder="0"
-              placeholderTextColor={colors[scheme].mutedForeground}
               keyboardType="decimal-pad"
               autoFocus={!isEdit}
               style={{

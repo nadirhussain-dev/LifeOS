@@ -14,9 +14,10 @@ import {
 } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QueryError } from '@/components/ui/query-error';
@@ -258,13 +259,13 @@ export default function NoteDetailScreen() {
         contentContainerStyle={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 24 : 32 }}
         keyboardShouldPersistTaps="handled"
       >
-        <TextInput
+        <Input
+          surface="bare"
           value={title}
           onChangeText={setTitle}
           multiline
           accessibilityLabel={t('notes.noteTitle')}
           placeholder={t('notes.noteTitle')}
-          placeholderTextColor={colors[scheme].mutedForeground}
           style={{
             fontSize: 26,
             fontFamily: 'Sora_700Bold',

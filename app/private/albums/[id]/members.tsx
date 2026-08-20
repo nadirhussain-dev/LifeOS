@@ -12,8 +12,9 @@ import {
 } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, Switch, TextInput, View } from 'react-native';
+import { Pressable, Switch, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { InlineError } from '@/components/ui/query-error';
@@ -336,12 +337,12 @@ export default function SharedAlbumMembersScreen() {
           <>
             <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
               <Mail size={16} color={theme.mutedForeground} />
-              <TextInput
+              <Input
+                surface="bare"
                 value={email}
                 onChangeText={setEmail}
                 accessibilityLabel={t('auth.email')}
                 placeholder="friend@example.com"
-                placeholderTextColor={theme.mutedForeground}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}

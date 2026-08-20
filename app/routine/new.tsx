@@ -2,9 +2,10 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TextInput, View } from 'react-native';
+import { View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { SheetHeader } from '@/components/ui/sheet-header';
 import { Text } from '@/components/ui/text';
@@ -32,12 +33,12 @@ export default function NewRoutineScreen() {
       <SheetHeader title={t('habits.newRoutine')} />
 
       <View className="gap-6 px-5 pt-3">
-        <TextInput
+        <Input
+          surface="bare"
           value={name}
           onChangeText={setName}
           accessibilityLabel={t('habits.routineName')}
           placeholder={t('habits.routineNamePlaceholder')}
-          placeholderTextColor={colors[scheme].mutedForeground}
           autoFocus
           onSubmitEditing={handleCreate}
           style={{ fontSize: 24, fontFamily: 'Sora_700Bold', color: colors[scheme].foreground }}

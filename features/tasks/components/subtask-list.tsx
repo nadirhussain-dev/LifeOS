@@ -2,8 +2,9 @@ import * as Haptics from 'expo-haptics';
 import { Check, ListChecks, Plus, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -103,7 +104,8 @@ export function SubtaskList({ taskId }: Props) {
 
       <View className="flex-row items-center gap-3">
         <Plus size={15} color={colors[scheme].mutedForeground} />
-        <TextInput
+        <Input
+          surface="bare"
           value={draft}
           onChangeText={setDraft}
           onSubmitEditing={submit}
@@ -113,7 +115,6 @@ export function SubtaskList({ taskId }: Props) {
           returnKeyType="next"
           accessibilityLabel={t('tasks.addChecklistItem')}
           placeholder={t('tasks.addChecklistItem')}
-          placeholderTextColor={colors[scheme].mutedForeground}
           className="flex-1 py-2 text-base text-foreground"
         />
       </View>

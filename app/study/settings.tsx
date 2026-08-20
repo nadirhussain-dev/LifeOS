@@ -2,8 +2,9 @@ import { useRouter } from 'expo-router';
 import { Minus, Plus, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -170,12 +171,12 @@ export default function StudySettingsScreen() {
             </View>
           ))}
           <View className="flex-row items-center gap-2 rounded-2xl border border-dashed border-border px-4 py-2.5">
-            <TextInput
+            <Input
+              surface="bare"
               value={newSubject}
               onChangeText={setNewSubject}
               accessibilityLabel={t('study.addSubject')}
               placeholder={t('study.addSubject')}
-              placeholderTextColor={colors[scheme].mutedForeground}
               onSubmitEditing={addNewSubject}
               returnKeyType="done"
               className="flex-1 text-foreground"

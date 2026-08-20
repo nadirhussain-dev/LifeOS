@@ -5,8 +5,9 @@ import type { TFunction } from 'i18next';
 import { Receipt, Search } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TextInput, View } from 'react-native';
+import { View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -100,11 +101,11 @@ export default function TransactionsScreen() {
         {showSearch && (
           <View className="flex-row items-center gap-2 rounded-full bg-muted px-4 py-2.5">
             <Search size={16} color={colors[scheme].mutedForeground} />
-            <TextInput
+            <Input
+              surface="bare"
               value={query}
               onChangeText={setQuery}
               placeholder={t('budget.searchNotesCategories')}
-              placeholderTextColor={colors[scheme].mutedForeground}
               accessibilityLabel={t('budget.searchTransactions')}
               autoFocus
               className="flex-1 text-foreground"

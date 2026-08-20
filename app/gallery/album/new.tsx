@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, TextInput, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/chip';
 import { Button } from '@/components/ui/button';
 import { SheetHeader } from '@/components/ui/sheet-header';
@@ -42,12 +43,12 @@ export default function NewAlbumScreen() {
         contentContainerClassName="gap-5 px-5 pt-3 pb-10"
         keyboardShouldPersistTaps="handled"
       >
-        <TextInput
+        <Input
+          surface="bare"
           value={name}
           onChangeText={setName}
           accessibilityLabel={t('gallery.albumName')}
           placeholder={t('gallery.albumName')}
-          placeholderTextColor={colors[scheme].mutedForeground}
           autoFocus
           style={{ fontSize: 24, fontFamily: 'Sora_700Bold', color: colors[scheme].foreground }}
         />

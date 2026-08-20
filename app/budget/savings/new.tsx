@@ -4,8 +4,9 @@ import { useRouter } from 'expo-router';
 import { CalendarDays } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SheetHeader } from '@/components/ui/sheet-header';
@@ -54,12 +55,12 @@ export default function NewSavingsGoalScreen() {
         contentContainerClassName="gap-5 px-5 pt-3 pb-10"
         keyboardShouldPersistTaps="handled"
       >
-        <TextInput
+        <Input
+          surface="bare"
           value={name}
           onChangeText={setName}
           accessibilityLabel={t('budget.goalName')}
           placeholder={t('budget.goalNamePlaceholder')}
-          placeholderTextColor={colors[scheme].mutedForeground}
           autoFocus
           style={{ fontSize: 22, fontFamily: 'Sora_700Bold', color: colors[scheme].foreground }}
         />
@@ -72,13 +73,13 @@ export default function NewSavingsGoalScreen() {
             <Text className="font-sora-bold text-xl" style={{ color: '#22c55e' }}>
               {currency}
             </Text>
-            <TextInput
+            <Input
+              surface="bare"
               value={target}
               onChangeText={setTarget}
               accessibilityLabel={t('budget.targetAmount')}
               placeholder="0"
               keyboardType="decimal-pad"
-              placeholderTextColor={colors[scheme].mutedForeground}
               className="flex-1 text-foreground"
               style={{ fontSize: 20, fontFamily: 'Sora_600SemiBold' }}
             />

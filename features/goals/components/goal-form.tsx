@@ -83,12 +83,12 @@ export function GoalForm({ defaultValues, submitLabel, onSubmit, showMilestones 
           control={control}
           name="title"
           render={({ field }) => (
-            <TextInput
+            <Input
+              surface="bare"
               value={field.value}
               onChangeText={field.onChange}
               accessibilityLabel={t('goals.goalTitle')}
               placeholder={t('goals.titlePlaceholder')}
-              placeholderTextColor={colors[scheme].mutedForeground}
               autoFocus
               multiline
               onFocus={() => (focusProgress.value = withTiming(1, { duration: 220 }))}

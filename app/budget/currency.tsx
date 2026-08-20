@@ -3,8 +3,9 @@ import { useRouter } from 'expo-router';
 import { Check, Search } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
@@ -57,12 +58,12 @@ export default function CurrencyPickerScreen() {
 
       <View className="mx-4 mb-2 flex-row items-center gap-2 rounded-full bg-muted px-4 py-2.5">
         <Search size={16} color={colors[scheme].mutedForeground} />
-        <TextInput
+        <Input
+          surface="bare"
           value={query}
           onChangeText={setQuery}
           accessibilityLabel={t('budget.searchCurrencies')}
           placeholder={t('budget.searchCurrencies')}
-          placeholderTextColor={colors[scheme].mutedForeground}
           autoCapitalize="characters"
           className="flex-1 text-foreground"
         />

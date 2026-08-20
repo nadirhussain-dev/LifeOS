@@ -251,12 +251,12 @@ export default function SplitExpenseScreen() {
           contentContainerClassName="gap-6 px-5 pt-3 pb-10"
           keyboardShouldPersistTaps="handled"
         >
-          <TextInput
+          <Input
+            surface="bare"
             value={description}
             onChangeText={setDescription}
             accessibilityLabel={t('split.description')}
             placeholder={t('split.descriptionPlaceholder')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             autoFocus={!existing}
             maxLength={80}
             style={{ fontSize: 22, fontFamily: 'Sora_700Bold', color: colors[scheme].foreground }}

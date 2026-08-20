@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { AttributeRow } from '@/components/ui/attribute-row';
 import { Button } from '@/components/ui/button';
@@ -101,12 +102,12 @@ export default function NewCalendarEventScreen() {
           <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
             {format(parseISO(dateKey), 'EEEE, MMM d')}
           </Text>
-          <TextInput
+          <Input
+            surface="bare"
             value={title}
             onChangeText={setTitle}
             accessibilityLabel={t('timeline.eventTitle')}
             placeholder={t('timeline.titlePlaceholder')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             autoFocus
             multiline
             style={{
