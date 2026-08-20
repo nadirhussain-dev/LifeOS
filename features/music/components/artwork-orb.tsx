@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { songColor, songGradient } from '@/features/music/utils/song-art';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { alpha, glowShadow } from '@/lib/color';
 
 type Props = {
@@ -23,6 +24,11 @@ type Props = {
  * The song's "artwork": a glossy generative-gradient orb. A diagonal highlight
  * sweeps slowly around it and the whole disc gently breathes while playing, then
  * settles when paused — the living centerpiece of Now Playing.
+ *
+ * Under reduced motion the orb keeps its gradient and glow and simply stops
+ * moving: the sheen holds at a fixed angle and the disc at rest scale. The two
+ * loops here ran indefinitely (a 2.6s breath and a 16s rotation), which is the
+ * category the setting exists for.
  */
 export function ArtworkOrb({ seed, size, playing }: Props) {
   const [c1, c2, c3] = songGradient(seed);
@@ -30,9 +36,17 @@ export function ArtworkOrb({ seed, size, playing }: Props) {
 
   const breathe = useSharedValue(1);
   const spin = useSharedValue(0);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
-    if (playing) {
+    if (playing && reducedMotion) {
+      cancelAnimation(breathe);
+      cancelAnimation(spin);
+      breathe.value = 1;
+      // A quarter turn, so the highlight reads as lighting from one side rather
+      // than as a sheen that happens to be parked at twelve o'clock.
+      spin.value = 0.25;
+    } else if (playing) {
       breathe.value = withRepeat(
         withTiming(1.045, { duration: 2600, easing: Easing.inOut(Easing.sin) }),
         -1,
@@ -48,7 +62,7 @@ export function ArtworkOrb({ seed, size, playing }: Props) {
       cancelAnimation(breathe);
       cancelAnimation(spin);
     };
-  }, [playing, breathe, spin]);
+  }, [playing, breathe, spin, reducedMotion]);
 
   const orbStyle = useAnimatedStyle(() => ({ transform: [{ scale: breathe.value }] }));
   const sheenStyle = useAnimatedStyle(() => ({

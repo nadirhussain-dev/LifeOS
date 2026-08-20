@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
 import { View } from 'react-native';
+
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
@@ -21,16 +23,29 @@ type BarProps = {
 
 function Bar({ color, width, minH, maxH, duration, delay, playing }: BarProps) {
   const h = useSharedValue(minH);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
-    if (playing) {
+    if (playing && reducedMotion) {
+      /*
+       * Held at this bar's own peak, not flattened to `minH`.
+       *
+       * Every bar carries a different `maxH`, so freezing each at its own peak
+       * leaves the staggered silhouette of an equalizer caught mid-beat — which
+       * still reads as "this is the one playing". Flat bars are what `playing:
+       * false` looks like, so reusing that state here would make reduced motion
+       * say the track was paused.
+       */
+      cancelAnimation(h);
+      h.value = maxH;
+    } else if (playing) {
       h.value = withDelay(delay, withRepeat(withTiming(maxH, { duration }), -1, true));
     } else {
       cancelAnimation(h);
       h.value = withTiming(minH, { duration: 160 });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing]);
+  }, [playing, reducedMotion]);
 
   const style = useAnimatedStyle(() => ({ height: h.value }));
   return (

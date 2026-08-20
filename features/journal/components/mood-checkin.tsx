@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -50,6 +51,7 @@ function MoodButton({
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const scale = useSharedValue(1);
+  const reducedMotion = useReducedMotion();
   const isMounted = useRef(false);
 
   useEffect(() => {
@@ -57,12 +59,16 @@ function MoodButton({
       isMounted.current = true;
       return;
     }
-    if (selected)
+    // A 1.25× overshoot at damping 7 is a pronounced bounce, and this is a
+    // wellbeing control — the one place in the app where someone reporting a bad
+    // day should not be answered with a spring. Selection still registers
+    // through colour, weight and `accessibilityState`.
+    if (selected && !reducedMotion)
       scale.value = withSequence(
         withSpring(1.25, { damping: 7, stiffness: 400 }),
         withSpring(1, { damping: 9, stiffness: 300 }),
       );
-  }, [selected, scale]);
+  }, [selected, scale, reducedMotion]);
 
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 

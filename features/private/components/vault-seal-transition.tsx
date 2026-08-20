@@ -17,6 +17,7 @@ import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import type { VaultTransitionMode } from '@/features/private/hooks/use-vault-transition';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { tintGradient } from '@/lib/color';
 
 const AnimatedView = Animated.createAnimatedComponent(View);
@@ -37,6 +38,19 @@ type Props = {
  * This does not make PBKDF2 faster — see use-vault-transition.ts. It exists
  * because a deliberately slow operation with no feedback reads as broken,
  * and the honest fix for that is a good animation, not a weaker KDF.
+ *
+ * Reduced motion is handled by splitting the two loops rather than gating both,
+ * because they are not the same kind of thing:
+ *
+ *   • the breathing orb is decoration, and stops.
+ *   • the rotating ring is the only signal that work is happening, and keeps
+ *     going. Freezing it would recreate exactly the "reads as broken" failure
+ *     this component was written to prevent — and on the vault, where the
+ *     alternative reading is that the key was rejected. An indeterminate
+ *     spinner is the standard exemption for essential feedback: the platform's
+ *     own `ActivityIndicator` keeps spinning under the setting too, and this is
+ *     a localised 128pt element rather than the full-screen drift the setting
+ *     is really aimed at.
  */
 export function VaultSealTransition({ visible, mode }: Props) {
   const scheme = useColorScheme() ?? 'light';
@@ -45,15 +59,21 @@ export function VaultSealTransition({ visible, mode }: Props) {
 
   const spin = useSharedValue(0);
   const breathe = useSharedValue(1);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     if (visible) {
       spin.value = withRepeat(withTiming(1, { duration: 1600, easing: Easing.linear }), -1, false);
-      breathe.value = withRepeat(
-        withTiming(1.08, { duration: 620, easing: Easing.inOut(Easing.sin) }),
-        -1,
-        true,
-      );
+      if (reducedMotion) {
+        cancelAnimation(breathe);
+        breathe.value = 1;
+      } else {
+        breathe.value = withRepeat(
+          withTiming(1.08, { duration: 620, easing: Easing.inOut(Easing.sin) }),
+          -1,
+          true,
+        );
+      }
     } else {
       cancelAnimation(spin);
       cancelAnimation(breathe);
@@ -64,7 +84,7 @@ export function VaultSealTransition({ visible, mode }: Props) {
       cancelAnimation(spin);
       cancelAnimation(breathe);
     };
-  }, [visible, spin, breathe]);
+  }, [visible, spin, breathe, reducedMotion]);
 
   const ringStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${spin.value * 360}deg` }] }));
   const orbStyle = useAnimatedStyle(() => ({ transform: [{ scale: breathe.value }] }));

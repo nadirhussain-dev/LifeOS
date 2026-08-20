@@ -11,6 +11,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
+
 const BAR_COUNT = 40;
 
 /** Deterministic 0.35–1 heights forming a stable waveform silhouette per song. */
@@ -42,9 +44,20 @@ function Bar({
 }) {
   const base = Math.max(3, maxH * ratio);
   const h = useSharedValue(base);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
-    if (playing) {
+    if (playing && reducedMotion) {
+      /*
+       * Held at the song's own deterministic silhouette — 40 bars each looping
+       * indefinitely is the densest motion in the app, and the shape is the
+       * part that carries meaning. It is the same resting height the paused
+       * state settles to, which is the right read: the waveform is still the
+       * waveform, it just is not dancing.
+       */
+      cancelAnimation(h);
+      h.value = base;
+    } else if (playing) {
       h.value = withDelay(
         (index % 7) * 40,
         withRepeat(withTiming(base * 0.62, { duration: 360 + (index % 5) * 60 }), -1, true),
@@ -54,7 +67,7 @@ function Bar({
       h.value = withTiming(base, { duration: 220 });
     }
     return () => cancelAnimation(h);
-  }, [playing, base, index, h]);
+  }, [playing, base, index, h, reducedMotion]);
 
   const style = useAnimatedStyle(() => ({ height: h.value }));
   const barW = Math.max(2, maxH / 14);
