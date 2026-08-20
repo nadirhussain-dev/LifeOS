@@ -472,7 +472,9 @@
     "unarchiveNamed": "Unarchive “{{name}}”",
     "deletedToast": "“{{title}}” deleted.",
     "reminderTitle": "Note reminder",
-    "reminderBody": "Take a look at this note."
+    "reminderBody": "Take a look at this note.",
+    "notFound": "This note no longer exists",
+    "notFoundBody": "It may have been deleted on this or another device."
   },
   "budget": {
     "title": "Budget",

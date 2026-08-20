@@ -472,7 +472,9 @@
     "unarchiveNamed": "“{{name}}” کو محفوظ شدہ سے نکالیں",
     "deletedToast": "“{{title}}” حذف ہو گیا۔",
     "reminderTitle": "نوٹ یاد دہانی",
-    "reminderBody": "اس نوٹ پر ایک نظر ڈالیں۔"
+    "reminderBody": "اس نوٹ پر ایک نظر ڈالیں۔",
+    "notFound": "یہ نوٹ اب موجود نہیں ہے",
+    "notFoundBody": "اسے اس یا کسی دوسرے ڈیوائس پر حذف کیا گیا ہو سکتا ہے۔"
   },
   "budget": {
     "title": "بجٹ",

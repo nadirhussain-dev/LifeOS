@@ -43,7 +43,13 @@ import type { SupabaseErrorKind } from '@/lib/supabase-error';
  * sent the search for the cause in exactly the wrong direction.
  */
 
-const ICONS: Record<SupabaseErrorKind, typeof TriangleAlert> = {
+/**
+ * Exported so the compact widget variant
+ * (features/dashboard/components/widget-error.tsx) derives its icon from the
+ * same map. Two error surfaces picking their own icon for one cause is how they
+ * start describing the same failure differently.
+ */
+export const ERROR_ICONS: Record<SupabaseErrorKind, typeof TriangleAlert> = {
   offline: WifiOff,
   'not-configured': CloudOff,
   'signed-out': Lock,
@@ -73,7 +79,7 @@ export function QueryError({ onRetry, message, error, action }: Props) {
   const { t } = useTranslation();
 
   const kind = error === undefined ? 'unknown' : errorKind(error);
-  const Icon = ICONS[kind];
+  const Icon = ERROR_ICONS[kind];
   const body =
     message ??
     (error === undefined
@@ -138,7 +144,7 @@ export function InlineError({ error, message }: { error?: unknown; message?: str
   const { t } = useTranslation();
   const scheme = useColorScheme() ?? 'light';
   const kind = error === undefined ? 'unknown' : errorKind(error);
-  const Icon = ICONS[kind];
+  const Icon = ERROR_ICONS[kind];
   const body =
     message ??
     (error === undefined

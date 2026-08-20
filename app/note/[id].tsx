@@ -5,6 +5,7 @@ import {
   Archive,
   ArchiveRestore,
   Bell,
+  FileQuestion,
   ListPlus,
   Star,
   Tag,
@@ -17,6 +18,9 @@ import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { cardClass } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { QueryError } from '@/components/ui/query-error';
+import { Skeleton } from '@/components/ui/skeleton';
 import { AttachmentStrip } from '@/components/ui/attachment-strip';
 import { AttributeRow } from '@/components/ui/attribute-row';
 import { ReminderPicker } from '@/components/ui/reminder-picker';
@@ -58,7 +62,12 @@ export default function NoteDetailScreen() {
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const keyboardHeight = useKeyboardHeight();
-  const { data: note } = useNote(id);
+  const {
+    data: note,
+    isLoading: noteLoading,
+    error: noteError,
+    refetch: refetchNote,
+  } = useNote(id);
   const { data: noteTags = [], refetch: refetchNoteTags } = useNoteTagsForNote(id);
   const { data: allTags = [], refetch: refetchAllTags } = useNoteTags();
   const { data: attachments = [] } = useNoteAttachments(id);
@@ -121,7 +130,39 @@ export default function NoteDetailScreen() {
     }, []),
   );
 
-  if (!note) return null;
+  /**
+   * `!note` used to `return null` — a blank screen for three different
+   * situations: still loading, the read failed, and the note genuinely no longer
+   * exists. All three showed nothing at all, so a failed read was
+   * indistinguishable from a deleted note, and neither offered a way back
+   * except the system gesture.
+   *
+   * The header renders in all three so `back` is always reachable; only the body
+   * differs.
+   */
+  if (!note) {
+    return (
+      <View className="flex-1 bg-background">
+        <Stack.Screen options={{ headerShown: false }} />
+        <ScreenHeader eyebrow={t('notes.title')} tint="#eab308" />
+        {noteLoading ? (
+          <View className="gap-3 px-5 pt-2">
+            <Skeleton className="h-8 w-2/3" />
+            <Skeleton className="h-5 w-1/3" />
+            <Skeleton className="h-40 w-full" />
+          </View>
+        ) : noteError ? (
+          <QueryError error={noteError} onRetry={() => refetchNote()} />
+        ) : (
+          <EmptyState
+            icon={FileQuestion}
+            title={t('notes.notFound')}
+            description={t('notes.notFoundBody')}
+          />
+        )}
+      </View>
+    );
+  }
 
   const selectedTagIds = noteTags.map((tag) => tag.id);
 

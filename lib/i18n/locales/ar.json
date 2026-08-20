@@ -488,7 +488,9 @@
     "unarchiveNamed": "إلغاء أرشفة «{{name}}»",
     "deletedToast": "تم حذف «{{title}}».",
     "reminderTitle": "تذكير بملاحظة",
-    "reminderBody": "ألقِ نظرة على هذه الملاحظة."
+    "reminderBody": "ألقِ نظرة على هذه الملاحظة.",
+    "notFound": "لم تعد هذه الملاحظة موجودة",
+    "notFoundBody": "قد تكون حُذفت على هذا الجهاز أو على جهاز آخر."
   },
   "budget": {
     "title": "الميزانية",

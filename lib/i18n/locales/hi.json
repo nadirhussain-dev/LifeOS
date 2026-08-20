@@ -472,7 +472,9 @@
     "unarchiveNamed": "“{{name}}” को संग्रह से निकालें",
     "deletedToast": "“{{title}}” हटाया गया।",
     "reminderTitle": "नोट अनुस्मारक",
-    "reminderBody": "इस नोट पर एक नज़र डालें।"
+    "reminderBody": "इस नोट पर एक नज़र डालें।",
+    "notFound": "यह नोट अब मौजूद नहीं है",
+    "notFoundBody": "इसे इस या किसी अन्य डिवाइस पर हटाया गया हो सकता है।"
   },
   "budget": {
     "title": "बजट",

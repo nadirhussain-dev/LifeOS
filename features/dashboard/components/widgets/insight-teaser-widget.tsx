@@ -19,10 +19,12 @@ import { INSIGHT_SENTENCE_KEY } from '@/features/insights/config/insight-copy';
 export function InsightTeaserWidget() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { data, isLoading } = useInsightTeaser();
+  const { data, isLoading, error, refetch } = useInsightTeaser();
 
   return (
     <WidgetCard
+      error={error}
+      onRetry={refetch}
       icon={Sparkles}
       title={t('dashboard.lifeInsights')}
       actionLabel={t('dashboard.viewAll')}
