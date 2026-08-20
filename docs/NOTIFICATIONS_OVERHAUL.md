@@ -1,9 +1,14 @@
 # Notifications overhaul — diagnosis and implementation plan
 
-Status: **Phases 1–3 complete** on `fix/notification-duplicates`, except item 11
-(deleting the now-redundant per-module id storage), which is deliberately held
-back until a release has shipped. Supersedes the open items at TODO.md:527 and
-TODO.md:533. Section 5 (push) remains a proposal — no push work has been done.
+Status: **complete** on `fix/notification-duplicates`, with three deliberate
+exceptions, all of which are "wait one release" rather than "not done":
+
+- Phase 2 item 11 — deleting the now-redundant per-module id storage.
+- The edge functions naming the new per-purpose push channels (§5).
+- Verifying FCM credentials, which is an operator task and not a commit (§5) —
+  **do this first; on Android it decides whether push works at all.**
+
+Supersedes the open items at TODO.md:527 and TODO.md:533.
 
 The reported symptom is four identical "Do not lose today" notifications firing at
 the same instant, with four matching inbox rows. That is not a challenge-feature
@@ -293,39 +298,61 @@ token lifecycle.
 
 The backbone is there. It is used only for shared features.
 
-### Gaps to close before push is trustworthy
+### Gaps — all closed except one, which needs an operator not a commit
 
-| Gap                                             | Detail                                                                                                                                                                                                                                                                                                              |
-| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **FCM credentials**                             | No `android.googleServicesFile` anywhere in `app.json` / `app.config.js` / `eas.json`. Without FCM V1 credentials in the native build, remote push does not deliver on Android in a standalone build at all. **Verify against EAS credentials before assuming push works today** — nothing in the repo provides it. |
-| **No receipt handling**                         | `notify-group` treats HTTP 200 as delivered. Expo returns per-message _tickets_; `DeviceNotRegistered`, `MessageTooBig` and `MessageRateExceeded` only appear when receipts are fetched from `/push/getReceipts` afterwards. Nothing does.                                                                          |
-| **Dead tokens are never pruned**                | Follows from the above. `push_tokens` grows unboundedly and fan-out cost grows with it.                                                                                                                                                                                                                             |
-| **`lastRegistered` is in-memory**               | The same bug class as §1: a wasted RPC on every cold start, and a token rotated while the app was closed is noticed only on next launch. There is no `addPushTokenListener` for rotation.                                                                                                                           |
-| **`unregisterPushToken` early-returns on null** | Sign-out after a launch where registration didn't complete leaves the token attached to that account on a shared phone.                                                                                                                                                                                             |
-| **No `collapseId` / `priority` / `ttl`**        | A collapse id is precisely the server-side answer to "four sent, one shown", and the natural counterpart to §3's dedupe key.                                                                                                                                                                                        |
-| **One channel for all pushes**                  | A user cannot silence album chatter without silencing group updates.                                                                                                                                                                                                                                                |
+| Gap                                             | Status                                                                                                                                                                                                                                                                                                                             |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **FCM credentials**                             | **STILL OPEN — and it is the one that decides whether any of the rest works.** No `android.googleServicesFile` anywhere in `app.json` / `app.config.js` / `eas.json`. Without FCM V1 credentials in the native build, remote push does not deliver on Android in a standalone build at all. Not fixable from the repo — see below. |
+| **No receipt handling**                         | Closed. `_shared/expo-push.ts` reads Expo's per-message tickets; `check-push-receipts` fetches receipts on a cron against the `push_receipts` table (migration 0068).                                                                                                                                                              |
+| **Dead tokens are never pruned**                | Closed. `DeviceNotRegistered` at ticket time or receipt time deletes the token. Narrow on purpose: never `MessageTooBig`/`MessageRateExceeded`, which are about the send and not the device.                                                                                                                                       |
+| **`lastRegistered` is in-memory**               | Closed. Persisted to AsyncStorage, and `startPushTokenRotationWatch` re-registers when the service hands over a new token mid-session.                                                                                                                                                                                             |
+| **`unregisterPushToken` early-returns on null** | Closed. Falls back to asking the OS for the token — the record is an optimisation, the device's token is the fact, and this is the path where being wrong is a disclosure on a shared phone.                                                                                                                                       |
+| **No `collapseId` / `priority` / `ttl`**        | Closed. Supported by the sender; both notify functions set a per-group / per-album collapse id.                                                                                                                                                                                                                                    |
+| **One channel for all pushes**                  | Half closed. `daykeep-groups-v3` and `daykeep-albums-v3` are created client-side; the edge functions deliberately still name `daykeep-general-v3`, because Android drops a notification naming a channel the device does not have. Switch one release after this ships.                                                            |
 
-### Recommendation
+### The one thing a commit cannot fix
 
-Do **not** add push for reminders. Add it for the three cases above, and make
-push and local share one identity so they can never double-fire:
+**Verify FCM credentials before believing any of this works on Android.**
+Nothing in the repo provides `google-services.json`, and Expo's push service
+needs an FCM V1 service-account key uploaded to EAS to reach Android devices at
+all. If that was never set up, every Android push has been failing silently
+since the feature shipped — the functions returned `sent: n` regardless, which
+is exactly the reporting this branch replaced.
 
-- A push carries the same `key` as the local notification it replaces or
-  cancels, plus `collapseId = key`. The arrival handler in
-  `use-notification-center.ts` cancels the matching local notification on
-  receipt, and `scheduleKeyed` refuses to queue one whose key was recently
-  satisfied by a push.
-- Without that shared key, adding push _adds a second duplicate source_ on top
-  of the one this document exists to fix. Phase 2 is a prerequisite, not a
-  parallel track.
+Check with `eas credentials` (Android → push notifications), or send one test
+push to a real device. If it is missing, no amount of the work above matters on
+Android; iOS is unaffected, since APNs credentials come from the Apple account
+EAS already holds.
 
-**Sequencing:** Phases 1–2 first. Then push work in this order — verify FCM
-credentials → receipts + token pruning → token rotation listener → collapse ids
-and per-purpose channels → the win-back / season-end senders.
+### Still to build: the senders
+
+The mechanism is done; nothing sends a keyed push yet. That is deliberate — the
+dedupe contract had to land first so whoever writes a sender inherits a system
+where push and local cannot double-fire. The three cases worth sending, from
+§5's opening:
+
+1. **Win-back** — `challenge-reminders.ts:180` already concedes its local
+   version reaches only people who came back, never the ones who left.
+2. **Season end / standing changes** — server-computed, so the device cannot
+   know them.
+3. **"You already finished today, stand down"** — the case TODO.md:527 gave as
+   the reason the streak category went unscheduled for so long. Send it with
+   the `challenge:at-risk` key and the local reminder cancels itself.
+
+Each needs a scheduled function and a rate-limit budget, in the shape
+`check-push-receipts` now establishes.
 
 ---
 
-## 6. What to do first
+## 6. What to do next
 
-Phase 1, items 1–4. They are contained, need no migration, fix the reported
-symptom, and do not conflict with any of the structural work that follows.
+1. **Verify FCM credentials** (§5). Everything else on Android is moot until
+   this is known, and it is a five-minute check.
+2. **Run it on a device.** All of this is verified in CI, not on hardware. The
+   thing that actually proves the original bug is fixed is one notification at
+   20:00 tomorrow instead of four.
+3. **After one release has shipped:** flip the edge functions to the
+   per-purpose channels, and delete the per-module id columns and stores
+   (Phase 2 item 11). Both are safe only once the install base carries this
+   build.
+4. **Then, if wanted:** the senders in §5. The mechanism is waiting for them.

@@ -524,13 +524,13 @@ Still open from this pass:
 
 ## ⚖️ Deferred (by design)
 
-- [ ] **Streak-at-risk notifications** — local notifications can't evaluate completion state at fire time, so any version nags after the habit is done. Revisit only with server push (FCM) or a background task. In-app confetti already covers celebrations.
+- [x] **Streak-at-risk notifications** — shipped, and the objection here was right: a local notification cannot evaluate anything at fire time. The way round it was a cheaper trigger, not a smarter one — the reminder is cancelled and re-queued from current state on every write, so it can only fire while something is genuinely outstanding. See `features/challenge/services/challenge-reminders.ts` and docs/NOTIFICATIONS_OVERHAUL.md. The remaining half — telling somebody who has already finished to stand down — now has a mechanism waiting for it: a push carrying the `challenge:at-risk` key cancels the local reminder on arrival.
 
 ---
 
 ## 🔵 Later / optional
 
-- [ ] **FCM (server push)** — only if we add remote/server-driven notifications. Local reminders don't need it.
+- [ ] **FCM (server push)** — _partly done, and one item is urgent._ The plumbing is built: `_shared/expo-push.ts` reads Expo's tickets, `check-push-receipts` reads receipts (migration 0068), dead tokens are pruned, the client persists and re-registers its token, and a keyed push cancels the matching local reminder. What is NOT verified is whether **FCM V1 credentials exist in EAS at all** — nothing in the repo provides `google-services.json`, and without it every Android push has been failing silently since shared groups shipped. Check `eas credentials` before trusting any of it. Server-driven _senders_ (win-back, season end) are still unwritten; see docs/NOTIFICATIONS_OVERHAUL.md §5.
 - [x] **Goals and Study categories are back.** Both have schedulers now:
       `features/goals/services/goal-reminders.ts` (one dated reminder per goal
       with a due date, capped at twelve and horizoned at 120 days, because iOS
