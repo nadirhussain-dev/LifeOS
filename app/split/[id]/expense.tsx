@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/chip';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -264,14 +265,13 @@ export default function SplitExpenseScreen() {
           <View className="flex-row gap-3">
             <View className="flex-1 gap-2">
               <Text variant="micro">{t('split.amount')}</Text>
-              <TextInput
+              <Input
                 value={amount}
                 onChangeText={setAmount}
                 accessibilityLabel={t('split.amount')}
                 placeholder="0.00"
                 keyboardType="decimal-pad"
-                placeholderTextColor={colors[scheme].mutedForeground}
-                className={cardClass({ padding: 'row' }, 'text-2xl text-foreground')}
+                className="text-2xl"
               />
             </View>
             <View className="gap-2">

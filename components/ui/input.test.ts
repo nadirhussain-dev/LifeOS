@@ -53,10 +53,25 @@ describe('Input token consumption', () => {
     expect(new Set([resting, focus, invalid]).size).toBe(3);
   });
 
+  it('stays on the radius scale', () => {
+    /*
+     * This component was first written with `rounded-[14px]`, an off-scale
+     * literal — which is precisely what it exists to stop other people writing,
+     * and it silently changed AuthField's corners from 28 to 14 on the way past.
+     *
+     * The `field` surface is now exactly `cardClass({ padding: 'row' })`, the
+     * shape 29 of the hand-rolled inputs already drew themselves as, so they
+     * migrate with no visual change at all.
+     */
+    expect(input).not.toMatch(/rounded-\[/);
+    expect(input).toContain("'rounded-2xl border bg-card px-4'");
+    expect(input).toMatch(/py-3 font-sans text-base text-foreground/);
+  });
+
   it('draws the focus halo with padding that is always present', () => {
     // A border that thickens on focus shifts every field below it. The halo is
     // unconditional padding whose colour changes, so focus cannot move layout.
-    expect(input).toMatch(/p-0\.5/);
+    expect(input).toMatch(/rounded-3xl p-0\.5/);
     expect(input).toMatch(/backgroundColor: focused \?/);
   });
 });

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/chip';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -269,13 +270,7 @@ export default function TransactionScreen() {
           />
         )}
 
-        <TextInput
-          value={note}
-          onChangeText={setNote}
-          placeholder={t('budget.noteOptional')}
-          placeholderTextColor={colors[scheme].mutedForeground}
-          className={cardClass({ padding: 'row' }, 'text-foreground')}
-        />
+        <Input value={note} onChangeText={setNote} placeholder={t('budget.noteOptional')} />
 
         <Button
           label={isEdit ? t('budget.saveChanges') : t('budget.addTransaction')}

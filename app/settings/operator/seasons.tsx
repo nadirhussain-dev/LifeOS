@@ -2,8 +2,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { ChevronForward } from '@/components/ui/directional-icon';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ListSkeleton } from '@/components/ui/list-skeleton';
@@ -112,12 +113,10 @@ export default function OperatorSeasonsScreen() {
 
         <View className={cardClass({ padding: 'md' }, 'gap-2')}>
           <Text variant="micro">{t('operator.seasonNew')}</Text>
-          <TextInput
+          <Input
             value={name}
             onChangeText={setName}
             placeholder={t('operator.seasonNamePlaceholder')}
-            placeholderTextColor={c.mutedForeground}
-            className={cardClass({ padding: 'row' }, 'text-foreground')}
           />
           {/* Stated on the way in, because it is the step whose absence caused
               every symptom this console was built for: a new season is created

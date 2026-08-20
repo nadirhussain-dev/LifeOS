@@ -2,8 +2,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Archive, RotateCcw } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ListSkeleton } from '@/components/ui/list-skeleton';
 import { Button } from '@/components/ui/button';
@@ -200,14 +201,12 @@ export default function OperatorCouponsScreen() {
         {form ? (
           <View className={cardClass({ padding: 'md' }, 'gap-3')}>
             <Text variant="micro">{t('operator.newCoupon')}</Text>
-            <TextInput
+            <Input
               value={form.code}
               onChangeText={(code) => setForm((f) => (f ? { ...f, code } : f))}
               placeholder={t('operator.couponCodePlaceholder')}
-              placeholderTextColor={c.mutedForeground}
               autoCapitalize="characters"
               autoCorrect={false}
-              className={cardClass({ padding: 'row' }, 'text-foreground')}
             />
             <View className="flex-row gap-2">
               {(['percent', 'fixed'] as const).map((type) => (
@@ -226,7 +225,7 @@ export default function OperatorCouponsScreen() {
               ))}
             </View>
             <View className="flex-row gap-2">
-              <TextInput
+              <Input
                 value={form.discountValue}
                 onChangeText={(v) => setForm((f) => (f ? { ...f, discountValue: v } : f))}
                 placeholder={
@@ -234,35 +233,31 @@ export default function OperatorCouponsScreen() {
                     ? t('operator.couponPercentPlaceholder')
                     : t('operator.couponCentsPlaceholder')
                 }
-                placeholderTextColor={c.mutedForeground}
                 keyboardType="numeric"
-                className={cardClass({ padding: 'row' }, 'flex-1 text-foreground')}
+                containerClassName="flex-1"
               />
-              <TextInput
+              <Input
                 value={form.durationCycles}
                 onChangeText={(v) => setForm((f) => (f ? { ...f, durationCycles: v } : f))}
                 placeholder={t('operator.couponCyclesPlaceholder')}
-                placeholderTextColor={c.mutedForeground}
                 keyboardType="numeric"
-                className={cardClass({ padding: 'row' }, 'flex-1 text-foreground')}
+                containerClassName="flex-1"
               />
             </View>
             <View className="flex-row gap-2">
-              <TextInput
+              <Input
                 value={form.validDays}
                 onChangeText={(v) => setForm((f) => (f ? { ...f, validDays: v } : f))}
                 placeholder={t('operator.couponValidDaysPlaceholder')}
-                placeholderTextColor={c.mutedForeground}
                 keyboardType="numeric"
-                className={cardClass({ padding: 'row' }, 'flex-1 text-foreground')}
+                containerClassName="flex-1"
               />
-              <TextInput
+              <Input
                 value={form.maxRedemptions}
                 onChangeText={(v) => setForm((f) => (f ? { ...f, maxRedemptions: v } : f))}
                 placeholder={t('operator.couponMaxRedemptionsPlaceholder')}
-                placeholderTextColor={c.mutedForeground}
                 keyboardType="numeric"
-                className={cardClass({ padding: 'row' }, 'flex-1 text-foreground')}
+                containerClassName="flex-1"
               />
             </View>
 

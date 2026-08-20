@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
@@ -591,29 +592,21 @@ function LadderSection({
 
       <View className="gap-2 py-3">
         <View className="flex-row gap-2">
-          <TextInput
+          <Input
             value={day}
             onChangeText={setDay}
             placeholder={t('operator.seasonRungDay')}
-            placeholderTextColor={c.mutedForeground}
             keyboardType="numeric"
-            className={cardClass({ padding: 'row' }, 'w-24 text-foreground')}
+            className="w-24"
           />
-          <TextInput
+          <Input
             value={name}
             onChangeText={setName}
             placeholder={t('operator.seasonRungName')}
-            placeholderTextColor={c.mutedForeground}
-            className={cardClass({ padding: 'row' }, 'flex-1 text-foreground')}
+            containerClassName="flex-1"
           />
         </View>
-        <TextInput
-          value={title}
-          onChangeText={setTitle}
-          placeholder={t('operator.seasonRungReward')}
-          placeholderTextColor={c.mutedForeground}
-          className={cardClass({ padding: 'row' }, 'text-foreground')}
-        />
+        <Input value={title} onChangeText={setTitle} placeholder={t('operator.seasonRungReward')} />
         <Button
           variant="secondary"
           label={t('operator.seasonRungAdd')}

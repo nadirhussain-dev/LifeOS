@@ -2,8 +2,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Crown, Trash2 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ListSkeleton } from '@/components/ui/list-skeleton';
 import { Button } from '@/components/ui/button';
@@ -160,15 +161,13 @@ export default function OperatorRosterScreen() {
         {owner ? (
           <View className="gap-3">
             <Text variant="micro">{t('operator.addOperator')}</Text>
-            <TextInput
+            <Input
               value={email}
               onChangeText={setEmail}
               placeholder="teammate@example.com"
-              placeholderTextColor={c.mutedForeground}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-              className={cardClass({ padding: 'row' }, 'text-foreground')}
             />
             <View className="flex-row gap-2">
               {(['staff', 'admin'] as OperatorRole[]).map((r) => (

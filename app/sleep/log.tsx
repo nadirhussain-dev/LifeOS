@@ -4,8 +4,9 @@ import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { CalendarDays, Moon, Sun, Trash2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/chip';
 import { cardClass } from '@/components/ui/card';
 import { showInterstitial } from '@/features/ads/services/interstitial';
@@ -294,13 +295,12 @@ export default function SleepLogScreen() {
 
         <View className="gap-2.5">
           <Text variant="micro">{t('sleep.noteOptional')}</Text>
-          <TextInput
+          <Input
             value={note}
             onChangeText={setNote}
             placeholder={t('sleep.notePlaceholder')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             multiline
-            className={cardClass({ padding: 'row' }, 'min-h-16 text-foreground')}
+            className="min-h-16"
           />
         </View>
 

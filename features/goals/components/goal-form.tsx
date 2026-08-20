@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { AttributeRow } from '@/components/ui/attribute-row';
 import { Button } from '@/components/ui/button';
@@ -106,14 +107,13 @@ export function GoalForm({ defaultValues, submitLabel, onSubmit, showMilestones 
         control={control}
         name="description"
         render={({ field }) => (
-          <TextInput
+          <Input
             value={field.value ?? ''}
             onChangeText={(text) => field.onChange(text || null)}
             accessibilityLabel={t('goals.goalDescription')}
             placeholder={t('goals.descriptionPlaceholder')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             multiline
-            className={cardClass({ padding: 'row' }, 'min-h-12 text-foreground')}
+            className="min-h-12"
           />
         )}
       />

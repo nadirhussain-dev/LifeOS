@@ -1,8 +1,9 @@
 import { Archive, Pencil, RotateCcw } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
@@ -183,39 +184,33 @@ export default function OperatorPricingScreen() {
               {editingExisting ? t('operator.editPlan') : t('operator.newPlan')}
             </Text>
             {!editingExisting ? (
-              <TextInput
+              <Input
                 value={form.id}
                 onChangeText={(id) => setForm((f) => (f ? { ...f, id } : f))}
                 placeholder={t('operator.planIdPlaceholder')}
-                placeholderTextColor={c.mutedForeground}
                 autoCapitalize="none"
                 autoCorrect={false}
-                className={cardClass({ padding: 'row' }, 'text-foreground')}
               />
             ) : null}
-            <TextInput
+            <Input
               value={form.name}
               onChangeText={(name) => setForm((f) => (f ? { ...f, name } : f))}
               placeholder={t('operator.planNamePlaceholder')}
-              placeholderTextColor={c.mutedForeground}
-              className={cardClass({ padding: 'row' }, 'text-foreground')}
             />
             <View className="flex-row gap-2">
-              <TextInput
+              <Input
                 value={form.storageMb}
                 onChangeText={(v) => setForm((f) => (f ? { ...f, storageMb: v } : f))}
                 placeholder={t('operator.storageMbPlaceholder')}
-                placeholderTextColor={c.mutedForeground}
                 keyboardType="numeric"
-                className={cardClass({ padding: 'row' }, 'flex-1 text-foreground')}
+                containerClassName="flex-1"
               />
-              <TextInput
+              <Input
                 value={form.priceDollars}
                 onChangeText={(v) => setForm((f) => (f ? { ...f, priceDollars: v } : f))}
                 placeholder={t('operator.priceDollarsPlaceholder')}
-                placeholderTextColor={c.mutedForeground}
                 keyboardType="decimal-pad"
-                className={cardClass({ padding: 'row' }, 'flex-1 text-foreground')}
+                containerClassName="flex-1"
               />
             </View>
             <View className="flex-row gap-2">
@@ -234,12 +229,10 @@ export default function OperatorPricingScreen() {
                 </Pressable>
               ))}
             </View>
-            <TextInput
+            <Input
               value={form.badge}
               onChangeText={(badge) => setForm((f) => (f ? { ...f, badge } : f))}
               placeholder={t('operator.badgePlaceholder')}
-              placeholderTextColor={c.mutedForeground}
-              className={cardClass({ padding: 'row' }, 'text-foreground')}
             />
             <View className="flex-row gap-2">
               <View className="flex-1">

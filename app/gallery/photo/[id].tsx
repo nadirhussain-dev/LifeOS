@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Image } from 'expo-image';
 import { Dimensions, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
@@ -181,14 +182,13 @@ export default function PhotoDetailScreen() {
             <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
               {t('gallery.caption')}
             </Text>
-            <TextInput
+            <Input
               value={caption}
               onChangeText={setCaption}
               onBlur={commitCaption}
               placeholder={t('gallery.captionPlaceholder')}
-              placeholderTextColor={colors[scheme].mutedForeground}
               multiline
-              className={cardClass({ padding: 'row' }, 'min-h-12 text-foreground')}
+              className="min-h-12"
             />
           </View>
 

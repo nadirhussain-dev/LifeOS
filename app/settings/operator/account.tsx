@@ -2,8 +2,9 @@ import { useLocalSearchParams } from 'expo-router';
 import { CheckCircle2, ShieldAlert, ShieldX, XCircle } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
@@ -134,13 +135,11 @@ export default function OperatorAccountScreen() {
       <ScrollView contentContainerClassName="gap-6 px-5 pb-10" showsVerticalScrollIndicator={false}>
         <View className="gap-2">
           <Text variant="micro">{t('operator.reasonLabel')}</Text>
-          <TextInput
+          <Input
             value={reason}
             onChangeText={setReason}
             placeholder={t('operator.reasonPlaceholder')}
-            placeholderTextColor={c.mutedForeground}
             multiline
-            className={cardClass({ padding: 'row' }, 'text-foreground')}
             style={{ fontFamily: 'Sora_400Regular', minHeight: 52 }}
           />
           <Text variant="caption">{t('operator.reasonHint')}</Text>

@@ -1,6 +1,7 @@
 import { forwardRef, useState, type ReactNode } from 'react';
 import { TextInput, View, type TextInputProps } from 'react-native';
 
+import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { useTheme } from '@/hooks/use-theme';
 import { alpha } from '@/lib/color';
@@ -23,6 +24,23 @@ type Props = Omit<TextInputProps, 'placeholderTextColor'> & {
   containerClassName?: string;
   /** Classes for the bordered row holding leading + input + trailing. */
   fieldClassName?: string;
+  /**
+   * The surface the field is drawn on.
+   *
+   * `field` is the app's existing field shape, which is exactly
+   * `cardClass({ padding: 'row' })` — 29 of the hand-rolled inputs already drew
+   * themselves that way, so they migrate with no visual change at all.
+   *
+   * `card` is for the fields drawn as content cards (a note body, a long
+   * description) — the case `components/ui/card.tsx` calls out in its own
+   * docstring as "a few are TextInput (fields drawn as cards)".
+   *
+   * `bare` draws no surface, for an input that sits inside a row its parent has
+   * already bordered. It still gets the placeholder colour, the dynamic-type
+   * cap and the invalid announcement; it cannot get the halo, because the
+   * border it would ring belongs to something else.
+   */
+  surface?: 'field' | 'card' | 'bare';
 };
 
 /**
@@ -66,6 +84,7 @@ export const Input = forwardRef<TextInput, Props>(function Input(
     className,
     containerClassName,
     fieldClassName,
+    surface = 'field',
     onFocus,
     onBlur,
     ...props
@@ -76,54 +95,79 @@ export const Input = forwardRef<TextInput, Props>(function Input(
   const [focused, setFocused] = useState(false);
 
   const borderColor = error ? c.error : focused ? c.ring : c.input;
+  const bare = surface === 'bare';
+
+  const surfaceClass =
+    surface === 'card'
+      ? cardClass({ padding: 'md', elevation: 'e1' })
+      : surface === 'field'
+        ? 'rounded-2xl border bg-card px-4'
+        : '';
+
+  const field = (
+    <View
+      className={cn('flex-row items-center', surfaceClass, fieldClassName)}
+      style={bare ? undefined : { borderColor }}
+    >
+      {leading}
+      <TextInput
+        ref={ref}
+        placeholderTextColor={c.mutedForeground}
+        // Matches components/ui/text.tsx, for the reason given there.
+        maxFontSizeMultiplier={1.4}
+        onFocus={(e) => {
+          setFocused(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          onBlur?.(e);
+        }}
+        className={cn('flex-1 py-3 font-sans text-base text-foreground', className)}
+        {...props}
+        /*
+         * After the spread, deliberately.
+         *
+         * React Native has no `invalid` accessibility state (the platform
+         * union is disabled/selected/checked/busy/expanded), so an invalid
+         * field is announced by folding the message into its label. That
+         * has to beat a caller-supplied label rather than lose to it, or
+         * the error stays red text a screen reader only reaches if the user
+         * happens to swipe onto it — "never colour alone" applies to
+         * assistive tech first.
+         */
+        accessibilityLabel={
+          [props.accessibilityLabel ?? label, error].filter(Boolean).join(', ') || undefined
+        }
+      />
+      {trailing}
+    </View>
+  );
 
   return (
     <View className={cn('gap-1.5', containerClassName)}>
       {label ? <Text variant="micro">{label}</Text> : null}
 
-      {/* The halo. Padding is unconditional; only its colour changes. */}
-      <View
-        className="rounded-2xl p-0.5"
-        style={{ backgroundColor: focused ? alpha(c.ring, 0.18) : 'transparent' }}
-      >
+      {bare ? (
+        field
+      ) : (
+        /*
+         * The halo. Padding is unconditional and only its colour changes, so
+         * gaining focus cannot shift layout.
+         *
+         * 32px outer against the 28px field: geometrically 30 is exact, but the
+         * radius scale in tailwind.config.js runs 20 → 28 → 32 with nothing
+         * between, and an off-scale literal here is what this component exists
+         * to stop other people writing. 32 reads as a soft outer glow; 28 would
+         * clip the corners it is meant to surround.
+         */
         <View
-          className={cn('flex-row items-center rounded-[14px] border bg-card px-4', fieldClassName)}
-          style={{ borderColor }}
+          className="rounded-3xl p-0.5"
+          style={{ backgroundColor: focused ? alpha(c.ring, 0.18) : 'transparent' }}
         >
-          {leading}
-          <TextInput
-            ref={ref}
-            placeholderTextColor={c.mutedForeground}
-            // Matches components/ui/text.tsx, for the reason given there.
-            maxFontSizeMultiplier={1.4}
-            onFocus={(e) => {
-              setFocused(true);
-              onFocus?.(e);
-            }}
-            onBlur={(e) => {
-              setFocused(false);
-              onBlur?.(e);
-            }}
-            className={cn('flex-1 py-3 font-sans text-base text-foreground', className)}
-            {...props}
-            /*
-             * After the spread, deliberately.
-             *
-             * React Native has no `invalid` accessibility state (the platform
-             * union is disabled/selected/checked/busy/expanded), so an invalid
-             * field is announced by folding the message into its label. That
-             * has to beat a caller-supplied label rather than lose to it, or
-             * the error stays red text a screen reader only reaches if the user
-             * happens to swipe onto it — "never colour alone" applies to
-             * assistive tech first.
-             */
-            accessibilityLabel={
-              [props.accessibilityLabel ?? label, error].filter(Boolean).join(', ') || undefined
-            }
-          />
-          {trailing}
+          {field}
         </View>
-      </View>
+      )}
 
       {error ? (
         <Text

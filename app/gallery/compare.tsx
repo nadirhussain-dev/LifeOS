@@ -6,10 +6,10 @@ import * as Sharing from 'expo-sharing';
 import { Bookmark, GitCompareArrows, Share2, Sparkles, TrendingUp } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dimensions, Image, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Dimensions, Image, Pressable, ScrollView, View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 
-import { cardClass } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { GradientButton } from '@/components/ui/gradient-button';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -416,13 +416,11 @@ export default function CompareScreen() {
           />
         )}
 
-        <TextInput
+        <Input
           value={caption}
           onChangeText={setCaption}
           accessibilityLabel={t('gallery.caption')}
           placeholder={t('gallery.captionLongPlaceholder')}
-          placeholderTextColor={colors[scheme].mutedForeground}
-          className={cardClass({ padding: 'row' }, 'text-foreground')}
           maxLength={140}
         />
 
