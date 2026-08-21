@@ -2,7 +2,7 @@
   "expo": {
     "name": "Daykeep",
     "slug": "day-keep-support",
-    "version": "1.24.0",
+    "version": "1.25.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "daykeep",
