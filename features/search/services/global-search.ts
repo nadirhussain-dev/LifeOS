@@ -27,8 +27,7 @@ export type SearchResultKind =
   | 'subject'
   | 'song'
   | 'playlist'
-  | 'album'
-  | 'group';
+  | 'album';
 
 export type SearchResult = {
   id: string;

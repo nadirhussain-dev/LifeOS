@@ -3,6 +3,7 @@ import { useCallback, useEffect } from 'react';
 import { AppState } from 'react-native';
 
 import { moduleForPath, privateModuleForPath } from '@/features/hub/config/route-modules';
+import { moduleMayBeShownIn } from '@/features/hub/services/module-gate';
 import { isClosedByUser } from '@/features/hub/services/module-visibility';
 import { useModuleCurationStore } from '@/features/hub/store/module-curation-store';
 import { refreshModuleFlags } from '@/features/module-flags/services/module-flags';
@@ -83,13 +84,9 @@ export function useModuleGate(): (moduleId: string) => boolean {
   const hydrated = usePrivateStore((s) => s.hydrated);
 
   return useCallback(
-    (moduleId: string) => {
-      if (!hydrated) return false;
-      if (flags[moduleId]?.enabled === false) return false;
-      if (isClosedByUser(moduleId, overrides)) return false;
-      if (privatised.includes(moduleId) && key === null) return false;
-      return true;
-    },
+    (moduleId: string) =>
+      hydrated &&
+      moduleMayBeShownIn(moduleId, { flags, overrides, privatised, unlocked: key !== null }),
     [flags, overrides, privatised, key, hydrated],
   );
 }
