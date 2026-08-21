@@ -47,7 +47,16 @@ export const SEGMENT_TO_MODULE: Record<string, string> = {
  * (auth, onboarding, the private space's own screens — see
  * `privateModuleForPath` below for those). */
 export function moduleForPath(pathname: string): string | null {
-  const segment = pathname.split('?')[0].split('/').filter(Boolean)[0] ?? '';
+  // Route groups are dropped before the first segment is taken. `usePathname()`
+  // has already resolved them away, so this changes nothing for the guard — but
+  // the hrefs held in registries have not, and `/(tabs)/habits` would otherwise
+  // answer `null` and read as "belongs to no module". That is the safe-looking
+  // wrong answer: it means "never gated".
+  const segment =
+    pathname
+      .split('?')[0]
+      .split('/')
+      .filter((part) => part.length > 0 && !part.startsWith('('))[0] ?? '';
   return SEGMENT_TO_MODULE[segment] ?? null;
 }
 

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { WIDGET_MODULE, widgetAllowed } from '@/features/dashboard/config/widget-registry';
 import { HUB_SECTIONS } from '@/features/hub/config/modules';
-import { SEGMENT_TO_MODULE } from '@/features/hub/config/route-modules';
+import { moduleForPath, SEGMENT_TO_MODULE } from '@/features/hub/config/route-modules';
 import { moduleMayBeShownIn, type ModuleGateContext } from '@/features/hub/services/module-gate';
 import type { SearchResultKind } from '@/features/search/services/global-search';
 
@@ -140,15 +140,43 @@ describe('search kind ownership', () => {
   });
 });
 
+describe('moduleForPath', () => {
+  it('reads the module off an ordinary path', () => {
+    expect(moduleForPath('/budget/transactions/x')).toBe('budget');
+  });
+
+  it('sees through a route group', () => {
+    // Registries hold unresolved hrefs. `null` here would read as "belongs to
+    // no module", which every gate treats as "always allowed".
+    expect(moduleForPath('/(tabs)/habits')).toBe('habits');
+    expect(moduleForPath('/(tabs)/journal')).toBe('journal');
+  });
+
+  it('still answers null for a route that genuinely owns no module', () => {
+    expect(moduleForPath('/auth/sign-in')).toBeNull();
+  });
+});
+
 describe('cross-module readers ask the gate', () => {
-  // The three screens that render another module's content. Each was found
-  // rendering it unconditionally; this is what stops that returning quietly.
+  // Every surface that renders or links into another module. Each was found
+  // doing it unconditionally; this is what stops that returning quietly.
   it.each([
     ['app/(tabs)/index.tsx', 'widgetAllowed'],
     ['features/insights/hooks/use-insights.ts', 'useModuleGate'],
     ['features/search/services/search-sources.ts', 'moduleMayBeShown'],
+    ['features/dashboard/components/quick-actions-sheet.tsx', 'useModuleGate'],
+    ['features/dashboard/components/focus-shortcuts.tsx', 'useModuleGate'],
   ])('%s', (file, symbol) => {
     expect(readCode(file)).toContain(symbol);
+  });
+
+  it('offers the same quick actions to the sheet and the radial menu', () => {
+    // They are the tap path and the long-press path onto one list; a gate
+    // applied to one of them is worse than none, because the difference is
+    // invisible until somebody long-presses.
+    const screen = readCode('app/(tabs)/index.tsx');
+    expect(screen).toContain('useQuickActions');
+    expect(screen).not.toContain('QUICK_ACTIONS.map');
   });
 
   it('masks every insights input, not just the queries it owns', () => {

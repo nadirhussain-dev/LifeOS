@@ -15,7 +15,7 @@ import { DashboardHeader } from '@/features/dashboard/components/dashboard-heade
 import { FocusShortcuts } from '@/features/dashboard/components/focus-shortcuts';
 import {
   QuickActionsSheet,
-  QUICK_ACTIONS,
+  useQuickActions,
 } from '@/features/dashboard/components/quick-actions-sheet';
 import { TodayFocusCard } from '@/features/dashboard/components/today-focus-card';
 import { MoodTile, WaterTile } from '@/features/dashboard/components/wellbeing-tiles';
@@ -104,6 +104,9 @@ export default function DashboardScreen() {
   );
 
   const allowed = useModuleGate();
+  // The radial menu is the long-press twin of the sheet, so it takes the same
+  // gated list — the two must never offer different actions.
+  const quickActions = useQuickActions();
   const showWater = widgetAllowed('water-intake', allowed);
   const showMood = widgetAllowed('reflect', allowed);
 
@@ -179,7 +182,7 @@ export default function DashboardScreen() {
       <RadialMenu
         open={radialOpen}
         onClose={() => setRadialOpen(false)}
-        actions={QUICK_ACTIONS.map((action) => ({
+        actions={quickActions.map((action) => ({
           key: action.labelKey,
           label: t(action.labelKey),
           icon: action.icon,
