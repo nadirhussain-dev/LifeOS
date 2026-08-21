@@ -10,15 +10,16 @@ import { RadialMenu } from '@/components/ui/radial-menu';
 import { Fab } from '@/components/ui/fab';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
-import { WIDGET_REGISTRY } from '@/features/dashboard/config/widget-registry';
+import { widgetAllowed, WIDGET_REGISTRY } from '@/features/dashboard/config/widget-registry';
 import { DashboardHeader } from '@/features/dashboard/components/dashboard-header';
 import { FocusShortcuts } from '@/features/dashboard/components/focus-shortcuts';
 import {
   QuickActionsSheet,
-  QUICK_ACTIONS,
+  useQuickActions,
 } from '@/features/dashboard/components/quick-actions-sheet';
 import { TodayFocusCard } from '@/features/dashboard/components/today-focus-card';
 import { MoodTile, WaterTile } from '@/features/dashboard/components/wellbeing-tiles';
+import { useModuleGate } from '@/features/module-flags/hooks/use-module-access';
 import type { WidgetId } from '@/features/dashboard/types/dashboard.types';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -42,9 +43,15 @@ const FULL_SECTIONS: { label: string; ids: WidgetId[] }[] = [
 /** Rendered as the compact Wellbeing tiles instead of full-width widgets. */
 const TILE_HANDLED: WidgetId[] = ['water-intake', 'reflect'];
 
-/** A titled zone of full-width widgets pulled from the registry. */
+/** A titled zone of full-width widgets pulled from the registry.
+ *
+ *  Filtered by the owning module's gate as well as by the registry: a widget
+ *  whose module the operator has pulled, the user has closed, or has moved
+ *  behind a locked vault renders nothing. An emptied zone drops its heading
+ *  too, rather than leaving a titled blank. */
 function WidgetSection({ label, ids }: { label: string; ids: WidgetId[] }) {
-  const items = ids.filter((id) => id in WIDGET_REGISTRY);
+  const allowed = useModuleGate();
+  const items = ids.filter((id) => id in WIDGET_REGISTRY && widgetAllowed(id, allowed));
   if (items.length === 0) return null;
   return (
     <View className="gap-3">
@@ -96,6 +103,13 @@ export default function DashboardScreen() {
     }, [queryClient]),
   );
 
+  const allowed = useModuleGate();
+  // The radial menu is the long-press twin of the sheet, so it takes the same
+  // gated list — the two must never offer different actions.
+  const quickActions = useQuickActions();
+  const showWater = widgetAllowed('water-intake', allowed);
+  const showMood = widgetAllowed('reflect', allowed);
+
   const placed = new Set<WidgetId>([
     ...FULL_SECTIONS.flatMap((section) => section.ids),
     ...TILE_HANDLED,
@@ -131,17 +145,22 @@ export default function DashboardScreen() {
           <WidgetSection label={t('dashboard.today')} ids={FULL_SECTIONS[0].ids} />
         </Defer>
 
-        <Defer placeholderHeight={140}>
-          <View className="gap-3">
-            <Text variant="micro" className="px-1">
-              {t('dashboard.wellbeing')}
-            </Text>
-            <View className="flex-row gap-3">
-              <WaterTile />
-              <MoodTile />
+        {/* The Wellbeing tiles are the same two widgets as `water-intake` and
+            `reflect`, rendered compact — so they answer to the same gate. Both
+            gone means the zone goes with them, heading included. */}
+        {showWater || showMood ? (
+          <Defer placeholderHeight={140}>
+            <View className="gap-3">
+              <Text variant="micro" className="px-1">
+                {t('dashboard.wellbeing')}
+              </Text>
+              <View className="flex-row gap-3">
+                {showWater ? <WaterTile /> : null}
+                {showMood ? <MoodTile /> : null}
+              </View>
             </View>
-          </View>
-        </Defer>
+          </Defer>
+        ) : null}
 
         <Defer placeholderHeight={220}>
           <WidgetSection label={t('dashboard.forYou')} ids={FULL_SECTIONS[1].ids} />
@@ -163,7 +182,7 @@ export default function DashboardScreen() {
       <RadialMenu
         open={radialOpen}
         onClose={() => setRadialOpen(false)}
-        actions={QUICK_ACTIONS.map((action) => ({
+        actions={quickActions.map((action) => ({
           key: action.labelKey,
           label: t(action.labelKey),
           icon: action.icon,

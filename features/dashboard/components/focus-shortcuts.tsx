@@ -4,6 +4,8 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
+import { moduleForPath } from '@/features/hub/config/route-modules';
+import { useModuleGate } from '@/features/module-flags/hooks/use-module-access';
 import { FOCUS_AREAS, focusTint } from '@/features/profile/constants';
 import { useProfileStore } from '@/features/profile/store/profile-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -21,11 +23,31 @@ export function FocusShortcuts() {
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const focusAreas = useProfileStore((s) => s.focusAreas);
+  const allowed = useModuleGate();
 
   if (focusAreas.length === 0) return null;
 
-  // Preserve the canonical FOCUS_AREAS order rather than selection order.
-  const chosen = FOCUS_AREAS.filter((area) => focusAreas.includes(area.id));
+  /**
+   * Preserve the canonical FOCUS_AREAS order rather than selection order, and
+   * drop any whose module may not be opened.
+   *
+   * This row is a set of deep links, so an ungated one is a shortcut into a
+   * screen the route guard immediately bounces — and for a privatised module,
+   * a tile naming it sitting on the dashboard. Answering onboarding is not a
+   * standing instruction that outranks the three switches; it is what put the
+   * shortcut here in the first place.
+   *
+   * The module comes from the area's own `route` through the guard's map,
+   * rather than its `module` field — that one is a `ModuleName` chosen for the
+   * tint (`fitness` for Gallery), not a module id the gate would recognise.
+   */
+  const chosen = FOCUS_AREAS.filter((area) => {
+    if (!focusAreas.includes(area.id)) return false;
+    const moduleId = moduleForPath(area.route);
+    return moduleId === null || allowed(moduleId);
+  });
+
+  if (chosen.length === 0) return null;
 
   return (
     <View className="gap-3">

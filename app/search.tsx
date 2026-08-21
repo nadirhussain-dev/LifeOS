@@ -1,6 +1,6 @@
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { Search, X } from 'lucide-react-native';
+import { Images, ListMusic, Music2, Search, X, type LucideIcon } from 'lucide-react-native';
 import { useDeferredValue, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Keyboard, Pressable, View } from 'react-native';
@@ -109,28 +109,40 @@ export default function SearchScreen() {
   );
 }
 
-/** Result kind → the notification category whose icon best describes it. Reusing
- *  that table keeps one icon per concept across the whole app. */
-const KIND_ICON: Record<SearchResultKind, keyof typeof CATEGORY_META> = {
-  task: 'tasks',
-  note: 'notes',
-  habit: 'habits',
-  goal: 'goals',
-  journal: 'journal',
-  transaction: 'budget',
-  debt: 'budget',
-  subject: 'study',
-  song: 'split',
-  playlist: 'split',
-  album: 'split',
-  group: 'split',
+/**
+ * Result kind → the icon that describes it.
+ *
+ * Mostly the notification category's icon, because reusing that table keeps one
+ * icon per concept across the whole app — a task is the same check box wherever
+ * it appears.
+ *
+ * Music and Gallery break the pattern, and had to: neither sends a
+ * notification, so neither has a category to borrow from. This map used to be
+ * typed as `keyof typeof CATEGORY_META`, which meant the three of them had to
+ * name *some* category, and all three named `split` — so every song, playlist
+ * and album in the results came back wearing Split's teal group-of-people icon.
+ * It typechecked, which is why it survived. They take their Hub tile's icon
+ * instead, which is the one the user already associates with the module.
+ */
+const KIND_ICON: Record<SearchResultKind, LucideIcon> = {
+  task: CATEGORY_META.tasks.icon,
+  note: CATEGORY_META.notes.icon,
+  habit: CATEGORY_META.habits.icon,
+  goal: CATEGORY_META.goals.icon,
+  journal: CATEGORY_META.journal.icon,
+  transaction: CATEGORY_META.budget.icon,
+  debt: CATEGORY_META.budget.icon,
+  subject: CATEGORY_META.study.icon,
+  song: Music2,
+  playlist: ListMusic,
+  album: Images,
 };
 
 function ResultRow({ result, onPress }: { result: SearchResult; onPress: () => void }) {
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const tint = moduleTint(result.module, scheme);
-  const Icon = CATEGORY_META[KIND_ICON[result.kind]].icon;
+  const Icon = KIND_ICON[result.kind];
 
   return (
     <Pressable

@@ -228,7 +228,15 @@ export const HUB_SECTIONS: HubSection[] = [
         status: 'ready',
         getRoute: () => '/split',
         tables: [],
-        searchKinds: ['group'],
+        // Nothing to search. Split owns no local tables — its groups live on
+        // the server, which is what makes them shared — and `searchEverything`
+        // is a synchronous read across local SQLite, so it cannot reach them.
+        // This said `['group']` from the day global search shipped and no
+        // source ever produced one: a kind declared here but never emitted is
+        // invisible, because the only thing the declaration drives is which
+        // results get *hidden* when the module is switched off. Searching
+        // groups needs an async source, not a line here.
+        searchKinds: [],
         canBePrivate: true,
       },
     ],

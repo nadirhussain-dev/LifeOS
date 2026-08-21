@@ -21,9 +21,20 @@ import { useTheme } from '@/hooks/use-theme';
 type Props = {
   tiers: ChallengeTier[];
   qualifiedDays: number;
+  /**
+   * Days left in this run, counting today. Null when the season has no end
+   * configured, which must read as "no deadline" and not as zero.
+   *
+   * The ladder used to quote "60 days to Forge" without knowing whether sixty
+   * days existed — under a calendar season a late joiner was being offered
+   * rungs that could not be reached at any rate of effort. 0070 gives every run
+   * its own full-length window, so the target is now always real; this says how
+   * much of it is left, which is the part that creates urgency.
+   */
+  daysLeft?: number | null;
 };
 
-export function ChallengeLadder({ tiers, qualifiedDays }: Props) {
+export function ChallengeLadder({ tiers, qualifiedDays, daysLeft }: Props) {
   const { t } = useTranslation();
   const { c } = useTheme();
 
@@ -32,9 +43,12 @@ export function ChallengeLadder({ tiers, qualifiedDays }: Props) {
 
   return (
     <View className={cardClass({ padding: 'md' }, 'gap-1')}>
-      <Text variant="micro" className="pb-2">
-        {t('challenge.ladderTitle')}
-      </Text>
+      <View className="flex-row items-baseline justify-between pb-2">
+        <Text variant="micro">{t('challenge.ladderTitle')}</Text>
+        {typeof daysLeft === 'number' ? (
+          <Text variant="micro">{t('challenge.daysLeftInRun', { count: daysLeft })}</Text>
+        ) : null}
+      </View>
 
       {ordered.map((tier, index) => {
         const climbed = tier.dayThreshold <= qualifiedDays;

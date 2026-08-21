@@ -84,3 +84,29 @@ export type ChainDay = {
   outcome: 'qualified' | 'shielded' | 'missed';
   modulesHit: string[];
 };
+
+/**
+ * A run that is over, as `challenge_today()` hands it back (0069).
+ *
+ * Separate from `ChallengeRun` because it answers a different question. That
+ * one is "where am I", read every time the checklist refreshes; this is "what
+ * did I come to", read once and then kept. Before 0069 there was no such
+ * thing — a completed run simply stopped being returned, so finishing a
+ * months-long streak and never having started one produced the same screen.
+ */
+export type FinishedRun = {
+  seasonId: string;
+  seasonName: string | null;
+  /** Reached the top rung, or ran out of calendar. Not interchangeable. */
+  status: 'completed' | 'ended';
+  qualifiedDays: number;
+  tierDay: number;
+  /**
+   * The furthest rung ever stood on, which never decreases — so it stays the
+   * honest answer for a run that fell back down the ladder before the season
+   * closed. `tierDay` is where it finished; this is how far it got.
+   */
+  highestTierDay: number;
+  shieldsEarned: number;
+  finishedAt: string | null;
+};

@@ -21,6 +21,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
+import { moduleForPath } from '@/features/hub/config/route-modules';
+import { useModuleGate } from '@/features/module-flags/hooks/use-module-access';
 import { toDateKey } from '@/lib/date';
 
 type Action = {
@@ -52,11 +54,34 @@ export const QUICK_ACTIONS: Action[] = [
   },
 ];
 
+/**
+ * The actions whose module may be opened right now.
+ *
+ * The FAB offered "New note" and "New event" whatever had become of Notes and
+ * Timeline — both `canBePrivate` — so the create path stayed advertised for a
+ * module the user had hidden, and tapping it landed on the PIN pad.
+ *
+ * The owning module is read back out of the action's own href via
+ * `moduleForPath`, the same map the route guard keys on, rather than a `module`
+ * field added here. A second list would be a second thing to keep right, and
+ * this one's whole job is to agree with the guard: if the guard would bounce
+ * the destination, the action should not be on offer.
+ */
+export function useQuickActions(): Action[] {
+  const allowed = useModuleGate();
+  return QUICK_ACTIONS.filter((action) => {
+    const href = action.getHref();
+    const moduleId = moduleForPath(typeof href === 'string' ? href : href.pathname);
+    return moduleId === null || allowed(moduleId);
+  });
+}
+
 export const QuickActionsSheet = forwardRef<BottomSheetModal>(
   function QuickActionsSheet(_props, ref) {
     const router = useRouter();
     const scheme = useColorScheme() ?? 'light';
     const { t } = useTranslation();
+    const actions = useQuickActions();
 
     const renderBackdrop = useCallback(
       (props: BottomSheetBackdropProps) => (
@@ -85,7 +110,7 @@ export const QuickActionsSheet = forwardRef<BottomSheetModal>(
           <Text variant="subheading" className="px-2 pb-2">
             {t('dashboard.quickActions')}
           </Text>
-          {QUICK_ACTIONS.map((action) => (
+          {actions.map((action) => (
             <Pressable
               accessibilityRole="button"
               key={action.labelKey}

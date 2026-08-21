@@ -12,14 +12,35 @@ import type {
   ChainDay,
   ChallengeTier,
   ChecklistItem,
+  FinishedRun,
 } from '@/features/challenge/types/challenge.types';
 import { isSupabaseConfigured } from '@/lib/env';
 import { reportError } from '@/lib/error-reporting';
 import { supabase } from '@/lib/supabase';
 
-/** What `challenge_today()` returns. Server-owned; see migrations 0048 and 0055. */
+/** What `challenge_today()` returns. Server-owned; see migrations 0048, 0055 and 0069. */
 export type ChallengeTodayResponse = {
+  /**
+   * A run is in progress. Deliberately still false for a finished one — every
+   * caller reads this as "there is a day to be won", and 0069 hands the
+   * finished run back separately rather than widening it.
+   */
   enrolled: boolean;
+  /** The last run that is over, for the summary. Null until there is one. */
+  finishedRun?: FinishedRun | null;
+  /**
+   * The last local day this run may earn, and how many days that leaves —
+   * counting today, so a run ending today has one left rather than none (0070).
+   *
+   * Both come from the server. Deriving the count here would use the device
+   * clock, which is the one number this engine never trusts, and the date alone
+   * cannot be turned into a countdown without it.
+   *
+   * Null on a season with no end configured at all, which is a real state and
+   * must read as "no deadline" rather than as zero.
+   */
+  runEndsOn?: string | null;
+  daysLeft?: number | null;
   seasonId?: string;
   seasonName?: string;
   /**

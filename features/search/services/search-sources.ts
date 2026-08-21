@@ -10,7 +10,7 @@ import { listNotes } from '@/features/notes/services/notes-repository';
 import { listStudySubjects } from '@/features/study/services/study-repository';
 import { listTasks } from '@/features/tasks/services/tasks-repository';
 import { HUB_SECTIONS } from '@/features/hub/config/modules';
-import { usePrivateStore } from '@/features/private/store/private-store';
+import { moduleMayBeShown } from '@/features/hub/services/module-gate';
 import {
   compareResults,
   scoreMatch,
@@ -21,24 +21,50 @@ import {
 import { reportError } from '@/lib/error-reporting';
 
 /**
- * Which result kinds must not appear, because their module is privatised and
- * the vault is locked.
+ * Result kinds owned by a module that has no Hub tile.
+ *
+ * Tasks, Habits and Journal are bottom tabs, so they are absent from
+ * `HUB_SECTIONS` and there is no `searchKinds` on them to read. Neither the
+ * module manager nor the vault's module list offers them either, so they can
+ * be neither closed nor privatised — but the operator can still pull one, and
+ * without this their hits would outlive the switch that pulled it.
+ *
+ * The list is short and it is hand-kept, which is exactly the shape of thing
+ * that falls behind; `search-coverage.test.ts` asserts that this and
+ * `HUB_SECTIONS` between them account for every kind in `SearchResultKind`, so
+ * a new kind cannot be added without an owner.
+ */
+const TAB_MODULE_KINDS: Record<string, readonly SearchResultKind[]> = {
+  tasks: ['task'],
+  habits: ['habit'],
+  journal: ['journal'],
+};
+
+/**
+ * Which result kinds must not appear, because their module may not be shown.
  *
  * Derived from the Hub registry's `searchKinds` rather than a second list here,
- * so a module cannot be privatised in one place and forgotten in the other.
+ * so a module cannot be switched off in one place and forgotten in the other.
+ *
+ * All three switches, not just the vault. Search used to check only whether a
+ * module was privatised, which left the other two returning hits that deep-link
+ * into a screen `useModuleRouteGuard` immediately redirects away from — a
+ * result you can see, tap, and get bounced off, for a module the operator has
+ * pulled or the user has closed.
  */
 function hiddenSearchKinds(): Set<SearchResultKind> {
-  const { privatised, key } = usePrivateStore.getState();
-  if (privatised.length === 0 || key !== null) return new Set();
-
   const hidden = new Set<SearchResultKind>();
+
+  const hideIfOff = (moduleId: string, kinds: readonly SearchResultKind[]) => {
+    if (kinds.length === 0 || moduleMayBeShown(moduleId)) return;
+    for (const kind of kinds) hidden.add(kind);
+  };
+
   for (const section of HUB_SECTIONS) {
-    for (const module of section.modules) {
-      if (privatised.includes(module.id)) {
-        for (const kind of module.searchKinds) hidden.add(kind);
-      }
-    }
+    for (const module of section.modules) hideIfOff(module.id, module.searchKinds);
   }
+  for (const [moduleId, kinds] of Object.entries(TAB_MODULE_KINDS)) hideIfOff(moduleId, kinds);
+
   return hidden;
 }
 
@@ -99,7 +125,11 @@ export function searchEverything(query: string, limit = 40): SearchResult[] {
       .map((note) => ({
         id: note.id,
         kind: 'note' as const,
-        module: 'journal' as const,
+        // Notes has had its own tint since the token pass; this said 'journal',
+        // so every note in the results wore Journal's violet while its Hub tile
+        // and every other surface showed it yellow. Tasks below genuinely do
+        // borrow 'habit' — there is no `tasks` tint, by design.
+        module: 'notes' as const,
         title: note.title || (note.body ?? '').slice(0, 40),
         subtitle: snippet(note.body, query),
         route: '/note/[id]',

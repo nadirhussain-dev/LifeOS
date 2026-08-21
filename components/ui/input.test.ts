@@ -112,10 +112,28 @@ describe('Input token consumption', () => {
     expect(input).toMatch(/py-3 font-sans text-base text-foreground/);
   });
 
-  it('draws the focus halo with padding that is always present', () => {
+  it('draws the focus halo with geometry that is always present', () => {
     // A border that thickens on focus shifts every field below it. The halo is
     // unconditional padding whose colour changes, so focus cannot move layout.
-    expect(input).toMatch(/rounded-3xl p-0\.5/);
+    expect(input).toMatch(/padding: 2,/);
     expect(input).toMatch(/backgroundColor: focused \?/);
+  });
+
+  it('keeps the halo radius in the same object as its colour', () => {
+    /*
+     * The corners used to come from a `rounded-3xl` className while the colour
+     * came from `style`, and they did not survive it: the halo painted a square
+     * of tinted green behind a fully rounded field, so focusing the email field
+     * showed four green corners around the pill.
+     *
+     * Asserted as "radius and colour are declared together" rather than as a
+     * literal, because the bug was never the value — 32 was always right. It
+     * was that two halves of one shape were set through two mechanisms that
+     * could disagree.
+     */
+    const halo = input.slice(input.indexOf('borderRadius: radius'));
+    expect(halo).toMatch(/borderRadius: radius\['3xl'\]/);
+    expect(halo.slice(0, 220)).toMatch(/backgroundColor: focused \?/);
+    expect(input).not.toMatch(/rounded-3xl/);
   });
 });

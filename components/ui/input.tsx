@@ -3,6 +3,7 @@ import { TextInput, View, type TextInputProps } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
+import { radius } from '@/constants/design-tokens';
 import { useTheme } from '@/hooks/use-theme';
 import { alpha } from '@/lib/color';
 import { cn } from '@/lib/utils';
@@ -203,18 +204,30 @@ export const Input = forwardRef<TextInput, Props>(function Input(
         field
       ) : (
         /*
-         * The halo. Padding is unconditional and only its colour changes, so
+         * The halo. Geometry is unconditional and only the colour changes, so
          * gaining focus cannot shift layout.
          *
-         * 32px outer against the 28px field: geometrically 30 is exact, but the
-         * radius scale in tailwind.config.js runs 20 → 28 → 32 with nothing
-         * between, and an off-scale literal here is what this component exists
-         * to stop other people writing. 32 reads as a soft outer glow; 28 would
-         * clip the corners it is meant to surround.
+         * Radius and padding sit in the same object as the colour, deliberately.
+         * They were a `rounded-3xl p-0.5` className while the colour came from
+         * `style`, and the corners did not survive it: the halo painted a
+         * *square* of tinted green behind a fully rounded field, so focusing the
+         * email field on the sign-in screen showed four green corners around the
+         * pill. Whatever the merge order is doing, geometry that has to agree
+         * with a colour should not be able to disagree with it, and one object
+         * has no order to get wrong.
+         *
+         * 32 against the 28 the field carries: geometrically 30 is exact, but 30
+         * is not on the scale, and an off-scale literal is what this component
+         * exists to stop other people writing. Taken from the `radius` token
+         * rather than typed, so it moves if the scale does. 32 reads as a soft
+         * outer glow; 28 would clip the corners it is meant to surround.
          */
         <View
-          className="rounded-3xl p-0.5"
-          style={{ backgroundColor: focused ? alpha(c.ring, 0.18) : 'transparent' }}
+          style={{
+            borderRadius: radius['3xl'],
+            padding: 2,
+            backgroundColor: focused ? alpha(c.ring, 0.18) : 'transparent',
+          }}
         >
           {field}
         </View>

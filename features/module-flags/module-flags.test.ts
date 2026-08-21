@@ -69,8 +69,13 @@ describe('module registry', () => {
     // A privatised module with no `tables` would silently keep exporting its
     // rows into the plaintext backup — the failure would be invisible until
     // somebody opened the JSON.
-    const searchable = modules.filter((m) => m.canBePrivate && m.searchKinds.length > 0);
-    const withoutTables = searchable.filter((m) => m.tables.length === 0).map((m) => m.id);
+    // Checked against `tables` directly. This used to filter to modules with
+    // `searchKinds` first, as a stand-in for "owns user data" — which stopped
+    // meaning that the moment Split's unproduced 'group' kind was removed, and
+    // would have quietly narrowed the check to nothing rather than failing.
+    const withoutTables = modules
+      .filter((m) => m.canBePrivate && m.tables.length === 0)
+      .map((m) => m.id);
     // Split is the deliberate exception: its data lives on the server in
     // shared group tables, not in local ones this app may drop from an export.
     expect(withoutTables).toEqual(['split']);

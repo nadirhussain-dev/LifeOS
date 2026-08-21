@@ -10,6 +10,7 @@ import {
 import { buildDailyMetrics } from '@/features/insights/services/daily-metrics';
 import { computeInsights } from '@/features/insights/services/insight-engine';
 import { listEntriesBetween } from '@/features/journal/services/journal-repository';
+import { useModuleGate } from '@/features/module-flags/hooks/use-module-access';
 import { useSleepSessions } from '@/features/sleep/hooks/use-sleep';
 import { listTasks } from '@/features/tasks/services/tasks-repository';
 import { listDailyTotals } from '@/features/water-intake/services/water-intake-repository';
@@ -24,8 +25,25 @@ import { useStudySessions } from '@/features/study/hooks/use-study';
  * because those hooks are shaped for their own screens, not a cross-module
  * date range — the habits query shares its cache key with `useHabits()` so
  * the same data isn't fetched twice.
+ *
+ * Every input is gated on its own module first. Insights is the widest
+ * cross-module read in the app — it is the whole point of the screen — which
+ * also makes it the one place where switching a module off can be undone by
+ * something outside it: a privatised Sleep still produced "you sleep better on
+ * days you journal", naming sleep data on an unlocked screen, and a module the
+ * operator had pulled still shaped correlations the user could no longer open.
+ *
+ * `notification-visibility.ts` already assumes this: the `review` category maps
+ * to no module "because what the review itself shows is filtered by the data it
+ * reads". It reads this hook, and until now nothing filtered it.
+ *
+ * A gated module contributes an empty series rather than being dropped from the
+ * join, so the day rows keep their shape and the correlation engine simply
+ * finds nothing to say about it — the same answer it gives for a module you
+ * have never used.
  */
 export function useLifeInsights(rangeDays: number) {
+  const allowed = useModuleGate();
   const {
     data: sleepSessions = [],
     isLoading: sleepLoading,
@@ -53,7 +71,11 @@ export function useLifeInsights(rangeDays: number) {
     isLoading: habitsLoading,
     isError: habitsError,
     refetch: refetchHabits,
-  } = useQuery({ queryKey: ['habits', false], queryFn: async () => listHabitsWithToday(false) });
+  } = useQuery({
+    queryKey: ['habits', false],
+    queryFn: async () => listHabitsWithToday(false),
+    enabled: allowed('habits'),
+  });
 
   const {
     data: habitLogs = [],
@@ -63,6 +85,7 @@ export function useLifeInsights(rangeDays: number) {
   } = useQuery({
     queryKey: ['insights', 'habit-logs', start, end],
     queryFn: async () => listAllHabitLogsBetween(start, end),
+    enabled: allowed('habits'),
   });
 
   const {
@@ -73,6 +96,7 @@ export function useLifeInsights(rangeDays: number) {
   } = useQuery({
     queryKey: ['insights', 'journal-entries', start, end],
     queryFn: async () => listEntriesBetween(start, end),
+    enabled: allowed('journal'),
   });
 
   const {
@@ -90,6 +114,7 @@ export function useLifeInsights(rangeDays: number) {
       ...listTasks('completed', 'created'),
       ...listTasks('archived', 'created'),
     ],
+    enabled: allowed('tasks'),
   });
 
   const {
@@ -100,23 +125,33 @@ export function useLifeInsights(rangeDays: number) {
   } = useQuery({
     queryKey: ['insights', 'water', start, end],
     queryFn: async () => listDailyTotals(start, end),
+    enabled: allowed('water'),
   });
 
+  /**
+   * The gate is applied here as well as on the queries above, and that is not
+   * belt-and-braces: `useSleepSessions`, `useStudySessions` and `useTransactions`
+   * are the modules' own hooks, shared with their own screens, so their caches
+   * are already warm and `enabled` on this hook's queries cannot reach them.
+   * Masking at the join is the part that actually holds; `enabled` above only
+   * saves the reads this hook owns.
+   */
   const daily = useMemo(
     () =>
       buildDailyMetrics({
         days: rangeDays,
-        sleepSessions,
-        studySessions,
-        habits,
-        habitLogs,
-        transactions,
-        journalEntries,
-        tasks,
-        waterTotals,
+        sleepSessions: allowed('sleep') ? sleepSessions : [],
+        studySessions: allowed('study') ? studySessions : [],
+        habits: allowed('habits') ? habits : [],
+        habitLogs: allowed('habits') ? habitLogs : [],
+        transactions: allowed('budget') ? transactions : [],
+        journalEntries: allowed('journal') ? journalEntries : [],
+        tasks: allowed('tasks') ? tasks : [],
+        waterTotals: allowed('water') ? waterTotals : [],
       }),
     [
       rangeDays,
+      allowed,
       sleepSessions,
       studySessions,
       habits,

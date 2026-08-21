@@ -56,6 +56,11 @@ export default function ChallengeTimelineScreen() {
         });
       case 'completed':
         return t('challenge.eventCompleted');
+      // Written by the maintenance cron rather than by anything the user did
+      // (0069). Without a case it fell to the default and rendered the raw
+      // `season_ended` string.
+      case 'season_ended':
+        return t('challenge.eventSeasonEnded');
       case 'admin_shield_granted':
         return t('challenge.eventAdminShield');
       case 'admin_days_restored':
