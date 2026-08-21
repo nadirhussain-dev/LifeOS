@@ -3,8 +3,9 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Heart, Trash2 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TextInput, View } from 'react-native';
+import { View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
@@ -89,10 +90,10 @@ export default function SongDetailScreen() {
           <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
             {t('music.songTitle')}
           </Text>
-          <TextInput
+          <Input
+            surface="bare"
             value={title}
             onChangeText={setTitle}
-            placeholderTextColor={colors[scheme].mutedForeground}
             style={{ fontSize: 22, fontFamily: 'Sora_700Bold', color: colors[scheme].foreground }}
           />
         </View>
@@ -101,12 +102,12 @@ export default function SongDetailScreen() {
           <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
             {t('music.artist')}
           </Text>
-          <TextInput
+          <Input
+            surface="bare"
             value={artist}
             onChangeText={setArtist}
             accessibilityLabel={t('music.artist')}
             placeholder={t('music.unknownArtist')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             className="text-lg text-foreground"
           />
         </View>

@@ -109,7 +109,8 @@
     "thingsNeedYou_zero": "لا شيء يحتاج إليك",
     "thingsNeedYou_two": "أمران يحتاجان إليك",
     "thingsNeedYou_few": "{{count}} أمور تحتاج إليك",
-    "thingsNeedYou_many": "{{count}} أمرًا يحتاج إليك"
+    "thingsNeedYou_many": "{{count}} أمرًا يحتاج إليك",
+    "closeQuickActions": "إغلاق الإجراءات السريعة"
   },
   "focus": {
     "habits": "العادات",
@@ -488,7 +489,9 @@
     "unarchiveNamed": "إلغاء أرشفة «{{name}}»",
     "deletedToast": "تم حذف «{{title}}».",
     "reminderTitle": "تذكير بملاحظة",
-    "reminderBody": "ألقِ نظرة على هذه الملاحظة."
+    "reminderBody": "ألقِ نظرة على هذه الملاحظة.",
+    "notFound": "لم تعد هذه الملاحظة موجودة",
+    "notFoundBody": "قد تكون حُذفت على هذا الجهاز أو على جهاز آخر."
   },
   "budget": {
     "title": "الميزانية",
@@ -814,7 +817,9 @@
     "usernameJustTaken": "أخذ أحدهم هذا الاسم للتو — جرّب اسمًا آخر.",
     "usernameClaimFailed": "أُنشئ حسابك، لكن تعذّر حفظ اسم المستخدم. يمكنك ضبطه من الإعدادات.",
     "usernameCheckFailed": "تعذّر التحقق من هذا الاسم الآن — يمكنك المتابعة على أي حال.",
-    "continueWithGoogle": "المتابعة باستخدام Google"
+    "continueWithGoogle": "المتابعة باستخدام Google",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور"
   },
   "language": {
     "en": "English",
@@ -1308,7 +1313,9 @@
     "playCount_few": "شُغِّلت {{count}} مرات",
     "playCount_many": "شُغِّلت {{count}} مرة",
     "playCount_other": "شُغِّلت {{count}} مرة",
-    "lastPlayed": "آخر تشغيل {{time}}"
+    "lastPlayed": "آخر تشغيل {{time}}",
+    "seekBar": "التقديم",
+    "percentPlayed": "تم تشغيل {{percent}}%"
   },
   "albumCategory": {
     "gym": "تقدّم الجيم",

@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, TextInput, View } from 'react-native';
+import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Input } from '@/components/ui/input';
 import { GradientButton } from '@/components/ui/gradient-button';
 import { StarRating } from '@/components/ui/star-rating';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { formatStudyDuration } from '@/features/study/services/study-stats';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
-const STUDY_TINT = '#8b5cf6';
+import { useTheme } from '@/hooks/use-theme';
 
 type Props = {
   visible: boolean;
@@ -22,6 +22,7 @@ type Props = {
  * optional focus rating + note so the user can track and improve quality over
  * time. Dismissing still saves the session (study time is never lost). */
 export function ReflectionSheet({ visible, focusSeconds, onSave }: Props) {
+  const { tint } = useTheme();
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
@@ -64,7 +65,7 @@ export function ReflectionSheet({ visible, focusSeconds, onSave }: Props) {
               <Text variant="heading">{t('study.niceWork')}</Text>
               <Text variant="muted">
                 {t('study.youFocusedFor')}{' '}
-                <Text className="font-sora-bold" style={{ color: STUDY_TINT }}>
+                <Text className="font-sora-bold" style={{ color: tint('study') }}>
                   {formatStudyDuration(focusSeconds)}
                 </Text>
               </Text>
@@ -77,16 +78,16 @@ export function ReflectionSheet({ visible, focusSeconds, onSave }: Props) {
               <StarRating value={rating} onChange={setRating} />
             </View>
 
-            <TextInput
+            <Input
+              surface="bare"
               value={note}
               onChangeText={setNote}
               accessibilityLabel={t('study.sessionReflection')}
               placeholder={t('study.notePlaceholder')}
-              placeholderTextColor={colors[scheme].mutedForeground}
               className="rounded-2xl border border-border px-4 py-3 text-foreground"
             />
 
-            <GradientButton label={t('study.saveSession')} tint={STUDY_TINT} onPress={commit} />
+            <GradientButton label={t('study.saveSession')} tint={tint('study')} onPress={commit} />
           </Pressable>
         </View>
       </Pressable>

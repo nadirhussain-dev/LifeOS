@@ -2,9 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Eye, Pencil } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -99,14 +100,14 @@ export function NoteEditorBody({ noteId, value, onChangeText, placeholder }: Pro
 
       {mode === 'edit' ? (
         <View className={cardClass({ padding: 'none' }, 'overflow-hidden')}>
-          <TextInput
+          <Input
+            surface="bare"
             value={value}
             onChangeText={onChangeText}
             onSelectionChange={(event) => setSelection(event.nativeEvent.selection)}
             multiline
             accessibilityLabel={t('notes.noteBody')}
             placeholder={placeholder}
-            placeholderTextColor={colors[scheme].mutedForeground}
             className="min-h-32 p-4 text-base text-foreground"
             textAlignVertical="top"
           />

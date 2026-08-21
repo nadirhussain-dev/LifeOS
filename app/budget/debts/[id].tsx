@@ -3,8 +3,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CheckCircle2, Pencil, RotateCcw, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { GradientButton } from '@/components/ui/gradient-button';
@@ -150,13 +151,13 @@ export default function DebtDetailScreen() {
                   <Text className="font-sora-bold text-lg" style={{ color: tint }}>
                     {debt.currency}
                   </Text>
-                  <TextInput
+                  <Input
+                    surface="bare"
                     value={payText}
                     onChangeText={setPayText}
                     accessibilityLabel={t('budget.paymentAmount')}
                     placeholder="0"
                     keyboardType="decimal-pad"
-                    placeholderTextColor={colors[scheme].mutedForeground}
                     className="flex-1 text-foreground"
                     style={{ fontSize: 18, fontFamily: 'Sora_600SemiBold' }}
                   />

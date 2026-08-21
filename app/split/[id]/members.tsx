@@ -4,16 +4,9 @@ import * as Haptics from 'expo-haptics';
 import { Flag, Mail, Send, Trash2, UserPlus } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Share,
-  TextInput,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Share, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { InlineError } from '@/components/ui/query-error';
@@ -347,12 +340,12 @@ export default function SplitMembersScreen() {
 
             <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
               <Mail size={16} color={colors[scheme].mutedForeground} />
-              <TextInput
+              <Input
+                surface="bare"
                 value={email}
                 onChangeText={setEmail}
                 accessibilityLabel={t('auth.email')}
                 placeholder="friend@example.com"
-                placeholderTextColor={colors[scheme].mutedForeground}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -363,12 +356,12 @@ export default function SplitMembersScreen() {
 
             <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
               <UserPlus size={16} color={colors[scheme].mutedForeground} />
-              <TextInput
+              <Input
+                surface="bare"
                 value={name}
                 onChangeText={setName}
                 accessibilityLabel={t('split.theirName')}
                 placeholder={t('split.theirNamePlaceholder')}
-                placeholderTextColor={colors[scheme].mutedForeground}
                 returnKeyType="done"
                 onSubmitEditing={add}
                 className="flex-1 text-foreground"

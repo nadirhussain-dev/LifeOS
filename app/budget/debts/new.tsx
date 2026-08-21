@@ -5,23 +5,25 @@ import type { TFunction } from 'i18next';
 import { BellRing, CalendarDays, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
+import { Chip } from '@/components/ui/chip';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Segmented } from '@/components/ui/segmented';
 import { SheetHeader } from '@/components/ui/sheet-header';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
+import { DEBT_TINT } from '@/features/budget/config/budget-config';
 import { REMINDER_DAY_OPTIONS } from '@/features/budget/services/debt-status';
 import { formatMoney, parseAmountToCents } from '@/features/budget/services/money';
 import { useBudgetSettings } from '@/features/budget/hooks/use-budget';
 import { useDebtMutations, useDebts } from '@/features/budget/hooks/use-debts';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/hooks/use-theme';
 import { notificationsAvailable } from '@/lib/notifications';
 import type { DebtDirection } from '@/features/budget/types/budget.types';
-
-const DEBT_TINT = '#6366f1';
 
 function reminderLabel(days: number, t: TFunction): string {
   if (days === 0) return t('budget.onTheDay');
@@ -33,6 +35,7 @@ export default function DebtFormScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
+  const debtTint = useTheme().resolve(DEBT_TINT);
   const { t } = useTranslation();
   const { data: settings } = useBudgetSettings();
   const { debts } = useDebts();
@@ -121,16 +124,16 @@ export default function DebtFormScreen() {
             options={directionOptions}
             value={direction}
             onChange={setDirection}
-            activeColor={DEBT_TINT}
+            activeColor={debtTint}
           />
         )}
 
-        <TextInput
+        <Input
+          surface="bare"
           value={counterparty}
           onChangeText={setCounterparty}
           accessibilityLabel={t('budget.person')}
           placeholder={t('budget.personName')}
-          placeholderTextColor={colors[scheme].mutedForeground}
           autoFocus={!isEdit}
           style={{ fontSize: 22, fontFamily: 'Sora_700Bold', color: colors[scheme].foreground }}
         />
@@ -140,16 +143,16 @@ export default function DebtFormScreen() {
             {t('budget.amount')}
           </Text>
           <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
-            <Text className="font-sora-bold text-xl" style={{ color: DEBT_TINT }}>
+            <Text className="font-sora-bold text-xl" style={{ color: debtTint }}>
               {currency}
             </Text>
-            <TextInput
+            <Input
+              surface="bare"
               value={amount}
               onChangeText={setAmount}
               accessibilityLabel={t('budget.amount')}
               placeholder="0"
               keyboardType="decimal-pad"
-              placeholderTextColor={colors[scheme].mutedForeground}
               className="flex-1 text-foreground"
               style={{ fontSize: 20, fontFamily: 'Sora_600SemiBold' }}
             />
@@ -216,21 +219,14 @@ export default function DebtFormScreen() {
               {[null, ...REMINDER_DAY_OPTIONS].map((days) => {
                 const selected = reminderDaysBefore === days;
                 return (
-                  <Pressable
-                    accessibilityRole="button"
+                  <Chip
                     key={days ?? 'off'}
+                    label={days == null ? t('budget.off') : reminderLabel(days, t)}
+                    selected={selected}
+                    tint={debtTint}
                     onPress={() => setReminderDaysBefore(days)}
-                    style={
-                      selected ? { backgroundColor: DEBT_TINT, borderColor: DEBT_TINT } : undefined
-                    }
-                    className="rounded-full border border-border px-3.5 py-2"
-                  >
-                    <Text
-                      className={selected ? 'font-sora-medium text-white' : 'text-muted-foreground'}
-                    >
-                      {days == null ? t('budget.off') : reminderLabel(days, t)}
-                    </Text>
-                  </Pressable>
+                    className="py-2"
+                  />
                 );
               })}
             </View>
@@ -240,13 +236,11 @@ export default function DebtFormScreen() {
           </View>
         )}
 
-        <TextInput
+        <Input
           value={note}
           onChangeText={setNote}
           accessibilityLabel={t('budget.note')}
           placeholder={t('budget.whatFor')}
-          placeholderTextColor={colors[scheme].mutedForeground}
-          className={cardClass({ padding: 'row' }, 'text-foreground')}
         />
 
         <Button

@@ -153,10 +153,35 @@ function channelIdFor(urgency: Urgency, soundId: NotificationSoundId): string {
  */
 const PUSH_CHANNEL_ID = `daykeep-general-v${CHANNEL_VERSION}`;
 
+/**
+ * The two kinds of shared update, separated so they can be silenced separately.
+ *
+ * Everything remote landed on `PUSH_CHANNEL_ID`, which meant a user who wanted
+ * to mute a chatty album had to mute expense-group updates with it — Android
+ * hands channel importance to the user, and one channel is one decision.
+ *
+ * Fixed ids, deliberately not tone-suffixed like the reminder channels: a
+ * server composing a push knows nothing about this device's chosen tone, which
+ * is the same reason `PUSH_CHANNEL_ID` is fixed.
+ *
+ * **These exist before anything sends to them.** Android drops a notification
+ * naming a channel that does not exist, so the edge functions must keep using
+ * `daykeep-general-v3` until a build carrying these has actually rolled out —
+ * see the note in notify-group/notify-album. Creating them a release early is
+ * what makes that switch safe rather than a coin toss on install base.
+ */
+const GROUPS_CHANNEL_ID = `daykeep-groups-v${CHANNEL_VERSION}`;
+const ALBUMS_CHANNEL_ID = `daykeep-albums-v${CHANNEL_VERSION}`;
+
 /** Every channel this app should own right now. Anything else of ours that
  *  Android is still holding is from an older version or an older tone. */
 function currentChannelIds(soundId: NotificationSoundId): string[] {
-  return [PUSH_CHANNEL_ID, ...URGENCIES.map((urgency) => channelIdFor(urgency, soundId))];
+  return [
+    PUSH_CHANNEL_ID,
+    GROUPS_CHANNEL_ID,
+    ALBUMS_CHANNEL_ID,
+    ...URGENCIES.map((urgency) => channelIdFor(urgency, soundId)),
+  ];
 }
 
 function selectedSoundId(): NotificationSoundId {
@@ -251,6 +276,18 @@ async function createAndroidChannels(soundId: NotificationSoundId): Promise<void
     name: 'Shared updates',
     description: 'Activity in expense groups and albums you share with others.',
   });
+  await Notifications.setNotificationChannelAsync(GROUPS_CHANNEL_ID, {
+    ...shared,
+    sound: 'default',
+    name: 'Expense groups',
+    description: 'Expenses, settlements and members in groups you share.',
+  });
+  await Notifications.setNotificationChannelAsync(ALBUMS_CHANNEL_ID, {
+    ...shared,
+    sound: 'default',
+    name: 'Shared albums',
+    description: 'Messages and invitations in albums you share.',
+  });
 
   await pruneForeignChannels(currentChannelIds(soundId));
 }
@@ -311,10 +348,53 @@ export async function hasNotificationPermission(): Promise<boolean> {
   return existing.granted;
 }
 
+/**
+ * What the OS is holding, cached for the length of a rebuild.
+ *
+ * `cancelScheduledByKey` has to read the queue before every keyed schedule, and
+ * a rebuild schedules dozens in a row — hydration alone is fourteen. Asking the
+ * native side each time turns one launch into ~40 round trips for an answer
+ * that only this module changes.
+ *
+ * Kept truthful by mutation rather than invalidation: every schedule appends and
+ * every cancel removes, so it stays warm across a whole resync. It is allowed to
+ * drift in exactly one direction — a one-time notification that has since fired
+ * leaves the OS queue but lingers here, and cancelling it is a no-op. The
+ * reverse (something queued that this does not know about) is what would cause a
+ * duplicate, and cannot happen while every keyed schedule goes through here.
+ *
+ * Dropped on foreground and before each rebuild anyway, so a long-lived process
+ * cannot accumulate drift.
+ */
+/** `Partial`, because an untagged call (no `data`) queues an empty payload and
+ *  only `key` and `category` are ever read back off it. */
+type QueueEntry = { identifier: string; data: Partial<NotificationPayload> | undefined };
+
+let queueCache: QueueEntry[] | null = null;
+
+async function scheduledQueue(): Promise<QueueEntry[]> {
+  if (queueCache) return queueCache;
+  const Notifications = getNotifications();
+  if (!Notifications) return [];
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync().catch(() => []);
+  queueCache = (scheduled ?? []).map((request) => ({
+    identifier: request.identifier,
+    data: request.content.data as Partial<NotificationPayload> | undefined,
+  }));
+  return queueCache;
+}
+
+/** Forces the next queue read to come from the OS. Called on foreground and at
+ *  the top of a rebuild — the two moments the app cannot vouch for the cache. */
+export function invalidateScheduledQueueCache(): void {
+  queueCache = null;
+}
+
 export async function cancelNotification(id: string | null | undefined): Promise<void> {
   const Notifications = getNotifications();
   if (!Notifications || !id) return;
   await Notifications.cancelScheduledNotificationAsync(id).catch(() => undefined);
+  if (queueCache) queueCache = queueCache.filter((entry) => entry.identifier !== id);
   // Keep the inbox in lock-step with what's actually queued.
   deleteLogByNotificationId(id);
   releaseSlot();
@@ -396,6 +476,27 @@ function resolveContent(params: {
   });
 }
 
+/**
+ * Makes a schedule idempotent for its key: one at a time, and replacing rather
+ * than joining whatever is already queued under that key.
+ *
+ * This is the whole keyed-scheduling contract in five lines, and it is opt-in —
+ * a call with no key gets exactly the behaviour it always had. That is what
+ * lets the modules migrate one at a time instead of in a single commit that
+ * touches every reminder in the app.
+ *
+ * Note the ordering: the cancel happens *inside* the lock, so a second caller
+ * cannot read the queue between the first one's cancel and its schedule. That
+ * gap is precisely where duplicates were born.
+ */
+function withKey<T>(key: string | undefined, work: () => Promise<T>): Promise<T> {
+  if (!key) return work();
+  return serializeOnKey(key, async () => {
+    await cancelScheduledByKey(key);
+    return work();
+  });
+}
+
 function nextDailyOccurrence(hour: number, minute: number): number {
   const next = new Date();
   next.setHours(hour, minute, 0, 0);
@@ -407,7 +508,16 @@ function nextDailyOccurrence(hour: number, minute: number): number {
  * reminders, calendar events. Returns null (schedules nothing) if the time
  * has already passed, the category is switched off, or permission was denied,
  * rather than throwing. */
-export async function scheduleOneTimeNotification(params: {
+export function scheduleOneTimeNotification(params: {
+  title: string;
+  body: string;
+  date: number;
+  data?: NotificationPayload;
+}): Promise<string | null> {
+  return withKey(params.data?.key, () => scheduleOneTime(params));
+}
+
+async function scheduleOneTime(params: {
   title: string;
   body: string;
   date: number;
@@ -455,6 +565,7 @@ export async function scheduleOneTimeNotification(params: {
     },
   });
   spendSlot();
+  if (queueCache) queueCache.push({ identifier: scheduleId, data });
 
   if (params.data?.category) {
     logScheduledNotification({
@@ -478,7 +589,17 @@ export async function scheduleOneTimeNotification(params: {
 /** Daily-repeating reminder at a fixed hour/minute — habits, hydration, the
  * journal nudge, bedtime. Shifts out of quiet hours unless the category is
  * exempt. */
-export async function scheduleDailyNotification(params: {
+export function scheduleDailyNotification(params: {
+  title: string;
+  body: string;
+  hour: number;
+  minute: number;
+  data?: NotificationPayload;
+}): Promise<string | null> {
+  return withKey(params.data?.key, () => scheduleDaily(params));
+}
+
+async function scheduleDaily(params: {
   title: string;
   body: string;
   hour: number;
@@ -521,6 +642,7 @@ export async function scheduleDailyNotification(params: {
     },
   });
   spendSlot();
+  if (queueCache) queueCache.push({ identifier: scheduleId, data });
 
   if (params.data?.category) {
     logScheduledNotification({
@@ -547,10 +669,21 @@ export async function scheduleDailyNotification(params: {
  * `scheduleDays` 0-based with Sunday = 0 (see habit-streaks.isDueOn), so the
  * conversion happens here, once, rather than at each call site.
  */
-export async function scheduleWeeklyNotification(params: {
+export function scheduleWeeklyNotification(params: {
   title: string;
   body: string;
   /** 0 = Sunday, matching Habit.scheduleDays and Date#getDay. */
+  weekday: number;
+  hour: number;
+  minute: number;
+  data?: NotificationPayload;
+}): Promise<string | null> {
+  return withKey(params.data?.key, () => scheduleWeekly(params));
+}
+
+async function scheduleWeekly(params: {
+  title: string;
+  body: string;
   weekday: number;
   hour: number;
   minute: number;
@@ -593,6 +726,7 @@ export async function scheduleWeeklyNotification(params: {
     },
   });
   spendSlot();
+  if (queueCache) queueCache.push({ identifier: scheduleId, data });
 
   if (params.data?.category) {
     logScheduledNotification({
@@ -646,8 +780,13 @@ export const SCHEDULING_BUDGET = Platform.OS === 'ios' ? 60 : Number.POSITIVE_IN
 export async function cancelAllScheduled(): Promise<void> {
   const Notifications = getNotifications();
   if (!Notifications) return;
+  // Straight from the OS, not the cache: this is the app's "forget everything
+  // and start again" path, so trusting a cache it may have drifted from is
+  // exactly the wrong move. The cache is rebuilt empty afterwards, which is
+  // true by construction and saves the next keyed schedule a round trip.
   const scheduled = await Notifications.getAllScheduledNotificationsAsync().catch(() => []);
   await Promise.all(scheduled.map((n) => cancelNotification(n.identifier)));
+  queueCache = [];
 }
 
 /** Subscribes to notification taps. Returns an unsubscribe fn (or a no-op in
@@ -683,6 +822,10 @@ export function addNotificationReceivedListener(
       body: content.body ?? '',
       payload: (content.data ?? {}) as NotificationPayload,
       notificationId: notification.request.identifier,
+      // Cast because the trigger union includes shapes with no `type` at all
+      // (ChannelAwareTriggerInput), and a narrow on the union would have to
+      // enumerate every member to ask one question of it.
+      remote: (notification.request.trigger as { type?: string } | null)?.type === 'push',
     });
   });
   return () => sub.remove();
@@ -693,6 +836,18 @@ export type ReceivedNotification = {
   body: string;
   payload: NotificationPayload;
   notificationId: string | null;
+  /**
+   * True when this came from the server rather than from this device's own
+   * queue.
+   *
+   * Load-bearing, not informational. A keyed push means "this supersedes the
+   * local reminder under that key", and acting on it means cancelling that
+   * reminder — but a *local* repeating reminder arrives through this same
+   * listener carrying the same key, and cancelling on that would delete the
+   * daily habit reminder the moment it first fired. The trigger type is the
+   * only thing that tells the two apart.
+   */
+  remote: boolean;
 };
 
 /** Cancels every OS-queued notification belonging to a category (matched via
@@ -703,12 +858,118 @@ export type ReceivedNotification = {
 export async function cancelScheduledInCategory(category: NotificationCategory): Promise<void> {
   const Notifications = getNotifications();
   if (!Notifications) return;
-  const scheduled = await Notifications.getAllScheduledNotificationsAsync().catch(() => []);
-  await Promise.all(
-    scheduled
-      .filter((n) => (n.content.data as NotificationPayload | undefined)?.category === category)
-      .map((n) => cancelNotification(n.identifier)),
+  const matches = (await scheduledQueue()).filter((entry) => entry.data?.category === category);
+  await Promise.all(matches.map((entry) => cancelNotification(entry.identifier)));
+}
+
+/**
+ * One in-flight operation per key.
+ *
+ * Scheduling a keyed reminder is cancel-then-schedule with several `await`
+ * points in it, and the sync functions that do it are almost all called
+ * fire-and-forget — from a store subscription, a save handler, a launch
+ * rebuild. Two of them overlapping for the same key both find nothing to
+ * cancel and both schedule, which is the duplicate this whole mechanism exists
+ * to prevent; the key alone does not stop it, because the read and the write
+ * are not atomic without a lock.
+ *
+ * Per key rather than global, so a slow habit rebuild does not hold up an
+ * unrelated task reminder. A promise chain rather than a rejected second
+ * caller: the later caller holds the newer state, so it waits its turn.
+ *
+ * The map entry is deleted once its tail settles with nothing behind it, so
+ * long-lived processes do not accumulate one entry per task ever scheduled.
+ */
+const keyLocks = new Map<string, Promise<void>>();
+
+function serializeOnKey<T>(key: string, work: () => Promise<T>): Promise<T> {
+  const previous = keyLocks.get(key) ?? Promise.resolve();
+  const run = previous.then(work, work);
+  const tail = run.then(
+    () => undefined,
+    () => undefined,
   );
+  keyLocks.set(key, tail);
+  void tail.then(() => {
+    if (keyLocks.get(key) === tail) keyLocks.delete(key);
+  });
+  return run;
+}
+
+/**
+ * Cancels every OS-queued notification whose key starts with `prefix`, and
+ * clears their inbox rows. Returns how many were cancelled.
+ *
+ * For the schedules that are a *set* rather than one notification — hydration's
+ * fourteen daily slots, a habit's weekday triggers, the goal deadlines. Each
+ * member needs its own key or rescheduling the set would cancel its own
+ * siblings, but that leaves nothing to reap a member the new set no longer
+ * contains: drop hydration from hourly to every three hours and the ten slots
+ * that went away have keys nothing will ever mention again.
+ *
+ * Cancelling the whole prefix before rebuilding the set makes the rebuild
+ * wholesale, which is what these modules already intend — and unlike the packed
+ * id columns they use today, it self-heals from a queue the app has lost track
+ * of.
+ */
+export async function cancelScheduledByKeyPrefix(prefix: string): Promise<number> {
+  const Notifications = getNotifications();
+  if (!Notifications) return 0;
+  const matches = (await scheduledQueue()).filter((entry) => entry.data?.key?.startsWith(prefix));
+  await Promise.all(matches.map((entry) => cancelNotification(entry.identifier)));
+  return matches.length;
+}
+
+/**
+ * Cancels every OS-queued notification carrying `key`, and clears their inbox
+ * rows. Returns how many were cancelled.
+ *
+ * The durable alternative to remembering an id. A caller that cancels by key
+ * before scheduling cannot leave a duplicate behind, because it is not relying
+ * on a variable that a process restart empties or a concurrent call overwrites
+ * — it is asking the OS what is actually queued. See
+ * `NotificationPayload['key']` for the full argument.
+ *
+ * Returning a count rather than void so a caller can tell "there was nothing"
+ * from "there were four", which is the difference between a healthy queue and
+ * one carrying orphans from an older build.
+ */
+export async function cancelScheduledByKey(key: string): Promise<number> {
+  const Notifications = getNotifications();
+  if (!Notifications) return 0;
+  const matches = (await scheduledQueue()).filter((entry) => entry.data?.key === key);
+  await Promise.all(matches.map((entry) => cancelNotification(entry.identifier)));
+  return matches.length;
+}
+
+/**
+ * Cancels every notification that shares a key with an earlier one, keeping one
+ * of each. Returns how many it removed.
+ *
+ * The backstop under the whole mechanism. Cancel-by-key stops a *scheduler*
+ * producing duplicates, but it only runs when something schedules — so a key
+ * nothing touches this session (a habit the user has not edited, a device
+ * carrying orphans from a build that predates keys) keeps whatever it has. This
+ * runs on launch and on every foreground and settles it regardless.
+ *
+ * Which copy survives does not matter: entries sharing a key are the same
+ * reminder by construction, and any that were not identical are about to be
+ * replaced by their own scheduler anyway. Keeping the first avoids reading
+ * trigger shapes, which differ per platform and per trigger type.
+ */
+export async function sweepDuplicateKeys(): Promise<number> {
+  const Notifications = getNotifications();
+  if (!Notifications) return 0;
+  const seen = new Set<string>();
+  const doomed: string[] = [];
+  for (const entry of await scheduledQueue()) {
+    const key = entry.data?.key;
+    if (!key) continue;
+    if (seen.has(key)) doomed.push(entry.identifier);
+    else seen.add(key);
+  }
+  await Promise.all(doomed.map((id) => cancelNotification(id)));
+  return doomed.length;
 }
 
 /** Posts a notification right now, bypassing the category gate, quiet hours and

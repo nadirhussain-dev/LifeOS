@@ -4,9 +4,10 @@ import { CalendarClock, Flag, ListChecks, Tag } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, TextInput, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { AttributeRow } from '@/components/ui/attribute-row';
 import { Button } from '@/components/ui/button';
@@ -82,12 +83,12 @@ export function GoalForm({ defaultValues, submitLabel, onSubmit, showMilestones 
           control={control}
           name="title"
           render={({ field }) => (
-            <TextInput
+            <Input
+              surface="bare"
               value={field.value}
               onChangeText={field.onChange}
               accessibilityLabel={t('goals.goalTitle')}
               placeholder={t('goals.titlePlaceholder')}
-              placeholderTextColor={colors[scheme].mutedForeground}
               autoFocus
               multiline
               onFocus={() => (focusProgress.value = withTiming(1, { duration: 220 }))}
@@ -106,14 +107,13 @@ export function GoalForm({ defaultValues, submitLabel, onSubmit, showMilestones 
         control={control}
         name="description"
         render={({ field }) => (
-          <TextInput
+          <Input
             value={field.value ?? ''}
             onChangeText={(text) => field.onChange(text || null)}
             accessibilityLabel={t('goals.goalDescription')}
             placeholder={t('goals.descriptionPlaceholder')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             multiline
-            className={cardClass({ padding: 'row' }, 'min-h-12 text-foreground')}
+            className="min-h-12"
           />
         )}
       />
@@ -180,7 +180,8 @@ export function GoalForm({ defaultValues, submitLabel, onSubmit, showMilestones 
                   control={control}
                   name="targetValue"
                   render={({ field }) => (
-                    <TextInput
+                    <Input
+                      surface="bare"
                       value={field.value ? String(field.value) : ''}
                       onChangeText={(text) => {
                         const parsed = parseFloat(text);
@@ -189,7 +190,6 @@ export function GoalForm({ defaultValues, submitLabel, onSubmit, showMilestones 
                       accessibilityLabel={t('goals.targetValue')}
                       placeholder={t('goals.targetPlaceholder')}
                       keyboardType="decimal-pad"
-                      placeholderTextColor={colors[scheme].mutedForeground}
                       className="w-24 rounded-lg border border-border px-3 py-2 text-center text-foreground"
                     />
                   )}
@@ -198,12 +198,12 @@ export function GoalForm({ defaultValues, submitLabel, onSubmit, showMilestones 
                   control={control}
                   name="unit"
                   render={({ field }) => (
-                    <TextInput
+                    <Input
+                      surface="bare"
                       value={field.value ?? ''}
                       onChangeText={(text) => field.onChange(text || null)}
                       accessibilityLabel={t('fields.unit')}
                       placeholder={t('goals.unitPlaceholder')}
-                      placeholderTextColor={colors[scheme].mutedForeground}
                       className="flex-1 rounded-lg border border-border px-3 py-2 text-foreground"
                     />
                   )}

@@ -26,7 +26,14 @@ export default function PrivateLayout() {
           // screen is the wrong direction to fail.
           gestureEnabled: false,
         }}
-      />
+      >
+        {/* Declared so it presents as a modal like every other creation screen
+            in the app. Bare `<Stack />` gave it the default push, which reads as
+            "you are now deeper in the vault" rather than "fill this in or back
+            out". `gestureEnabled` stays inherited: a modal that can be swiped
+            away is exactly what the screenOptions above rule out. */}
+        <Stack.Screen name="albums/new" options={{ presentation: 'modal' }} />
+      </Stack>
     </ErrorBoundary>
   );
 }

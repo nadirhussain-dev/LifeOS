@@ -68,6 +68,27 @@ function inkSafe(hex: string, minRatio: number): string {
   return darken(hex, 0.9);
 }
 
+/**
+ * A flat fill of `hex` that white text can sit on.
+ *
+ * The same `inkSafe` the gradients use, exposed for surfaces that are a solid
+ * tint rather than a wash — selected chips, filled pills, tinted buttons.
+ *
+ * Those had been painting `text-white` straight onto `resolveTint(tint, scheme)`.
+ * Fine on light, where the tints are dark; wrong on dark, where `resolveTint`
+ * correctly returns the *bright* variant, and white on music's lime (`#a3e635`)
+ * runs at 1.3:1 — illegible, in the theme nobody screenshots.
+ *
+ * Deliberately the same answer the gradients give — darken the surface, keep the
+ * label white — rather than flipping the label to a dark ink. It costs nothing
+ * in hue (darkening is a mix toward black, asserted in lib/color.test.ts) and it
+ * keeps one white-on-colour language across gradients, heroes and chips, instead
+ * of two rules a call site has to choose between.
+ */
+export function inkSafeFill(hex: string): string {
+  return inkSafe(hex, 4.5);
+}
+
 /** Two-stop gradient derived from a module tint: a brighter top-left flowing
  * into a deeper bottom-right, for hero cards, rings and FAB-like surfaces.
  *

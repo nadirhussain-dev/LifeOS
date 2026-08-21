@@ -19,7 +19,7 @@ export function TodayTasksWidget() {
   const queryClient = useQueryClient();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
-  const { data, isLoading } = useTodayTasks();
+  const { data, isLoading, error, refetch } = useTodayTasks();
   const { complete } = useTaskMutations();
 
   const completeTask = (id: string) => {
@@ -31,6 +31,8 @@ export function TodayTasksWidget() {
 
   return (
     <WidgetCard
+      error={error}
+      onRetry={refetch}
       icon={ListChecks}
       title={t('dashboard.today')}
       actionLabel={t('dashboard.viewAll')}

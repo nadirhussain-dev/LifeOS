@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Daykeep",
-    "slug": "Daykeep",
+    "slug": "day-keep-support",
     "version": "1.23.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -327,9 +327,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "c285766e-6443-4209-a24c-621f377080af"
+        "projectId": "1807f5c7-e0c3-4ab6-a633-01a09274f87a"
       }
     },
-    "owner": "daykeep.app"
+    "owner": "daykeep-support"
   }
 }

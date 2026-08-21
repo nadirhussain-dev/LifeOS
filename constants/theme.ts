@@ -102,8 +102,14 @@ export const priorityColors = {
  * "Done today" for habits, deliberately not the brand accent — the accent is
  * already the app's generic CTA color (buttons, FAB, pin), so reusing it here
  * would make a completed habit read as "tap me" instead of "already done."
+ *
+ * A pair, like `streakColor` below it, because it was a single value: the same
+ * mid green was drawn on a white card and on a near-black one. The light value
+ * is the `#22c55e` it always was, so nothing changes on light; the dark step is
+ * new. (It matches `contentTints.green`, which is the same green by intent —
+ * "this went well" — reached from the content side.)
  */
-export const habitDoneColor = '#22c55e';
+export const habitDoneColor = { light: '#22c55e', dark: '#4ade80' } as const;
 
 /**
  * The streak flame. Amber reads as warmth and momentum, but at 2.06:1 on the

@@ -23,11 +23,19 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+import { pruneDeadTokens, recordTickets, sendExpoPush } from '../_shared/expo-push.ts';
 import { consumeRateLimit, tooManyRequests } from '../_shared/rate-limit.ts';
 
-const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
-/** Expo rejects batches larger than this. */
-const CHUNK = 100;
+/**
+ * Shared updates land on the one channel whose id never moves.
+ *
+ * Deliberately still the general channel, not the purpose-specific
+ * `daykeep-groups-v3` that lib/notifications.ts now creates. Android silently
+ * drops a notification naming a channel the device does not have, so naming it
+ * here would lose every push to anybody who has not updated yet. Switch this
+ * one release after the build carrying that channel has rolled out.
+ */
+const PUSH_CHANNEL_ID = 'daykeep-general-v3';
 
 type Payload = {
   groupId: string;
@@ -109,40 +117,36 @@ Deno.serve(async (req: Request) => {
   const tokens = (tokenRows ?? []).map((r: { token: string }) => r.token);
   if (tokens.length === 0) return json({ sent: 0, reason: 'no_tokens' });
 
-  // 3. Hand off to Expo, in batches it will accept.
-  const expoToken = Deno.env.get('EXPO_ACCESS_TOKEN');
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (expoToken) headers.Authorization = `Bearer ${expoToken}`;
-
-  let sent = 0;
-  const failures: unknown[] = [];
-
-  for (let i = 0; i < tokens.length; i += CHUNK) {
-    const messages = tokens.slice(i, i + CHUNK).map((to: string) => ({
-      to,
+  // 3. Hand off to Expo, and read what it says back.
+  const outcome = await sendExpoPush(
+    tokens,
+    {
       title: payload.title,
       body: payload.body,
-      sound: 'default',
+      channelId: PUSH_CHANNEL_ID,
+      // One notification per group, replaced rather than stacked. Four people
+      // settling expenses in a minute should not be four buzzes about the same
+      // group — the same argument the local scheduler's dedupe key makes.
+      collapseId: `split:${payload.groupId}`,
       // 'split', not 'budget'. Miscategorising these put a shared-group ping
       // under the user's money reminders — so switching off budget alerts also
       // silenced their group, and the inbox filed it in the wrong place.
       data: { route: payload.route ?? `/split/${payload.groupId}`, category: 'split' },
-    }));
+    },
+    { fetch, accessToken: Deno.env.get('EXPO_ACCESS_TOKEN') },
+  );
 
-    try {
-      const res = await fetch(EXPO_PUSH_URL, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(messages),
-      });
-      if (res.ok) sent += messages.length;
-      else failures.push(await res.text());
-    } catch (error) {
-      failures.push(String(error));
-    }
-  }
+  // Expo answers a 200 with a per-message ticket that may itself say the device
+  // is gone. Acting on that is what stops `push_tokens` growing an entry per
+  // uninstall and being paid for on every fan-out afterwards.
+  await pruneDeadTokens(admin, outcome.deadTokens);
+  await recordTickets(admin, outcome, Date.now());
 
+  // `accepted`, not "sent": a ticket means Expo took the message, and only the
+  // receipt fetched later says a device did. Reporting it as delivery is the
+  // thing this function used to get wrong.
+  //
   // A partial failure is still reported 200: the write it accompanies already
   // succeeded, and the client must not retry the expense because a push bounced.
-  return json({ sent, failures: failures.length });
+  return json({ accepted: outcome.accepted, rejected: outcome.rejected });
 });

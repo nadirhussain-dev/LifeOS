@@ -5,15 +5,10 @@ import * as Haptics from 'expo-haptics';
 import { CalendarDays, Check, Trash2 } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  TextInput,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
+import { Chip } from '@/components/ui/chip';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { InlineError } from '@/components/ui/query-error';
@@ -249,12 +244,12 @@ export default function SplitExpenseScreen() {
           contentContainerClassName="gap-6 px-5 pt-3 pb-10"
           keyboardShouldPersistTaps="handled"
         >
-          <TextInput
+          <Input
+            surface="bare"
             value={description}
             onChangeText={setDescription}
             accessibilityLabel={t('split.description')}
             placeholder={t('split.descriptionPlaceholder')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             autoFocus={!existing}
             maxLength={80}
             style={{ fontSize: 22, fontFamily: 'Sora_700Bold', color: colors[scheme].foreground }}
@@ -263,14 +258,13 @@ export default function SplitExpenseScreen() {
           <View className="flex-row gap-3">
             <View className="flex-1 gap-2">
               <Text variant="micro">{t('split.amount')}</Text>
-              <TextInput
+              <Input
                 value={amount}
                 onChangeText={setAmount}
                 accessibilityLabel={t('split.amount')}
                 placeholder="0.00"
                 keyboardType="decimal-pad"
-                placeholderTextColor={colors[scheme].mutedForeground}
-                className={cardClass({ padding: 'row' }, 'text-2xl text-foreground')}
+                className="text-2xl"
               />
             </View>
             <View className="gap-2">
@@ -311,29 +305,20 @@ export default function SplitExpenseScreen() {
                 // the payer of the expense being edited.
                 if (former && !selected) return null;
                 return (
-                  <Pressable
+                  <Chip
                     key={m.id}
+                    label={memberName(m.id)}
+                    selected={selected}
+                    tint={tint}
                     onPress={() => {
                       void Haptics.selectionAsync();
                       setPaidBy(m.id);
                     }}
+                    // One of a set, so radio rather than button.
                     accessibilityRole="radio"
                     accessibilityState={{ selected, checked: selected }}
-                    accessibilityLabel={memberName(m.id)}
-                    style={{
-                      minHeight: 44,
-                      justifyContent: 'center',
-                      borderColor: selected ? tint : colors[scheme].border,
-                      backgroundColor: selected ? tint : 'transparent',
-                    }}
-                    className="rounded-full border px-3.5 py-1.5"
-                  >
-                    <Text
-                      className={selected ? 'font-sora-medium text-white' : 'text-muted-foreground'}
-                    >
-                      {memberName(m.id)}
-                    </Text>
-                  </Pressable>
+                    className="min-h-[44px] justify-center"
+                  />
                 );
               })}
             </View>
@@ -427,13 +412,13 @@ export default function SplitExpenseScreen() {
                     </Pressable>
 
                     {included && mode === 'exact' ? (
-                      <TextInput
+                      <Input
+                        surface="bare"
                         value={exact[m.id] ?? ''}
                         onChangeText={(v) => setExact((prev) => ({ ...prev, [m.id]: v }))}
                         accessibilityLabel={`${memberName(m.id)} — ${t('split.amount')}`}
                         placeholder="0.00"
                         keyboardType="decimal-pad"
-                        placeholderTextColor={colors[scheme].mutedForeground}
                         className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-end text-foreground"
                         style={{ minWidth: 84 }}
                       />

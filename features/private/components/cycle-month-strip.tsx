@@ -1,8 +1,8 @@
 import { eachDayOfInterval, endOfMonth, format, getDay, isToday, startOfMonth } from 'date-fns';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { ChevronBack, ChevronForward } from '@/components/ui/directional-icon';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -71,13 +71,13 @@ export function CycleMonthStrip({
     <View className={cardClass({ padding: 'md', elevation: 'e1' }, 'gap-2')}>
       <View className="flex-row items-center justify-between">
         <Pressable accessibilityRole="button" onPress={onPrevMonth} hitSlop={8}>
-          <ChevronLeft size={16} color={theme.mutedForeground} />
+          <ChevronBack size={16} color={theme.mutedForeground} />
         </Pressable>
         <Text variant="micro" className="font-sora-semibold">
           {format(monthAnchor, 'MMMM yyyy')}
         </Text>
         <Pressable accessibilityRole="button" onPress={onNextMonth} hitSlop={8}>
-          <ChevronRight size={16} color={theme.mutedForeground} />
+          <ChevronForward size={16} color={theme.mutedForeground} />
         </Pressable>
       </View>
 

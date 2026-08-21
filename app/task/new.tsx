@@ -3,10 +3,11 @@ import { useRouter } from 'expo-router';
 import { Bell, CalendarDays, Flag, Repeat, StickyNote, Tag } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Switch, TextInput, View } from 'react-native';
+import { ScrollView, Switch, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SheetHeader } from '@/components/ui/sheet-header';
@@ -89,12 +90,12 @@ export default function NewTaskScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-2">
-          <TextInput
+          <Input
+            surface="bare"
             value={title}
             onChangeText={setTitle}
             accessibilityLabel={t('tasks.taskTitle')}
             placeholder={t('tasks.titlePlaceholder')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             autoFocus
             multiline
             onFocus={() => {
@@ -157,13 +158,13 @@ export default function NewTaskScreen() {
               {t('fields.notes')}
             </Text>
           </View>
-          <TextInput
+          <Input
+            surface="bare"
             value={notes}
             onChangeText={setNotes}
             multiline
             accessibilityLabel={t('tasks.taskNotes')}
             placeholder={t('tasks.addNotes')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             className={cardClass(
               { padding: 'md', elevation: 'e1' },
               'min-h-24 text-base text-foreground',

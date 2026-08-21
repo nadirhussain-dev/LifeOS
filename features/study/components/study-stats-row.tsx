@@ -5,17 +5,17 @@ import { View } from 'react-native';
 import { StatTile } from '@/components/ui/stat-tile';
 import { formatStudyDuration } from '@/features/study/services/study-stats';
 import type { StudyStats } from '@/features/study/types/study.types';
-
-const STUDY_TINT = '#8b5cf6';
+import { useTheme } from '@/hooks/use-theme';
 
 export function StudyStatsRow({ stats }: { stats: StudyStats }) {
+  const { tint } = useTheme();
   const { t } = useTranslation();
   const tiles = [
     {
       icon: CalendarRange,
       label: t('study.thisWeek'),
       value: formatStudyDuration(stats.weekSeconds),
-      tint: STUDY_TINT,
+      tint: tint('study'),
     },
     {
       icon: Flame,

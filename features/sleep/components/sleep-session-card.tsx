@@ -6,7 +6,7 @@ import { Pressable, View } from 'react-native';
 import { cardClass } from '@/components/ui/card';
 import { ArrowForward } from '@/components/ui/directional-icon';
 import { Text } from '@/components/ui/text';
-import { moduleTint } from '@/constants/design-tokens';
+import { moduleTint, contentTints } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { formatClock, formatDuration, minutesOfDay } from '@/features/sleep/services/sleep-stats';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -20,6 +20,9 @@ type Props = {
 
 export function SleepSessionCard({ session, goalMinutes, onPress }: Props) {
   const scheme = useColorScheme() ?? 'light';
+  // The session rating star. Content yellow, whose light value is the `#eab308`
+  // this was hardcoded to — so light is unchanged and dark finally steps up.
+  const starColor = contentTints.yellow[scheme];
   const { t } = useTranslation();
   const sleepTint = moduleTint('sleep', scheme);
   const metGoal = session.durationMinutes >= goalMinutes;
@@ -73,7 +76,7 @@ export function SleepSessionCard({ session, goalMinutes, onPress }: Props) {
         </Text>
         {session.quality ? (
           <View className="flex-row items-center gap-0.5">
-            <Star size={11} color="#eab308" fill="#eab308" />
+            <Star size={11} color={starColor} fill={starColor} />
             <Text variant="caption">{session.quality}</Text>
           </View>
         ) : null}

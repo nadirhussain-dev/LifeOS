@@ -42,6 +42,7 @@ import { useWidgetSync } from '@/features/widgets/hooks/use-widget-sync';
 import { useProfileStore } from '@/features/profile/store/profile-store';
 import {
   registerPushToken,
+  startPushTokenRotationWatch,
   unregisterPushToken,
 } from '@/features/split/services/push-registration';
 import { useLanguageStore } from '@/features/settings/store/language-store';
@@ -74,6 +75,10 @@ import { syncCycleReminders } from '@/features/private/services/cycle-reminders'
 // comment on why.
 import '@/features/private/services/register-reminders';
 import '@/features/insights/services/register-reminders';
+// Likewise for the streak reminders, which were the one scheduler the launch
+// rebuild could not see — so its cancel-all deleted them and nothing put them
+// back. See features/challenge/services/register-reminders.ts.
+import '@/features/challenge/services/register-reminders';
 import { usePrivateStore } from '@/features/private/store/private-store';
 import { useSplashStore } from '@/hooks/use-splash-store';
 import { useSyncTrigger } from '@/features/sync/hooks/use-sync';
@@ -223,6 +228,13 @@ function PushRegistrationBridge() {
     if (session) void registerPushToken();
     else void unregisterPushToken();
   }, [session]);
+
+  // A push token can be rotated by the service mid-session, and until it is
+  // re-registered every notification aimed at this device goes to an address
+  // that no longer exists. Watched for the whole life of the app rather than
+  // per session: the rotation does not wait for a sign-in to happen.
+  useEffect(() => startPushTokenRotationWatch(), []);
+
   return null;
 }
 
@@ -399,6 +411,12 @@ function AppNavigator({ background }: { background: string }) {
       <Stack.Screen name="budget/savings/new" options={{ presentation: 'modal' }} />
       <Stack.Screen name="budget/debts/new" options={{ presentation: 'modal' }} />
       <Stack.Screen name="gallery/album/new" options={{ presentation: 'modal' }} />
+      {/* These two were declared in no layout at all, so they inherited the
+          default push while all sixteen sibling creation screens presented as
+          modals — the same task with different physics. A push says "you have
+          navigated deeper"; a modal says "finish this or cancel it", which is
+          what a new-thing form actually is. */}
+      <Stack.Screen name="budget/recurring/new" options={{ presentation: 'modal' }} />
     </Stack>
   );
 }
@@ -444,15 +462,24 @@ export default function RootLayout() {
     // is open. This effect re-runs once `dbReady` flips.
     if (!dbReady) return;
     init();
-    // Reconcile scheduled reminders with the delivery mode and refresh the
-    // morning digest with today's counts on every launch — local notifications
-    // carry fixed text, so this is how it stays current.
-    applyDeliveryMode();
-    // Rebuild every reminder from the database. Scheduling can silently produce
-    // nothing (permission not yet granted, category off, digest mode, master
-    // switch), and nothing ever retried — so a reminder lost that way stayed
-    // lost until its item happened to be edited again. No-ops without permission.
-    void resyncAllReminders();
+    // Reconcile scheduled reminders with the delivery mode, then rebuild every
+    // reminder from the database.
+    //
+    // Strictly in that order, and that is the reason for the `void
+    // (async () => …)` rather than two bare calls. Both are async and both
+    // rewrite the OS queue: `applyDeliveryMode` cancels whole categories, the
+    // rebuild re-creates them. Started concurrently they interleave, and the
+    // cancel lands in the middle of the rebuild — silently deleting reminders
+    // that had just been re-queued, on a launch that looked completely normal.
+    //
+    // The rebuild exists because scheduling can silently produce nothing
+    // (permission not yet granted, category off, digest mode, master switch)
+    // and nothing ever retried — so a reminder lost that way stayed lost until
+    // its item happened to be edited again. It no-ops without permission.
+    void (async () => {
+      await applyDeliveryMode();
+      await resyncAllReminders();
+    })();
     // Refresh the home-screen widget's snapshot with today's counts (Android).
     syncTodayWidget();
   }, [init, dbReady]);

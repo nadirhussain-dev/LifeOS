@@ -15,9 +15,10 @@ import {
 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Switch, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
@@ -135,13 +136,13 @@ export default function TaskDetailScreen() {
         contentContainerStyle={{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 24 : 32 }}
         keyboardShouldPersistTaps="handled"
       >
-        <TextInput
+        <Input
+          surface="bare"
           value={title}
           onChangeText={setTitle}
           multiline
           accessibilityLabel={t('tasks.taskTitle')}
           placeholder={t('tasks.taskTitle')}
-          placeholderTextColor={colors[scheme].mutedForeground}
           style={{
             fontSize: 26,
             fontFamily: 'Sora_700Bold',
@@ -275,13 +276,13 @@ export default function TaskDetailScreen() {
               {t('fields.notes')}
             </Text>
           </View>
-          <TextInput
+          <Input
+            surface="bare"
             value={notes}
             onChangeText={setNotes}
             multiline
             accessibilityLabel={t('tasks.taskNotes')}
             placeholder={t('tasks.addNotes')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             className={cardClass(
               { padding: 'md', elevation: 'e1' },
               'min-h-24 text-base text-foreground',

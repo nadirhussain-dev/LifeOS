@@ -18,7 +18,7 @@ export function TodayTimelineWidget() {
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
-  const { data, isLoading } = useTodayTimeline();
+  const { data, isLoading, error, refetch } = useTodayTimeline();
   const todayKey = toDateKey(new Date());
 
   const addEvent = () =>
@@ -26,6 +26,8 @@ export function TodayTimelineWidget() {
 
   return (
     <WidgetCard
+      error={error}
+      onRetry={refetch}
       icon={Clock3}
       title={t('dashboard.todaysTimeline')}
       tint={moduleTint('calendar', scheme)}

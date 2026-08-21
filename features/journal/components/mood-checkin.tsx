@@ -2,8 +2,10 @@ import * as Haptics from 'expo-haptics';
 import { Battery, Moon, Target, Waves } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTheme } from '@/hooks/use-theme';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -11,11 +13,17 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { moduleTint, resolveTint, type TintPair } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
-import { MOOD_EMOJI, MOOD_LABEL_KEY, MOOD_TINT } from '@/features/journal/constants';
+import {
+  MOOD_DIMENSION_TINT,
+  MOOD_EMOJI,
+  MOOD_LABEL_KEY,
+  MOOD_TINT,
+} from '@/features/journal/constants';
 import { alpha } from '@/lib/color';
 import { MOOD_REASONS, type MoodOption } from '@/features/journal/types/journal.types';
 
@@ -33,11 +41,6 @@ const STRESS_LABELS = ['mood.stress1', 'mood.stress2', 'mood.stress3', 'mood.str
 const FOCUS_LABELS = ['mood.focus1', 'mood.focus2', 'mood.focus3', 'mood.focus4', 'mood.focus5'] as const; // prettier-ignore
 const SLEEP_QUALITY_LABELS = ['mood.sleep1', 'mood.sleep2', 'mood.sleep3', 'mood.sleep4', 'mood.sleep5'] as const; // prettier-ignore
 
-const ENERGY_TINT = '#22c55e';
-const STRESS_TINT = '#f97316';
-const FOCUS_TINT = '#0ea5e9';
-const SLEEP_TINT = '#8b5cf6';
-
 function MoodButton({
   option,
   selected,
@@ -50,6 +53,7 @@ function MoodButton({
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const scale = useSharedValue(1);
+  const reducedMotion = useReducedMotion();
   const isMounted = useRef(false);
 
   useEffect(() => {
@@ -57,12 +61,16 @@ function MoodButton({
       isMounted.current = true;
       return;
     }
-    if (selected)
+    // A 1.25× overshoot at damping 7 is a pronounced bounce, and this is a
+    // wellbeing control — the one place in the app where someone reporting a bad
+    // day should not be answered with a spring. Selection still registers
+    // through colour, weight and `accessibilityState`.
+    if (selected && !reducedMotion)
       scale.value = withSequence(
         withSpring(1.25, { damping: 7, stiffness: 400 }),
         withSpring(1, { damping: 9, stiffness: 300 }),
       );
-  }, [selected, scale]);
+  }, [selected, scale, reducedMotion]);
 
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
@@ -132,6 +140,7 @@ function ScaleRow({ icon: Icon, label, value, levelLabels, tint, onChange }: Sca
           const isCurrent = value === level;
           return (
             <Pressable
+              hitSlop={8}
               key={level}
               onPress={() => {
                 Haptics.selectionAsync();
@@ -195,6 +204,7 @@ export function MoodCheckin({
   onToggleReason,
 }: Props) {
   const scheme = useColorScheme() ?? 'light';
+  const { resolve } = useTheme();
   const { t } = useTranslation();
   const [sleepHoursText, setSleepHoursText] = useState(
     sleepHours !== null ? String(sleepHours) : '',
@@ -222,7 +232,7 @@ export function MoodCheckin({
         label={t('mood.energyLabel')}
         value={energy}
         levelLabels={ENERGY_LABELS}
-        tint={ENERGY_TINT}
+        tint={resolve(MOOD_DIMENSION_TINT.energy)}
         onChange={onChangeEnergy}
       />
       <ScaleRow
@@ -230,7 +240,7 @@ export function MoodCheckin({
         label={t('mood.stressLabel')}
         value={stress}
         levelLabels={STRESS_LABELS}
-        tint={STRESS_TINT}
+        tint={resolve(MOOD_DIMENSION_TINT.stress)}
         onChange={onChangeStress}
       />
       <ScaleRow
@@ -238,7 +248,7 @@ export function MoodCheckin({
         label={t('mood.focusLabel')}
         value={focus}
         levelLabels={FOCUS_LABELS}
-        tint={FOCUS_TINT}
+        tint={resolve(MOOD_DIMENSION_TINT.focus)}
         onChange={onChangeFocus}
       />
       <ScaleRow
@@ -246,16 +256,17 @@ export function MoodCheckin({
         label={t('mood.sleepQualityLabel')}
         value={sleepQuality}
         levelLabels={SLEEP_QUALITY_LABELS}
-        tint={SLEEP_TINT}
+        tint={resolve(MOOD_DIMENSION_TINT.sleep)}
         onChange={onChangeSleepQuality}
       />
 
       <View className="flex-row items-center gap-2">
-        <Moon size={13} color={SLEEP_TINT} />
+        <Moon size={13} color={resolve(MOOD_DIMENSION_TINT.sleep)} />
         <Text variant="micro" className="font-sora-semibold">
           {t('mood.hoursSlept')}
         </Text>
-        <TextInput
+        <Input
+          surface="bare"
           value={sleepHoursText}
           onChangeText={(text) => {
             setSleepHoursText(text);
@@ -264,7 +275,6 @@ export function MoodCheckin({
           }}
           keyboardType="decimal-pad"
           placeholder="7.5"
-          placeholderTextColor={colors[scheme].mutedForeground}
           className="w-16 rounded-lg border border-border px-2 py-1.5 text-center text-foreground"
         />
       </View>

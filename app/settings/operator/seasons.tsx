@@ -1,10 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
+import { ChevronForward } from '@/components/ui/directional-icon';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { ListSkeleton } from '@/components/ui/list-skeleton';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { QueryError } from '@/components/ui/query-error';
@@ -81,20 +84,12 @@ export default function OperatorSeasonsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <View className="flex-row items-center gap-3 px-5 pb-3 pt-14">
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          hitSlop={10}
-          className="h-10 w-10 items-center justify-center rounded-full border border-border bg-surface"
-        >
-          <ChevronLeft size={20} color={c.foreground} />
-        </Pressable>
-        <View className="flex-1">
-          <Text className="font-sora-extrabold text-xl">{t('operator.seasonsTitle')}</Text>
-          <Text variant="caption">{t('operator.seasonsSubtitle')}</Text>
-        </View>
-      </View>
+      <ScreenHeader
+        eyebrow={t('operator.eyebrow')}
+        title={t('operator.seasonsTitle')}
+        subtitle={t('operator.seasonsSubtitle')}
+        tint={c.error}
+      />
 
       <ScrollView contentContainerClassName="gap-3 px-5 pb-10" showsVerticalScrollIndicator={false}>
         {seasons.isError || (seasons.data && !seasons.data.ok) ? (
@@ -105,6 +100,7 @@ export default function OperatorSeasonsScreen() {
           <Text variant="muted">{t('operator.seasonsEmpty')}</Text>
         ) : null}
 
+        {seasons.isLoading ? <ListSkeleton rows={3} /> : null}
         {rows.map((season) => (
           <SeasonRow
             key={season.id}
@@ -117,12 +113,10 @@ export default function OperatorSeasonsScreen() {
 
         <View className={cardClass({ padding: 'md' }, 'gap-2')}>
           <Text variant="micro">{t('operator.seasonNew')}</Text>
-          <TextInput
+          <Input
             value={name}
             onChangeText={setName}
             placeholder={t('operator.seasonNamePlaceholder')}
-            placeholderTextColor={c.mutedForeground}
-            className={cardClass({ padding: 'row' }, 'text-foreground')}
           />
           {/* Stated on the way in, because it is the step whose absence caused
               every symptom this console was built for: a new season is created
@@ -156,7 +150,7 @@ function SeasonRow({ season, onOpen }: { season: AdminSeason; onOpen: () => void
           {season.name}
         </Text>
         <StateChip state={season.state} />
-        <ChevronRight size={16} color={c.mutedForeground} />
+        <ChevronForward size={16} color={c.mutedForeground} />
       </View>
 
       <Text variant="caption">{windowLabel(season.startsAt, season.endsAt)}</Text>

@@ -3,16 +3,17 @@ import { useRouter } from 'expo-router';
 import { ArrowUpDown, Search, Target } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
+import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QueryError } from '@/components/ui/query-error';
 import { Fab } from '@/components/ui/fab';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Segmented } from '@/components/ui/segmented';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Text } from '@/components/ui/text';
-import { contentTints, moduleTint, resolveTint } from '@/constants/design-tokens';
+import { contentTints, moduleTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { AdSlot } from '@/features/ads/components/ad-slot';
 import { GOAL_CATEGORIES } from '@/features/goals/config/goal-categories';
@@ -21,7 +22,6 @@ import { GoalsStatsHeader } from '@/features/goals/components/goals-stats-header
 import { useGoals, useGoalStats } from '@/features/goals/hooks/use-goals';
 import { useGoalsFilterStore, type GoalSort } from '@/features/goals/store/goals-filter-store';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { cn } from '@/lib/utils';
 
 const STATUS_OPTIONS = [
   { value: 'active' as const, labelKey: 'goals.filterActive' },
@@ -47,8 +47,8 @@ const SORT_CYCLE: GoalSort[] = ['manual', 'progress', 'due', 'priority', 'create
 
 export default function GoalsScreen() {
   const router = useRouter();
-  const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
+  const scheme = useColorScheme() ?? 'light';
   const [showSearch, setShowSearch] = useState(false);
 
   const { data: goals = [], isLoading, isError, refetch } = useGoals();
@@ -89,11 +89,11 @@ export default function GoalsScreen() {
       {showSearch && (
         <View className="flex-row items-center gap-2 rounded-full border border-border bg-surface px-4 py-2.5">
           <Search size={16} color={colors[scheme].mutedForeground} />
-          <TextInput
+          <Input
+            surface="bare"
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholder={t('goals.searchGoals')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             autoFocus
             className="flex-1 text-foreground"
           />
@@ -175,7 +175,6 @@ function CategoryChips({
   setCategoryFilter: (c: never) => void;
 }) {
   const { t } = useTranslation();
-  const scheme = useColorScheme() ?? 'light';
   const items = [
     { id: 'all', labelKey: 'common.all', tint: contentTints.neutral },
     ...GOAL_CATEGORIES,
@@ -189,24 +188,14 @@ function CategoryChips({
       {items.map((item) => {
         const selected = categoryFilter === item.id;
         return (
-          <Pressable
-            accessibilityRole="button"
+          <Chip
             key={item.id}
+            label={t(item.labelKey)}
+            selected={selected}
+            tint={item.tint}
             onPress={() => setCategoryFilter(item.id as never)}
-            style={
-              selected
-                ? {
-                    backgroundColor: resolveTint(item.tint, scheme),
-                    borderColor: resolveTint(item.tint, scheme),
-                  }
-                : undefined
-            }
-            className={cn('rounded-full border px-3 py-1.5', !selected && 'border-border')}
-          >
-            <Text className={selected ? 'font-sora-medium text-white' : 'text-muted-foreground'}>
-              {t(item.labelKey)}
-            </Text>
-          </Pressable>
+            className="px-3"
+          />
         );
       })}
     </ScrollView>

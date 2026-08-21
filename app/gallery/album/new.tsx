@@ -1,8 +1,10 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
+import { Chip } from '@/components/ui/chip';
 import { Button } from '@/components/ui/button';
 import { SheetHeader } from '@/components/ui/sheet-header';
 import { Text } from '@/components/ui/text';
@@ -12,7 +14,6 @@ import { ALBUM_CATEGORIES } from '@/features/gallery/config/album-categories';
 import { useGalleryMutations } from '@/features/gallery/hooks/use-gallery-mutations';
 import type { AlbumCategory } from '@/features/gallery/types/gallery.types';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { cn } from '@/lib/utils';
 
 export default function NewAlbumScreen() {
   const router = useRouter();
@@ -42,12 +43,12 @@ export default function NewAlbumScreen() {
         contentContainerClassName="gap-5 px-5 pt-3 pb-10"
         keyboardShouldPersistTaps="handled"
       >
-        <TextInput
+        <Input
+          surface="bare"
           value={name}
           onChangeText={setName}
           accessibilityLabel={t('gallery.albumName')}
           placeholder={t('gallery.albumName')}
-          placeholderTextColor={colors[scheme].mutedForeground}
           autoFocus
           style={{ fontSize: 24, fontFamily: 'Sora_700Bold', color: colors[scheme].foreground }}
         />
@@ -61,27 +62,21 @@ export default function NewAlbumScreen() {
               const selected = item.id === category;
               const Icon = item.icon;
               return (
-                <Pressable
-                  accessibilityRole="button"
+                <Chip
                   key={item.id}
+                  label={t(item.labelKey)}
+                  selected={selected}
+                  tint={tint}
                   onPress={() => setCategory(item.id)}
-                  style={selected ? { backgroundColor: tint, borderColor: tint } : undefined}
-                  className={cn(
-                    'flex-row items-center gap-1.5 rounded-full border px-3 py-2',
-                    !selected && 'border-border',
-                  )}
-                >
-                  <Icon
-                    size={15}
-                    color={selected ? '#ffffff' : colors[scheme].mutedForeground}
-                    strokeWidth={2.2}
-                  />
-                  <Text
-                    className={selected ? 'font-sora-medium text-white' : 'text-muted-foreground'}
-                  >
-                    {t(item.labelKey)}
-                  </Text>
-                </Pressable>
+                  className="px-3 py-2"
+                  leading={
+                    <Icon
+                      size={15}
+                      color={selected ? '#ffffff' : colors[scheme].mutedForeground}
+                      strokeWidth={2.2}
+                    />
+                  }
+                />
               );
             })}
           </View>

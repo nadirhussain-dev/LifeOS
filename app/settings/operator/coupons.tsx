@@ -1,10 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
-import { Archive, ChevronLeft, RotateCcw } from 'lucide-react-native';
+import { Archive, RotateCcw } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { ListSkeleton } from '@/components/ui/list-skeleton';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
@@ -50,7 +52,6 @@ const blankForm = (): FormState => ({
  * at the moment of subscribing — it cannot touch anyone already subscribed.
  */
 export default function OperatorCouponsScreen() {
-  const router = useRouter();
   const { t } = useTranslation();
   const { c } = useTheme();
   const queryClient = useQueryClient();
@@ -130,22 +131,15 @@ export default function OperatorCouponsScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <View className="flex-row items-center gap-3 px-5 pb-3 pt-14">
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          hitSlop={10}
-          className="h-10 w-10 items-center justify-center rounded-full border border-border bg-surface"
-        >
-          <ChevronLeft size={20} color={c.foreground} />
-        </Pressable>
-        <View className="flex-1">
-          <Text className="font-sora-extrabold text-xl">{t('operator.couponsTitle')}</Text>
-          <Text variant="caption">{t('operator.couponsSubtitle')}</Text>
-        </View>
-      </View>
+      <ScreenHeader
+        eyebrow={t('operator.eyebrow')}
+        title={t('operator.couponsTitle')}
+        subtitle={t('operator.couponsSubtitle')}
+        tint={c.error}
+      />
 
       <ScrollView contentContainerClassName="gap-3 px-5 pb-10" showsVerticalScrollIndicator={false}>
+        {coupons.isLoading ? <ListSkeleton rows={3} /> : null}
         {list.map((coupon) => (
           <View
             key={coupon.id}
@@ -207,14 +201,12 @@ export default function OperatorCouponsScreen() {
         {form ? (
           <View className={cardClass({ padding: 'md' }, 'gap-3')}>
             <Text variant="micro">{t('operator.newCoupon')}</Text>
-            <TextInput
+            <Input
               value={form.code}
               onChangeText={(code) => setForm((f) => (f ? { ...f, code } : f))}
               placeholder={t('operator.couponCodePlaceholder')}
-              placeholderTextColor={c.mutedForeground}
               autoCapitalize="characters"
               autoCorrect={false}
-              className={cardClass({ padding: 'row' }, 'text-foreground')}
             />
             <View className="flex-row gap-2">
               {(['percent', 'fixed'] as const).map((type) => (
@@ -233,7 +225,7 @@ export default function OperatorCouponsScreen() {
               ))}
             </View>
             <View className="flex-row gap-2">
-              <TextInput
+              <Input
                 value={form.discountValue}
                 onChangeText={(v) => setForm((f) => (f ? { ...f, discountValue: v } : f))}
                 placeholder={
@@ -241,35 +233,31 @@ export default function OperatorCouponsScreen() {
                     ? t('operator.couponPercentPlaceholder')
                     : t('operator.couponCentsPlaceholder')
                 }
-                placeholderTextColor={c.mutedForeground}
                 keyboardType="numeric"
-                className={cardClass({ padding: 'row' }, 'flex-1 text-foreground')}
+                containerClassName="flex-1"
               />
-              <TextInput
+              <Input
                 value={form.durationCycles}
                 onChangeText={(v) => setForm((f) => (f ? { ...f, durationCycles: v } : f))}
                 placeholder={t('operator.couponCyclesPlaceholder')}
-                placeholderTextColor={c.mutedForeground}
                 keyboardType="numeric"
-                className={cardClass({ padding: 'row' }, 'flex-1 text-foreground')}
+                containerClassName="flex-1"
               />
             </View>
             <View className="flex-row gap-2">
-              <TextInput
+              <Input
                 value={form.validDays}
                 onChangeText={(v) => setForm((f) => (f ? { ...f, validDays: v } : f))}
                 placeholder={t('operator.couponValidDaysPlaceholder')}
-                placeholderTextColor={c.mutedForeground}
                 keyboardType="numeric"
-                className={cardClass({ padding: 'row' }, 'flex-1 text-foreground')}
+                containerClassName="flex-1"
               />
-              <TextInput
+              <Input
                 value={form.maxRedemptions}
                 onChangeText={(v) => setForm((f) => (f ? { ...f, maxRedemptions: v } : f))}
                 placeholder={t('operator.couponMaxRedemptionsPlaceholder')}
-                placeholderTextColor={c.mutedForeground}
                 keyboardType="numeric"
-                className={cardClass({ padding: 'row' }, 'flex-1 text-foreground')}
+                containerClassName="flex-1"
               />
             </View>
 

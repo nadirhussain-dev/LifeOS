@@ -7,14 +7,15 @@ import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { formatStudyDuration, timeOfDayLabelKey } from '@/features/study/services/study-stats';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { contentTints } from '@/constants/design-tokens';
+import { useTheme } from '@/hooks/use-theme';
 import { alpha } from '@/lib/color';
 import type { StudyInsights } from '@/features/study/types/study.types';
-
-const STUDY_TINT = '#8b5cf6';
 
 /** A 2×2 grid of "how to improve" signals: when you focus best, typical
  * session length, focus quality, and momentum vs last week. */
 export function StudyInsightsCard({ insights }: { insights: StudyInsights }) {
+  const { tint, resolve } = useTheme();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const wow = insights.weekOverWeek;
@@ -24,21 +25,21 @@ export function StudyInsightsCard({ insights }: { insights: StudyInsights }) {
     {
       key: 'best',
       icon: Sunrise,
-      tint: '#f59e0b',
+      tint: resolve(contentTints.amber),
       label: t('study.youFocusBestIn'),
       value: insights.bestTimeOfDay ? t(timeOfDayLabelKey(insights.bestTimeOfDay)) : '—',
     },
     {
       key: 'avg',
       icon: Clock,
-      tint: STUDY_TINT,
+      tint: tint('study'),
       label: t('study.typicalSession'),
       value: insights.avgSessionSeconds > 0 ? formatStudyDuration(insights.avgSessionSeconds) : '—',
     },
     {
       key: 'focus',
       icon: Star,
-      tint: '#eab308',
+      tint: resolve(contentTints.yellow),
       label: t('study.avgFocus'),
       value:
         insights.avgFocusRating != null

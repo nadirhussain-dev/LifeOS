@@ -3,10 +3,11 @@ import { useRouter } from 'expo-router';
 import { Bell, Star, Tag } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SheetHeader } from '@/components/ui/sheet-header';
@@ -80,12 +81,12 @@ export default function NewNoteScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-2">
-          <TextInput
+          <Input
+            surface="bare"
             value={title}
             onChangeText={setTitle}
             accessibilityLabel={t('notes.noteTitle')}
             placeholder={t('notes.noteTitle')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             autoFocus
             multiline
             onFocus={() => {
@@ -115,7 +116,7 @@ export default function NewNoteScreen() {
 
         <NoteTemplatePicker selectedId={templateId} onSelect={selectTemplate} />
 
-        <TextInput
+        <Input
           value={body}
           onChangeText={(text) => {
             setBody(text);
@@ -130,8 +131,8 @@ export default function NewNoteScreen() {
           multiline
           accessibilityLabel={t('notes.noteBody')}
           placeholder={t('notes.writeSomething')}
-          placeholderTextColor={colors[scheme].mutedForeground}
-          className={cardClass({ padding: 'md' }, 'min-h-32 text-base text-foreground')}
+          surface="card"
+          className="min-h-32 text-base"
           textAlignVertical="top"
         />
 

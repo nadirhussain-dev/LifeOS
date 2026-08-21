@@ -34,7 +34,7 @@ export function WaterIntakeWidget() {
   const scheme = useColorScheme() ?? 'light';
   const waterTint = moduleTint('water', scheme);
   const goalMl = useWaterSettingsStore((state) => state.goalMl);
-  const { data: currentMl, isLoading } = useTodayWaterTotal();
+  const { data: currentMl, isLoading, error, refetch } = useTodayWaterTotal();
   const { addWater, undoLast } = useWaterIntakeMutations();
 
   const goalReached = (currentMl ?? 0) >= goalMl;
@@ -67,6 +67,8 @@ export function WaterIntakeWidget() {
 
   return (
     <WidgetCard
+      error={error}
+      onRetry={refetch}
       icon={GlassWater}
       title={t('dashboard.waterIntake')}
       tint={waterTint}

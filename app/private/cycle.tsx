@@ -2,8 +2,9 @@ import { type BottomSheetModal } from '@gorhom/bottom-sheet';
 import { addMonths, format, parseISO, subMonths } from 'date-fns';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -264,13 +265,12 @@ export default function CycleScreen() {
         />
       </View>
 
-      <TextInput
+      <Input
         value={note}
         onChangeText={setNote}
         placeholder={t('private.notePlaceholder')}
-        placeholderTextColor={theme.mutedForeground}
         multiline
-        className={cardClass({ padding: 'row' }, 'min-h-[88px] text-foreground')}
+        className="min-h-[88px]"
         style={{ fontFamily: 'Sora_400Regular', textAlignVertical: 'top' }}
       />
 

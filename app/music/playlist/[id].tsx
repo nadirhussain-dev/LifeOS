@@ -4,8 +4,9 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ListMusic, Play, Plus, Trash2 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
@@ -84,12 +85,12 @@ export default function PlaylistDetailScreen() {
       />
 
       <View className="gap-3 px-5 pt-1">
-        <TextInput
+        <Input
+          surface="bare"
           value={name}
           onChangeText={setName}
           accessibilityLabel={t('music.playlistName')}
           placeholder={t('music.playlistName')}
-          placeholderTextColor={colors[scheme].mutedForeground}
           style={{ fontSize: 26, fontFamily: 'Sora_700Bold', color: colors[scheme].foreground }}
         />
 

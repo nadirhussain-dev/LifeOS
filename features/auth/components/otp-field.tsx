@@ -1,5 +1,6 @@
-import { TextInput, View } from 'react-native';
+import { View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -30,12 +31,12 @@ export function OtpField({ label, value, onChangeText, autoFocus }: Props) {
         className="rounded-2xl border px-4"
         style={{ borderColor: theme.border, backgroundColor: theme.card }}
       >
-        <TextInput
+        <Input
+          surface="bare"
           value={value}
           onChangeText={(text) => onChangeText(text.replace(/\D/g, '').slice(0, OTP_LENGTH))}
           accessibilityLabel={label}
           placeholder="000000"
-          placeholderTextColor={theme.mutedForeground}
           keyboardType="number-pad"
           autoComplete="one-time-code"
           textContentType="oneTimeCode"

@@ -3,15 +3,17 @@ import { useRouter } from 'expo-router';
 import { Archive, Search, StickyNote } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, RefreshControl, TextInput, View } from 'react-native';
+import { Pressable, RefreshControl, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Fab } from '@/components/ui/fab';
 import { ListSectionHeader } from '@/components/ui/list-section-header';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { moduleTints } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { AdSlot } from '@/features/ads/components/ad-slot';
 import { NoteCard } from '@/features/notes/components/note-card';
@@ -96,7 +98,7 @@ export default function NotesScreen() {
       <ScreenHeader
         title={t('notes.title')}
         eyebrow={t('notes.capture')}
-        tint="#eab308"
+        tint={moduleTints.notes}
         right={
           <Pressable
             accessibilityRole="button"
@@ -111,12 +113,12 @@ export default function NotesScreen() {
       <View className="px-5 pb-3 pt-3">
         <View className="flex-row items-center gap-2 rounded-full border border-border bg-surface px-4 py-2.5">
           <Search size={16} color={colors[scheme].mutedForeground} />
-          <TextInput
+          <Input
+            surface="bare"
             value={searchQuery}
             onChangeText={setSearchQuery}
             accessibilityLabel={t('notes.searchNotes')}
             placeholder={t('notes.searchNotes')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             className="flex-1 text-foreground"
           />
         </View>

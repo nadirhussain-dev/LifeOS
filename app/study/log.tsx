@@ -4,14 +4,16 @@ import { useRouter } from 'expo-router';
 import { CalendarDays, Clock, Minus, Plus } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
+import { Chip } from '@/components/ui/chip';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StarRating } from '@/components/ui/star-rating';
 import { SheetHeader } from '@/components/ui/sheet-header';
 import { Text } from '@/components/ui/text';
-import { moduleTint } from '@/constants/design-tokens';
+import { moduleTint, moduleTints } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { SubjectPicker } from '@/features/study/components/subject-picker';
 import { formatStudyDuration } from '@/features/study/services/study-stats';
@@ -136,23 +138,13 @@ export default function StudyLogScreen() {
           </View>
           <View className="flex-row flex-wrap justify-center gap-2">
             {QUICK_MINUTES.map((m) => (
-              <Pressable
-                accessibilityRole="button"
+              <Chip
                 key={m}
+                label={t('study.minutesShort', { minutes: m })}
+                selected={minutes === m}
+                tint={moduleTints.study}
                 onPress={() => setMinutes(m)}
-                className="rounded-full border border-border px-3.5 py-1.5"
-                style={
-                  minutes === m ? { backgroundColor: studyTint, borderColor: studyTint } : undefined
-                }
-              >
-                <Text
-                  className={
-                    minutes === m ? 'font-sora-semibold text-white' : 'text-muted-foreground'
-                  }
-                >
-                  {t('study.minutesShort', { minutes: m })}
-                </Text>
-              </Pressable>
+              />
             ))}
           </View>
         </View>
@@ -223,13 +215,7 @@ export default function StudyLogScreen() {
           <StarRating value={rating} onChange={setRating} />
         </View>
 
-        <TextInput
-          value={note}
-          onChangeText={setNote}
-          placeholder={t('study.notePlaceholder')}
-          placeholderTextColor={colors[scheme].mutedForeground}
-          className={cardClass({ padding: 'row' }, 'text-foreground')}
-        />
+        <Input value={note} onChangeText={setNote} placeholder={t('study.notePlaceholder')} />
 
         <Button label={t('study.saveSession')} onPress={save} size="lg" variant="accent" />
       </ScrollView>

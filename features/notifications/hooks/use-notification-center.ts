@@ -13,8 +13,16 @@ import {
   type NotificationCategory,
 } from '@/features/notifications/types/notification.types';
 import { useNotificationsStore } from '@/features/notifications/store/notifications-store';
+import { seedSlots } from '@/features/notifications/services/scheduling-budget';
 import { reportError } from '@/lib/error-reporting';
-import { addNotificationReceivedListener, hasNotificationPermission } from '@/lib/notifications';
+import {
+  addNotificationReceivedListener,
+  cancelScheduledByKey,
+  getScheduledCount,
+  hasNotificationPermission,
+  invalidateScheduledQueueCache,
+  sweepDuplicateKeys,
+} from '@/lib/notifications';
 
 /**
  * Turns an arriving notification into something the app itself can show.
@@ -69,6 +77,32 @@ export function useNotificationCenter(): void {
       void hasNotificationPermission()
         .then(useNotificationsStore.getState().setSystemPermissionGranted)
         .catch(() => undefined);
+
+      /**
+       * Re-read the OS queue on the same beat, and settle two things that drift
+       * while the app is backgrounded.
+       *
+       * The slot ledger is an in-process counter that only a rebuild reseeds
+       * (see scheduling-budget.ts). Notifications that fired overnight left the
+       * queue without telling it, so it over-counts — and on iOS, where the
+       * ceiling is real, an over-counting ledger makes `hasHeadroom` decline
+       * reminders there is actually room for. Returning to the foreground is
+       * both when the answer has changed and when it is cheap to ask.
+       *
+       * The sweep is the other half: cancel-by-key only runs when something
+       * schedules, so a key nothing touched this session keeps whatever it has
+       * — including duplicates from a build that predates keys. This is what
+       * cleans those up without waiting for the user to edit the item.
+       */
+      void (async () => {
+        try {
+          invalidateScheduledQueueCache();
+          await sweepDuplicateKeys();
+          seedSlots(await getScheduledCount());
+        } catch (error) {
+          reportError(error, { scope: 'notification-queue-reconcile' });
+        }
+      })();
     };
 
     catchUp();
@@ -85,6 +119,26 @@ export function useNotificationCenter(): void {
       // an uncategorised arrival still deserves a row rather than vanishing.
       const category: NotificationCategory =
         payload.category && payload.category in CATEGORY_META ? payload.category : 'split';
+
+      /**
+       * A keyed push supersedes the local reminder under that key.
+       *
+       * The contract that lets push and local coexist without becoming a new
+       * duplicate source. A local reminder carries fixed text chosen when it
+       * was scheduled and cannot evaluate anything at fire time; a server can.
+       * So the server saying something about `challenge:at-risk` has to be able
+       * to stand the local one down, or the user gets both — which is exactly
+       * the bug this whole body of work exists to remove, reintroduced from the
+       * other side.
+       *
+       * Guarded on `remote`, and that guard is the important part: a local
+       * repeating reminder arrives here too, carrying its own key, and
+       * cancelling on that would delete a daily habit reminder the first time
+       * it fired.
+       */
+      if (received.remote && payload.key) {
+        void cancelScheduledByKey(payload.key).catch(() => undefined);
+      }
 
       try {
         recordNotificationDelivery({

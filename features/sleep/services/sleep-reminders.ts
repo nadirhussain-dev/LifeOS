@@ -5,6 +5,7 @@ import {
 } from '@/features/sleep/services/sleep-repository';
 import { formatClock } from '@/features/sleep/services/sleep-stats';
 import i18n from '@/lib/i18n';
+import { SLEEP_REMINDER_KEY } from '@/features/notifications/services/notification-keys';
 import { cancelNotification, scheduleDailyNotification } from '@/lib/notifications';
 
 function parseHHmm(value: string): { hour: number; minute: number } | null {
@@ -34,7 +35,7 @@ export async function syncBedtimeReminder(): Promise<void> {
     }),
     hour: time.hour,
     minute: time.minute,
-    data: { category: 'sleep', route: '/sleep' },
+    data: { category: 'sleep', route: '/sleep', key: SLEEP_REMINDER_KEY },
   });
   setSleepReminderNotificationId(id);
 }

@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Search } from 'lucide-react-native';
+import { Search } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { listUsers, type UserDirectoryRow } from '@/features/operator/services/operator-repository';
@@ -50,29 +52,21 @@ export default function OperatorUsersScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <View className="flex-row items-center gap-3 px-5 pb-3 pt-14">
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          hitSlop={10}
-          className="h-10 w-10 items-center justify-center rounded-full border border-border bg-surface"
-        >
-          <ChevronLeft size={20} color={c.foreground} />
-        </Pressable>
-        <View className="flex-1">
-          <Text className="font-sora-extrabold text-xl">{t('operator.accountsTitle')}</Text>
-          <Text variant="caption">{t('operator.accountsSubtitle')}</Text>
-        </View>
-      </View>
+      <ScreenHeader
+        eyebrow={t('operator.eyebrow')}
+        title={t('operator.accountsTitle')}
+        subtitle={t('operator.accountsSubtitle')}
+        tint={c.error}
+      />
 
       <View className="px-5 pb-3">
         <View className={cardClass({ padding: 'none' }, 'flex-row items-center gap-2 px-4 py-3')}>
           <Search size={16} color={c.mutedForeground} />
-          <TextInput
+          <Input
+            surface="bare"
             value={query}
             onChangeText={setQuery}
             placeholder={t('operator.accountsSearchPlaceholder')}
-            placeholderTextColor={c.mutedForeground}
             autoCapitalize="none"
             autoCorrect={false}
             className="flex-1 text-foreground"

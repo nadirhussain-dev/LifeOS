@@ -1,9 +1,9 @@
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
-import { colors } from '@/constants/theme';
 import { GOAL_CATEGORIES } from '@/features/goals/config/goal-categories';
 import { resolveTint } from '@/constants/design-tokens';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -58,12 +58,12 @@ export function GoalCategoryPicker({ value, customLabel, onChange, onChangeLabel
       </ScrollView>
 
       {value === 'custom' && (
-        <TextInput
+        <Input
+          surface="bare"
           value={customLabel ?? ''}
           onChangeText={(text) => onChangeLabel(text || null)}
           accessibilityLabel={t('category.name')}
           placeholder={t('goals.categoryPlaceholder')}
-          placeholderTextColor={colors[scheme].mutedForeground}
           maxLength={30}
           className="rounded-lg border border-border px-3 py-2 text-foreground"
         />

@@ -2,9 +2,10 @@ import * as Haptics from 'expo-haptics';
 import { Plus } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import type { NoteTag } from '@/features/notes/types/note.types';
@@ -83,12 +84,12 @@ export function TagPicker({ tags, selectedTagIds, onToggle, onCreateTag, onDelet
 
       {isAdding ? (
         <View className="flex-row items-center gap-1.5 rounded-full border border-border px-2 py-1">
-          <TextInput
+          <Input
+            surface="bare"
             value={name}
             onChangeText={setName}
             accessibilityLabel={t('notes.tagName')}
             placeholder={t('notes.tagName')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             autoFocus
             onSubmitEditing={confirmNewTag}
             onBlur={confirmNewTag}

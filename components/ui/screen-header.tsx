@@ -31,6 +31,16 @@ type Props = {
    *  screens, parent-module breadcrumb on inner screens. */
   eyebrow?: string;
   /**
+   * Quiet line below the title — a count ("12 items"), or one sentence saying
+   * what the screen is for.
+   *
+   * Added for the private space, whose own shell had this slot and so could not
+   * adopt this header without losing it. Distinct from `eyebrow` on purpose: an
+   * eyebrow is an identity label and reads as uppercase micro, which is wrong
+   * for a sentence.
+   */
+  subtitle?: string;
+  /**
    * Module tint — colors the eyebrow and the back-chip icon. When omitted the
    * header stays neutral (used by module-less screens like Journal).
    *
@@ -61,6 +71,7 @@ type Props = {
 export function ScreenHeader({
   title,
   eyebrow,
+  subtitle,
   tint: tintProp,
   onBack,
   showBack = true,
@@ -103,6 +114,11 @@ export function ScreenHeader({
           {title ? (
             <Text variant="heading" numberOfLines={1}>
               {title}
+            </Text>
+          ) : null}
+          {subtitle ? (
+            <Text variant="caption" numberOfLines={1}>
+              {subtitle}
             </Text>
           ) : null}
         </View>

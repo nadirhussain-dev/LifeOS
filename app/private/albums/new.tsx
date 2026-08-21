@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TextInput, View } from 'react-native';
+import { View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { InlineError } from '@/components/ui/query-error';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
@@ -56,12 +57,12 @@ export default function NewSharedAlbumScreen() {
   return (
     <PrivateScreen moduleId="shared-albums" title={t('private.newAlbum')} tint={tint}>
       <View className="gap-4">
-        <TextInput
+        <Input
+          surface="bare"
           value={name}
           onChangeText={setName}
           accessibilityLabel={t('private.albumNamePlaceholder')}
           placeholder={t('private.albumNamePlaceholder')}
-          placeholderTextColor={theme.mutedForeground}
           autoFocus
           returnKeyType="done"
           onSubmitEditing={save}

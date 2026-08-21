@@ -1,13 +1,15 @@
 import { formatDistanceToNowStrict } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Mic, Send, Trash2 } from 'lucide-react-native';
+import { Mic, Send, Trash2 } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, FlatList, Pressable, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 import Animated, { useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Input } from '@/components/ui/input';
+import { ChevronBack } from '@/components/ui/directional-icon';
 import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
@@ -200,7 +202,7 @@ export default function AlbumChatScreen() {
           hitSlop={10}
           className="h-10 w-10 items-center justify-center rounded-full border border-border bg-surface"
         >
-          <ChevronLeft size={20} color={theme.foreground} />
+          <ChevronBack size={20} color={theme.foreground} />
         </Pressable>
         <View className="flex-1">
           <Text className="font-sora-extrabold text-2xl tracking-tight" style={{ color: tint }}>
@@ -381,11 +383,11 @@ export default function AlbumChatScreen() {
             className="flex-row items-center gap-2 border-t border-border px-4 pt-3"
             style={{ paddingBottom: insets.bottom + 10 }}
           >
-            <TextInput
+            <Input
+              surface="bare"
               value={draft}
               onChangeText={onDraftChange}
               placeholder={t('private.messagePlaceholder')}
-              placeholderTextColor={theme.mutedForeground}
               multiline
               maxLength={1000}
               className="flex-1 rounded-2xl border border-border px-4 py-2.5 text-foreground"

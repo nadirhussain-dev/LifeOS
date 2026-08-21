@@ -1,8 +1,9 @@
 import { format, parseISO } from 'date-fns';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -212,13 +213,12 @@ export default function RecoveryScreen() {
         />
       </View>
 
-      <TextInput
+      <Input
         value={note}
         onChangeText={setNote}
         placeholder={t('private.notePlaceholder')}
-        placeholderTextColor={theme.mutedForeground}
         multiline
-        className={cardClass({ padding: 'row' }, 'min-h-[80px] text-foreground')}
+        className="min-h-[80px]"
         style={{ fontFamily: 'Sora_400Regular', textAlignVertical: 'top' }}
       />
 

@@ -4,8 +4,16 @@ import {
   type GoalReminderSettings,
 } from '@/features/goals/store/goal-reminder-store';
 import { listGoals } from '@/features/goals/services/goals-repository';
+import {
+  GOAL_KEY_PREFIX,
+  goalReminderKey,
+} from '@/features/notifications/services/notification-keys';
 import i18n from '@/lib/i18n';
-import { cancelNotifications, scheduleOneTimeNotification } from '@/lib/notifications';
+import {
+  cancelNotifications,
+  cancelScheduledByKeyPrefix,
+  scheduleOneTimeNotification,
+} from '@/lib/notifications';
 
 /**
  * Deadline reminders for goals.
@@ -50,6 +58,9 @@ export async function syncGoalReminders(
 ): Promise<string[]> {
   const store = useGoalReminderStore.getState();
   await cancelNotifications(store.scheduledNotificationIds);
+  // A goal completed, deleted, or pushed past the horizon drops out of the set
+  // entirely, and its key goes with it — so the prefix, not just the stored ids.
+  await cancelScheduledByKeyPrefix(GOAL_KEY_PREFIX);
 
   if (!settings.enabled) {
     store.setReminder(settings, []);
@@ -88,7 +99,12 @@ export async function syncGoalReminders(
           ? i18n.t('goals.reminderNotifToday')
           : i18n.t('goals.reminderNotifBody', { count: daysLeft }),
       date: fireAt,
-      data: { category: 'goals', route: '/goals/[id]', params: { id: goal.id } },
+      data: {
+        category: 'goals',
+        route: '/goals/[id]',
+        params: { id: goal.id },
+        key: goalReminderKey(goal.id),
+      },
     });
     if (id) ids.push(id);
   }

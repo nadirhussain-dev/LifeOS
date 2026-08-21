@@ -105,7 +105,8 @@
     "percentTasksCompleted": "{{percent}}% کام مکمل",
     "yourFocus": "آپ کی توجہ",
     "forYou": "آپ کے لیے",
-    "wellbeing": "فلاح و بہبود"
+    "wellbeing": "فلاح و بہبود",
+    "closeQuickActions": "فوری اقدامات بند کریں"
   },
   "focus": {
     "habits": "عادات",
@@ -472,7 +473,9 @@
     "unarchiveNamed": "“{{name}}” کو محفوظ شدہ سے نکالیں",
     "deletedToast": "“{{title}}” حذف ہو گیا۔",
     "reminderTitle": "نوٹ یاد دہانی",
-    "reminderBody": "اس نوٹ پر ایک نظر ڈالیں۔"
+    "reminderBody": "اس نوٹ پر ایک نظر ڈالیں۔",
+    "notFound": "یہ نوٹ اب موجود نہیں ہے",
+    "notFoundBody": "اسے اس یا کسی دوسرے ڈیوائس پر حذف کیا گیا ہو سکتا ہے۔"
   },
   "budget": {
     "title": "بجٹ",
@@ -782,7 +785,9 @@
     "usernameJustTaken": "یہ نام ابھی کسی نے لے لیا — کوئی اور آزمائیں۔",
     "usernameClaimFailed": "آپ کا اکاؤنٹ بن گیا، لیکن صارف نام محفوظ نہیں ہو سکا۔ آپ اسے ترتیبات میں مقرر کر سکتے ہیں۔",
     "usernameCheckFailed": "ابھی یہ نام چیک نہیں ہو سکا — آپ پھر بھی آگے بڑھ سکتے ہیں۔",
-    "continueWithGoogle": "Google کے ساتھ جاری رکھیں"
+    "continueWithGoogle": "Google کے ساتھ جاری رکھیں",
+    "showPassword": "پاس ورڈ دکھائیں",
+    "hidePassword": "پاس ورڈ چھپائیں"
   },
   "language": {
     "en": "English",
@@ -1224,7 +1229,9 @@
     "unfavoriteA11y": "\"{{title}}\" کو پسندیدہ سے ہٹائیں",
     "playCount_one": "{{count}} بار بجایا گیا",
     "playCount_other": "{{count}} بار بجایا گیا",
-    "lastPlayed": "آخری بار {{time}} بجایا گیا"
+    "lastPlayed": "آخری بار {{time}} بجایا گیا",
+    "seekBar": "سیک کریں",
+    "percentPlayed": "{{percent}}% چل چکا"
   },
   "albumCategory": {
     "gym": "جم کی پیش رفت",

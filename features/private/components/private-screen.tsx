@@ -1,10 +1,10 @@
 import { useRouter } from 'expo-router';
-import { ChevronLeft } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
@@ -45,8 +45,6 @@ type Props = {
 export function PrivateScreen({ title, subtitle, tint, children, footer, moduleId }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const scheme = useColorScheme() ?? 'light';
-  const theme = colors[scheme];
   const key = usePrivateStore((s) => s.key);
   const gender = useProfileStore((s) => s.gender);
   const showAllModules = usePrivateStore((s) => s.showAllModules);
@@ -71,25 +69,21 @@ export function PrivateScreen({ title, subtitle, tint, children, footer, moduleI
 
   return (
     <View className="flex-1 bg-background">
-      <View
-        className="flex-row items-center gap-3 px-5 pb-3"
-        style={{ paddingTop: insets.top + 8 }}
-      >
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          hitSlop={10}
-          className="h-10 w-10 items-center justify-center rounded-full border border-border bg-surface"
-        >
-          <ChevronLeft size={20} color={theme.foreground} />
-        </Pressable>
-        <View className="flex-1">
-          <Text className="font-sora-extrabold text-2xl tracking-tight" style={{ color: tint }}>
-            {title}
-          </Text>
-          {subtitle ? <Text variant="caption">{subtitle}</Text> : null}
-        </View>
-      </View>
+      {/*
+       * The app's header, not a private one.
+       *
+       * This block used to be hand-rolled here — its own back chip, its own
+       * title metrics, and a raw lucide `ChevronLeft`, which does not mirror in
+       * RTL. So in Arabic and Urdu the vault's back button pointed at the
+       * content it had come from, on all nineteen screens this shell serves.
+       * `ScreenHeader` uses `ChevronBack` and gets that right.
+       *
+       * The module tint moves from the title to the back chip, which is where
+       * every other module in the app carries its identity. The private space
+       * keeps its colour; it stops being the one part of the app that wears it
+       * differently.
+       */}
+      <ScreenHeader title={title} subtitle={subtitle} tint={tint} />
 
       <ScrollView
         contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}

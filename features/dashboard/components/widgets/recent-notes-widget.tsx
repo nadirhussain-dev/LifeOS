@@ -40,10 +40,12 @@ function NoteRow({
 export function RecentNotesWidget() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { data, isLoading } = useRecentNotes();
+  const { data, isLoading, error, refetch } = useRecentNotes();
 
   return (
     <WidgetCard
+      error={error}
+      onRetry={refetch}
       icon={StickyNote}
       title={t('dashboard.recentNotes')}
       actionLabel={t('dashboard.viewAll')}

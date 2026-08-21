@@ -21,7 +21,7 @@ export function HabitRowWidget() {
   const queryClient = useQueryClient();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
-  const { data, isLoading } = useHabitRow();
+  const { data, isLoading, error, refetch } = useHabitRow();
   const { logToday, unlogToday } = useHabitMutations();
   const habitTint = moduleTint('habit', scheme);
 
@@ -34,6 +34,8 @@ export function HabitRowWidget() {
 
   return (
     <WidgetCard
+      error={error}
+      onRetry={refetch}
       icon={Repeat}
       title={t('tabs.habits')}
       tint={moduleTint('habit', scheme)}

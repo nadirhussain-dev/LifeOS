@@ -30,7 +30,7 @@ export function ReflectWidget() {
   const queryClient = useQueryClient();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
-  const { data, isLoading } = useReflect();
+  const { data, isLoading, error, refetch } = useReflect();
   const { upsert } = useJournalMutations();
   const todayKey = toDateKey(new Date());
 
@@ -42,6 +42,8 @@ export function ReflectWidget() {
 
   return (
     <WidgetCard
+      error={error}
+      onRetry={refetch}
       icon={BookHeart}
       title={t('dashboard.reflect')}
       tint={moduleTint('journal', scheme)}

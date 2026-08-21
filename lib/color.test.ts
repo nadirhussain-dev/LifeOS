@@ -136,9 +136,11 @@ describe('user-content palettes', () => {
   });
 
   it('habit-done green is legible as text in both themes', () => {
+    // Now a pair, so each theme is checked against the value it actually draws
+    // rather than both being checked against the light one.
     for (const theme of THEMES) {
       expect(
-        contrastRatio(readableTint(habitDoneColor, theme), colors[theme].card),
+        contrastRatio(readableTint(habitDoneColor[theme], theme), colors[theme].card),
       ).toBeGreaterThanOrEqual(AA_TEXT);
     }
   });

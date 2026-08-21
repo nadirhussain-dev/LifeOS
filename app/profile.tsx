@@ -2,8 +2,9 @@ import { useRouter } from 'expo-router';
 import { Camera, LogOut, ShieldCheck, Trash2, UserCircle } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Linking, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Linking, Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -228,13 +229,13 @@ export default function ProfileScreen() {
 
         <View className="gap-2">
           <Text variant="micro">{t('profile.displayName')}</Text>
-          <TextInput
+          <Input
             value={name}
             onChangeText={setName}
             onBlur={() => void saveName()}
             placeholder={t('onboarding.yourName')}
-            placeholderTextColor={theme.mutedForeground}
-            className={cardClass({ padding: 'rowLg' }, 'text-foreground')}
+            surface="card"
+            cardPadding="rowLg"
             style={{ fontFamily: 'Sora_400Regular' }}
           />
         </View>

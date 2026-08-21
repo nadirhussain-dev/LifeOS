@@ -9,10 +9,10 @@ import { useProductivitySummary } from '@/features/dashboard/hooks/use-widget-da
 
 export function ProductivitySummaryWidget() {
   const { t } = useTranslation();
-  const { data, isLoading } = useProductivitySummary();
+  const { data, isLoading, error, refetch } = useProductivitySummary();
 
   return (
-    <WidgetCard icon={TrendingUp} title={t('dashboard.thisWeek')}>
+    <WidgetCard error={error} onRetry={refetch} icon={TrendingUp} title={t('dashboard.thisWeek')}>
       {isLoading || !data ? (
         <Skeleton className="h-14 w-full" />
       ) : (

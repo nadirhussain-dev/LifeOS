@@ -1,7 +1,12 @@
+import {
+  WATER_KEY_PREFIX,
+  waterReminderKey,
+} from '@/features/notifications/services/notification-keys';
 import { allowance } from '@/features/notifications/services/scheduling-budget';
 import i18n from '@/lib/i18n';
 import {
   cancelNotifications,
+  cancelScheduledByKeyPrefix,
   scheduleDailyNotification,
   SCHEDULING_BUDGET,
 } from '@/lib/notifications';
@@ -17,6 +22,12 @@ export async function cancelWaterReminders(notificationIds: string[]): Promise<v
  * expo-notifications has no native "repeat every N minutes within a daily
  * window" trigger, so this composes it from plain daily-at-HH:mm triggers. */
 export async function scheduleWaterReminders(settings: WaterReminderSettings): Promise<string[]> {
+  // The set shrinks as well as grows — widening the interval from hourly to
+  // every three hours retires ten slots — and a slot that is gone has a key
+  // nothing will schedule again. Clearing the prefix first makes the rebuild
+  // wholesale, which is what this function has always meant to be.
+  await cancelScheduledByKeyPrefix(WATER_KEY_PREFIX);
+
   if (!settings.enabled) return [];
 
   /**
@@ -45,7 +56,11 @@ export async function scheduleWaterReminders(settings: WaterReminderSettings): P
         body: i18n.t('water.reminderNotifBody'),
         hour: slot.hour,
         minute: slot.minute,
-        data: { category: 'water', route: '/water-intake/history' },
+        data: {
+          category: 'water',
+          route: '/water-intake/history',
+          key: waterReminderKey(slot.hour, slot.minute),
+        },
       }),
     ),
   );

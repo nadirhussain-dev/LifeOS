@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -10,6 +11,8 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 const BAR_COUNT = 40;
 
@@ -42,9 +45,20 @@ function Bar({
 }) {
   const base = Math.max(3, maxH * ratio);
   const h = useSharedValue(base);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
-    if (playing) {
+    if (playing && reducedMotion) {
+      /*
+       * Held at the song's own deterministic silhouette — 40 bars each looping
+       * indefinitely is the densest motion in the app, and the shape is the
+       * part that carries meaning. It is the same resting height the paused
+       * state settles to, which is the right read: the waveform is still the
+       * waveform, it just is not dancing.
+       */
+      cancelAnimation(h);
+      h.value = base;
+    } else if (playing) {
       h.value = withDelay(
         (index % 7) * 40,
         withRepeat(withTiming(base * 0.62, { duration: 360 + (index % 5) * 60 }), -1, true),
@@ -54,7 +68,7 @@ function Bar({
       h.value = withTiming(base, { duration: 220 });
     }
     return () => cancelAnimation(h);
-  }, [playing, base, index, h]);
+  }, [playing, base, index, h, reducedMotion]);
 
   const style = useAnimatedStyle(() => ({ height: h.value }));
   const barW = Math.max(2, maxH / 14);
@@ -85,8 +99,16 @@ type Props = {
  * portion is filled in the song color and the rest is ghosted; bars gently pulse
  * while playing. Drag or tap anywhere to scrub — a playhead tracks your finger
  * and the seek commits on release.
+ *
+ * A pan gesture is invisible to a screen reader, and this one had no
+ * accessibility at all: the only way to move through a song was a drag, which
+ * VoiceOver and TalkBack cannot perform. So it is `adjustable` — the role for a
+ * control with a value along a range — which makes swipe-up/swipe-down step the
+ * position, and announces where you are rather than only that something is
+ * there. A hint would have described the drag; this replaces it.
  */
 export function WaveformScrubber({ seed, progress, playing, color, height = 56, onSeek }: Props) {
+  const { t } = useTranslation();
   const [width, setWidth] = useState(0);
   const heights = useMemo(() => seededHeights(seed), [seed]);
   const head = useSharedValue(-1);
@@ -117,12 +139,33 @@ export function WaveformScrubber({ seed, progress, playing, color, height = 56, 
   }));
 
   const filledCount = Math.round(progress * BAR_COUNT);
+  const percent = Math.round(progress * 100);
+
+  /** One assistive step. 5% is ~9s of a 3-minute track — coarse enough to cross
+   *  a song in a reasonable number of swipes, fine enough to be useful. */
+  const STEP = 0.05;
 
   return (
     <GestureDetector gesture={pan}>
       <View
         style={{ height, justifyContent: 'center' }}
         onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+        accessible
+        accessibilityRole="adjustable"
+        accessibilityLabel={t('music.seekBar')}
+        accessibilityValue={{
+          min: 0,
+          max: 100,
+          now: percent,
+          // `text` is what actually gets spoken; without it the announcement is
+          // a bare number with no unit.
+          text: t('music.percentPlayed', { percent }),
+        }}
+        accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+        onAccessibilityAction={(event) => {
+          const delta = event.nativeEvent.actionName === 'increment' ? STEP : -STEP;
+          onSeek(Math.min(1, Math.max(0, progress + delta)));
+        }}
       >
         <View
           style={{

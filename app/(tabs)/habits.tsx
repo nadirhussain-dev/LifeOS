@@ -3,10 +3,11 @@ import { useRouter } from 'expo-router';
 import { Repeat, Search } from 'lucide-react-native';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl, TextInput, View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 
+import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QueryError } from '@/components/ui/query-error';
 import { Fab } from '@/components/ui/fab';
@@ -155,12 +156,12 @@ export default function HabitsScreen() {
 
         <View className="flex-row items-center gap-2 rounded-full border border-border bg-surface px-4 py-2.5">
           <Search size={16} color={colors[scheme].mutedForeground} />
-          <TextInput
+          <Input
+            surface="bare"
             value={searchQuery}
             onChangeText={setSearchQuery}
             accessibilityLabel={t('habits.searchHabits')}
             placeholder={t('habits.searchHabits')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             className="flex-1 text-foreground"
           />
         </View>

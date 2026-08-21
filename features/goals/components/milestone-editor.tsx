@@ -1,7 +1,8 @@
 import { GripVertical, Plus, X } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -35,12 +36,12 @@ export function MilestoneEditor({ value, onChange }: Props) {
           className="flex-row items-center gap-2 rounded-lg border border-border px-2.5 py-1.5"
         >
           <GripVertical size={15} color={colors[scheme].mutedForeground} />
-          <TextInput
+          <Input
+            surface="bare"
             value={milestone}
             onChangeText={(text) => setAt(index, text)}
             accessibilityLabel={t('goals.milestoneN', { index: index + 1 })}
             placeholder={t('goals.milestoneN', { index: index + 1 })}
-            placeholderTextColor={colors[scheme].mutedForeground}
             className="flex-1 py-1 text-foreground"
             maxLength={100}
           />

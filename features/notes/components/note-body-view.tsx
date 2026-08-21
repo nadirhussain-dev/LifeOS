@@ -33,6 +33,7 @@ type Props = {
 
 export function NoteBodyView({ body, onToggleChecklist }: Props) {
   const scheme = useColorScheme() ?? 'light';
+  const doneColor = habitDoneColor[scheme];
   const { t } = useTranslation();
   const lines = parseMarkdownLines(body);
   let checklistIndex = -1;
@@ -79,8 +80,8 @@ export function NoteBodyView({ body, onToggleChecklist }: Props) {
               <View
                 className="h-5 w-5 items-center justify-center rounded-md border"
                 style={{
-                  borderColor: line.checked ? habitDoneColor : colors[scheme].border,
-                  backgroundColor: line.checked ? habitDoneColor : 'transparent',
+                  borderColor: line.checked ? doneColor : colors[scheme].border,
+                  backgroundColor: line.checked ? doneColor : 'transparent',
                 }}
               >
                 {line.checked && <Check size={12} color="#ffffff" />}

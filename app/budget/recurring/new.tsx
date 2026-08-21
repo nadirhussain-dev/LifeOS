@@ -2,8 +2,9 @@ import { format } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, TextInput, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { Segmented } from '@/components/ui/segmented';
@@ -79,13 +80,13 @@ export default function NewRecurringScreen() {
 
         <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
           <Text className="font-sora-bold text-lg text-foreground">{currencySymbol(code)}</Text>
-          <TextInput
+          <Input
+            surface="bare"
             value={amount}
             onChangeText={setAmount}
             accessibilityLabel={t('budget.amount')}
             placeholder="0"
             keyboardType="decimal-pad"
-            placeholderTextColor={colors[scheme].mutedForeground}
             className="flex-1 text-foreground"
             style={{ fontSize: 18, fontFamily: 'Sora_600SemiBold' }}
           />
@@ -114,13 +115,14 @@ export default function NewRecurringScreen() {
           />
         </View>
 
-        <TextInput
+        <Input
           value={note}
           onChangeText={setNote}
           accessibilityLabel={t('fields.notes')}
           placeholder={t('budget.recurringNotePlaceholder')}
-          placeholderTextColor={colors[scheme].mutedForeground}
-          className={cardClass({ padding: 'md' }, 'text-base text-foreground')}
+          surface="card"
+          cardPadding="md"
+          className="text-base"
         />
 
         <Button

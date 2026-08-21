@@ -9,6 +9,7 @@ import { listTasks } from '@/features/tasks/services/tasks-repository';
 import { getDailyTotal } from '@/features/water-intake/services/water-intake-repository';
 import { useWaterSettingsStore } from '@/features/water-intake/store/water-settings-store';
 import i18n from '@/lib/i18n';
+import { DIGEST_REMINDER_KEY } from '@/features/notifications/services/notification-keys';
 import { cancelNotification, scheduleDailyNotification } from '@/lib/notifications';
 import { toDateKey } from '@/lib/date';
 
@@ -142,7 +143,7 @@ export async function syncDigest(): Promise<void> {
     body,
     hour: store.digestHour,
     minute: store.digestMinute,
-    data: { category: 'digest', route: '/' },
+    data: { category: 'digest', route: '/', key: DIGEST_REMINDER_KEY },
   });
   store.setDigestNotificationId(id);
 }

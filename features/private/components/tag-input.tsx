@@ -1,8 +1,8 @@
 import { X } from 'lucide-react-native';
 import { useState } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
-import { cardClass } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -78,13 +78,11 @@ export function TagInput({ value, onChange, suggestions = [], tint, placeholder 
         </View>
       ) : null}
 
-      <TextInput
+      <Input
         value={text}
         onChangeText={handleChangeText}
         onSubmitEditing={() => add(text)}
         placeholder={placeholder}
-        placeholderTextColor={theme.mutedForeground}
-        className={cardClass({ padding: 'row' }, 'text-foreground')}
         style={{ fontFamily: 'Sora_400Regular' }}
         returnKeyType="done"
         blurOnSubmit={false}

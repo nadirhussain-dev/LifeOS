@@ -1,9 +1,10 @@
-import { useRouter } from 'expo-router';
-import { Archive, ChevronLeft, Pencil, RotateCcw } from 'lucide-react-native';
+import { Archive, Pencil, RotateCcw } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
@@ -63,7 +64,6 @@ const formFor = (plan: StoragePlan): FormState => ({
  * schema.
  */
 export default function OperatorPricingScreen() {
-  const router = useRouter();
   const { t } = useTranslation();
   const { c } = useTheme();
 
@@ -106,20 +106,12 @@ export default function OperatorPricingScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <View className="flex-row items-center gap-3 px-5 pb-3 pt-14">
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          hitSlop={10}
-          className="h-10 w-10 items-center justify-center rounded-full border border-border bg-surface"
-        >
-          <ChevronLeft size={20} color={c.foreground} />
-        </Pressable>
-        <View className="flex-1">
-          <Text className="font-sora-extrabold text-xl">{t('billing.plans')}</Text>
-          <Text variant="caption">{t('operator.pricingSubtitle')}</Text>
-        </View>
-      </View>
+      <ScreenHeader
+        eyebrow={t('operator.eyebrow')}
+        title={t('billing.plans')}
+        subtitle={t('operator.pricingSubtitle')}
+        tint={c.error}
+      />
 
       <ScrollView contentContainerClassName="gap-3 px-5 pb-10" showsVerticalScrollIndicator={false}>
         {plans.map((plan) => (
@@ -192,39 +184,33 @@ export default function OperatorPricingScreen() {
               {editingExisting ? t('operator.editPlan') : t('operator.newPlan')}
             </Text>
             {!editingExisting ? (
-              <TextInput
+              <Input
                 value={form.id}
                 onChangeText={(id) => setForm((f) => (f ? { ...f, id } : f))}
                 placeholder={t('operator.planIdPlaceholder')}
-                placeholderTextColor={c.mutedForeground}
                 autoCapitalize="none"
                 autoCorrect={false}
-                className={cardClass({ padding: 'row' }, 'text-foreground')}
               />
             ) : null}
-            <TextInput
+            <Input
               value={form.name}
               onChangeText={(name) => setForm((f) => (f ? { ...f, name } : f))}
               placeholder={t('operator.planNamePlaceholder')}
-              placeholderTextColor={c.mutedForeground}
-              className={cardClass({ padding: 'row' }, 'text-foreground')}
             />
             <View className="flex-row gap-2">
-              <TextInput
+              <Input
                 value={form.storageMb}
                 onChangeText={(v) => setForm((f) => (f ? { ...f, storageMb: v } : f))}
                 placeholder={t('operator.storageMbPlaceholder')}
-                placeholderTextColor={c.mutedForeground}
                 keyboardType="numeric"
-                className={cardClass({ padding: 'row' }, 'flex-1 text-foreground')}
+                containerClassName="flex-1"
               />
-              <TextInput
+              <Input
                 value={form.priceDollars}
                 onChangeText={(v) => setForm((f) => (f ? { ...f, priceDollars: v } : f))}
                 placeholder={t('operator.priceDollarsPlaceholder')}
-                placeholderTextColor={c.mutedForeground}
                 keyboardType="decimal-pad"
-                className={cardClass({ padding: 'row' }, 'flex-1 text-foreground')}
+                containerClassName="flex-1"
               />
             </View>
             <View className="flex-row gap-2">
@@ -243,12 +229,10 @@ export default function OperatorPricingScreen() {
                 </Pressable>
               ))}
             </View>
-            <TextInput
+            <Input
               value={form.badge}
               onChangeText={(badge) => setForm((f) => (f ? { ...f, badge } : f))}
               placeholder={t('operator.badgePlaceholder')}
-              placeholderTextColor={c.mutedForeground}
-              className={cardClass({ padding: 'row' }, 'text-foreground')}
             />
             <View className="flex-row gap-2">
               <View className="flex-1">

@@ -1,8 +1,9 @@
 import { format, parseISO } from 'date-fns';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -121,13 +122,12 @@ export default function IntimacyScreen() {
         />
       </View>
 
-      <TextInput
+      <Input
         value={note}
         onChangeText={setNote}
         placeholder={t('private.intimacyNotePlaceholder')}
-        placeholderTextColor={theme.mutedForeground}
         multiline
-        className={cardClass({ padding: 'row' }, 'min-h-[120px] text-foreground')}
+        className="min-h-[120px]"
         style={{ fontFamily: 'Sora_400Regular', textAlignVertical: 'top' }}
       />
 

@@ -105,7 +105,8 @@
     "percentTasksCompleted": "{{percent}}% of tasks completed",
     "yourFocus": "Your focus",
     "forYou": "For you",
-    "wellbeing": "Wellbeing"
+    "wellbeing": "Wellbeing",
+    "closeQuickActions": "Close quick actions"
   },
   "focus": {
     "habits": "Habits",
@@ -472,7 +473,9 @@
     "unarchiveNamed": "Unarchive “{{name}}”",
     "deletedToast": "“{{title}}” deleted.",
     "reminderTitle": "Note reminder",
-    "reminderBody": "Take a look at this note."
+    "reminderBody": "Take a look at this note.",
+    "notFound": "This note no longer exists",
+    "notFoundBody": "It may have been deleted on this or another device."
   },
   "budget": {
     "title": "Budget",
@@ -782,7 +785,9 @@
     "usernameJustTaken": "Someone just took that name — try another.",
     "usernameClaimFailed": "Your account was created, but the username couldn't be saved. You can set it in Settings.",
     "usernameCheckFailed": "Couldn't check that name right now — you can still continue.",
-    "continueWithGoogle": "Continue with Google"
+    "continueWithGoogle": "Continue with Google",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "language": {
     "en": "English",
@@ -1224,7 +1229,9 @@
     "unfavoriteA11y": "Remove \"{{title}}\" from favorites",
     "playCount_one": "Played {{count}} time",
     "playCount_other": "Played {{count}} times",
-    "lastPlayed": "Last played {{time}}"
+    "lastPlayed": "Last played {{time}}",
+    "seekBar": "Seek",
+    "percentPlayed": "{{percent}}% played"
   },
   "albumCategory": {
     "gym": "Gym Progress",

@@ -3,8 +3,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Minus, Plus } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { GradientButton } from '@/components/ui/gradient-button';
 import { SheetHeader } from '@/components/ui/sheet-header';
@@ -188,14 +189,13 @@ export default function LogProgressScreen() {
 
         <View className="gap-2">
           <Text variant="micro">{t('goals.noteOptional')}</Text>
-          <TextInput
+          <Input
             value={note}
             onChangeText={setNote}
             accessibilityLabel={t('goals.progressNote')}
             placeholder={t('goals.notePlaceholder')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             multiline
-            className={cardClass({ padding: 'row' }, 'min-h-12 text-foreground')}
+            className="min-h-12"
           />
         </View>
 

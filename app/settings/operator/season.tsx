@@ -1,10 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Trash2 } from 'lucide-react-native';
+import { Trash2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Switch, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { QueryError } from '@/components/ui/query-error';
@@ -119,22 +121,12 @@ export default function OperatorSeasonScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <View className="flex-row items-center gap-3 px-5 pb-3 pt-14">
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          hitSlop={10}
-          className="h-10 w-10 items-center justify-center rounded-full border border-border bg-surface"
-        >
-          <ChevronLeft size={20} color={c.foreground} />
-        </Pressable>
-        <View className="flex-1">
-          <Text className="font-sora-extrabold text-xl" numberOfLines={1}>
-            {season?.name ?? t('operator.seasonsTitle')}
-          </Text>
-          <Text variant="caption">{t('operator.seasonSubtitle')}</Text>
-        </View>
-      </View>
+      <ScreenHeader
+        eyebrow={t('operator.eyebrow')}
+        title={season?.name ?? t('operator.seasonsTitle')}
+        subtitle={t('operator.seasonSubtitle')}
+        tint={c.error}
+      />
 
       {!season || !draft ? (
         <View className="px-5">
@@ -600,29 +592,21 @@ function LadderSection({
 
       <View className="gap-2 py-3">
         <View className="flex-row gap-2">
-          <TextInput
+          <Input
             value={day}
             onChangeText={setDay}
             placeholder={t('operator.seasonRungDay')}
-            placeholderTextColor={c.mutedForeground}
             keyboardType="numeric"
-            className={cardClass({ padding: 'row' }, 'w-24 text-foreground')}
+            className="w-24"
           />
-          <TextInput
+          <Input
             value={name}
             onChangeText={setName}
             placeholder={t('operator.seasonRungName')}
-            placeholderTextColor={c.mutedForeground}
-            className={cardClass({ padding: 'row' }, 'flex-1 text-foreground')}
+            containerClassName="flex-1"
           />
         </View>
-        <TextInput
-          value={title}
-          onChangeText={setTitle}
-          placeholder={t('operator.seasonRungReward')}
-          placeholderTextColor={c.mutedForeground}
-          className={cardClass({ padding: 'row' }, 'text-foreground')}
-        />
+        <Input value={title} onChangeText={setTitle} placeholder={t('operator.seasonRungReward')} />
         <Button
           variant="secondary"
           label={t('operator.seasonRungAdd')}
@@ -672,7 +656,6 @@ type NumberFieldProps = {
 function NumberField(props: NumberFieldProps) {
   const { label, hint, value } = props;
   const { t } = useTranslation();
-  const { c } = useTheme();
   const [text, setText] = useState(value === null ? '' : String(value));
 
   const commit = (next: string) => {
@@ -695,12 +678,12 @@ function NumberField(props: NumberFieldProps) {
         <Text className="font-sora-medium text-foreground">{label}</Text>
         <Text variant="caption">{hint}</Text>
       </View>
-      <TextInput
+      <Input
+        surface="bare"
         value={text}
         onChangeText={commit}
         keyboardType="numeric"
         placeholder={props.nullable ? t('operator.seasonNoLimit') : ''}
-        placeholderTextColor={c.mutedForeground}
         className="w-20 rounded-xl border border-border px-3 py-2 text-right text-foreground"
       />
     </View>
@@ -726,7 +709,6 @@ function DateField({
   onChange: (value: string | null) => void;
 }) {
   const { t } = useTranslation();
-  const { c } = useTheme();
   const iso = value ? new Date(value).toISOString().slice(0, 10) : '';
   const [text, setText] = useState(iso);
 
@@ -748,11 +730,11 @@ function DateField({
   return (
     <View className="flex-row items-center gap-3 py-2.5">
       <Text className="flex-1 font-sora-medium text-foreground">{label}</Text>
-      <TextInput
+      <Input
+        surface="bare"
         value={shown}
         onChangeText={commit}
         placeholder={t('operator.seasonDatePlaceholder')}
-        placeholderTextColor={c.mutedForeground}
         autoCapitalize="none"
         autoCorrect={false}
         className="w-36 rounded-xl border border-border px-3 py-2 text-right text-foreground"

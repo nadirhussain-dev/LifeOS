@@ -7,8 +7,8 @@ import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { formatStudyDuration } from '@/features/study/services/study-stats';
 import type { StudySession, StudySubject } from '@/features/study/types/study.types';
-
-const STUDY_TINT = '#8b5cf6';
+import { contentTints } from '@/constants/design-tokens';
+import { useTheme } from '@/hooks/use-theme';
 
 const MODE_LABEL_KEY: Record<StudySession['mode'], string> = {
   pomodoro: 'study.modePomodoro',
@@ -23,8 +23,12 @@ type Props = {
 };
 
 export function StudySessionCard({ session, subject, onLongPress }: Props) {
+  const { tint, resolve } = useTheme();
+  // The session rating star. Content yellow, whose light value is the `#eab308`
+  // this was hardcoded to — so light is unchanged and dark finally steps up.
+  const starColor = resolve(contentTints.yellow);
   const { t } = useTranslation();
-  const color = subject?.colorToken ?? STUDY_TINT;
+  const color = subject?.colorToken ?? tint('study');
 
   return (
     <Pressable
@@ -53,7 +57,7 @@ export function StudySessionCard({ session, subject, onLongPress }: Props) {
         </Text>
         {session.focusRating != null && (
           <View className="flex-row items-center gap-0.5">
-            <Star size={11} color="#eab308" fill="#eab308" />
+            <Star size={11} color={starColor} fill={starColor} />
             <Text variant="caption">{session.focusRating}</Text>
           </View>
         )}

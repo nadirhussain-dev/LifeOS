@@ -3,10 +3,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ClipboardPaste } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import {
@@ -256,16 +256,17 @@ export default function AcceptAlbumInviteScreen() {
 
         <View className="gap-3">
           <Text variant="micro">{t('receive.stepPayload')}</Text>
-          <TextInput
+          <Input
             value={payload}
             onChangeText={setPayload}
             accessibilityLabel={t('receive.stepPayload')}
             placeholder={t('receive.payloadPlaceholder')}
-            placeholderTextColor={c.mutedForeground}
             multiline
             autoCapitalize="none"
             autoCorrect={false}
-            className={cardClass({ padding: 'none' }, 'px-4 py-3 text-foreground')}
+            surface="card"
+            cardPadding="none"
+            className="px-4 py-3"
             style={{ minHeight: 90, fontFamily: 'Sora_400Regular', fontSize: 13 }}
           />
           <Pressable
@@ -284,15 +285,16 @@ export default function AcceptAlbumInviteScreen() {
         <View className="gap-3">
           <Text variant="micro">{t('receive.stepCode')}</Text>
           <Text variant="caption">{t('receive.codeHint')}</Text>
-          <TextInput
+          <Input
             value={code}
             onChangeText={setCode}
             accessibilityLabel={t('receive.stepCode')}
             placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
-            placeholderTextColor={c.mutedForeground}
             autoCapitalize="characters"
             autoCorrect={false}
-            className={cardClass({ padding: 'none' }, 'px-4 py-4 text-foreground')}
+            surface="card"
+            cardPadding="none"
+            className="px-4 py-4"
             style={{ fontFamily: 'Sora_500Medium', fontSize: 17, letterSpacing: 1.5 }}
           />
         </View>

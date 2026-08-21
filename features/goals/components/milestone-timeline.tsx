@@ -3,10 +3,11 @@ import { format } from 'date-fns';
 import { Check, Plus } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
+import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -105,11 +106,11 @@ export function MilestoneTimeline({ milestones, tint, onToggle, onAdd, onRemove 
         >
           <Plus size={13} color={colors[scheme].mutedForeground} />
         </View>
-        <TextInput
+        <Input
+          surface="bare"
           value={draft}
           onChangeText={setDraft}
           placeholder={t('goals.addAMilestone')}
-          placeholderTextColor={colors[scheme].mutedForeground}
           onSubmitEditing={submitDraft}
           returnKeyType="done"
           className="flex-1 py-1 text-foreground"

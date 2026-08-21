@@ -4,8 +4,9 @@ import { useLocalSearchParams } from 'expo-router';
 import { Send, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
@@ -77,17 +78,18 @@ export default function AlbumNotesScreen() {
       footer={
         canSend ? (
           <View className="flex-row items-center gap-2 rounded-2xl border border-border px-3 py-2">
-            <TextInput
+            <Input
+              surface="bare"
               value={draft}
               onChangeText={setDraft}
               placeholder={prompt}
-              placeholderTextColor={theme.mutedForeground}
               multiline
               maxLength={2000}
               className="flex-1 text-foreground"
               style={{ maxHeight: 90 }}
             />
             <Pressable
+              hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={t('private.postComment')}
               disabled={!draft.trim() || addNote.isPending}

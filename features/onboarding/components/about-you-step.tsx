@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { StepScaffold } from '@/features/onboarding/components/step-scaffold';
 import { GENDER_OPTIONS } from '@/features/profile/constants';
@@ -56,18 +56,19 @@ export function AboutYouStep({
       }
     >
       <View className="gap-7">
-        <TextInput
+        <Input
           value={name}
           onChangeText={onChangeName}
           accessibilityLabel={t('onboarding.yourName')}
           placeholder={t('onboarding.yourName')}
-          placeholderTextColor={c.mutedForeground}
           autoFocus={!name}
           autoCapitalize="words"
           autoComplete="name"
           returnKeyType="done"
           onSubmitEditing={() => name.trim() && onNext()}
-          className={cardClass({ padding: 'none' }, 'px-4 py-4 text-lg text-foreground')}
+          surface="card"
+          cardPadding="none"
+          className="px-4 py-4 text-lg"
           style={{ fontFamily: 'Sora_400Regular' }}
         />
 

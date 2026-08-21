@@ -1,9 +1,11 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { CheckCircle2, ChevronLeft, ShieldAlert, ShieldX, XCircle } from 'lucide-react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { CheckCircle2, ShieldAlert, ShieldX, XCircle } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
@@ -45,7 +47,6 @@ const MODULES: { id: string; titleKey: string }[] = [
  */
 export default function OperatorAccountScreen() {
   const { userId, label } = useLocalSearchParams<{ userId: string; label?: string }>();
-  const router = useRouter();
   const { t } = useTranslation();
   const { c } = useTheme();
 
@@ -124,35 +125,21 @@ export default function OperatorAccountScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      <View className="flex-row items-center gap-3 px-5 pb-3 pt-14">
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.back()}
-          hitSlop={10}
-          className="h-10 w-10 items-center justify-center rounded-full border border-border bg-surface"
-        >
-          <ChevronLeft size={20} color={c.foreground} />
-        </Pressable>
-        <View className="flex-1">
-          <Text className="font-sora-extrabold text-xl" numberOfLines={1}>
-            {detail?.displayName ?? detail?.username ?? label ?? userId}
-          </Text>
-          <Text variant="caption" numberOfLines={1} selectable>
-            {userId}
-          </Text>
-        </View>
-      </View>
+      <ScreenHeader
+        eyebrow={t('operator.eyebrow')}
+        title={detail?.displayName ?? detail?.username ?? label ?? userId}
+        subtitle={userId}
+        tint={c.error}
+      />
 
       <ScrollView contentContainerClassName="gap-6 px-5 pb-10" showsVerticalScrollIndicator={false}>
         <View className="gap-2">
           <Text variant="micro">{t('operator.reasonLabel')}</Text>
-          <TextInput
+          <Input
             value={reason}
             onChangeText={setReason}
             placeholder={t('operator.reasonPlaceholder')}
-            placeholderTextColor={c.mutedForeground}
             multiline
-            className={cardClass({ padding: 'row' }, 'text-foreground')}
             style={{ fontFamily: 'Sora_400Regular', minHeight: 52 }}
           />
           <Text variant="caption">{t('operator.reasonHint')}</Text>

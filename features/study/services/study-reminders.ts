@@ -2,8 +2,16 @@ import {
   useStudyReminderStore,
   type StudyReminderSettings,
 } from '@/features/study/store/study-reminder-store';
+import {
+  STUDY_KEY_PREFIX,
+  studyReminderKey,
+} from '@/features/notifications/services/notification-keys';
 import i18n from '@/lib/i18n';
-import { cancelNotifications, scheduleWeeklyNotification } from '@/lib/notifications';
+import {
+  cancelNotifications,
+  cancelScheduledByKeyPrefix,
+  scheduleWeeklyNotification,
+} from '@/lib/notifications';
 
 /**
  * The daily study nudge.
@@ -34,6 +42,9 @@ export async function syncStudyReminders(
 ): Promise<string[]> {
   const store = useStudyReminderStore.getState();
   await cancelNotifications(store.scheduledNotificationIds);
+  // Dropping a weekday retires its key, so the stored ids are not enough on
+  // their own — see the same note in water-reminders.ts.
+  await cancelScheduledByKeyPrefix(STUDY_KEY_PREFIX);
 
   if (!settings.enabled || settings.days.length === 0) {
     store.setReminder(settings, []);
@@ -50,7 +61,7 @@ export async function syncStudyReminders(
       weekday,
       hour: settings.hour,
       minute: settings.minute,
-      data: { category: 'study', route: '/study' },
+      data: { category: 'study', route: '/study', key: studyReminderKey(weekday) },
     });
     if (id) ids.push(id);
   }

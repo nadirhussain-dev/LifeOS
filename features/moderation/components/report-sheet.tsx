@@ -11,6 +11,7 @@ import { forwardRef, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -180,11 +181,12 @@ export const ReportSheet = forwardRef<BottomSheetModal, Props>(function ReportSh
           })}
         </View>
 
-        <BottomSheetTextInput
+        <Input
+          surface="bare"
+          as={BottomSheetTextInput}
           value={note}
           onChangeText={setNote}
           placeholder={t('sharing.reportNotePlaceholder')}
-          placeholderTextColor={theme.mutedForeground}
           multiline
           maxLength={500}
           accessibilityLabel={t('sharing.reportNotePlaceholder')}

@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { CategoryCapEditor } from '@/features/budget/components/category-cap-editor';
 import { ChevronForward } from '@/components/ui/directional-icon';
@@ -93,13 +94,13 @@ export default function BudgetSettingsScreen() {
           </Text>
           <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
             <Text className="font-sora-bold text-lg text-foreground">{currencySymbol(code)}</Text>
-            <TextInput
+            <Input
+              surface="bare"
               value={monthlyBudget}
               onChangeText={setMonthlyBudget}
               accessibilityLabel={t('budget.monthlyBudget')}
               placeholder="0"
               keyboardType="decimal-pad"
-              placeholderTextColor={colors[scheme].mutedForeground}
               className="flex-1 text-foreground"
               style={{ fontSize: 18, fontFamily: 'Sora_600SemiBold' }}
             />

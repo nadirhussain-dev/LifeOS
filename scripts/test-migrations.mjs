@@ -7680,4 +7680,88 @@ await test('0066 retention counts a cohort that is genuinely thirty days in', as
   });
 });
 
+// ---------------------------------------------------------------------------
+console.log('\npush receipts (0068)');
+// ---------------------------------------------------------------------------
+
+await test('0068 push_receipts is invisible to every authenticated user', async () => {
+  // The table has RLS on and no policy at all, which denies everyone. Only the
+  // edge functions touch it, with the service-role key, which bypasses RLS —
+  // so "nobody can read it" is the intended reading rather than an oversight.
+  const now = Date.now();
+  await asUser(db, ALICE, async () => {
+    await db.query(`select public.register_push_token('ExponentPushToken[receipts]','ios',$1)`, [
+      now,
+    ]);
+  });
+  await db.query(
+    `insert into public.push_receipts (ticket_id, token, created_at)
+     values ('ticket-1','ExponentPushToken[receipts]',$1)`,
+    [now],
+  );
+
+  for (const who of [ALICE, BOB]) {
+    await asUser(db, who, async () => {
+      expectEqual(
+        await count(`select count(*)::int n from public.push_receipts`),
+        0,
+        'rows this user can see',
+      );
+    });
+  }
+  expectEqual(
+    await count(`select count(*)::int n from public.push_receipts`),
+    1,
+    'the row is really there, as the service role sees it',
+  );
+});
+
+await test('0068 releasing a token takes its pending receipts with it', async () => {
+  // Without the cascade, a released device would leave receipt rows pointing at
+  // a token that no longer exists — and the checker would go on asking Expo
+  // about messages sent to a device nobody can act on any more.
+  await asUser(db, ALICE, async () => {
+    await db.query(`select public.release_push_token('ExponentPushToken[receipts]')`);
+  });
+  expectEqual(
+    await count(`select count(*)::int n from public.push_receipts`),
+    0,
+    'receipts left behind',
+  );
+});
+
+await test('0068 the sweep drops only what is older than the cutoff', async () => {
+  const now = Date.now();
+  await asUser(db, ALICE, async () => {
+    await db.query(`select public.register_push_token('ExponentPushToken[sweep]','ios',$1)`, [now]);
+  });
+  await db.query(
+    `insert into public.push_receipts (ticket_id, token, created_at) values
+       ('old-1','ExponentPushToken[sweep]',$1),
+       ('new-1','ExponentPushToken[sweep]',$2)`,
+    [now - 48 * 60 * 60 * 1000, now],
+  );
+
+  const removed = (
+    await one(`select public.sweep_push_receipts($1) as v`, [now - 24 * 60 * 60 * 1000])
+  ).v;
+  expectEqual(removed, 1, 'rows swept');
+  expectEqual(
+    (await one(`select ticket_id from public.push_receipts`)).ticket_id,
+    'new-1',
+    'the recent ticket survives',
+  );
+});
+
+await test('0068 the sweep is not reachable from a user session', async () => {
+  // It deletes across every account. A grant to `authenticated` would let any
+  // signed-in user wipe the delivery bookkeeping for everybody.
+  await asUser(db, ALICE, async () => {
+    await expectRejection(
+      () => db.query(`select public.sweep_push_receipts($1)`, [Date.now()]),
+      'permission denied',
+    );
+  });
+});
+
 summary();
