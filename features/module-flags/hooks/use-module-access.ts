@@ -1,5 +1,5 @@
 import { usePathname, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { AppState } from 'react-native';
 
 import { moduleForPath, privateModuleForPath } from '@/features/hub/config/route-modules';
@@ -52,6 +52,46 @@ export function useModuleAccess(moduleId: string): ModuleAccess {
     return { allowed: false, reason: 'locked' };
   }
   return { allowed: true };
+}
+
+/**
+ * A reactive `(moduleId) => boolean` for screens that render another module's
+ * content.
+ *
+ * The same three gates as `useModuleAccess`, and deliberately so: all three of
+ * them stop the module's own routes from opening, so anything that surfaces its
+ * content elsewhere — a dashboard widget, a search hit, a correlation on the
+ * Insights screen — is offering a tap-through to a screen the guard will bounce,
+ * and in the privatised case is showing the content itself on a screen that
+ * anybody holding the phone can see.
+ *
+ * `moduleMayBeNamed()` is the same rule read outside React, for the scheduler
+ * and the home-screen widget. This is the version a component can subscribe to,
+ * because a module being privatised has to blank the screen already rendering
+ * it rather than the next one.
+ *
+ * Everything is hidden until the private store has rehydrated — the same
+ * reasoning as the route guard's `if (!hydrated) return`, but resolved the other
+ * way because a screen has to render *something* meanwhile: a frame of nothing
+ * is recoverable, a frame of somebody's private module is not.
+ */
+export function useModuleGate(): (moduleId: string) => boolean {
+  const flags = useModuleFlagsStore((s) => s.flags);
+  const overrides = useModuleCurationStore((s) => s.overrides);
+  const privatised = usePrivateStore((s) => s.privatised);
+  const key = usePrivateStore((s) => s.key);
+  const hydrated = usePrivateStore((s) => s.hydrated);
+
+  return useCallback(
+    (moduleId: string) => {
+      if (!hydrated) return false;
+      if (flags[moduleId]?.enabled === false) return false;
+      if (isClosedByUser(moduleId, overrides)) return false;
+      if (privatised.includes(moduleId) && key === null) return false;
+      return true;
+    },
+    [flags, overrides, privatised, key, hydrated],
+  );
 }
 
 /**
