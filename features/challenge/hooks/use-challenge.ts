@@ -12,14 +12,22 @@ import type {
   ChainDay,
   ChallengeTier,
   ChecklistItem,
+  FinishedRun,
 } from '@/features/challenge/types/challenge.types';
 import { isSupabaseConfigured } from '@/lib/env';
 import { reportError } from '@/lib/error-reporting';
 import { supabase } from '@/lib/supabase';
 
-/** What `challenge_today()` returns. Server-owned; see migrations 0048 and 0055. */
+/** What `challenge_today()` returns. Server-owned; see migrations 0048, 0055 and 0069. */
 export type ChallengeTodayResponse = {
+  /**
+   * A run is in progress. Deliberately still false for a finished one — every
+   * caller reads this as "there is a day to be won", and 0069 hands the
+   * finished run back separately rather than widening it.
+   */
   enrolled: boolean;
+  /** The last run that is over, for the summary. Null until there is one. */
+  finishedRun?: FinishedRun | null;
   seasonId?: string;
   seasonName?: string;
   /**

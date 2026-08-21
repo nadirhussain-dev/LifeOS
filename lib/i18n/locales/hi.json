@@ -2852,7 +2852,18 @@
     "winBackNext_one": "अगली सीढ़ी तक {{count}} दिन। आज पहला दिन है।",
     "winBackNext_other": "अगली सीढ़ी तक {{count}} दिन। आज पहला दिन है।",
     "winBackPlain_one": "आप {{count}} दिन पर हैं। अगले के लिए तैयार?",
-    "winBackPlain_other": "आप {{count}} दिन पर हैं। अगले के लिए तैयार?"
+    "winBackPlain_other": "आप {{count}} दिन पर हैं। अगले के लिए तैयार?",
+    "eventSeasonEnded": "सीज़न समाप्त हुआ",
+    "summaryWonTitle": "आपने {{name}} पूरा किया",
+    "summaryEndedTitle": "{{name}} समाप्त हो गया",
+    "summaryReached": "सबसे ऊँचा पायदान: {{name}}",
+    "summaryNoRung": "इस बार कोई पायदान नहीं मिला",
+    "summaryDaysLabel": "बचाए गए दिन",
+    "summaryShieldsLabel": "अर्जित ढालें",
+    "celebrateTier": "आप {{name}} तक पहुँचे",
+    "celebrateShield": "ढाल अर्जित — एक छूटा दिन ढक जाएगा",
+    "celebrateCompleted": "आपने हर पायदान चढ़ लिया",
+    "celebrateSeasonEnded": "आपका सीज़न समाप्त — देखें कैसा रहा"
   },
   "env": {
     "staging": "स्टेजिंग बिल्ड",

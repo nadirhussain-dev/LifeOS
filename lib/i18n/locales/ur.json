@@ -2852,7 +2852,18 @@
     "winBackNext_one": "اگلے درجے تک {{count}} دن۔ آج پہلا دن ہے۔",
     "winBackNext_other": "اگلے درجے تک {{count}} دن۔ آج پہلا دن ہے۔",
     "winBackPlain_one": "آپ {{count}} دن پر ہیں۔ اگلے کے لیے تیار؟",
-    "winBackPlain_other": "آپ {{count}} دن پر ہیں۔ اگلے کے لیے تیار؟"
+    "winBackPlain_other": "آپ {{count}} دن پر ہیں۔ اگلے کے لیے تیار؟",
+    "eventSeasonEnded": "سیزن ختم ہوا",
+    "summaryWonTitle": "آپ نے {{name}} مکمل کیا",
+    "summaryEndedTitle": "{{name}} ختم ہو گیا",
+    "summaryReached": "بلند ترین مرحلہ: {{name}}",
+    "summaryNoRung": "اس بار کوئی مرحلہ حاصل نہیں ہوا",
+    "summaryDaysLabel": "محفوظ دن",
+    "summaryShieldsLabel": "حاصل کردہ ڈھالیں",
+    "celebrateTier": "آپ {{name}} تک پہنچے",
+    "celebrateShield": "ڈھال حاصل — ایک چھوٹا دن ڈھک جائے گا",
+    "celebrateCompleted": "آپ نے ہر مرحلہ عبور کر لیا",
+    "celebrateSeasonEnded": "آپ کا سیزن ختم — دیکھیں کیسا رہا"
   },
   "env": {
     "staging": "اسٹیجنگ بلڈ",

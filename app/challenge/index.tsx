@@ -19,6 +19,7 @@ import { ShareButton, ShareCard } from '@/features/challenge/components/share-ca
 import { ShieldSlots } from '@/features/challenge/components/shield-slots';
 import { TodayChecklist } from '@/features/challenge/components/today-checklist';
 import { SeasonNotice } from '@/features/challenge/components/season-notice';
+import { SeasonSummary } from '@/features/challenge/components/season-summary';
 import {
   useChallengeChain,
   useChallengeChecklist,
@@ -28,10 +29,12 @@ import {
   useChallengeToday,
   useSeasonStatus,
 } from '@/features/challenge/hooks/use-challenge';
+import { celebrationsFor } from '@/features/challenge/services/celebrations';
 import { nextTier } from '@/features/challenge/services/challenge-math';
 import { canJoin } from '@/features/challenge/services/season-state';
 import { currentDay, useChallengeStore } from '@/features/challenge/store/challenge-store';
 import { useTheme } from '@/hooks/use-theme';
+import { toast } from '@/lib/toast-store';
 
 /**
  * The challenge, on one screen.
@@ -61,7 +64,14 @@ export default function ChallengeScreen() {
   const checklist = useChallengeChecklist();
   const chain = useChallengeChain(today.data?.seasonId);
   const rank = useChallengeRank();
-  const events = useChallengeEvents(today.data?.seasonId);
+  const finishedRun = today.data?.finishedRun ?? null;
+  /*
+   * The live run's season, or the finished one's when there is no live run.
+   * Keyed off `seasonId` alone, this query switched itself off the moment a run
+   * ended — taking the whole timeline with it, and the demotion sheet and the
+   * celebrations below, which all read from it.
+   */
+  const events = useChallengeEvents(today.data?.seasonId ?? finishedRun?.seasonId);
 
   const lastSeenEventId = useChallengeStore((s) => s.lastSeenEventId);
   const lastClosedDay = useChallengeStore((s) => s.lastClosedDay);
@@ -74,7 +84,7 @@ export default function ChallengeScreen() {
   // The ladder of the run being drawn, which is not necessarily the season on
   // offer — see `useChallengeTiers`. Falls back to the joinable season's ladder
   // for the not-enrolled case, where there is no run yet to belong to.
-  const runSeasonId = today.data?.seasonId ?? status.seasonId;
+  const runSeasonId = today.data?.seasonId ?? finishedRun?.seasonId ?? status.seasonId;
   const seasonTiers = useChallengeTiers(runSeasonId);
   // Memoised because the `??` chain builds a fresh array on every render, and
   // the win-back effect below depends on it — without this it would re-arm the
@@ -121,6 +131,50 @@ export default function ChallengeScreen() {
     void scheduleWinBack(toDays, next ? next.dayThreshold - toDays : null);
   }, [unseenDemotion, tiers]);
 
+  /**
+   * Says the things the engine has always recorded and the app has never read.
+   *
+   * `challenge_credit_day` writes `tier_reached`, `shield_earned` and
+   * `completed` on the very call that earns them, and until now progress simply
+   * appeared in a number on the next refetch — earning a rung after ninety days
+   * was silent. `celebrationsFor` stops the walk at an unseen fall so the sheet
+   * below still finds it; see the note there for why the watermark is shared.
+   *
+   * Toasts rather than a sheet: a rung is worth marking, and a modal in front
+   * of somebody who opened this screen to tick today's boxes is worth less than
+   * the tick.
+   */
+  const celebrations = useMemo(
+    () => celebrationsFor(events.data ?? [], lastSeenEventId),
+    [events.data, lastSeenEventId],
+  );
+
+  useEffect(() => {
+    if (celebrations.show.length === 0) return;
+    for (const event of celebrations.show) {
+      const rung = tiers.find((tier) => tier.dayThreshold === Number(event.detail.dayThreshold));
+      switch (event.kind) {
+        case 'tier_reached':
+          toast.success(
+            t('challenge.celebrateTier', {
+              name: rung?.name ?? String(event.detail.dayThreshold ?? ''),
+            }),
+          );
+          break;
+        case 'shield_earned':
+          toast.success(t('challenge.celebrateShield'));
+          break;
+        case 'completed':
+          toast.success(t('challenge.celebrateCompleted'));
+          break;
+        case 'season_ended':
+          toast.info(t('challenge.celebrateSeasonEnded'));
+          break;
+      }
+    }
+    markEventsSeen(celebrations.watermark);
+  }, [celebrations, tiers, t, markEventsSeen]);
+
   const body = () => {
     if (today.isError || season.isError) {
       return (
@@ -145,11 +199,22 @@ export default function ChallengeScreen() {
     if (!enrolled) {
       const joinable = canJoin(status.state);
       return (
-        <View className={cardClass({ padding: 'md' }, 'gap-3')}>
-          <Text variant="subheading">{t('challenge.notEnrolledTitle')}</Text>
-          <Text variant="muted">{t('challenge.notEnrolledBody')}</Text>
-
+        <View className="gap-4">
           {/*
+            What the last run came to, above the invitation to start another.
+
+            Both, and in this order. The screen used to show only the second —
+            finishing a season and never having played produced the same card —
+            and putting the summary underneath would make the app's first
+            response to a completed streak be "start a run".
+          */}
+          {finishedRun ? <SeasonSummary run={finishedRun} tiers={tiers} /> : null}
+
+          <View className={cardClass({ padding: 'md' }, 'gap-3')}>
+            <Text variant="subheading">{t('challenge.notEnrolledTitle')}</Text>
+            <Text variant="muted">{t('challenge.notEnrolledBody')}</Text>
+
+            {/*
             The state, named and dated, rather than one blanket sentence.
 
             This card used to collapse six different situations into "No season
@@ -159,43 +224,47 @@ export default function ChallengeScreen() {
             "this is broken". `SeasonNotice` says which season, which state, and
             when; the button below then says what to do about it.
           */}
-          <View className="rounded-2xl border border-border p-3">
-            <SeasonNotice status={status} />
-          </View>
+            <View className="rounded-2xl border border-border p-3">
+              <SeasonNotice status={status} />
+            </View>
 
-          {/*
+            {/*
             Every state ends in something to press. This screen once explained
             the requirement and then stopped: a signed-out visitor read
             "joining a run needs an account" under a heading saying they were
             not in one, with no way to make an account anywhere on the screen.
             Being told what you need is only useful next to the way to get it.
           */}
-          {!session ? (
-            <>
-              <Text variant="caption">{t('challenge.signInBody')}</Text>
-              <Button label={t('sync.signInCreate')} onPress={() => router.push('/(auth)/login')} />
-            </>
-          ) : joinable ? (
-            <Button
-              label={t('challenge.startRun')}
-              onPress={() => router.push('/challenge/join')}
-            />
-          ) : (
-            // Nothing in the remaining states is the user's to fix, so the only
-            // honest action is to ask again. Without it the screen is frozen on
-            // an answer that was true when it loaded and cannot update — and
-            // these are exactly the answers an operator changes from the
-            // console while somebody is looking at them.
-            <Button
-              label={season.isFetching ? t('common.loadingEllipsis') : t('challenge.checkAgain')}
-              variant="secondary"
-              disabled={season.isFetching}
-              onPress={() => {
-                void season.refetch();
-                void today.refetch();
-              }}
-            />
-          )}
+            {!session ? (
+              <>
+                <Text variant="caption">{t('challenge.signInBody')}</Text>
+                <Button
+                  label={t('sync.signInCreate')}
+                  onPress={() => router.push('/(auth)/login')}
+                />
+              </>
+            ) : joinable ? (
+              <Button
+                label={t('challenge.startRun')}
+                onPress={() => router.push('/challenge/join')}
+              />
+            ) : (
+              // Nothing in the remaining states is the user's to fix, so the only
+              // honest action is to ask again. Without it the screen is frozen on
+              // an answer that was true when it loaded and cannot update — and
+              // these are exactly the answers an operator changes from the
+              // console while somebody is looking at them.
+              <Button
+                label={season.isFetching ? t('common.loadingEllipsis') : t('challenge.checkAgain')}
+                variant="secondary"
+                disabled={season.isFetching}
+                onPress={() => {
+                  void season.refetch();
+                  void today.refetch();
+                }}
+              />
+            )}
+          </View>
         </View>
       );
     }

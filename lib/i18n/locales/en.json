@@ -2852,7 +2852,18 @@
     "winBackNext_one": "{{count}} day to the next rung. Today is day one.",
     "winBackNext_other": "{{count}} days to the next rung. Today is day one.",
     "winBackPlain_one": "You are on {{count}} day. Ready for the next?",
-    "winBackPlain_other": "You are on {{count}} days. Ready for the next?"
+    "winBackPlain_other": "You are on {{count}} days. Ready for the next?",
+    "eventSeasonEnded": "The season ended",
+    "summaryWonTitle": "You finished {{name}}",
+    "summaryEndedTitle": "{{name}} has ended",
+    "summaryReached": "Furthest rung: {{name}}",
+    "summaryNoRung": "No rung reached this time",
+    "summaryDaysLabel": "Days kept",
+    "summaryShieldsLabel": "Shields earned",
+    "celebrateTier": "You reached {{name}}",
+    "celebrateShield": "Shield earned — one missed day is covered",
+    "celebrateCompleted": "You climbed every rung",
+    "celebrateSeasonEnded": "Your season has ended — see how it went"
   },
   "env": {
     "staging": "Staging build",
