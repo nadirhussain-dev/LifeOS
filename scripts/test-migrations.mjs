@@ -6755,6 +6755,224 @@ await test('0065 another account cannot see or attest into this run', async () =
 });
 
 // ---------------------------------------------------------------------------
+console.log('\nthe end of a run (0069)');
+
+// Everything here is about the season's own window and the terminal states, so
+// each test states the window it wants rather than inheriting one. The season is
+// put back to "open, no live rule" first: the 0065 section above leaves the rule
+// on, and a live-write season would fail these for a reason that has nothing to
+// do with what they are testing.
+const restoreSeason = () =>
+  db.query(
+    `update public.challenge_seasons
+        set enabled = true, starts_at = null, ends_at = null, require_live_writes = false
+      where id = $1`,
+    [SEASON],
+  );
+
+const clearRuns = async (user) => {
+  await db.query(`delete from public.challenge_days where user_id = $1`, [user]);
+  await db.query(`delete from public.challenge_events where user_id = $1`, [user]);
+  await setRun(user, {
+    qualified_days: 0,
+    perfect_run: 0,
+    shields: 0,
+    shields_earned: 0,
+    recent_misses: 0,
+    current_tier_day: 0,
+    highest_tier_day: 0,
+    status: 'active',
+    completed_at: null,
+    finished_at: null,
+  });
+};
+
+await test('0069 a day after the season closed is refused', async () => {
+  await restoreSeason();
+  await clearRuns(RUNNER);
+  await db.query(
+    `update public.challenge_seasons set ends_at = now() - interval '2 days'
+                   where id = $1`,
+    [SEASON],
+  );
+  const today = (await one(`select public.challenge_local_day(now(), 0, 0)::text as d`)).d;
+  const res = await asUser(db, RUNNER, () =>
+    one(`select public.record_challenge_day($1::date, $2::jsonb, 120, 'dev-runner') as v`, [
+      today,
+      JSON.stringify({ habits: 2, water: 5, journal: 1 }),
+    ]),
+  );
+  expectEqual(res.v.reason, 'season closed', 'named, not silently unqualified');
+  expectEqual((await runRow(RUNNER)).qualified_days, 0, 'and nothing was credited');
+});
+
+await test('0069 a day before the season opened is refused', async () => {
+  await restoreSeason();
+  await clearRuns(RUNNER);
+  await db.query(
+    `update public.challenge_seasons set starts_at = now() + interval '3 days'
+                   where id = $1`,
+    [SEASON],
+  );
+  const today = (await one(`select public.challenge_local_day(now(), 0, 0)::text as d`)).d;
+  const res = await asUser(db, RUNNER, () =>
+    one(`select public.record_challenge_day($1::date, $2::jsonb, 120, 'dev-runner') as v`, [
+      today,
+      JSON.stringify({ habits: 2, water: 5, journal: 1 }),
+    ]),
+  );
+  expectEqual(res.v.reason, 'season closed', 'the same refusal at the other end');
+});
+
+await test('0069 the last day of the season still credits when it is flushed the morning after', async () => {
+  // The reason the guard is on the *claimed* day and not on now(): a day that
+  // was genuinely worked inside the window must survive an offline night.
+  await restoreSeason();
+  await clearRuns(RUNNER);
+  await db.query(
+    `update public.challenge_seasons set ends_at = now() - interval '1 hour'
+                   where id = $1`,
+    [SEASON],
+  );
+  const yesterday = (await one(`select (public.challenge_local_day(now(), 0, 0) - 1)::text as d`))
+    .d;
+  const res = await asUser(db, RUNNER, () =>
+    one(`select public.record_challenge_day($1::date, $2::jsonb, 120, 'dev-runner') as v`, [
+      yesterday,
+      JSON.stringify({ habits: 2, water: 5, journal: 1 }),
+    ]),
+  );
+  expectEqual(res.v.qualified, true, 'earned fairly, credited late');
+});
+
+await test('0069 finalising settles the tail of the season before it closes the run', async () => {
+  await restoreSeason();
+  await clearRuns(RUNNER);
+  await db.query(
+    `update public.challenge_seasons set ends_at = now() - interval '2 days'
+                   where id = $1`,
+    [SEASON],
+  );
+  const close = (
+    await one(`select public.challenge_local_day(now() - interval '2 days', 0, 0) as d`)
+  ).d;
+  await setRun(RUNNER, { qualified_days: 40, perfect_run: 40, shields: 1 });
+  await db.query(
+    `update public.challenge_enrollments set last_settled_day = $3::date - 3
+      where user_id = $1 and season_id = $2`,
+    [RUNNER, SEASON, close],
+  );
+
+  // At least this one. Other suites above leave their own users enrolled in
+  // seasons with past end dates, and the sweep is global by design — asserting
+  // an exact total here would make this test fail whenever one of them changes.
+  expectEqual(
+    (await one(`select public.finalize_ended_seasons() as n`)).n >= 1,
+    true,
+    'the sweep finished runs',
+  );
+
+  expectEqual(
+    await count(`select count(*)::int n from public.challenge_days where user_id = $1`, [RUNNER]),
+    3,
+    'the three unaccounted days of the season were judged',
+  );
+  const r = await runRow(RUNNER);
+  expectEqual(r.status, 'ended', "and the run is 'ended', not 'completed'");
+  expectEqual(r.finished_at !== null, true, 'stamped with when it stopped');
+  expectEqual(r.shields, 0, 'the shield it was holding was spent on the way out');
+});
+
+await test('0069 finalising twice changes nothing', async () => {
+  expectEqual(
+    (await one(`select public.finalize_ended_seasons() as n`)).n,
+    0,
+    'nothing left to finish',
+  );
+  expectEqual((await runRow(RUNNER)).status, 'ended', 'and the run is untouched');
+});
+
+await test('0069 a completed run is never re-labelled as merely ended', async () => {
+  // Reaching the top rung and running out of calendar are different outcomes,
+  // and the summary screen is the thing that has to tell them apart.
+  await restoreSeason();
+  await clearRuns(RUNNER2);
+  await db.query(
+    `update public.challenge_seasons set ends_at = now() - interval '2 days'
+                   where id = $1`,
+    [SEASON],
+  );
+  await setRun(RUNNER2, { status: 'completed', completed_at: 'now()', qualified_days: 365 });
+  await one(`select public.finalize_ended_seasons() as n`);
+  expectEqual((await runRow(RUNNER2)).status, 'completed', 'still completed');
+});
+
+await test('0069 finishing a run frees the seat the next season needs', async () => {
+  // `challenge_enrollments_one_active` is unique on (user_id) where status =
+  // 'active'. While nothing ever finished a run, season one's row blocked the
+  // same person joining season two — the programme could not have had one.
+  const SEASON2 = (
+    await one(
+      `insert into public.challenge_seasons (name, enabled) values ('Second Season', true)
+       returning id`,
+    )
+  ).id;
+  for (const m of ['habits', 'water', 'journal']) {
+    await db.query(`insert into public.challenge_modules (season_id, module_id) values ($1, $2)`, [
+      SEASON2,
+      m,
+    ]);
+  }
+  await asUser(db, RUNNER, () =>
+    one(
+      `select public.enroll_in_challenge($1::uuid, 0, $2::text[], $3::text[], 'dev-runner') as v`,
+      [SEASON2, '{habits,water,journal}', '{}'],
+    ),
+  );
+  expectEqual(
+    await count(
+      `select count(*)::int n from public.challenge_enrollments
+        where user_id = $1 and status = 'active'`,
+      [RUNNER],
+    ),
+    1,
+    'season two started',
+  );
+  // Clean up so the tests after this one still see one run per user.
+  await db.query(`delete from public.challenge_enrollments where season_id = $1`, [SEASON2]);
+  await db.query(`delete from public.challenge_seasons where id = $1`, [SEASON2]);
+});
+
+await test('0069 a finished run is still readable, so winning does not empty the screen', async () => {
+  // challenge_today() returned {enrolled:false} for anything not 'active', so
+  // the app offered to start a run the moment one finished — the same answer it
+  // gives somebody who has never played.
+  const res = await asUser(db, RUNNER, () => one(`select public.challenge_today() as v`));
+  expectEqual(res.v.finishedRun !== null, true, 'the finished run comes back');
+  expectEqual(res.v.finishedRun.status, 'ended', 'labelled with how it ended');
+  expectEqual(
+    typeof res.v.finishedRun.highestTierDay,
+    'number',
+    'carrying the furthest rung it ever stood on',
+  );
+});
+
+await test('0069 the maintenance entry point is not reachable from a user session', async () => {
+  // It settles and finishes runs across every account.
+  await asUser(db, RUNNER, async () => {
+    await expectRejection(
+      () => db.query(`select public.run_challenge_maintenance()`),
+      'permission denied',
+    );
+    await expectRejection(
+      () => db.query(`select public.finalize_ended_seasons()`),
+      'permission denied',
+    );
+  });
+});
+
+await restoreSeason();
+
 console.log('\ntask recurrence rules (0056)');
 // ---------------------------------------------------------------------------
 
