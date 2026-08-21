@@ -2863,7 +2863,9 @@
     "celebrateTier": "आप {{name}} तक पहुँचे",
     "celebrateShield": "ढाल अर्जित — एक छूटा दिन ढक जाएगा",
     "celebrateCompleted": "आपने हर पायदान चढ़ लिया",
-    "celebrateSeasonEnded": "आपका सीज़न समाप्त — देखें कैसा रहा"
+    "celebrateSeasonEnded": "आपका सीज़न समाप्त — देखें कैसा रहा",
+    "daysLeftInRun_one": "आपकी दौड़ में {{count}} दिन बाकी",
+    "daysLeftInRun_other": "आपकी दौड़ में {{count}} दिन बाकी"
   },
   "env": {
     "staging": "स्टेजिंग बिल्ड",

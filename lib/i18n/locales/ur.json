@@ -2863,7 +2863,9 @@
     "celebrateTier": "آپ {{name}} تک پہنچے",
     "celebrateShield": "ڈھال حاصل — ایک چھوٹا دن ڈھک جائے گا",
     "celebrateCompleted": "آپ نے ہر مرحلہ عبور کر لیا",
-    "celebrateSeasonEnded": "آپ کا سیزن ختم — دیکھیں کیسا رہا"
+    "celebrateSeasonEnded": "آپ کا سیزن ختم — دیکھیں کیسا رہا",
+    "daysLeftInRun_one": "آپ کی دوڑ میں {{count}} دن باقی",
+    "daysLeftInRun_other": "آپ کی دوڑ میں {{count}} دن باقی"
   },
   "env": {
     "staging": "اسٹیجنگ بلڈ",

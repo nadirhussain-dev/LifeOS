@@ -348,7 +348,11 @@ export default function ChallengeScreen() {
           </View>
         </View>
 
-        <ChallengeLadder tiers={tiers} qualifiedDays={qualifiedDays} />
+        <ChallengeLadder
+          tiers={tiers}
+          qualifiedDays={qualifiedDays}
+          daysLeft={today.data?.daysLeft}
+        />
 
         <Braid
           days={chain.data ?? []}

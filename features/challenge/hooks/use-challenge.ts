@@ -28,6 +28,19 @@ export type ChallengeTodayResponse = {
   enrolled: boolean;
   /** The last run that is over, for the summary. Null until there is one. */
   finishedRun?: FinishedRun | null;
+  /**
+   * The last local day this run may earn, and how many days that leaves —
+   * counting today, so a run ending today has one left rather than none (0070).
+   *
+   * Both come from the server. Deriving the count here would use the device
+   * clock, which is the one number this engine never trusts, and the date alone
+   * cannot be turned into a countdown without it.
+   *
+   * Null on a season with no end configured at all, which is a real state and
+   * must read as "no deadline" rather than as zero.
+   */
+  runEndsOn?: string | null;
+  daysLeft?: number | null;
   seasonId?: string;
   seasonName?: string;
   /**

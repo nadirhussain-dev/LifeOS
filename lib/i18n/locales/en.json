@@ -2863,7 +2863,9 @@
     "celebrateTier": "You reached {{name}}",
     "celebrateShield": "Shield earned — one missed day is covered",
     "celebrateCompleted": "You climbed every rung",
-    "celebrateSeasonEnded": "Your season has ended — see how it went"
+    "celebrateSeasonEnded": "Your season has ended — see how it went",
+    "daysLeftInRun_one": "{{count}} day left in your run",
+    "daysLeftInRun_other": "{{count}} days left in your run"
   },
   "env": {
     "staging": "Staging build",

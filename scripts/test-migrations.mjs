@@ -6784,17 +6784,22 @@ const clearRuns = async (user) => {
     status: 'active',
     completed_at: null,
     finished_at: null,
+    run_ends_on: null,
   });
 };
+
+/** The run's own finish line, which is what 0070 made authoritative. */
+const setRunEnd = (user, sql) =>
+  db.query(
+    `update public.challenge_enrollments set run_ends_on = ${sql}
+      where user_id = $1 and season_id = $2`,
+    [user, SEASON],
+  );
 
 await test('0069 a day after the season closed is refused', async () => {
   await restoreSeason();
   await clearRuns(RUNNER);
-  await db.query(
-    `update public.challenge_seasons set ends_at = now() - interval '2 days'
-                   where id = $1`,
-    [SEASON],
-  );
+  await setRunEnd(RUNNER, `public.challenge_local_day(now(), 0, 0) - 2`);
   const today = (await one(`select public.challenge_local_day(now(), 0, 0)::text as d`)).d;
   const res = await asUser(db, RUNNER, () =>
     one(`select public.record_challenge_day($1::date, $2::jsonb, 120, 'dev-runner') as v`, [
@@ -6829,11 +6834,7 @@ await test('0069 the last day of the season still credits when it is flushed the
   // was genuinely worked inside the window must survive an offline night.
   await restoreSeason();
   await clearRuns(RUNNER);
-  await db.query(
-    `update public.challenge_seasons set ends_at = now() - interval '1 hour'
-                   where id = $1`,
-    [SEASON],
-  );
+  await setRunEnd(RUNNER, `public.challenge_local_day(now(), 0, 0) - 1`);
   const yesterday = (await one(`select (public.challenge_local_day(now(), 0, 0) - 1)::text as d`))
     .d;
   const res = await asUser(db, RUNNER, () =>
@@ -6848,14 +6849,8 @@ await test('0069 the last day of the season still credits when it is flushed the
 await test('0069 finalising settles the tail of the season before it closes the run', async () => {
   await restoreSeason();
   await clearRuns(RUNNER);
-  await db.query(
-    `update public.challenge_seasons set ends_at = now() - interval '2 days'
-                   where id = $1`,
-    [SEASON],
-  );
-  const close = (
-    await one(`select public.challenge_local_day(now() - interval '2 days', 0, 0) as d`)
-  ).d;
+  await setRunEnd(RUNNER, `public.challenge_local_day(now(), 0, 0) - 2`);
+  const close = (await one(`select (public.challenge_local_day(now(), 0, 0) - 2) as d`)).d;
   await setRun(RUNNER, { qualified_days: 40, perfect_run: 40, shields: 1 });
   await db.query(
     `update public.challenge_enrollments set last_settled_day = $3::date - 3
@@ -6897,11 +6892,7 @@ await test('0069 a completed run is never re-labelled as merely ended', async ()
   // and the summary screen is the thing that has to tell them apart.
   await restoreSeason();
   await clearRuns(RUNNER2);
-  await db.query(
-    `update public.challenge_seasons set ends_at = now() - interval '2 days'
-                   where id = $1`,
-    [SEASON],
-  );
+  await setRunEnd(RUNNER2, `public.challenge_local_day(now(), 0, 0) - 2`);
   await setRun(RUNNER2, { status: 'completed', completed_at: 'now()', qualified_days: 365 });
   await one(`select public.finalize_ended_seasons() as n`);
   expectEqual((await runRow(RUNNER2)).status, 'completed', 'still completed');
@@ -6972,6 +6963,207 @@ await test('0069 the maintenance entry point is not reachable from a user sessio
 });
 
 await restoreSeason();
+
+console.log('\nfair runs, whenever you join (0070)');
+// ---------------------------------------------------------------------------
+// The ladder is counted in qualified days and the season was counted in dates,
+// and those only agree for somebody who joined on the opening day.
+
+// A user of their own: 000003 is already the 0055 season-state runner, and
+// enrolment is one-active-run-per-account.
+const LATE = 'aaaaaaaa-0000-4000-8000-000000000009';
+await createUser(db, LATE, 'late@example.com');
+
+/** A season half over, of the shape an operator would actually configure. */
+const midSeason = async (durationDays) => {
+  const id = (
+    await one(
+      `insert into public.challenge_seasons
+         (name, enabled, starts_at, ends_at, duration_days, required_modules)
+       values ('Mid Season', true, now() - interval '180 days',
+               now() + interval '180 days', $1, 3)
+       returning id`,
+      [durationDays],
+    )
+  ).id;
+  for (const m of ['habits', 'water', 'journal']) {
+    await db.query(`insert into public.challenge_modules (season_id, module_id) values ($1, $2)`, [
+      id,
+      m,
+    ]);
+  }
+  return id;
+};
+
+const dropSeason = async (id) => {
+  await db.query(`delete from public.challenge_enrollments where season_id = $1`, [id]);
+  await db.query(`delete from public.challenge_seasons where id = $1`, [id]);
+};
+
+await test('0070 joining halfway through gives a full-length run, not the remainder', async () => {
+  /*
+   * The unfairness this migration exists for. Under a calendar season, joining
+   * on day 180 of 365 capped the run at ~185 days — so Forge (240), Summit
+   * (300) and Year One (365, the physical gift) were unreachable at the moment
+   * of enrolling, and nothing said so.
+   */
+  const season = await midSeason(365);
+  await asUser(db, LATE, () =>
+    one(`select public.enroll_in_challenge($1::uuid, 0, $2::text[], $3::text[], 'dev-late') as v`, [
+      season,
+      '{habits,water,journal}',
+      '{}',
+    ]),
+  );
+  const run = await one(
+    `select enrolled_local_day, run_ends_on,
+            (run_ends_on - enrolled_local_day) as span
+       from public.challenge_enrollments where user_id = $1 and season_id = $2`,
+    [LATE, season],
+  );
+  // 364, because the day you join is day one of the 365.
+  expectEqual(Number(run.span), 364, 'a full 365 days from the day they joined');
+  await dropSeason(season);
+});
+
+await test('0070 the whole ladder is reachable for a late joiner', async () => {
+  // The property that actually matters, stated as itself rather than as a date.
+  const season = await midSeason(365);
+  await asUser(db, LATE, () =>
+    one(`select public.enroll_in_challenge($1::uuid, 0, $2::text[], $3::text[], 'dev-late') as v`, [
+      season,
+      '{habits,water,journal}',
+      '{}',
+    ]),
+  );
+  const top = 365;
+  const run = await one(
+    `select (run_ends_on - enrolled_local_day) + 1 as days
+       from public.challenge_enrollments where user_id = $1 and season_id = $2`,
+    [LATE, season],
+  );
+  expectEqual(Number(run.days) >= top, true, 'the top rung needs no more days than the run has');
+  await dropSeason(season);
+});
+
+await test('0070 with a duration set, the season date is a join deadline', async () => {
+  /*
+   * Taking the earlier of the two dates was the first thing tried, and it
+   * re-creates the whole bug: a July joiner in a Jan-Dec season would be capped
+   * at December again and the top rungs would go back to being unreachable.
+   * A fixed-date season is still expressible — by leaving the duration null,
+   * which the next test covers.
+   */
+  const id = (
+    await one(
+      `insert into public.challenge_seasons
+         (name, enabled, starts_at, ends_at, duration_days, required_modules)
+       values ('Short Window', true, now() - interval '1 day',
+               now() + interval '10 days', 365, 3)
+       returning id`,
+    )
+  ).id;
+  for (const m of ['habits', 'water', 'journal']) {
+    await db.query(`insert into public.challenge_modules (season_id, module_id) values ($1, $2)`, [
+      id,
+      m,
+    ]);
+  }
+  await asUser(db, LATE, () =>
+    one(`select public.enroll_in_challenge($1::uuid, 0, $2::text[], $3::text[], 'dev-late') as v`, [
+      id,
+      '{habits,water,journal}',
+      '{}',
+    ]),
+  );
+  const run = await one(
+    `select (run_ends_on - public.challenge_local_day(now(), 0, 0)) as remaining
+       from public.challenge_enrollments where user_id = $1 and season_id = $2`,
+    [LATE, id],
+  );
+  expectEqual(Number(run.remaining), 364, 'the full duration, not the ten days left to join');
+  await dropSeason(id);
+});
+
+await test('0070 a season with no duration keeps the calendar behaviour', async () => {
+  // Null is not a compatibility shim to delete later; it is the fixed-date
+  // season, still expressible.
+  const season = await midSeason(null);
+  await asUser(db, LATE, () =>
+    one(`select public.enroll_in_challenge($1::uuid, 0, $2::text[], $3::text[], 'dev-late') as v`, [
+      season,
+      '{habits,water,journal}',
+      '{}',
+    ]),
+  );
+  const run = await one(
+    `select (run_ends_on - public.challenge_local_day(now(), 0, 0)) as left
+       from public.challenge_enrollments where user_id = $1 and season_id = $2`,
+    [LATE, season],
+  );
+  expectEqual(Number(run.left), 180, 'ends when the season does, as before');
+  await dropSeason(season);
+});
+
+await test('0070 the app is told how long is left, counting today', async () => {
+  // Derived here rather than on the client: the device clock is the one number
+  // this engine never trusts.
+  const season = await midSeason(30);
+  await asUser(db, LATE, () =>
+    one(`select public.enroll_in_challenge($1::uuid, 0, $2::text[], $3::text[], 'dev-late') as v`, [
+      season,
+      '{habits,water,journal}',
+      '{}',
+    ]),
+  );
+  const res = await asUser(db, LATE, () => one(`select public.challenge_today() as v`));
+  expectEqual(res.v.daysLeft, 30, 'a 30-day run has 30 days left on day one');
+  expectEqual(typeof res.v.runEndsOn, 'string', 'and a date to put in a calendar');
+  await dropSeason(season);
+});
+
+await test('0070 the console can set a duration, and clear it again', async () => {
+  // The only place a season is configured. Without this the column would be
+  // reachable only from a hand-written SQL statement, which makes the whole
+  // migration academic.
+  const season = await midSeason(null);
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_update_challenge_season($1::uuid, $2::jsonb)`, [
+      season,
+      JSON.stringify({ durationDays: 90 }),
+    ]);
+  });
+  expectEqual(
+    (await one(`select duration_days from public.challenge_seasons where id = $1`, [season]))
+      .duration_days,
+    90,
+    'rolling from now on',
+  );
+
+  await asUser(db, ADMIN, async () => {
+    await db.query(`select public.admin_update_challenge_season($1::uuid, $2::jsonb)`, [
+      season,
+      JSON.stringify({ durationDays: null }),
+    ]);
+  });
+  expectEqual(
+    (await one(`select duration_days from public.challenge_seasons where id = $1`, [season]))
+      .duration_days,
+    null,
+    'and back to a fixed-date season, which a coalesce could never have done',
+  );
+  await dropSeason(season);
+});
+
+await test('0070 a run below the first rung cannot be configured', async () => {
+  await expectRejection(
+    () =>
+      db.query(
+        `insert into public.challenge_seasons (name, duration_days) values ('Too Short', 3)`,
+      ),
+    'challenge_seasons_duration_check',
+  );
+});
 
 console.log('\ntask recurrence rules (0056)');
 // ---------------------------------------------------------------------------

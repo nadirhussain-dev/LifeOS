@@ -3047,7 +3047,9 @@
     "celebrateTier": "وصلت إلى {{name}}",
     "celebrateShield": "كسبت درعًا — يوم واحد فائت مغطى",
     "celebrateCompleted": "صعدت كل الدرجات",
-    "celebrateSeasonEnded": "انتهى موسمك — اطّلع على النتيجة"
+    "celebrateSeasonEnded": "انتهى موسمك — اطّلع على النتيجة",
+    "daysLeftInRun_one": "بقي يوم واحد في جولتك",
+    "daysLeftInRun_other": "بقي {{count}} يومًا في جولتك"
   },
   "env": {
     "staging": "نسخة اختبارية",
