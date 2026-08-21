@@ -10,10 +10,7 @@ import { RadialMenu } from '@/components/ui/radial-menu';
 import { Fab } from '@/components/ui/fab';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
-import {
-  widgetAllowed,
-  WIDGET_REGISTRY,
-} from '@/features/dashboard/config/widget-registry';
+import { widgetAllowed, WIDGET_REGISTRY } from '@/features/dashboard/config/widget-registry';
 import { DashboardHeader } from '@/features/dashboard/components/dashboard-header';
 import { FocusShortcuts } from '@/features/dashboard/components/focus-shortcuts';
 import {
