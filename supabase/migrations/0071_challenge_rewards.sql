@@ -87,6 +87,12 @@
  *   {"kind":"shield",  "count":1}
  *   {"kind":"premium", "days":7, "tier":"premium"}
  *
+ * `icon` is accepted and **nothing seeds it**. Swapping the launcher icon needs
+ * an alternate-icon set declared at build time, which this app does not have,
+ * and a rung that grants an icon the launcher never shows is exactly the empty
+ * promise the seed below was rewritten to remove. The branch stays because it
+ * costs one line and the day that build config lands, the reward is data.
+ *
  * Validated by `challenge_reward_effect_ok` at the point of payout rather than
  * by a check constraint over the array's contents — the constraint would have
  * to be rewritten every time a kind is added, and an operator pasting a typo
@@ -828,13 +834,13 @@ update public.challenge_tiers t
    set rewards = d.rewards
   from (values
     (  7, '[{"kind":"badge","slug":"spark"},{"kind":"theme","slug":"spark-dawn"}]'::jsonb),
-    ( 30, '[{"kind":"badge","slug":"ember"},{"kind":"icon","slug":"ember-mark"},{"kind":"shield","count":1}]'::jsonb),
-    ( 60, '[{"kind":"badge","slug":"flame"},{"kind":"chain","slug":"molten"}]'::jsonb),
+    ( 30, '[{"kind":"badge","slug":"ember"},{"kind":"chain","slug":"ember-glow"},{"kind":"shield","count":1}]'::jsonb),
+    ( 60, '[{"kind":"badge","slug":"flame"},{"kind":"theme","slug":"flame-dusk"}]'::jsonb),
     ( 90, '[{"kind":"badge","slug":"blaze"},{"kind":"frame","slug":"blaze-ring"},{"kind":"premium","days":7,"tier":"premium"}]'::jsonb),
-    (120, '[{"kind":"badge","slug":"keystone"},{"kind":"theme","slug":"keystone-slate"}]'::jsonb),
+    (120, '[{"kind":"badge","slug":"keystone"},{"kind":"chain","slug":"keystone-steel"}]'::jsonb),
     (180, '[{"kind":"badge","slug":"half-year"},{"kind":"frame","slug":"half-year-laurel"},{"kind":"premium","days":30,"tier":"premium"}]'::jsonb),
-    (240, '[{"kind":"badge","slug":"forge"},{"kind":"chain","slug":"forge-gold"}]'::jsonb),
-    (300, '[{"kind":"badge","slug":"summit"},{"kind":"theme","slug":"summit-aurora"}]'::jsonb),
+    (240, '[{"kind":"badge","slug":"forge"},{"kind":"theme","slug":"forge-gold"}]'::jsonb),
+    (300, '[{"kind":"badge","slug":"summit"},{"kind":"chain","slug":"summit-aurora"}]'::jsonb),
     (365, '[{"kind":"badge","slug":"year-one"},{"kind":"frame","slug":"year-one-crown"},{"kind":"premium","days":90,"tier":"premium"}]'::jsonb)
   ) as d(day, rewards)
  where t.day_threshold = d.day
@@ -895,20 +901,20 @@ begin
       from (values
         (  7, 'Spark',     'digital',  'A badge, and the Dawn gradient',
              '[{"kind":"badge","slug":"spark"},{"kind":"theme","slug":"spark-dawn"}]'::jsonb),
-        ( 30, 'Ember',     'digital',  'A badge, the Ember app icon, and a shield',
-             '[{"kind":"badge","slug":"ember"},{"kind":"icon","slug":"ember-mark"},{"kind":"shield","count":1}]'::jsonb),
-        ( 60, 'Flame',     'digital',  'A badge, and Molten chain colours',
-             '[{"kind":"badge","slug":"flame"},{"kind":"chain","slug":"molten"}]'::jsonb),
+        ( 30, 'Ember',     'digital',  'A badge, the Ember chain, and a shield',
+             '[{"kind":"badge","slug":"ember"},{"kind":"chain","slug":"ember-glow"},{"kind":"shield","count":1}]'::jsonb),
+        ( 60, 'Flame',     'digital',  'A badge, and the Dusk gradient',
+             '[{"kind":"badge","slug":"flame"},{"kind":"theme","slug":"flame-dusk"}]'::jsonb),
         ( 90, 'Blaze',     'digital',  'A badge, a profile frame, and a week of Premium',
              '[{"kind":"badge","slug":"blaze"},{"kind":"frame","slug":"blaze-ring"},{"kind":"premium","days":7,"tier":"premium"}]'::jsonb),
-        (120, 'Keystone',  'digital',  'A badge, and the Slate gradient',
-             '[{"kind":"badge","slug":"keystone"},{"kind":"theme","slug":"keystone-slate"}]'::jsonb),
+        (120, 'Keystone',  'digital',  'A badge, and the Steel chain',
+             '[{"kind":"badge","slug":"keystone"},{"kind":"chain","slug":"keystone-steel"}]'::jsonb),
         (180, 'Half Year', 'digital',  'A badge, the laurel frame, and a month of Premium',
              '[{"kind":"badge","slug":"half-year"},{"kind":"frame","slug":"half-year-laurel"},{"kind":"premium","days":30,"tier":"premium"}]'::jsonb),
-        (240, 'Forge',     'digital',  'A badge, and Forge gold chain colours',
-             '[{"kind":"badge","slug":"forge"},{"kind":"chain","slug":"forge-gold"}]'::jsonb),
-        (300, 'Summit',    'digital',  'A badge, and the Aurora gradient',
-             '[{"kind":"badge","slug":"summit"},{"kind":"theme","slug":"summit-aurora"}]'::jsonb),
+        (240, 'Forge',     'digital',  'A badge, and the Forge gradient',
+             '[{"kind":"badge","slug":"forge"},{"kind":"theme","slug":"forge-gold"}]'::jsonb),
+        (300, 'Summit',    'digital',  'A badge, and the Aurora chain',
+             '[{"kind":"badge","slug":"summit"},{"kind":"chain","slug":"summit-aurora"}]'::jsonb),
         (365, 'Year One',  'physical', 'A badge, the crown frame, and three months of Premium',
              '[{"kind":"badge","slug":"year-one"},{"kind":"frame","slug":"year-one-crown"},{"kind":"premium","days":90,"tier":"premium"}]'::jsonb)
       ) as d(day, name, kind, title, rewards)
@@ -930,15 +936,15 @@ update public.challenge_tiers t
    set reward_title = d.title
   from (values
     (  7, 'Badge and an exclusive gradient theme',        'A badge, and the Dawn gradient'),
-    ( 30, 'Exclusive app icon, and your first shield',    'A badge, the Ember app icon, and a shield'),
-    ( 60, 'A shareable sixty-day stats card',             'A badge, and Molten chain colours'),
+    ( 30, 'Exclusive app icon, and your first shield',    'A badge, the Ember chain, and a shield'),
+    ( 60, 'A shareable sixty-day stats card',             'A badge, and the Dusk gradient'),
     ( 90, 'Your name on the finishers wall, if you want it',
           'A badge, a profile frame, and a week of Premium'),
-    (120, 'The gift box becomes visible, and named',      'A badge, and the Slate gradient'),
+    (120, 'The gift box becomes visible, and named',      'A badge, and the Steel chain'),
     (180, 'Prestige badge, profile frame, storage bump',
           'A badge, the laurel frame, and a month of Premium'),
-    (240, 'Custom chain colours and an animated badge',   'A badge, and Forge gold chain colours'),
-    (300, 'A personalised film of your year so far',      'A badge, and the Aurora gradient'),
+    (240, 'Custom chain colours and an animated badge',   'A badge, and the Forge gradient'),
+    (300, 'A personalised film of your year so far',      'A badge, and the Aurora chain'),
     (365, 'The physical gift box, claimable',
           'A badge, the crown frame, and three months of Premium')
   ) as d(day, was, title)
