@@ -146,11 +146,7 @@ export default function PrivateHomeScreen() {
             >
               <View className="flex-row items-center gap-2">
                 <Sparkles size={15} color="#ffffff" strokeWidth={2} />
-                <Text
-                  variant="micro"
-                  className="uppercase tracking-wide"
-                  style={{ color: alpha('#ffffff', 0.85) }}
-                >
+                <Text variant="micro" style={{ color: alpha('#ffffff', 0.85) }}>
                   {t('private.madeForYou')}
                 </Text>
               </View>

@@ -103,7 +103,7 @@ function NotificationRow({
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <Text variant="caption" className="px-1 font-sora-semibold uppercase tracking-wide">
+    <Text variant="sectionLabel" className="px-1">
       {children}
     </Text>
   );

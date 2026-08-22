@@ -6,6 +6,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { ArrowForward } from '@/components/ui/directional-icon';
 import { ListSkeleton } from '@/components/ui/list-skeleton';
+import { QueryError } from '@/components/ui/query-error';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -113,51 +114,72 @@ export default function ChallengeSwapScreen() {
       >
         <Text variant="muted">{t('challenge.swapLead')}</Text>
 
-        {/* State the two rules that can refuse this, before somebody spends a
+        {/* One error for the screen rather than one per list: a swap is a
+            single decision made across both, and offering half of it — an
+            empty "swap out" column beside a populated "swap in" one — invites
+            a choice the server will refuse. Without this the failed lists just
+            rendered as empty, which reads as "nothing to swap". */}
+
+        {today.isError || season.isError ? (
+          <QueryError
+            error={today.error ?? season.error}
+            onRetry={() => {
+              void today.refetch();
+              void season.refetch();
+            }}
+          />
+        ) : (
+          <>
+            {/* State the two rules that can refuse this, before somebody spends a
             minute choosing and then gets turned away by the server. */}
-        <Text variant="caption" style={{ color: locked || swapsLeft === 0 ? c.warning : c.accent }}>
-          {locked
-            ? t('challenge.swapLocked', { day: unlockDay })
-            : swapsLeft === 0
-              ? t('challenge.swapNone')
-              : t('challenge.swapLeft', { count: swapsLeft })}
-        </Text>
+            <Text
+              variant="caption"
+              style={{ color: locked || swapsLeft === 0 ? c.warning : c.accent }}
+            >
+              {locked
+                ? t('challenge.swapLocked', { day: unlockDay })
+                : swapsLeft === 0
+                  ? t('challenge.swapNone')
+                  : t('challenge.swapLeft', { count: swapsLeft })}
+            </Text>
 
-        <View className={cardClass({ padding: 'md' }, 'gap-1')}>
-          <Text variant="micro">{t('challenge.swapOut')}</Text>
-          {today.isLoading ? <ListSkeleton rows={3} /> : null}
-          {committed.map((moduleId) => (
-            <Row
-              key={moduleId}
-              moduleId={moduleId}
-              selected={out === moduleId}
-              onPress={() => setOut(moduleId)}
+            <View className={cardClass({ padding: 'md' }, 'gap-1')}>
+              <Text variant="micro">{t('challenge.swapOut')}</Text>
+              {today.isLoading ? <ListSkeleton rows={3} /> : null}
+              {committed.map((moduleId) => (
+                <Row
+                  key={moduleId}
+                  moduleId={moduleId}
+                  selected={out === moduleId}
+                  onPress={() => setOut(moduleId)}
+                />
+              ))}
+            </View>
+
+            <View className="items-center">
+              <ArrowForward size={18} color={c.mutedForeground} />
+            </View>
+
+            <View className={cardClass({ padding: 'md' }, 'gap-1')}>
+              <Text variant="micro">{t('challenge.swapIn')}</Text>
+              {season.isLoading ? <ListSkeleton rows={3} /> : null}
+              {available.map((moduleId) => (
+                <Row
+                  key={moduleId}
+                  moduleId={moduleId}
+                  selected={into === moduleId}
+                  onPress={() => setInto(moduleId)}
+                />
+              ))}
+            </View>
+
+            <Button
+              label={t('challenge.swapConfirm')}
+              onPress={() => void swap()}
+              disabled={!out || !into || busy || blocked}
             />
-          ))}
-        </View>
-
-        <View className="items-center">
-          <ArrowForward size={18} color={c.mutedForeground} />
-        </View>
-
-        <View className={cardClass({ padding: 'md' }, 'gap-1')}>
-          <Text variant="micro">{t('challenge.swapIn')}</Text>
-          {season.isLoading ? <ListSkeleton rows={3} /> : null}
-          {available.map((moduleId) => (
-            <Row
-              key={moduleId}
-              moduleId={moduleId}
-              selected={into === moduleId}
-              onPress={() => setInto(moduleId)}
-            />
-          ))}
-        </View>
-
-        <Button
-          label={t('challenge.swapConfirm')}
-          onPress={() => void swap()}
-          disabled={!out || !into || busy || blocked}
-        />
+          </>
+        )}
       </ScrollView>
     </View>
   );

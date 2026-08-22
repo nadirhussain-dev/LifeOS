@@ -8,6 +8,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Input } from '@/components/ui/input';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { cardClass } from '@/components/ui/card';
+import { QueryError } from '@/components/ui/query-error';
 import { Text } from '@/components/ui/text';
 import { listUsers, type UserDirectoryRow } from '@/features/operator/services/operator-repository';
 import { useTheme } from '@/hooks/use-theme';
@@ -81,6 +82,10 @@ export default function OperatorUsersScreen() {
             <Text className="font-sora-medium text-foreground">{t('operator.noAccess')}</Text>
             <Text variant="caption">{users.data.error}</Text>
           </View>
+        ) : users.isError ? (
+          // Previously fell through to "no accounts", which describes a
+          // healthy empty directory rather than a request that never landed.
+          <QueryError error={users.error} onRetry={() => void users.refetch()} />
         ) : users.isLoading ? (
           <Text variant="muted">{t('common.loadingEllipsis')}</Text>
         ) : (users.data?.data ?? []).length === 0 ? (

@@ -2,7 +2,7 @@ import { useDeviceSessionStore } from '@/features/auth/store/device-session-stor
 import { useModerationStore } from '@/features/moderation/store/moderation-store';
 import { useOnboardingDraftStore } from '@/features/onboarding/store/onboarding-draft-store';
 import { useProfileStore } from '@/features/profile/store/profile-store';
-import { useSyncStore } from '@/features/sync/store/sync-store';
+import { GUEST_SENTINEL, useSyncStore } from '@/features/sync/store/sync-store';
 import { clearAllData } from '@/lib/data-management';
 import { reportError } from '@/lib/error-reporting';
 import { cancelAllScheduled } from '@/lib/notifications';
@@ -18,13 +18,18 @@ import { queryClient } from '@/lib/query-client';
  * and the two users' data would merge locally.
  *
  * The same user re-signing-in keeps their data (their uid is still stamped as
- * `lastUserId` from before). A guest, on the other hand, is stamped with the
- * `GUEST_SENTINEL` the moment they choose "continue as guest" (see
- * `continueAsGuest()` in auth-store.ts) — so the first real sign-in on that
- * device is treated as a genuine identity change and wipes the unidentified
- * guest data before it can bleed into the new account. A device that has
- * NEVER been touched by guest mode or a prior sign-in has `lastUserId ===
- * null`, which is the one case that still means "nothing to wipe."
+ * `lastUserId` from before). A device that has NEVER been touched by guest mode
+ * or a prior sign-in has `lastUserId === null`, which means "nothing to wipe."
+ *
+ * A guest is the third case and it is **not decided here**. They are stamped
+ * with the `GUEST_SENTINEL` the moment they choose "continue as guest" (see
+ * `continueAsGuest()` in auth-store.ts), which used to make the first real
+ * sign-in look like an identity change — so it wiped, silently, against the
+ * promise the account step makes on screen. Guest data is unidentified rather
+ * than foreign: usually it belongs to the person signing in, occasionally to
+ * whoever lent them the phone, and nothing on the device can tell those apart.
+ * So the question is raised (`pendingGuestData`) and answered by the user
+ * through `resolveGuestData` below. See the comment at that branch.
  *
  * ## Why this waits for hydration
  *
@@ -69,6 +74,34 @@ export function reconcileAccountOnSignIn(uid: string): void {
 
   const previous = store.lastUserId;
 
+  /*
+   * A guest signing in is not an account switch, and treating it as one was
+   * destroying exactly the data the app promises to keep.
+   *
+   * The account step tells every new user, on the screen where they choose:
+   * "sign in later and everything you have already written comes with you."
+   * TODO.md documents the same thing as the design. But the sentinel stamped by
+   * `continueAsGuest()` is `!== uid` like any other prior account, so the first
+   * real sign-in on a guest device fell into the branch below and wiped the
+   * local database — silently, irreversibly, and against a promise still on
+   * screen a minute earlier.
+   *
+   * The wipe was not wrong to exist. Guest data is *unidentified*: usually it
+   * belongs to the person signing in, and occasionally it belongs to whoever
+   * handed them the phone. Nothing on the device can tell those apart, which is
+   * precisely why this is the one case that must not be decided automatically —
+   * both answers are irreversible and only the user knows which is right.
+   *
+   * So the question is raised and the data is kept until it is answered. Sync
+   * is held meanwhile (`syncNow` checks the same flag): pushing first would
+   * answer the question by doing it.
+   */
+  if (previous === GUEST_SENTINEL) {
+    useSyncStore.getState().setPendingGuestData(uid);
+    useSyncStore.getState().setLastUserId(uid);
+    return;
+  }
+
   if (previous && previous !== uid) {
     try {
       wipeLocalData();
@@ -82,6 +115,39 @@ export function reconcileAccountOnSignIn(uid: string): void {
   }
 
   useSyncStore.getState().setLastUserId(uid);
+}
+
+/**
+ * The answer to the guest-data question.
+ *
+ * `keep` is the promised path: the rows stay, and the engine's `'local'` → uid
+ * translation pushes them up on the next run, which is the migration TODO.md
+ * has described as automatic since sync v1.
+ *
+ * `discard` is the shared-phone path. It wipes and then re-stamps the uid,
+ * because `wipeLocalData` deliberately clears `lastUserId` — without the
+ * re-stamp the next sign-in would look like a first-ever one on a blank device
+ * and the question would be asked again about nothing.
+ */
+export function resolveGuestData(choice: 'keep' | 'discard'): void {
+  const sync = useSyncStore.getState();
+  const uid = sync.pendingGuestData;
+  if (!uid) return;
+
+  if (choice === 'discard') {
+    try {
+      wipeLocalData();
+    } catch (error) {
+      // Reported and swallowed, unlike the switch case above. There the throw
+      // stops a leak into somebody else's account; here the data is already
+      // this user's to keep, so a failed wipe leaves them with more than they
+      // asked for rather than with a hazard.
+      reportError(error, { scope: 'guest-data-discard', uid });
+    }
+    useSyncStore.getState().setLastUserId(uid);
+  }
+
+  useSyncStore.getState().setPendingGuestData(null);
 }
 
 /** Wipes all local data, the query cache, sync cursors, and the device

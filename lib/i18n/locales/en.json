@@ -1726,7 +1726,11 @@
     "signOutDeviceOnlyTitle": "This will delete your device-only data",
     "signOutDeviceOnlyBody": "Sync is off for {{modules}}, so none of it is in your account — that’s what device-only means. Signing out clears this device, and it can’t be brought back.\n\nTo keep it: cancel, turn sync on for {{modules}}, wait for it to finish, then sign out.",
     "signOutAndDelete": "Delete and sign out",
-    "signOutAnyway": "Sign out anyway"
+    "signOutAnyway": "Sign out anyway",
+    "guestDataTitle": "Bring your data with you?",
+    "guestDataBody": "This device already has notes, habits and entries saved on it from before you signed in. Add them to your account, or start this account fresh?",
+    "guestDataKeep": "Add them to my account",
+    "guestDataDiscard": "Start fresh"
   },
   "syncModule": {
     "tasks": "Tasks",

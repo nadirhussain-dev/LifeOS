@@ -57,9 +57,7 @@ export default function NewAlbumScreen() {
         />
 
         <View className="gap-2.5">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('fields.category')}
-          </Text>
+          <Text variant="sectionLabel">{t('fields.category')}</Text>
           <View className="flex-row flex-wrap gap-2">
             {ALBUM_CATEGORIES.map((item) => {
               const selected = item.id === category;

@@ -7,6 +7,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Input } from '@/components/ui/input';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { ListSkeleton } from '@/components/ui/list-skeleton';
+import { QueryError } from '@/components/ui/query-error';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
@@ -140,6 +141,11 @@ export default function OperatorCouponsScreen() {
 
       <ScrollView contentContainerClassName="gap-3 px-5 pb-10" showsVerticalScrollIndicator={false}>
         {coupons.isLoading ? <ListSkeleton rows={3} /> : null}
+        {/* Without this the list simply stayed empty on a failed request,
+            which reads as "you have no coupons" — the opposite of true. */}
+        {coupons.isError ? (
+          <QueryError error={coupons.error} onRetry={() => void coupons.refetch()} />
+        ) : null}
         {list.map((coupon) => (
           <View
             key={coupon.id}

@@ -53,11 +53,7 @@ export function EnvironmentPill({ className }: { className?: string }) {
       style={{ backgroundColor: `${theme.warning}22`, borderColor: theme.warning, borderWidth: 1 }}
     >
       <FlaskConical size={12} color={theme.warning} />
-      <Text
-        variant="caption"
-        className="font-sora-semibold uppercase tracking-wide"
-        style={{ color: theme.warning }}
-      >
+      <Text variant="sectionLabel" style={{ color: theme.warning }}>
         {label}
       </Text>
     </View>

@@ -170,9 +170,7 @@ export default function WaterSettingsScreen() {
           {draft.enabled && (
             <View className="gap-4 pt-1">
               <View className="gap-1.5">
-                <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-                  {t('water.remindEvery')}
-                </Text>
+                <Text variant="sectionLabel">{t('water.remindEvery')}</Text>
                 <View className="flex-row gap-2">
                   {REMINDER_INTERVALS_MIN.map((minutes) => {
                     const selected = draft.intervalMinutes === minutes;

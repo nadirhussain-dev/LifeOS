@@ -89,9 +89,7 @@ export default function NewSplitGroupScreen() {
           />
 
           <View className="gap-2.5">
-            <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-              {t('split.groupKind')}
-            </Text>
+            <Text variant="sectionLabel">{t('split.groupKind')}</Text>
             <View className="flex-row flex-wrap gap-2">
               {KINDS.map(({ value, icon: Icon }) => {
                 const selected = value === kind;

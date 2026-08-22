@@ -102,16 +102,12 @@ export default function NewRecurringScreen() {
         </View>
 
         <View className="gap-2">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('fields.category')}
-          </Text>
+          <Text variant="sectionLabel">{t('fields.category')}</Text>
           <CategoryGrid items={categories} value={category} onChange={setCategory} />
         </View>
 
         <View className="gap-2">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('budget.repeats')}
-          </Text>
+          <Text variant="sectionLabel">{t('budget.repeats')}</Text>
           <Segmented
             options={[
               { value: 'weekly' as const, label: t('budget.recurringWeeklyShort') },

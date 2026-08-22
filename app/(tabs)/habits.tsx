@@ -15,7 +15,7 @@ import { ListSectionHeader } from '@/components/ui/list-section-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
-import { moduleTint } from '@/constants/design-tokens';
+import { layout, moduleTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { AdSlot } from '@/features/ads/components/ad-slot';
 import { HabitRow } from '@/features/habits/components/habit-row';
@@ -192,7 +192,7 @@ export default function HabitsScreen() {
                 ? `routine-${item.routine.id}`
                 : item.habit.id
           }
-          contentContainerStyle={{ paddingTop: 4, paddingBottom: 120 }}
+          contentContainerStyle={{ paddingTop: 4, paddingBottom: layout.scrollBottomInset }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

@@ -26,9 +26,7 @@ export function GeneratedTasksPanel({ tasks }: Props) {
     <View className="gap-2">
       <View className="flex-row items-center gap-1.5">
         <CheckSquare size={13} color={colors[scheme].mutedForeground} />
-        <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-          {t('notes.generatedTasks')}
-        </Text>
+        <Text variant="sectionLabel">{t('notes.generatedTasks')}</Text>
       </View>
       <View className={cardClass({ padding: 'none' }, 'gap-1 px-4')}>
         {tasks.map((task, index) => {

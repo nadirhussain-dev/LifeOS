@@ -77,7 +77,7 @@ export function SoundPicker() {
     <View className="gap-6">
       {soundsByFamily().map(({ family, sounds }) => (
         <View key={family} className="gap-2">
-          <Text variant="caption" className="px-1 font-sora-semibold uppercase tracking-wide">
+          <Text variant="sectionLabel" className="px-1">
             {t(`notifSound.family.${family}`)}
           </Text>
 

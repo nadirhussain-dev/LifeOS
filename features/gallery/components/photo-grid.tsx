@@ -133,9 +133,7 @@ export function PhotoGrid({ photos, onPressPhoto, timeline }: Props) {
       <View className="gap-4">
         {groups.map(([month, monthPhotos]) => (
           <View key={month} className="gap-2">
-            <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-              {month}
-            </Text>
+            <Text variant="sectionLabel">{month}</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: GAP }}>
               {monthPhotos.map((photo) => (
                 <PhotoTile key={photo.id} photo={photo} size={size} onPress={onPressPhoto} />

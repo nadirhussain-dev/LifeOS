@@ -165,7 +165,7 @@ export default function CompareScreen() {
       />
 
       <ScrollView
-        contentContainerClassName="gap-5 px-4 pb-10"
+        contentContainerClassName="gap-5 px-5 pb-10"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -483,9 +483,7 @@ export default function CompareScreen() {
 
         {/* Photo picker strip */}
         <View className="gap-2">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('gallery.tapToSet', { slot: slotLabel(active) })}
-          </Text>
+          <Text variant="sectionLabel">{t('gallery.tapToSet', { slot: slotLabel(active) })}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
             {stills.map((photo) => {
               const selected = photo.id === beforeId || photo.id === afterId;

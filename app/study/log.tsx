@@ -217,9 +217,7 @@ export default function StudyLogScreen() {
         )}
 
         <View className="items-center gap-2">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('study.howFocusedOptional')}
-          </Text>
+          <Text variant="sectionLabel">{t('study.howFocusedOptional')}</Text>
           <StarRating value={rating} onChange={setRating} />
         </View>
 

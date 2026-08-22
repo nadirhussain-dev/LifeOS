@@ -211,9 +211,7 @@ export default function TransactionScreen() {
 
         {type === 'savings' ? (
           <View className="gap-2.5">
-            <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-              {t('budget.towardGoal')}
-            </Text>
+            <Text variant="sectionLabel">{t('budget.towardGoal')}</Text>
             {savingsGoals.length === 0 ? (
               <Text variant="muted">{t('budget.savingsGoalHint')}</Text>
             ) : (
@@ -236,9 +234,7 @@ export default function TransactionScreen() {
           </View>
         ) : (
           <View className="gap-2.5">
-            <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-              {t('fields.category')}
-            </Text>
+            <Text variant="sectionLabel">{t('fields.category')}</Text>
             <CategoryGrid
               items={type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES}
               value={category}
@@ -248,9 +244,7 @@ export default function TransactionScreen() {
         )}
 
         <View className="gap-2.5">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('budget.account')}
-          </Text>
+          <Text variant="sectionLabel">{t('budget.account')}</Text>
           <Segmented
             options={ACCOUNT_OPTIONS}
             value={account}

@@ -1,6 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Plus, type LucideIcon } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -23,6 +24,8 @@ type Props = {
    * sheet. Optional: without it the FAB behaves exactly as it always has.
    */
   onLongPress?: () => void;
+  /** Defaults to the translated "Quick actions" — pass one whenever the FAB
+   *  creates something specific ("Add task"), which is most screens. */
   accessibilityLabel?: string;
   /**
    * The glyph. Defaults to a plus, which is right for every screen whose FAB
@@ -46,13 +49,8 @@ type Props = {
   label?: string;
 };
 
-export function Fab({
-  onPress,
-  onLongPress,
-  accessibilityLabel = 'Quick actions',
-  icon: Icon = Plus,
-  label,
-}: Props) {
+export function Fab({ onPress, onLongPress, accessibilityLabel, icon: Icon = Plus, label }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme() ?? 'light';
   const scale = useSharedValue(1);
@@ -80,7 +78,11 @@ export function Fab({
       onPressOut={() => {
         scale.value = withTiming(1, { duration: 100 });
       }}
-      accessibilityLabel={accessibilityLabel}
+      // The default was the one hardcoded English string left in a shared
+      // primitive: a screen that passes no label announced "Quick actions" to
+      // an Arabic or Urdu screen reader, in English, from inside an otherwise
+      // fully translated app.
+      accessibilityLabel={accessibilityLabel ?? t('dashboard.quickActions')}
       accessibilityRole="button"
       style={[
         animatedStyle,

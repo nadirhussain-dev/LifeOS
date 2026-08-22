@@ -71,9 +71,7 @@ export default function NewSavingsGoalScreen() {
         />
 
         <View className="gap-2.5">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('budget.targetAmount')}
-          </Text>
+          <Text variant="sectionLabel">{t('budget.targetAmount')}</Text>
           <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
             <Text className="font-sora-bold text-xl" style={{ color: '#22c55e' }}>
               {currency}

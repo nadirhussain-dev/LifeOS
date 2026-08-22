@@ -31,6 +31,8 @@ export default function LogProgressScreen() {
   const [addCount, setAddCount] = useState(0);
   const [note, setNote] = useState('');
 
+  const release = useUnsavedChanges(pct !== null || addCount !== 0 || note.trim() !== '');
+
   if (!goal) return null;
   const meta = goalCategoryMeta(goal.category, scheme);
   const isCount = goal.progressMode === 'count';
@@ -53,7 +55,6 @@ export default function LogProgressScreen() {
 
   const delta = isCount ? addCount : resultingFraction - goal.manualProgress;
   const canSave = isCount ? addCount !== 0 : Math.abs(delta) > 0.001;
-  const release = useUnsavedChanges(pct !== null || addCount !== 0 || note.trim() !== '');
 
   const countStep = goal.targetValue ? Math.max(1, Math.round(goal.targetValue / 20)) : 1;
 

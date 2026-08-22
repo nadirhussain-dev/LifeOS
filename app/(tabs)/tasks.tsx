@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { layout } from '@/constants/design-tokens';
 
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -245,7 +246,7 @@ export default function TasksScreen() {
           keyExtractor={(item) =>
             item.type === 'header' ? `header-${item.labelKey}` : item.task.id
           }
-          contentContainerStyle={{ paddingTop: 4, paddingBottom: 120 }}
+          contentContainerStyle={{ paddingTop: 4, paddingBottom: layout.scrollBottomInset }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

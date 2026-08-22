@@ -110,9 +110,7 @@ export default function NewCalendarEventScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-1">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {format(parseISO(dateKey), 'EEEE, MMM d')}
-          </Text>
+          <Text variant="sectionLabel">{format(parseISO(dateKey), 'EEEE, MMM d')}</Text>
           <Input
             surface="bare"
             value={title}
@@ -248,9 +246,7 @@ export default function NewCalendarEventScreen() {
         <View className="gap-2.5">
           <View className="flex-row items-center gap-1.5">
             <StickyNote size={13} color={colors[scheme].mutedForeground} />
-            <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-              {t('timeline.notes')}
-            </Text>
+            <Text variant="sectionLabel">{t('timeline.notes')}</Text>
           </View>
           <Input
             value={notes}

@@ -81,9 +81,7 @@ export function NoteEditorBody({ noteId, value, onChangeText, placeholder }: Pro
   return (
     <View className="gap-2">
       <View className="flex-row items-center justify-between">
-        <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-          Note
-        </Text>
+        <Text variant="sectionLabel">Note</Text>
         <Pressable
           accessibilityRole="button"
           onPress={() => setMode((current) => (current === 'edit' ? 'read' : 'edit'))}

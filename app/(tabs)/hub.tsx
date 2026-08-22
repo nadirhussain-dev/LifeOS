@@ -9,7 +9,7 @@ import { Search, UserCircle } from 'lucide-react-native';
 
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
-import { resolveTint } from '@/constants/design-tokens';
+import { layout, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AdSlot } from '@/features/ads/components/ad-slot';
@@ -162,8 +162,11 @@ export default function HubScreen() {
   return (
     <View className="flex-1 bg-background">
       <ScrollView
-        contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: 120 }}
-        contentContainerClassName="gap-6 px-4"
+        contentContainerStyle={{
+          paddingTop: insets.top + 8,
+          paddingBottom: layout.scrollBottomInset,
+        }}
+        contentContainerClassName="gap-6 px-5"
         showsVerticalScrollIndicator={false}
       >
         <View className="flex-row items-end justify-between gap-3">
@@ -211,9 +214,7 @@ export default function HubScreen() {
 
         {sections.map((section, sectionIndex) => (
           <View key={section.id} className="gap-3">
-            <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-              {t(section.labelKey)}
-            </Text>
+            <Text variant="sectionLabel">{t(section.labelKey)}</Text>
             <View className="gap-3">
               {section.rows.map((row, rowIndex) => (
                 <Animated.View
@@ -264,9 +265,7 @@ export default function HubScreen() {
 
         {disabled.length > 0 ? (
           <View className="gap-3">
-            <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-              {t('moduleFlags.unavailable')}
-            </Text>
+            <Text variant="sectionLabel">{t('moduleFlags.unavailable')}</Text>
             <View className="gap-2">
               {disabled.map((module) => (
                 <View
@@ -294,9 +293,7 @@ export default function HubScreen() {
 
         {privateSection ? (
           <View className="gap-3">
-            <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-              {t('private.sectionLabel')}
-            </Text>
+            <Text variant="sectionLabel">{t('private.sectionLabel')}</Text>
             <View className="gap-2">
               {privateSection.map((module) => {
                 const Icon = module.icon;

@@ -122,9 +122,7 @@ export const ModuleManagerSheet = forwardRef<BottomSheetModal, Props>(function M
 
         {sections.map((section) => (
           <View key={section.id} className="gap-2">
-            <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-              {t(section.labelKey)}
-            </Text>
+            <Text variant="sectionLabel">{t(section.labelKey)}</Text>
             <View className="gap-1">
               {section.modules.map((module) => {
                 const Icon = module.icon;

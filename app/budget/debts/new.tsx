@@ -159,9 +159,7 @@ export default function DebtFormScreen() {
         />
 
         <View className="gap-2.5">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('budget.amount')}
-          </Text>
+          <Text variant="sectionLabel">{t('budget.amount')}</Text>
           <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
             <Text className="font-sora-bold text-xl" style={{ color: debtTint }}>
               {currency}
@@ -231,9 +229,7 @@ export default function DebtFormScreen() {
           <View className="gap-2.5">
             <View className="flex-row items-center gap-2">
               <BellRing size={14} color={colors[scheme].mutedForeground} />
-              <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-                {t('budget.remindMeBefore')}
-              </Text>
+              <Text variant="sectionLabel">{t('budget.remindMeBefore')}</Text>
             </View>
             <View className="flex-row flex-wrap gap-2">
               {[null, ...REMINDER_DAY_OPTIONS].map((days) => {

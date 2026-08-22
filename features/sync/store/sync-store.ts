@@ -73,6 +73,21 @@ type SyncState = {
    * detect an account switch on a shared device and wipe before the new
    * account's first sync, so one user's data never bleeds into another's. */
   lastUserId: string | null;
+  /**
+   * An account that signed in over guest data, before the user has said what
+   * to do with it.
+   *
+   * Persisted, deliberately. The question is asked once and it decides the fate
+   * of everything on the device — a force-quit before answering must leave it
+   * still asked, not silently resolved either way. Null means there is nothing
+   * outstanding, which is the case for every sign-in that is not the first one
+   * over guest data.
+   *
+   * Sync is held while this is set. Pushing first would answer the question by
+   * doing it: the rows would be up under the new uid before anybody chose, and
+   * "start fresh" could no longer mean what it says.
+   */
+  pendingGuestData: string | null;
 
   // Transient (not persisted):
   status: SyncStatus;
@@ -91,6 +106,8 @@ type SyncState = {
   setStatus: (status: SyncStatus, error?: string | null) => void;
   setNextAttemptAt: (at: number | null) => void;
   setLastUserId: (uid: string | null) => void;
+  /** Raises or clears the guest-data question. See `pendingGuestData`. */
+  setPendingGuestData: (uid: string | null) => void;
   /** Wipes cursors — used on account switch so the next sync is a full pull. */
   resetCursors: () => void;
 };
@@ -105,6 +122,7 @@ export const useSyncStore = create<SyncState>()(
       nextAttemptAt: null,
       consecutiveFailures: 0,
       lastUserId: null,
+      pendingGuestData: null,
       status: 'idle',
       lastError: null,
       hydrated: false,
@@ -130,6 +148,7 @@ export const useSyncStore = create<SyncState>()(
         })),
       setNextAttemptAt: (nextAttemptAt) => set({ nextAttemptAt }),
       setLastUserId: (lastUserId) => set({ lastUserId }),
+      setPendingGuestData: (pendingGuestData) => set({ pendingGuestData }),
       resetCursors: () => set({ cursors: {}, nextAttemptAt: null, consecutiveFailures: 0 }),
     }),
     {
@@ -144,6 +163,7 @@ export const useSyncStore = create<SyncState>()(
         nextAttemptAt: s.nextAttemptAt,
         consecutiveFailures: s.consecutiveFailures,
         lastUserId: s.lastUserId,
+        pendingGuestData: s.pendingGuestData,
       }),
       onRehydrateStorage: () => () => {
         useSyncStore.setState({ hydrated: true });

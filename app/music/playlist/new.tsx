@@ -49,9 +49,7 @@ export default function NewPlaylistScreen() {
         />
 
         <View className="gap-2.5">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('music.color')}
-          </Text>
+          <Text variant="sectionLabel">{t('music.color')}</Text>
           <View className="flex-row gap-2.5">
             {categoryColorPalette.map((swatch) => {
               const selected = swatch === colorToken;

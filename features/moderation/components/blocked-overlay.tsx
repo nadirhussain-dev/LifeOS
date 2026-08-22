@@ -100,9 +100,7 @@ export function BlockedOverlay() {
 
         {standing?.reason ? (
           <View className={cardClass({ padding: 'row' }, 'w-full')}>
-            <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-              {t('moderation.reason')}
-            </Text>
+            <Text variant="sectionLabel">{t('moderation.reason')}</Text>
             <Text className="mt-1 text-foreground">{standing.reason}</Text>
           </View>
         ) : null}
@@ -111,9 +109,7 @@ export function BlockedOverlay() {
             removed" is what turns a moderation action into a support thread. */}
         {wipeOutcome ? (
           <View className={cardClass({ padding: 'row' }, 'w-full gap-1')}>
-            <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-              {t('moderation.wipedTitle')}
-            </Text>
+            <Text variant="sectionLabel">{t('moderation.wipedTitle')}</Text>
             <Text className="mt-1 text-foreground">{t('moderation.wipedBody')}</Text>
             {wipeOutcome.unsaved.length > 0 ? (
               <Text variant="muted" className="mt-1">

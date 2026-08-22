@@ -141,9 +141,7 @@ export default function DebtDetailScreen() {
         ) : (
           <View className="gap-3">
             <View className="gap-2.5">
-              <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-                {t('budget.recordPayment')}
-              </Text>
+              <Text variant="sectionLabel">{t('budget.recordPayment')}</Text>
               <View className="flex-row items-center gap-2">
                 <View
                   className={cardClass({ padding: 'row' }, 'flex-1 flex-row items-center gap-2')}
