@@ -93,7 +93,16 @@ export function useAuthGate() {
       // login/sign-up screen has nothing left to do and nothing sends the user
       // anywhere — the "successful auth, then nothing happens" bug. Send them
       // back to pick up onboarding where they left off.
-      if (inAuthGroup && authed) {
+      //
+      // `session`, **not** `authed`. A guest is not somebody `(auth)` has
+      // finished with — they are somebody who deferred the question, and
+      // `isGuest` is persisted, so testing `authed` here meant that once you
+      // tapped "continue on this device" the auth stack became permanently
+      // unreachable for the rest of onboarding: opening sign-in redirected you
+      // back to `(onboarding)` before you could type anything. That is the
+      // "I go back and try to sign in and nothing happens" report, and it is
+      // this line rather than the sign-in screen.
+      if (inAuthGroup && session) {
         router.replace('/(onboarding)');
         return;
       }

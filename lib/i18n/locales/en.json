@@ -179,7 +179,9 @@
     "learnRemindersList": "We will set these up: {{modules}}",
     "learnAllow": "Allow reminders",
     "learnNotNow": "Not now",
-    "readyReminders": "Reminders on for {{modules}}"
+    "readyReminders": "Reminders on for {{modules}}",
+    "accountBodyGuest": "You're set up on this device. You can still add an account — everything you've done so far comes with you.",
+    "keepOnThisDevice": "Keep it on this device"
   },
   "fields": {
     "priority": "Priority",

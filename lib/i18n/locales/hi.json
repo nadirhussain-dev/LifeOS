@@ -179,7 +179,9 @@
     "learnRemindersList": "हम ये चालू करेंगे: {{modules}}",
     "learnAllow": "रिमाइंडर की अनुमति दें",
     "learnNotNow": "अभी नहीं",
-    "readyReminders": "{{modules}} के लिए रिमाइंडर चालू"
+    "readyReminders": "{{modules}} के लिए रिमाइंडर चालू",
+    "accountBodyGuest": "आप इस डिवाइस पर तैयार हैं। आप अब भी खाता जोड़ सकते हैं — अब तक का सब कुछ आपके साथ चलेगा।",
+    "keepOnThisDevice": "इसी डिवाइस पर रखें"
   },
   "fields": {
     "priority": "प्राथमिकता",

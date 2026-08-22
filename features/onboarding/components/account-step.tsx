@@ -38,10 +38,21 @@ export function AccountStep({
   onContinueAsGuest,
   onSignedIn,
   onUseEmail,
+  isGuest = false,
 }: {
   onContinueAsGuest: () => void;
   onSignedIn: () => void;
   onUseEmail: () => void;
+  /**
+   * The user already chose "continue on this device" and has walked back here.
+   *
+   * Worth knowing, because the screen is otherwise identical to the one they
+   * answered a moment ago and reads as the app having forgotten. The choice is
+   * still reversible in both directions — that is the whole reason this step is
+   * no longer deleted from the flow once it is answered — so the copy
+   * acknowledges the answer rather than re-asking the question.
+   */
+  isGuest?: boolean;
 }) {
   const { t } = useTranslation();
   const { c } = useTheme();
@@ -52,7 +63,7 @@ export function AccountStep({
       scroll
       eyebrow={t('onboarding.accountEyebrow')}
       title={t('onboarding.accountTitle')}
-      body={t('onboarding.accountBody')}
+      body={isGuest ? t('onboarding.accountBodyGuest') : t('onboarding.accountBody')}
       footer={
         <Pressable
           accessibilityRole="button"
@@ -60,7 +71,7 @@ export function AccountStep({
           className="items-center py-3"
         >
           <Text className="font-sora-semibold" style={{ color: c.foreground }}>
-            {t('onboarding.continueOnThisDevice')}
+            {isGuest ? t('onboarding.keepOnThisDevice') : t('onboarding.continueOnThisDevice')}
           </Text>
           <Text variant="caption" className="mt-0.5 text-center">
             {t('onboarding.continueOnThisDeviceHint')}

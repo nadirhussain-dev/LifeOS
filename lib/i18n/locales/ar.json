@@ -187,7 +187,9 @@
     "learnRemindersList": "سنُفعّل هذه: {{modules}}",
     "learnAllow": "السماح بالتذكيرات",
     "learnNotNow": "ليس الآن",
-    "readyReminders": "التذكيرات مُفعّلة لـ {{modules}}"
+    "readyReminders": "التذكيرات مُفعّلة لـ {{modules}}",
+    "accountBodyGuest": "أنت جاهز على هذا الجهاز. لا يزال بإمكانك إضافة حساب — وكل ما أنجزته حتى الآن سينتقل معك.",
+    "keepOnThisDevice": "أبقِه على هذا الجهاز"
   },
   "fields": {
     "priority": "الأولوية",

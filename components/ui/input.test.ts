@@ -43,7 +43,20 @@ describe('Input dynamic type', () => {
 });
 
 describe('every field in the app goes through Input', () => {
-  const screens = sourceFiles('app', 'features');
+  /*
+   * `components` is in this list, and its absence was a real blind spot rather
+   * than an oversight of scope: `components/ui/category-picker.tsx` held a raw
+   * `TextInput` the entire time this suite claimed there were none left. It is
+   * a shared control used by tasks and notes, so it appeared on more screens
+   * than most of the fields the guard did cover — and it carried the platform's
+   * own emerald underline into a rounded pill on Android because of it.
+   *
+   * `input.tsx` itself is excluded below, being the one file allowed to render
+   * the element.
+   */
+  const screens = sourceFiles('app', 'features', 'components').filter(
+    (path) => !path.endsWith(join('components', 'ui', 'input.tsx')),
+  );
 
   it('leaves no raw TextInput or BottomSheetTextInput', () => {
     /*
@@ -135,5 +148,22 @@ describe('Input token consumption', () => {
     expect(halo).toMatch(/borderRadius: radius\['3xl'\]/);
     expect(halo.slice(0, 220)).toMatch(/backgroundColor: focused \?/);
     expect(input).not.toMatch(/rounded-3xl/);
+  });
+
+  it("suppresses Android's own underline, which is tinted with the accent", () => {
+    /*
+     * The second green artefact, and a different one from the halo above.
+     *
+     * Android draws an underline behind every `TextInput`, tinted with the
+     * platform accent — emerald here. Inside our own rounded bordered surface
+     * that shows as a green line across the bottom of the field, and on focus
+     * as a wash bleeding past its edge. Two focus indicators, one of them not
+     * ours, neither agreeing with the other.
+     *
+     * Set on the shared props rather than per call site: 75 fields were
+     * hand-rolled before this component existed, and a detail every call site
+     * has to remember is one most of them will not.
+     */
+    expect(input).toMatch(/underlineColorAndroid: 'transparent'/);
   });
 });

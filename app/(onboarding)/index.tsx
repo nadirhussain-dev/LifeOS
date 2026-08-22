@@ -154,14 +154,25 @@ export default function OnboardingScreen() {
     if (local) setCurrencyCode(local);
   }, [shape.currencyCode, setCurrencyCode]);
 
-  const authed = !!session || isGuest;
-
   const steps = useMemo<StepId[]>(() => {
     const list: StepId[] = ['welcome'];
-    // Skipped once there is a session or an explicit guest choice — including on
-    // the way back from the email flow, which is exactly when re-asking would be
-    // most confusing.
-    if (!authed) list.push('account');
+    /*
+     * Dropped once there is a **session** — including on the way back from the
+     * email flow, which is exactly when re-asking would be most confusing.
+     *
+     * Deliberately not dropped for a guest, which is what it used to do. Both
+     * are `authed`, but they are not the same fact: a session is an answered
+     * question, and "continue on this device" is a deferred one. Keying the
+     * list off `authed` meant tapping it deleted this step from the flow
+     * permanently — `isGuest` is persisted — so somebody who chose it and then
+     * walked back to the start had no way to reach sign-in ever again.
+     *
+     * Keeping it costs nothing going forward: choosing guest still advances
+     * past it, because `goNext` moves by index and the step behind them is one
+     * they have answered. It only reappears if they walk back to it, which is
+     * precisely when they want it.
+     */
+    if (!session) list.push('account');
     list.push('about', 'focus');
     if (hasAnythingToShape(focusAreas)) list.push('shape');
     // After the answers, before the finish. It needs the focus areas to name
@@ -170,7 +181,7 @@ export default function OnboardingScreen() {
     list.push('learn');
     list.push('lock', 'ready');
     return list;
-  }, [authed, focusAreas]);
+  }, [session, focusAreas]);
 
   /**
    * Clamped, because the step list can shrink underneath a stored index — signing
@@ -332,6 +343,7 @@ export default function OnboardingScreen() {
 
         {current === 'account' ? (
           <AccountStep
+            isGuest={isGuest}
             onSignedIn={goNext}
             onContinueAsGuest={() => {
               continueAsGuest();

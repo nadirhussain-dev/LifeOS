@@ -179,7 +179,9 @@
     "learnRemindersList": "ہم یہ چالو کریں گے: {{modules}}",
     "learnAllow": "یاد دہانیوں کی اجازت دیں",
     "learnNotNow": "ابھی نہیں",
-    "readyReminders": "{{modules}} کے لیے یاد دہانیاں چالو"
+    "readyReminders": "{{modules}} کے لیے یاد دہانیاں چالو",
+    "accountBodyGuest": "آپ اس ڈیوائس پر تیار ہیں۔ آپ اب بھی اکاؤنٹ شامل کر سکتے ہیں — اب تک کا سب کچھ آپ کے ساتھ چلا جائے گا۔",
+    "keepOnThisDevice": "اسی ڈیوائس پر رکھیں"
   },
   "fields": {
     "priority": "ترجیح",

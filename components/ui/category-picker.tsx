@@ -2,9 +2,10 @@ import * as Haptics from 'expo-haptics';
 import { Plus } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { cn } from '@/lib/utils';
@@ -131,16 +132,26 @@ export function CategoryPicker({
 
       {isAdding ? (
         <View className="flex-row items-center gap-1.5 rounded-full border border-border px-2 py-1">
-          <TextInput
+          {/*
+            The last raw `TextInput` in the app, and it was raw for a reason
+            that stopped applying: the surface here is a pill the parent draws,
+            so none of `Input`'s chrome was wanted. `surface="bare"` with no
+            label, error or affix is exactly that — it returns the bare element
+            and adds only the things every field should have had anyway, which
+            now includes suppressing Android's own emerald-tinted underline.
+            Inside a rounded pill that underline was a green line across the
+            bottom of the field.
+          */}
+          <Input
+            surface="bare"
             value={name}
             onChangeText={setName}
             accessibilityLabel={t('category.name')}
             placeholder={t('category.name')}
-            placeholderTextColor={colors[scheme].mutedForeground}
             autoFocus
             onSubmitEditing={confirmNewCategory}
             onBlur={confirmNewCategory}
-            className="min-w-24 px-1 text-foreground"
+            className="min-w-24 px-1"
           />
         </View>
       ) : (

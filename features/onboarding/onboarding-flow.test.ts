@@ -67,6 +67,47 @@ describe('the welcome comes before the sign-in wall', () => {
     const source = read('features/auth/hooks/use-auth-gate.ts');
     expect(source).toContain('!inOnboarding && !inAuthGroup');
   });
+
+  it('bounces a completed sign-in out of the auth stack, but never a guest', () => {
+    /*
+     * The bug this pins, in the words it was reported in: "I go back and try to
+     * sign in and it does not work."
+     *
+     * The bounce exists so that finishing sign-up from onboarding's email
+     * detour returns you to the flow instead of stranding you on a screen with
+     * nothing left to do. It was conditioned on `authed`, which is
+     * `session || isGuest` — and `isGuest` is persisted. So the moment somebody
+     * tapped "continue on this device", the whole auth stack became
+     * unreachable: opening sign-in redirected straight back to `(onboarding)`
+     * before a single character could be typed.
+     *
+     * A guest has deferred the question, not answered it. Only a session means
+     * `(auth)` is finished with them.
+     */
+    const source = read('features/auth/hooks/use-auth-gate.ts');
+    const effect = source.slice(source.indexOf('if (!effectivelyOnboarded)'));
+    const bounce = effect.slice(0, effect.indexOf("router.replace('/(onboarding)')"));
+    expect(bounce).toContain('inAuthGroup && session');
+    expect(bounce).not.toContain('inAuthGroup && authed');
+  });
+
+  it('keeps the account step reachable for a guest who walks back to it', () => {
+    /*
+     * The other half of the same report, and it needed both fixes: even with
+     * the gate letting them into `(auth)`, the step offering sign-in had been
+     * deleted from the flow.
+     *
+     * The step list drops `account` once the question is answered. Answered
+     * means a session; "continue on this device" is a deferral, and because
+     * `isGuest` persists, keying the list off it removed the only route to
+     * sign-in for the rest of onboarding — permanently, across restarts.
+     */
+    const source = read('app/(onboarding)/index.tsx');
+    const steps = source.slice(source.indexOf('const steps = useMemo'));
+    const push = steps.slice(0, steps.indexOf("list.push('about'"));
+    expect(push).toContain("if (!session) list.push('account')");
+    expect(push).not.toContain("if (!authed) list.push('account')");
+  });
 });
 
 describe('starter habits', () => {
