@@ -2785,7 +2785,6 @@
     "ladderTitle": "सीढ़ी",
     "perfectRun": "{{count}} साफ़ दिन",
     "enrolFailed": "रन शुरू नहीं हो सका",
-    "reminderTitle": "आज का दिन न खोएँ",
     "reminderOne": "बाकी: {{modules}}",
     "rankLine": "शुरू करने वालों में शीर्ष {{percent}}%",
     "timelineTitle": "आपका इतिहास",
@@ -2865,7 +2864,26 @@
     "celebrateCompleted": "आपने हर पायदान चढ़ लिया",
     "celebrateSeasonEnded": "आपका सीज़न समाप्त — देखें कैसा रहा",
     "daysLeftInRun_one": "आपकी दौड़ में {{count}} दिन बाकी",
-    "daysLeftInRun_other": "आपकी दौड़ में {{count}} दिन बाकी"
+    "daysLeftInRun_other": "आपकी दौड़ में {{count}} दिन बाकी",
+    "nudgeTitle": {
+      "0": "आज अभी बाकी है",
+      "1": "एक काम बाकी",
+      "2": "दिन खत्म होने से पहले",
+      "3": "आपकी लय इंतज़ार में है"
+    },
+    "nudgeBody": {
+      "0": "{{modules}} अभी दर्ज नहीं। दिन {{count}} अब भी आपका है।",
+      "1": "आपके और दिन {{count}} के बीच बस {{modules}} है।",
+      "2": "दो मिनट: {{modules}}। फिर दिन {{count}} पूरा।",
+      "3": "{{modules}} बाकी है। दिन {{count}} आधी रात को बंद हो जाएगा।"
+    },
+    "reminderNearRung_one": "{{name}} तक {{count}} दिन — {{modules}} अभी बाकी।",
+    "reminderNearRung_other": "{{name}} तक {{count}} दिन — {{modules}} अभी बाकी।",
+    "reminderNearRungPlain_one": "अगले पायदान तक {{count}} दिन — {{modules}} अभी बाकी।",
+    "reminderNearRungPlain_other": "अगले पायदान तक {{count}} दिन — {{modules}} अभी बाकी।",
+    "rewardTitle": "{{name}} खुल गया",
+    "rewardTitleGeneric": "पुरस्कार खुल गया",
+    "rewardBody": "आपका पुरस्कार चैलेंज स्क्रीन पर इंतज़ार कर रहा है।"
   },
   "rewards": {
     "title": "आपके पुरस्कार",

@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { notifyRewardGranted } from '@/features/challenge/services/challenge-reminders';
 import { useChallengeStore } from '@/features/challenge/store/challenge-store';
 import { isSupabaseConfigured } from '@/lib/env';
 import { queryClient } from '@/lib/query-client';
@@ -42,6 +43,8 @@ export type RecordDayResult = {
   tierDay?: number;
   completed?: boolean;
   localDay?: string;
+  /** Slugs the rung paid out on this call (0071). Absent before it. */
+  rewards?: string[];
 };
 
 let inFlight: Promise<void> | null = null;
@@ -102,6 +105,21 @@ async function runFlush(): Promise<void> {
       if (result.ok !== false && result.qualified && !result.alreadyCounted) {
         void queryClient.invalidateQueries({ queryKey: ['challenge'] });
         void queryClient.invalidateQueries({ queryKey: ['rewards'] });
+
+        /*
+         * And if the day paid a rung out, say so.
+         *
+         * This is the flush that runs on the way to the background, so the
+         * common shape is somebody finishing their last habit, closing the
+         * app, and the rung landing a second later with the screen already
+         * dark. `notifyRewardGranted` declines when the app is in front of
+         * them, because the milestone sheet is the better version of this and
+         * is already showing.
+         */
+        if (Array.isArray(result.rewards) && result.rewards.length > 0) {
+          const standing = useChallengeStore.getState().standing;
+          void notifyRewardGranted(result.rewards, standing.rungNames[result.tierDay ?? 0] ?? null);
+        }
       }
     } catch {
       // Left in the buffer on purpose. An offline week should show up as a

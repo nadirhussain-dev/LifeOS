@@ -2785,7 +2785,6 @@
     "ladderTitle": "سیڑھی",
     "perfectRun": "{{count}} صاف دن",
     "enrolFailed": "سلسلہ شروع نہیں ہو سکا",
-    "reminderTitle": "آج کا دن ضائع نہ کریں",
     "reminderOne": "باقی: {{modules}}",
     "rankLine": "شروع کرنے والوں میں سرِفہرست {{percent}}٪",
     "timelineTitle": "آپ کی تاریخ",
@@ -2865,7 +2864,26 @@
     "celebrateCompleted": "آپ نے ہر مرحلہ عبور کر لیا",
     "celebrateSeasonEnded": "آپ کا سیزن ختم — دیکھیں کیسا رہا",
     "daysLeftInRun_one": "آپ کی دوڑ میں {{count}} دن باقی",
-    "daysLeftInRun_other": "آپ کی دوڑ میں {{count}} دن باقی"
+    "daysLeftInRun_other": "آپ کی دوڑ میں {{count}} دن باقی",
+    "nudgeTitle": {
+      "0": "آج ابھی باقی ہے",
+      "1": "ایک کام باقی",
+      "2": "دن ختم ہونے سے پہلے",
+      "3": "آپ کا سلسلہ منتظر ہے"
+    },
+    "nudgeBody": {
+      "0": "{{modules}} ابھی درج نہیں۔ دن {{count}} اب بھی آپ کا ہے۔",
+      "1": "آپ اور دن {{count}} کے درمیان صرف {{modules}} ہے۔",
+      "2": "دو منٹ: {{modules}}۔ پھر دن {{count}} مکمل۔",
+      "3": "{{modules}} باقی ہے۔ دن {{count}} آدھی رات کو ختم ہو جائے گا۔"
+    },
+    "reminderNearRung_one": "{{name}} تک {{count}} دن — {{modules}} ابھی باقی۔",
+    "reminderNearRung_other": "{{name}} تک {{count}} دن — {{modules}} ابھی باقی۔",
+    "reminderNearRungPlain_one": "اگلے درجے تک {{count}} دن — {{modules}} ابھی باقی۔",
+    "reminderNearRungPlain_other": "اگلے درجے تک {{count}} دن — {{modules}} ابھی باقی۔",
+    "rewardTitle": "{{name}} کھل گیا",
+    "rewardTitleGeneric": "انعام کھل گیا",
+    "rewardBody": "آپ کا انعام چیلنج اسکرین پر منتظر ہے۔"
   },
   "rewards": {
     "title": "آپ کے انعامات",

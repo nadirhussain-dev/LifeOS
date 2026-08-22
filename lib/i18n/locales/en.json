@@ -2785,7 +2785,6 @@
     "ladderTitle": "The ladder",
     "perfectRun": "{{count}} clean days",
     "enrolFailed": "Could not start the run",
-    "reminderTitle": "Do not lose today",
     "reminderOne": "Still to do: {{modules}}",
     "rankLine": "Top {{percent}}% of everyone who started",
     "timelineTitle": "Your history",
@@ -2865,7 +2864,26 @@
     "celebrateCompleted": "You climbed every rung",
     "celebrateSeasonEnded": "Your season has ended — see how it went",
     "daysLeftInRun_one": "{{count}} day left in your run",
-    "daysLeftInRun_other": "{{count}} days left in your run"
+    "daysLeftInRun_other": "{{count}} days left in your run",
+    "nudgeTitle": {
+      "0": "Still open today",
+      "1": "One thing left",
+      "2": "Before the day closes",
+      "3": "Your run is waiting"
+    },
+    "nudgeBody": {
+      "0": "{{modules}} not logged yet. Day {{count}} is still yours.",
+      "1": "{{modules}} is all that stands between you and day {{count}}.",
+      "2": "Two minutes: {{modules}}. Then day {{count}} is done.",
+      "3": "{{modules}} still open. Day {{count}} closes at midnight."
+    },
+    "reminderNearRung_one": "{{count}} day to {{name}} — {{modules}} still to log.",
+    "reminderNearRung_other": "{{count}} days to {{name}} — {{modules}} still to log.",
+    "reminderNearRungPlain_one": "{{count}} day to your next rung — {{modules}} still to log.",
+    "reminderNearRungPlain_other": "{{count}} days to your next rung — {{modules}} still to log.",
+    "rewardTitle": "{{name}} unlocked",
+    "rewardTitleGeneric": "Reward unlocked",
+    "rewardBody": "Your reward is waiting on the challenge screen."
   },
   "rewards": {
     "title": "Your rewards",

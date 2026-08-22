@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { buildChecklist } from '@/features/challenge/services/challenge-math';
@@ -117,6 +118,10 @@ export function useChallengeToday() {
           recentMisses: response.recentMisses ?? 0,
           maxDemotionDays: response.maxDemotionDays ?? 0,
           tierThresholds: response.tierThresholds ?? [],
+          // Left empty on purpose — this payload has no names in it, and the
+          // store preserves whatever the ladder query last supplied rather than
+          // letting this refresh blank them. See `setStanding`.
+          rungNames: {},
         });
       } else {
         clearEnrolment();
@@ -185,7 +190,9 @@ export function useSeasonStatus() {
  * not a person — so this needs no session.
  */
 export function useChallengeTiers(seasonId: string | undefined) {
-  return useQuery({
+  const setRungNames = useChallengeStore((s) => s.setRungNames);
+
+  const query = useQuery({
     queryKey: ['challenge', 'tiers', seasonId ?? null],
     enabled: isSupabaseConfigured && Boolean(seasonId),
     staleTime: 5 * 60 * 1000,
@@ -211,6 +218,24 @@ export function useChallengeTiers(seasonId: string | undefined) {
       }));
     },
   });
+
+  /*
+   * Mirrored into the store, the same way `useChallengeToday` mirrors the
+   * counters and for the same reason: the evening reminder is rebuilt outside
+   * React on every write and cannot fetch anything, so anything it needs to say
+   * has to already be somewhere it can read.
+   *
+   * Names only. The thresholds it prices a miss from arrive with the counters
+   * and must not depend on this screen ever having been opened; the names are
+   * the part the copy can honestly do without.
+   */
+  const tiers = query.data;
+  useEffect(() => {
+    if (!tiers || tiers.length === 0) return;
+    setRungNames(Object.fromEntries(tiers.map((tier) => [tier.dayThreshold, tier.name])));
+  }, [tiers, setRungNames]);
+
+  return query;
 }
 
 /**

@@ -2957,7 +2957,6 @@
     "ladderTitle": "السلّم",
     "perfectRun": "{{count}} يومًا متتاليًا",
     "enrolFailed": "تعذّر البدء",
-    "reminderTitle": "لا تفوّت اليوم",
     "reminderOne": "المتبقي: {{modules}}",
     "rankLine": "ضمن أفضل {{percent}}٪ ممن بدأوا",
     "timelineTitle": "سجلّك",
@@ -3049,7 +3048,26 @@
     "celebrateCompleted": "صعدت كل الدرجات",
     "celebrateSeasonEnded": "انتهى موسمك — اطّلع على النتيجة",
     "daysLeftInRun_one": "بقي يوم واحد في جولتك",
-    "daysLeftInRun_other": "بقي {{count}} يومًا في جولتك"
+    "daysLeftInRun_other": "بقي {{count}} يومًا في جولتك",
+    "nudgeTitle": {
+      "0": "لا يزال اليوم مفتوحًا",
+      "1": "بقي شيء واحد",
+      "2": "قبل انتهاء اليوم",
+      "3": "سلسلتك تنتظر"
+    },
+    "nudgeBody": {
+      "0": "لم تُسجّل {{modules}} بعد. اليوم {{count}} ما زال لك.",
+      "1": "لا يفصلك عن اليوم {{count}} سوى {{modules}}.",
+      "2": "دقيقتان: {{modules}}. عندها يكتمل اليوم {{count}}.",
+      "3": "{{modules}} ما زالت مفتوحة. اليوم {{count}} ينتهي عند منتصف الليل."
+    },
+    "reminderNearRung_one": "{{count}} يوم حتى {{name}} — بقيت {{modules}}.",
+    "reminderNearRung_other": "{{count}} أيام حتى {{name}} — بقيت {{modules}}.",
+    "reminderNearRungPlain_one": "{{count}} يوم حتى الدرجة التالية — بقيت {{modules}}.",
+    "reminderNearRungPlain_other": "{{count}} أيام حتى الدرجة التالية — بقيت {{modules}}.",
+    "rewardTitle": "تم فتح {{name}}",
+    "rewardTitleGeneric": "تم فتح مكافأة",
+    "rewardBody": "مكافأتك بانتظارك في شاشة التحدي."
   },
   "rewards": {
     "title": "مكافآتك",
