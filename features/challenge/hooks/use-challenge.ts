@@ -192,7 +192,7 @@ export function useChallengeTiers(seasonId: string | undefined) {
     queryFn: async (): Promise<ChallengeTier[]> => {
       const { data, error } = await supabase
         .from('challenge_tiers')
-        .select('day_threshold, name, reward_kind, reward_title, reward_description')
+        .select('day_threshold, name, reward_kind, reward_title, reward_description, rewards')
         .eq('season_id', seasonId)
         .order('day_threshold');
       if (error) throw new Error(error.message);
@@ -202,6 +202,12 @@ export function useChallengeTiers(seasonId: string | undefined) {
         rewardKind: t.reward_kind as ChallengeTier['rewardKind'],
         rewardTitle: (t.reward_title as string | null) ?? null,
         rewardDescription: (t.reward_description as string | null) ?? null,
+        // Defaulted rather than assumed present: `challenge_today()` embeds its
+        // own copy of the ladder without this column, and a build talking to a
+        // database that has not had 0071 applied yet gets an undefined here.
+        // An empty payout renders as a rung with no art, which is what a
+        // pre-0071 ladder honestly is.
+        rewards: Array.isArray(t.rewards) ? (t.rewards as ChallengeTier['rewards']) : [],
       }));
     },
   });

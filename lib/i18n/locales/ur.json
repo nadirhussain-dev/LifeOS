@@ -2867,6 +2867,37 @@
     "daysLeftInRun_one": "آپ کی دوڑ میں {{count}} دن باقی",
     "daysLeftInRun_other": "آپ کی دوڑ میں {{count}} دن باقی"
   },
+  "rewards": {
+    "title": "آپ کے انعامات",
+    "badgesTitle": "بیجز",
+    "noLadder": "اس سیزن کے لیے ابھی کوئی سیڑھی ترتیب نہیں دی گئی۔",
+    "lockedAt_one": "دن {{count}}",
+    "lockedAt_other": "دن {{count}}",
+    "emptyHint": "پہلے سات دن مکمل کریں اور اسپارک بیج آپ کا ہے۔",
+    "catchingUp": "آپ ایک درجہ عبور کر چکے ہیں جس کا انعام ابھی نہیں پہنچا۔ ہم اسے لا رہے ہیں۔",
+    "emptyTitle": "ابھی کچھ نہیں کمایا",
+    "emptyBody": "سیڑھی چڑھنے کے ساتھ انعامات کھلتے ہیں۔ پہلا انعام سات دن کی دوری پر ہے۔",
+    "premiumWon_one": "پریمیم کا {{count}} دن، دن {{day}} پر حاصل ہوا",
+    "premiumWon_other": "پریمیم کے {{count}} دن، دن {{day}} پر حاصل ہوئے",
+    "section": {
+      "theme": "گریڈیئنٹس",
+      "chain": "زنجیر کے رنگ",
+      "frame": "پروفائل فریم",
+      "premium": "پریمیم"
+    },
+    "cosmetic": {
+      "spark-dawn": "سحر",
+      "flame-dusk": "شام",
+      "forge-gold": "بھٹی",
+      "ember-glow": "انگارے کی چمک",
+      "keystone-steel": "کی اسٹون اسٹیل",
+      "summit-aurora": "سمٹ ارورا",
+      "blaze-ring": "بلیز رِنگ",
+      "half-year-laurel": "لارل",
+      "year-one-crown": "تاج"
+    },
+    "open": "آپ کے انعامات"
+  },
   "env": {
     "staging": "اسٹیجنگ بلڈ",
     "development": "ڈیولپمنٹ بلڈ",

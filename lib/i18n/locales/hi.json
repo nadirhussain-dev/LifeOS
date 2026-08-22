@@ -2867,6 +2867,37 @@
     "daysLeftInRun_one": "आपकी दौड़ में {{count}} दिन बाकी",
     "daysLeftInRun_other": "आपकी दौड़ में {{count}} दिन बाकी"
   },
+  "rewards": {
+    "title": "आपके पुरस्कार",
+    "badgesTitle": "बैज",
+    "noLadder": "इस सीज़न के लिए अभी कोई सीढ़ी सेट नहीं है।",
+    "lockedAt_one": "दिन {{count}}",
+    "lockedAt_other": "दिन {{count}}",
+    "emptyHint": "पहले सात दिन पूरे करें और स्पार्क बैज आपका है।",
+    "catchingUp": "आपने एक पायदान पार किया है जिसका इनाम अभी नहीं पहुँचा। हम उसे ला रहे हैं।",
+    "emptyTitle": "अभी कुछ नहीं कमाया",
+    "emptyBody": "सीढ़ी चढ़ने के साथ पुरस्कार खुलते हैं। पहला सात दिन दूर है।",
+    "premiumWon_one": "प्रीमियम का {{count}} दिन, दिन {{day}} पर मिला",
+    "premiumWon_other": "प्रीमियम के {{count}} दिन, दिन {{day}} पर मिले",
+    "section": {
+      "theme": "ग्रेडिएंट",
+      "chain": "चेन के रंग",
+      "frame": "प्रोफ़ाइल फ़्रेम",
+      "premium": "प्रीमियम"
+    },
+    "cosmetic": {
+      "spark-dawn": "भोर",
+      "flame-dusk": "साँझ",
+      "forge-gold": "भट्टी",
+      "ember-glow": "अंगार आभा",
+      "keystone-steel": "कीस्टोन स्टील",
+      "summit-aurora": "सम्मिट अरोरा",
+      "blaze-ring": "ब्लेज़ रिंग",
+      "half-year-laurel": "लॉरेल",
+      "year-one-crown": "ताज"
+    },
+    "open": "आपके पुरस्कार"
+  },
   "env": {
     "staging": "स्टेजिंग बिल्ड",
     "development": "डेवलपमेंट बिल्ड",

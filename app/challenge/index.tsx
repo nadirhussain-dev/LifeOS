@@ -360,6 +360,17 @@ export default function ChallengeScreen() {
           justClosed={lastClosedDay === currentDay() && checklist.outstanding.length === 0}
         />
 
+        {/* The trophy case gets a full-width button above the pair, not a third
+            slot beside them. It is the only one of the three that answers "what
+            did all this buy me", which is the question the ladder above has
+            just raised — and a third button in a row of three is the one people
+            stop seeing. */}
+        <Button
+          label={t('rewards.open')}
+          variant="secondary"
+          onPress={() => router.push('/challenge/rewards')}
+        />
+
         <View className="flex-row gap-2">
           <View className="flex-1">
             <Button

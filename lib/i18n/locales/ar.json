@@ -3051,6 +3051,37 @@
     "daysLeftInRun_one": "بقي يوم واحد في جولتك",
     "daysLeftInRun_other": "بقي {{count}} يومًا في جولتك"
   },
+  "rewards": {
+    "title": "مكافآتك",
+    "badgesTitle": "الشارات",
+    "noLadder": "لم يتم إعداد سلّم لهذا الموسم بعد.",
+    "lockedAt_one": "اليوم {{count}}",
+    "lockedAt_other": "اليوم {{count}}",
+    "emptyHint": "أكمل أول سبعة أيام وتصبح شارة سبارك لك.",
+    "catchingUp": "لقد تجاوزت درجة لم تصل مكافأتها بعد. نحن نجلبها الآن.",
+    "emptyTitle": "لم تكسب شيئًا بعد",
+    "emptyBody": "تُفتح المكافآت مع صعودك السلّم. الأولى على بعد سبعة أيام.",
+    "premiumWon_one": "يوم {{count}} من بريميوم، حصلت عليه في اليوم {{day}}",
+    "premiumWon_other": "{{count}} يومًا من بريميوم، حصلت عليها في اليوم {{day}}",
+    "section": {
+      "theme": "التدرجات",
+      "chain": "ألوان السلسلة",
+      "frame": "إطارات الملف",
+      "premium": "بريميوم"
+    },
+    "cosmetic": {
+      "spark-dawn": "الفجر",
+      "flame-dusk": "الغسق",
+      "forge-gold": "المصهر",
+      "ember-glow": "وهج الجمر",
+      "keystone-steel": "فولاذ كيستون",
+      "summit-aurora": "شفق القمة",
+      "blaze-ring": "حلقة اللهب",
+      "half-year-laurel": "الغار",
+      "year-one-crown": "التاج"
+    },
+    "open": "مكافآتك"
+  },
   "env": {
     "staging": "نسخة اختبارية",
     "development": "نسخة تطوير",

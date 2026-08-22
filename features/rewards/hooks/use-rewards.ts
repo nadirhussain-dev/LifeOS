@@ -3,7 +3,11 @@ import { useMemo } from 'react';
 
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { BADGES, CHAINS, FRAMES, THEMES, parseSlug } from '@/features/rewards/config/catalog';
-import { isCosmetic, type UserReward } from '@/features/rewards/types/rewards.types';
+import {
+  isCosmetic,
+  type CosmeticKind,
+  type UserReward,
+} from '@/features/rewards/types/rewards.types';
 import { isSupabaseConfigured } from '@/lib/env';
 import { supabase } from '@/lib/supabase';
 
@@ -82,11 +86,18 @@ export function useSyncRewards() {
  * as an empty tile with no explanation; dropping it means an older app shows
  * fewer rewards rather than broken ones, which is the right way round.
  */
-export function useOwnedCosmetics() {
+export type OwnedCosmetics = Record<CosmeticKind, string[]> & {
+  isLoading: boolean;
+  /** Whether anything at all has been earned. What decides between the trophy
+   *  case and the empty state. */
+  any: boolean;
+};
+
+export function useOwnedCosmetics(): OwnedCosmetics {
   const rewards = useRewards();
 
   return useMemo(() => {
-    const owned: Record<string, string[]> = {
+    const owned: Record<CosmeticKind, string[]> = {
       badge: [],
       theme: [],
       chain: [],
@@ -107,14 +118,12 @@ export function useOwnedCosmetics() {
       // `icon` has no art map — nothing seeds it and nothing can draw it yet.
       // See the note in 0071.
       if (parsed.kind !== 'icon' && !art[parsed.kind]?.[parsed.name]) continue;
-      owned[parsed.kind]?.push(parsed.name);
+      owned[parsed.kind as CosmeticKind]?.push(parsed.name);
     }
 
     return {
       ...owned,
       isLoading: rewards.isLoading,
-      /** Whether anything at all has been earned. What decides between the
-       *  trophy case and the empty state. */
       any: Object.values(owned).some((list) => list.length > 0),
     };
   }, [rewards.data, rewards.isLoading]);
