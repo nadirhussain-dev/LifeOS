@@ -2896,7 +2896,17 @@
       "half-year-laurel": "लॉरेल",
       "year-one-crown": "ताज"
     },
-    "open": "आपके पुरस्कार"
+    "open": "आपके पुरस्कार",
+    "milestoneTitle": "{{name}} खुल गया",
+    "milestoneTitleGeneric": "पुरस्कार खुल गया",
+    "milestoneBody_one": "{{count}} दिन बनाए रखा। यह उसका फल है।",
+    "milestoneBody_other": "{{count}} दिन बनाए रखे। यह उसका फल है।",
+    "milestoneShare": "किसी को दिखाएँ",
+    "milestoneDone": "जारी रखें",
+    "milestoneShield": "एक शील्ड, आपके खानों में जुड़ी",
+    "milestonePremium": "प्रीमियम की एक अवधि",
+    "milestonePremiumDays_one": "प्रीमियम का {{count}} दिन",
+    "milestonePremiumDays_other": "प्रीमियम के {{count}} दिन"
   },
   "env": {
     "staging": "स्टेजिंग बिल्ड",

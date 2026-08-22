@@ -3080,7 +3080,17 @@
       "half-year-laurel": "الغار",
       "year-one-crown": "التاج"
     },
-    "open": "مكافآتك"
+    "open": "مكافآتك",
+    "milestoneTitle": "تم فتح {{name}}",
+    "milestoneTitleGeneric": "تم فتح مكافأة",
+    "milestoneBody_one": "حافظت على {{count}} يوم. هذا ما جلبه.",
+    "milestoneBody_other": "حافظت على {{count}} يومًا. هذا ما جلبه.",
+    "milestoneShare": "اعرضها على أحد",
+    "milestoneDone": "واصل",
+    "milestoneShield": "درع، أُضيف إلى خاناتك",
+    "milestonePremium": "فترة من بريميوم",
+    "milestonePremiumDays_one": "يوم {{count}} من بريميوم",
+    "milestonePremiumDays_other": "{{count}} يومًا من بريميوم"
   },
   "env": {
     "staging": "نسخة اختبارية",

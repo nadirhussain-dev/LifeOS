@@ -2896,7 +2896,17 @@
       "half-year-laurel": "Laurel",
       "year-one-crown": "Crown"
     },
-    "open": "Your rewards"
+    "open": "Your rewards",
+    "milestoneTitle": "{{name}} unlocked",
+    "milestoneTitleGeneric": "Reward unlocked",
+    "milestoneBody_one": "{{count}} day kept. Here is what it bought.",
+    "milestoneBody_other": "{{count}} days kept. Here is what it bought.",
+    "milestoneShare": "Show someone",
+    "milestoneDone": "Keep going",
+    "milestoneShield": "A shield, added to your slots",
+    "milestonePremium": "A window of Premium",
+    "milestonePremiumDays_one": "{{count}} day of Premium",
+    "milestonePremiumDays_other": "{{count}} days of Premium"
   },
   "env": {
     "staging": "Staging build",

@@ -1,6 +1,7 @@
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { useChallengeStore } from '@/features/challenge/store/challenge-store';
 import { isSupabaseConfigured } from '@/lib/env';
+import { queryClient } from '@/lib/query-client';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -82,6 +83,25 @@ async function runFlush(): Promise<void> {
       // this branch is reached at all.
       if (result.ok === false && result.reason === 'day out of window') {
         useChallengeStore.getState().dropDay(day.day);
+      }
+
+      /*
+       * A day that actually landed is the only moment any of this can have
+       * changed, so it is the only moment worth a refetch.
+       *
+       * `alreadyCounted` is excluded deliberately: it is the common case on a
+       * second device and on every retry of a day that already went in, and
+       * invalidating on it would refetch the ladder, the chain and the shelf
+       * for an answer that provably has not moved.
+       *
+       * Both keys, because a credited day can pay a rung out (0071) and the
+       * milestone sheet reads the event log. Without this the payout waits for
+       * whatever refetch happens next, which on a fresh screen is none — the
+       * user earns Ember and finds out about it tomorrow.
+       */
+      if (result.ok !== false && result.qualified && !result.alreadyCounted) {
+        void queryClient.invalidateQueries({ queryKey: ['challenge'] });
+        void queryClient.invalidateQueries({ queryKey: ['rewards'] });
       }
     } catch {
       // Left in the buffer on purpose. An offline week should show up as a

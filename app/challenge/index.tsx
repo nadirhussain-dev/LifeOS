@@ -14,8 +14,14 @@ import { useAuthStore } from '@/features/auth/services/auth-store';
 import { ChallengeLadder } from '@/features/challenge/components/challenge-ladder';
 import { Braid } from '@/features/challenge/components/braid';
 import { DemotionSheet } from '@/features/challenge/components/demotion-sheet';
+import { MilestoneSheet } from '@/features/challenge/components/milestone-sheet';
 import { scheduleWinBack } from '@/features/challenge/services/challenge-reminders';
-import { ShareButton, ShareCard } from '@/features/challenge/components/share-card';
+import {
+  ShareButton,
+  ShareCard,
+  captureAndShare,
+  useShareCosmetics,
+} from '@/features/challenge/components/share-card';
 import { ShieldSlots } from '@/features/challenge/components/shield-slots';
 import { TodayChecklist } from '@/features/challenge/components/today-checklist';
 import { SeasonNotice } from '@/features/challenge/components/season-notice';
@@ -58,6 +64,7 @@ export default function ChallengeScreen() {
   const router = useRouter();
   const session = useAuthStore((s) => s.session);
   const shareTarget = useRef<View>(null);
+  const shareCosmetics = useShareCosmetics();
 
   const today = useChallengeToday();
   const season = useSeasonStatus();
@@ -96,18 +103,36 @@ export default function ChallengeScreen() {
   const next = nextTier(tiers, qualifiedDays);
 
   /**
-   * The most recent fall the user has not been shown.
+   * Says the things the engine has always recorded and the app has never read.
    *
-   * Found by walking the event log rather than by comparing counters, because
-   * the counters only say where somebody is now — the log is the only thing
-   * that says they used to be somewhere else, and by how much.
+   * `challenge_credit_day` writes `tier_reached`, `shield_earned` and
+   * `completed` on the very call that earns them, and until now progress simply
+   * appeared in a number on the next refetch — earning a rung after ninety days
+   * was silent.
+   *
+   * The walk also reports the event it *stopped* at, which is the one that
+   * needs a sheet. Asking it rather than searching the log a second time is
+   * what keeps "which sheet, if any" to a single answer: a fall and a payout
+   * both unseen would otherwise each find themselves, and two modals would race
+   * for the same surface.
    */
-  const unseenDemotion = (events.data ?? []).find(
-    (event) => event.kind === 'demoted' && event.id > lastSeenEventId,
+  const celebrations = useMemo(
+    () => celebrationsFor(events.data ?? [], lastSeenEventId),
+    [events.data, lastSeenEventId],
   );
 
+  const blocking = celebrations.blockedBy;
+  const unseenDemotion = blocking?.kind === 'demoted' ? blocking : undefined;
+  const unseenReward = blocking?.kind === 'reward_granted' ? blocking : undefined;
+
+  /** The slugs a payout handed over. Defended against a malformed detail
+   *  because this decides what a modal renders. */
+  const rewardSlugs = Array.isArray(unseenReward?.detail.slugs)
+    ? (unseenReward.detail.slugs as unknown[]).filter((s): s is string => typeof s === 'string')
+    : [];
+
   const acknowledge = () => {
-    if (unseenDemotion) markEventsSeen(unseenDemotion.id);
+    if (blocking) markEventsSeen(blocking.id);
     setDismissed(true);
   };
 
@@ -132,23 +157,14 @@ export default function ChallengeScreen() {
   }, [unseenDemotion, tiers]);
 
   /**
-   * Says the things the engine has always recorded and the app has never read.
+   * The quiet half of the walk.
    *
-   * `challenge_credit_day` writes `tier_reached`, `shield_earned` and
-   * `completed` on the very call that earns them, and until now progress simply
-   * appeared in a number on the next refetch — earning a rung after ninety days
-   * was silent. `celebrationsFor` stops the walk at an unseen fall so the sheet
-   * below still finds it; see the note there for why the watermark is shared.
-   *
-   * Toasts rather than a sheet: a rung is worth marking, and a modal in front
-   * of somebody who opened this screen to tick today's boxes is worth less than
-   * the tick.
+   * Toasts rather than a sheet: crossing a rung is worth marking, and a modal
+   * in front of somebody who opened this screen to tick today's boxes is worth
+   * less than the tick. The *payout* is the exception, and it gets the sheet
+   * below — see `celebrations.ts` for why exactly two kinds are worth stopping
+   * for.
    */
-  const celebrations = useMemo(
-    () => celebrationsFor(events.data ?? [], lastSeenEventId),
-    [events.data, lastSeenEventId],
-  );
-
   useEffect(() => {
     if (celebrations.show.length === 0) return;
     for (const event of celebrations.show) {
@@ -401,7 +417,13 @@ export default function ChallengeScreen() {
             negative offset rather than `display: none`, which would render
             nothing for view-shot to photograph. */}
         <View className="absolute" style={{ left: -10000, top: 0 }} pointerEvents="none">
-          <ShareCard ref={shareTarget} days={chain.data ?? []} qualifiedDays={qualifiedDays} />
+          <ShareCard
+            ref={shareTarget}
+            days={chain.data ?? []}
+            qualifiedDays={qualifiedDays}
+            chain={shareCosmetics.chain}
+            badge={shareCosmetics.badge}
+          />
         </View>
       </View>
     );
@@ -426,6 +448,23 @@ export default function ChallengeScreen() {
         fromDays={Number(unseenDemotion?.detail.fromDays ?? 0)}
         toDays={Number(unseenDemotion?.detail.toDays ?? 0)}
         tiers={tiers}
+        onDismiss={acknowledge}
+      />
+
+      {/* The other half of the same mechanism. Only one of the two can be
+          visible, because only one event can be the one the walk stopped at. */}
+      <MilestoneSheet
+        visible={Boolean(unseenReward) && rewardSlugs.length > 0 && !dismissed}
+        slugs={rewardSlugs}
+        tiers={tiers}
+        qualifiedDays={Number(unseenReward?.detail.qualifiedDays ?? qualifiedDays)}
+        onShare={() => {
+          // Acknowledged first, then shared. The share sheet is another app
+          // taking the screen, and coming back to a modal that is still
+          // congratulating you reads as the app having lost track.
+          acknowledge();
+          void captureAndShare(shareTarget);
+        }}
         onDismiss={acknowledge}
       />
     </View>

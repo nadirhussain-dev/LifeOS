@@ -76,4 +76,43 @@ describe('celebrationsFor', () => {
     const { show } = celebrationsFor(newestFirst(event(2, 'season_ended')), 1);
     expect(show.map((e) => e.kind)).toEqual(['season_ended']);
   });
+
+  it('names the event it stopped at, so one sheet is chosen rather than two', () => {
+    const { blockedBy } = celebrationsFor(newestFirst(event(1, 'demoted')), 0);
+    expect(blockedBy?.kind).toBe('demoted');
+  });
+
+  it('stops at a payout too, so it cannot be missed', () => {
+    /*
+     * The whole reason `reward_granted` blocks rather than toasting. A toast is
+     * gone in three seconds and only fires if somebody is holding the phone;
+     * the walk halting here means force-quitting on the sheet shows it again
+     * next time, which is what a rung that paid out ninety days of Premium is
+     * worth.
+     */
+    const events = newestFirst(event(1, 'tier_reached'), event(2, 'reward_granted'));
+    const { show, watermark, blockedBy } = celebrationsFor(events, 0);
+    expect(show.map((e) => e.kind)).toEqual(['tier_reached']);
+    expect(blockedBy?.id).toBe(2);
+    // Stops *before* the payout, so acknowledging the sheet is the only thing
+    // that can move the watermark past it.
+    expect(watermark).toBe(1);
+  });
+
+  it('when a fall and a payout are both unseen, the older one goes first', () => {
+    // Both need a sheet and there is one surface. Being congratulated on a
+    // payout and then told you fell off the rung is the wrong way round, and
+    // two modals racing is worse than either.
+    const events = newestFirst(event(1, 'demoted'), event(2, 'reward_granted'));
+    expect(celebrationsFor(events, 0).blockedBy?.kind).toBe('demoted');
+
+    const other = newestFirst(event(1, 'reward_granted'), event(2, 'demoted'));
+    expect(celebrationsFor(other, 0).blockedBy?.kind).toBe('reward_granted');
+  });
+
+  it('reports nothing blocking when the walk ran clean', () => {
+    // The screen keys both sheets off this, so "nothing to show" has to be
+    // null rather than a stale last event.
+    expect(celebrationsFor(newestFirst(event(1, 'tier_reached')), 0).blockedBy).toBeNull();
+  });
 });

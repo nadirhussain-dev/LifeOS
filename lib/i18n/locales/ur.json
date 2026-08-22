@@ -2896,7 +2896,17 @@
       "half-year-laurel": "لارل",
       "year-one-crown": "تاج"
     },
-    "open": "آپ کے انعامات"
+    "open": "آپ کے انعامات",
+    "milestoneTitle": "{{name}} کھل گیا",
+    "milestoneTitleGeneric": "انعام کھل گیا",
+    "milestoneBody_one": "{{count}} دن قائم رکھا۔ یہ اس کا صلہ ہے۔",
+    "milestoneBody_other": "{{count}} دن قائم رکھے۔ یہ اس کا صلہ ہے۔",
+    "milestoneShare": "کسی کو دکھائیں",
+    "milestoneDone": "جاری رکھیں",
+    "milestoneShield": "ایک شیلڈ، آپ کے خانوں میں شامل",
+    "milestonePremium": "پریمیم کی ایک مدت",
+    "milestonePremiumDays_one": "پریمیم کا {{count}} دن",
+    "milestonePremiumDays_other": "پریمیم کے {{count}} دن"
   },
   "env": {
     "staging": "اسٹیجنگ بلڈ",
