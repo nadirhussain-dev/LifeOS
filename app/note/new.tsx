@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
+import { showInterstitial } from '@/features/ads/services/interstitial';
 import { Bell, Star, Tag } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +23,10 @@ import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
 
 export default function NewNoteScreen() {
   const router = useRouter();
+  // The route the ad would appear over. Passed rather than guessed — see
+  // `mayShowAdNow`, where a stale value is how an ad reaches a screen that
+  // forbids them.
+  const segments = useSegments();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const keyboardHeight = useKeyboardHeight();
@@ -52,6 +57,10 @@ export default function NewNoteScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     create.mutate({ title: trimmed, body: body.trim() || null, categoryId, isPinned, reminderAt });
     router.back();
+    // Same shape and same ordering as the task sheet: after the write, after
+    // the navigation, and only for a run that committed to Notes. See the note
+    // at that call site for why the order is the rule rather than the manners.
+    void showInterstitial({ segments, breakpoint: 'note-saved' });
   };
 
   return (

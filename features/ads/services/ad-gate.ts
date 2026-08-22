@@ -2,6 +2,7 @@ import { getInstallAt } from '@/features/analytics/services/install-id';
 import { trackFunnel } from '@/features/analytics/store/funnel-store';
 import type { FunnelMetric } from '@/features/analytics/config/funnel-metrics';
 import { ADS_MODULE_ID } from '@/features/ads/config';
+import { useChallengeStore } from '@/features/challenge/store/challenge-store';
 import { mayShowFullScreenAd, type AdRefusal } from '@/features/ads/services/ad-pacing';
 import { isAdFree } from '@/features/ads/store/ad-free-store';
 import { useAdSessionStore } from '@/features/ads/store/ad-session-store';
@@ -44,6 +45,7 @@ const METRIC_FOR_REFUSAL: Record<AdRefusal, FunnelMetric> = {
   'ad-free-route': 'ad_refused_ad_free_route',
   'not-a-breakpoint': 'ad_refused_not_a_breakpoint',
   launch: 'ad_refused_launch',
+  'not-enrolled': 'ad_refused_not_enrolled',
 };
 
 /**
@@ -79,9 +81,20 @@ export async function mayShowAdNow(input: {
   const now = Date.now();
   const installedAt = await getInstallAt();
 
+  /*
+   * Read from the store rather than the query cache, for the same reason the
+   * evening reminder does: this can be called from a screen that has never
+   * mounted a challenge query, and the store is the copy that survives a cold
+   * start. `enrolled` there is false for everybody who has not joined, which is
+   * the safe default — it can only ever *withhold* the extra placements.
+   */
+  const challenge = useChallengeStore.getState();
+
   const result = mayShowFullScreenAd({
     segments: input.segments,
     breakpoint: input.breakpoint,
+    challengeEnrolled: challenge.enrolled,
+    committedModules: challenge.required,
     installAgeMs: now - installedAt,
     shownThisSession: session.shownThisSession,
     lastShownAt: session.lastShownAt,
