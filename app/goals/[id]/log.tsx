@@ -16,6 +16,7 @@ import { formatProgressPercent } from '@/features/goals/services/goal-format';
 import { useGoal } from '@/features/goals/hooks/use-goals';
 import { useGoalMutations } from '@/features/goals/hooks/use-goal-mutations';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { alpha } from '@/lib/color';
 
 export default function LogProgressScreen() {
@@ -52,6 +53,7 @@ export default function LogProgressScreen() {
 
   const delta = isCount ? addCount : resultingFraction - goal.manualProgress;
   const canSave = isCount ? addCount !== 0 : Math.abs(delta) > 0.001;
+  const release = useUnsavedChanges(pct !== null || addCount !== 0 || note.trim() !== '');
 
   const countStep = goal.targetValue ? Math.max(1, Math.round(goal.targetValue / 20)) : 1;
 
@@ -63,6 +65,7 @@ export default function LogProgressScreen() {
       delta,
       note: note.trim() || null,
     });
+    release();
     router.back();
   };
 

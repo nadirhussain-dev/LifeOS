@@ -38,7 +38,11 @@
     "or": "or",
     "optional": "Optional",
     "loadingEllipsis": "Loading…",
-    "manage": "Manage"
+    "manage": "Manage",
+    "discardTitle": "Discard changes?",
+    "discardBody": "You've made changes that haven't been saved. Leaving now loses them.",
+    "discard": "Discard",
+    "keepEditing": "Keep editing"
   },
   "reminder": {
     "in1Hour": "In 1 hour",

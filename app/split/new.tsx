@@ -16,6 +16,7 @@ import { useBudgetSettings } from '@/features/budget/hooks/use-budget';
 import { useSplitMutations } from '@/features/split/hooks/use-split';
 import type { GroupKind } from '@/features/split/types/split.types';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { alpha } from '@/lib/color';
 import { toast } from '@/lib/toast-store';
 
@@ -43,9 +44,11 @@ export default function NewSplitGroupScreen() {
   const [kind, setKind] = useState<GroupKind>('trip');
 
   const canSave = name.trim().length > 0 && !createGroup.isPending;
+  const release = useUnsavedChanges(name.trim() !== '' || kind !== 'trip');
 
   const save = () => {
     if (!canSave) return;
+    release();
     createGroup.mutate(
       { name: name.trim(), kind, currency },
       {

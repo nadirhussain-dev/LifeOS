@@ -2,7 +2,7 @@ import DateTimePicker, { type DateTimePickerEvent } from '@react-native-communit
 import { format, set, subDays } from 'date-fns';
 import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { CalendarDays, Moon, Sun, Trash2 } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 
@@ -21,6 +21,7 @@ import { durationBetween, formatDuration } from '@/features/sleep/services/sleep
 import { useSleepMutations } from '@/features/sleep/hooks/use-sleep-mutations';
 import { useSleepSession } from '@/features/sleep/hooks/use-sleep';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { confirm } from '@/lib/dialog-store';
 import { toast } from '@/lib/toast-store';
 
@@ -107,6 +108,31 @@ export default function SleepLogScreen() {
     setSeeded(true);
   }
 
+  /**
+   * "Has anything been touched" against the values this screen opened with.
+   *
+   * A ref rather than a comparison with `existing`, because the same screen is
+   * both the create and the edit form: on create there is no record to compare
+   * to, and the defaults (23:00 / 07:00, or the times handed over by the
+   * tracker) are themselves the baseline. Re-taken once the async edit load has
+   * seeded the fields, or every edit would open already "dirty".
+   */
+  const snapshot = JSON.stringify([
+    nightDate.getTime(),
+    bed.getTime(),
+    wake.getTime(),
+    fellAsleep,
+    quality,
+    note.trim(),
+  ]);
+  const baseline = useRef(snapshot);
+  const rebased = useRef(false);
+  if (seeded && !rebased.current) {
+    rebased.current = true;
+    baseline.current = snapshot;
+  }
+  const release = useUnsavedChanges(snapshot !== baseline.current);
+
   const previewMinutes = useMemo(() => {
     const { bedtime, wakeTime } = buildTimestamps(nightDate, bed, wake);
     return durationBetween(bedtime, wakeTime);
@@ -148,6 +174,7 @@ export default function SleepLogScreen() {
         note: note.trim() || null,
       });
     }
+    release();
     router.back();
     // Same reasoning as the study timer: a saved entry is a finished flow, not
     // a moment in the middle of one. `showInterstitial` owns every gate.
@@ -165,6 +192,9 @@ export default function SleepLogScreen() {
     }).then(async (ok) => {
       if (!ok) return;
       remove.mutate(existing.id);
+      // Deleting is also a deliberate exit — asking "discard your changes?"
+      // on top of a confirmed delete is the app not listening.
+      release();
       router.back();
     });
   };

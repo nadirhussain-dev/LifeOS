@@ -20,6 +20,7 @@ import { MilestoneEditor } from '@/features/goals/components/milestone-editor';
 import { makeGoalFormSchema, type GoalFormValues } from '@/features/goals/schemas/goal-form-schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 
 type Props = {
   defaultValues: GoalFormValues;
@@ -57,17 +58,22 @@ export function GoalForm({ defaultValues, submitLabel, onSubmit, showMilestones 
     control,
     handleSubmit,
     watch,
-    formState: { isValid },
+    formState: { isValid, isDirty },
   } = useForm<GoalFormValues>({
     resolver: zodResolver(schema),
     defaultValues,
     mode: 'onChange',
   });
 
+  // Owned here for the same reason as HabitForm's: `isDirty` is the question,
+  // and the screens mounting this form cannot see it.
+  const release = useUnsavedChanges(isDirty);
+
   const progressMode = watch('progressMode');
 
   const submit = handleSubmit((values) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    release();
     onSubmit(values);
   });
 

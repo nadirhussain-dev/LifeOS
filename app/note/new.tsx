@@ -19,6 +19,7 @@ import { NoteCategoryPicker } from '@/features/notes/components/note-category-pi
 import { NoteTemplatePicker } from '@/features/notes/components/note-template-picker';
 import { useNoteMutations } from '@/features/notes/hooks/use-note-mutations';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 
 export default function NewNoteScreen() {
   const router = useRouter();
@@ -40,6 +41,16 @@ export default function NewNoteScreen() {
     setBody(template ? t(template.bodyKey) : '');
   };
 
+  // A template fills the body, so picking one counts as work too.
+  const release = useUnsavedChanges(
+    title.trim() !== '' ||
+      body.trim() !== '' ||
+      categoryId !== null ||
+      isPinned ||
+      reminderAt !== null ||
+      templateId !== null,
+  );
+
   const focusProgress = useSharedValue(0);
   const underlineStyle = useAnimatedStyle(() => ({
     opacity: focusProgress.value,
@@ -51,6 +62,7 @@ export default function NewNoteScreen() {
     if (!trimmed) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     create.mutate({ title: trimmed, body: body.trim() || null, categoryId, isPinned, reminderAt });
+    release();
     router.back();
   };
 

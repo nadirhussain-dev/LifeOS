@@ -14,6 +14,7 @@ import { ALBUM_CATEGORIES } from '@/features/gallery/config/album-categories';
 import { useGalleryMutations } from '@/features/gallery/hooks/use-gallery-mutations';
 import type { AlbumCategory } from '@/features/gallery/types/gallery.types';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 
 export default function NewAlbumScreen() {
   const router = useRouter();
@@ -26,9 +27,11 @@ export default function NewAlbumScreen() {
   const [category, setCategory] = useState<AlbumCategory>('gym');
 
   const canSave = name.trim().length > 0;
+  const release = useUnsavedChanges(name.trim() !== '' || category !== 'gym');
 
   const save = () => {
     if (!canSave) return;
+    release();
     addAlbum.mutate(
       { name: name.trim(), category },
       { onSuccess: (album) => router.replace(`/gallery/album/${album.id}`) },

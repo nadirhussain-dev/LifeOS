@@ -224,6 +224,36 @@ export default function OnboardingScreen() {
   const goBack = useCallback(() => setStep(Math.max(index - 1, 0)), [index, setStep]);
 
   /**
+   * Moves to a named step rather than to a number.
+   *
+   * `goNext` is an index bump, and an index is only meaningful against the list
+   * it was computed from. That is fine everywhere except the one transition
+   * that *changes the list underneath itself*: signing in at the account step
+   * removes that step, so a `goNext` issued from index 1 sets step 2 and the
+   * re-render then resolves 2 against a list one shorter — landing on `focus`
+   * and **silently skipping `about`**, the step that asks somebody's name.
+   *
+   * The file's own header warns about exactly this ("hardcoding indices around
+   * conditional screens is how a back button ends up on a screen that no longer
+   * exists"), and `goToReady` already navigates by id for the same reason. This
+   * is that, generalised.
+   *
+   * Falls back to `goNext` if the id is not in the list, so a step becoming
+   * conditional later cannot strand anybody.
+   */
+  const goTo = useCallback(
+    (id: StepId) => {
+      const target = steps.indexOf(id);
+      if (target < 0) {
+        setStep(Math.min(index + 1, steps.length - 1));
+        return;
+      }
+      setStep(target);
+    },
+    [steps, index, setStep],
+  );
+
+  /**
    * Runs the seed on the way into the final screen, not on the way out of it.
    *
    * The last screen's whole job is to say what was created, so the creating has
@@ -344,7 +374,9 @@ export default function OnboardingScreen() {
         {current === 'account' ? (
           <AccountStep
             isGuest={isGuest}
-            onSignedIn={goNext}
+            // By name, not by `goNext`. Signing in deletes this step from the
+            // list, so an index bump lands one step too far — see `goTo`.
+            onSignedIn={() => goTo('about')}
             onContinueAsGuest={() => {
               continueAsGuest();
               goNext();

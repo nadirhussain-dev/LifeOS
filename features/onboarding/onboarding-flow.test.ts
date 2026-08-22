@@ -108,6 +108,23 @@ describe('the welcome comes before the sign-in wall', () => {
     expect(push).toContain("if (!session) list.push('account')");
     expect(push).not.toContain("if (!authed) list.push('account')");
   });
+
+  it('advances by name from the one step that deletes itself', () => {
+    /*
+     * Signing in at the account step removes that step from the list. A
+     * `goNext` issued from it sets index+1, and the re-render then resolves
+     * that index against a list one shorter — so the user landed on `focus`
+     * and never saw `about`, the step that asks their name.
+     *
+     * The email path did not have this: it leaves the screen entirely and comes
+     * back with `step` still pointing at the account slot, which now resolves
+     * to `about` on its own. Only the in-place social sign-in skipped a step,
+     * which is why it survived — it is invisible unless you sign in with Google
+     * on a fresh install and notice a question you were never asked.
+     */
+    const source = read('app/(onboarding)/index.tsx');
+    expect(source).toMatch(/onSignedIn=\{\(\) => goTo\('about'\)\}/);
+  });
 });
 
 describe('starter habits', () => {

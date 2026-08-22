@@ -18,6 +18,7 @@ import { Text } from '@/components/ui/text';
 import { categoryColorPalette, colors } from '@/constants/theme';
 import { useCalendarEventMutations } from '@/features/timeline/hooks/use-calendar-event-mutations';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 
 const DURATIONS = [
   { key: 'none', labelKey: 'timeline.durationNone', minutes: null },
@@ -52,6 +53,15 @@ export default function NewCalendarEventScreen() {
   const [durationMinutes, setDurationMinutes] = useState<number | null>(null);
   const [reminderMinutesBefore, setReminderMinutesBefore] = useState<number | null>(30);
 
+  // Colour and reminder start at a default, so only a change to them counts.
+  const release = useUnsavedChanges(
+    title.trim() !== '' ||
+      notes.trim() !== '' ||
+      durationMinutes !== null ||
+      colorToken !== categoryColorPalette[3] ||
+      reminderMinutesBefore !== 30,
+  );
+
   const wash = `${colorToken}33`;
 
   const handleTimeChange = (event: DateTimePickerEvent, next?: Date) => {
@@ -80,6 +90,7 @@ export default function NewCalendarEventScreen() {
       notes: notes.trim() || null,
       reminderMinutesBefore,
     });
+    release();
     router.back();
   };
 

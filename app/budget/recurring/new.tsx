@@ -19,6 +19,7 @@ import { useRecurringMutations } from '@/features/budget/hooks/use-recurring';
 import { parseAmountToCents } from '@/features/budget/services/money';
 import type { RecurringFrequencyOption } from '@/features/budget/types/budget.types';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 
 /** A new repeating transaction. Anchored on today by default, because "starting
  *  now" is what almost everybody means and a date picker in the way of that is
@@ -40,6 +41,13 @@ export default function NewRecurringScreen() {
   const categories = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES;
   const amountCents = amount.trim() ? parseAmountToCents(amount) : 0;
   const canSave = amountCents > 0;
+  const release = useUnsavedChanges(
+    amount.trim() !== '' ||
+      note.trim() !== '' ||
+      type !== 'expense' ||
+      category !== EXPENSE_CATEGORIES[0].id ||
+      frequency !== 'monthly',
+  );
 
   const save = () => {
     if (!canSave) return;
@@ -52,6 +60,7 @@ export default function NewRecurringScreen() {
       interval: 1,
       anchorDate: format(new Date(), 'yyyy-MM-dd'),
     });
+    release();
     router.back();
   };
 

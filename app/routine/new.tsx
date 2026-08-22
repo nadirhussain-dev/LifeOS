@@ -11,6 +11,7 @@ import { SheetHeader } from '@/components/ui/sheet-header';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useRoutineMutations } from '@/features/habits/hooks/use-routine-mutations';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 
 export default function NewRoutineScreen() {
   const router = useRouter();
@@ -18,11 +19,13 @@ export default function NewRoutineScreen() {
   const { t } = useTranslation();
   const { create } = useRoutineMutations();
   const [name, setName] = useState('');
+  const release = useUnsavedChanges(name.trim() !== '');
 
   const handleCreate = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    release();
     create.mutate(trimmed, {
       onSuccess: (routine) => router.replace(`/routine/${routine.id}`),
     });

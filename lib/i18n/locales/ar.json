@@ -38,7 +38,11 @@
     "or": "أو",
     "optional": "اختياري",
     "loadingEllipsis": "جارٍ التحميل…",
-    "manage": "إدارة"
+    "manage": "إدارة",
+    "discardTitle": "تجاهل التغييرات؟",
+    "discardBody": "أجريت تغييرات لم تُحفظ. الخروج الآن سيؤدي إلى فقدانها.",
+    "discard": "تجاهل",
+    "keepEditing": "متابعة التحرير"
   },
   "reminder": {
     "in1Hour": "خلال ساعة",
