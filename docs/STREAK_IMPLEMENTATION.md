@@ -9,6 +9,11 @@ table, no addresses, no fulfilment, no terms, no legal exposure. Gates B–D are
 sketched in §4 but deliberately not planned in detail, because they depend on
 decisions and accounts that don't exist yet.
 
+"Digital rewards" was in that scope line from the first draft and went unbuilt
+for five waves — the ladder shipped as prose. **Wave 6 is what makes it true**,
+and it is worth noticing that the gap survived a plan, a review and four waves
+of verification because nothing in the scope line said what a reward _was_.
+
 Same split as [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), for the same
 reason: **Part A** is what can be written and verified from here, **Part B** is
 what only you can do. Verification commands are the real ones in `package.json`.
@@ -327,6 +332,96 @@ Two honest ways out, and this is a B-item decision (B4):
   honest. More work, and it needs a privacy-policy line.
 
 _Verify:_ `npm run test:sql` for whichever lands.
+
+---
+
+### Wave 6 — the ladder pays out (0071–0072)
+
+Not in the original plan, and it should have been. Waves 1–5 built an engine
+that could measure a year of somebody's discipline to the day and then had
+nothing to give them for it: `challenge_tiers.reward_title` was prose, and
+reaching Ember on day thirty raised a toast. Every rung above Spark was a
+promise the engine had no mechanism to keep, and the longer somebody climbed the
+more obviously so.
+
+**A16. `0071_challenge_rewards.sql` — the payout.** ✅ done. Rung payouts become
+data (`challenge_tiers.rewards`, a jsonb array of effects: badge, theme, chain,
+frame, icon, shield, premium). `user_rewards` is the shelf, owner-read with no
+insert policy anywhere — a cosmetic the client could award itself is worth
+nothing.
+
+The one rule the whole file rests on: **insert into the ledger first, apply the
+side effect second**, with `unique (user_id, slug)` doing the arbitration. It is
+what makes the granter safe to call more than once, and it will be called more
+than once — `current_tier_day` _decreases_ on a demotion, so re-climbing fires
+`tier_reached` again, and on the top rung that is the difference between one
+payout and ninety days of Premium every time somebody falls.
+
+Cosmetics key by what they are (`badge:spark`); consumables key by where they
+were earned (`premium:<season>:<rung>`). Premium goes through `premium_grants`
+exactly as an owner's gesture does, with `granted_by` null meaning the engine —
+and `admin_grant_premium`'s merge logic moved into a shared
+`grant_premium_window()` rather than being copied.
+
+Two decisions that reversed what was already written, both recorded in
+REWARDS_PROGRAM §1.5: **bounded Premium windows** join the high rungs (rev 3 had
+excluded free Plus, and that reasoning covers permanent Plus rather than a
+seven-day trial at ninety qualified days), and the **seeded ladder stops
+promising things that do not exist** — the finishers wall, the storage bump, the
+film and the app icon were all copy with nothing behind them.
+_Verify:_ `npm run check:migrations`, `npm run test:sql`.
+
+**A17. SQL tests for the payout.** ✅ done, eighteen of them, and the same
+reasoning as A3 applies: the expensive failure here is silent and it is measured
+in money. The cases that earn their place — a re-climb after a fall paying
+nothing, a premium window that cannot be farmed, a short rung not shortening a
+longer window already held, the shield cap surviving a rung that grants one,
+arrears paid on the next qualified day, and a rename from the console not wiping
+the payout it did not mention.
+_Verify:_ `npm run test:sql`.
+
+**A18. `features/rewards/` — the catalog and the shelf.** ✅ done. The server
+decides who owns what; the catalog decides what it looks like, which is what lets
+an operator move a cosmetic between rungs without a build. `catalog.test.ts`
+reads the seed out of the migration and fails if a granted slug has no art —
+the same relationship `entitlements.ts` has to 0059, and for the same reason.
+
+`equippedOwned` is the only way a screen may read the equip store: the store is
+local and survives a sign-out, so the raw value can name a cosmetic the person
+now holding the phone never earned. Validating at the point of use cannot be
+forgotten the way a reset hook can.
+_Verify:_ `npm test`, `npm run typecheck`.
+
+**A19. The trophy case and the milestone sheet.** ✅ done.
+`app/challenge/rewards.tsx` draws locked rungs as silhouettes rather than hiding
+them, and reconciles on open. `reward_granted` now **halts** the celebration walk
+the way `demoted` always has — which is what makes the payout durable rather
+than a toast that vanishes in three seconds while somebody is looking at their
+checklist. `celebrationsFor` reports the event it stopped at, so a fall and a
+payout both unseen resolve to one sheet instead of two racing for the surface.
+
+Cosmetics land on the share card first, because that is the one surface other
+people see. **The braid deliberately keeps its module tints**: its strands are
+how you tell which commitment broke, and trading the only diagnostic in the
+feature for a nicer palette would be a bad swap.
+_Verify:_ `npm run typecheck`, `npm run check:i18n`, `npm run check:tokens`.
+
+**A20. Reminder copy that survives a year.** ✅ done. The 20:00 nudge fires on
+every unfinished evening of a run that can last 365 days and produced one
+identical string every time. `reminder-copy.ts` rotates the framing off the local
+day — stable within a day, because the reminder is cancelled and rescheduled on
+every write — while the facts never rotate. A rung within three days becomes the
+headline, which is the only line here that offers a reason to act rather than a
+consequence of not acting.
+_Verify:_ `npm test`.
+
+**A21. The programme's ad surface (0072).** ✅ done, and see REWARDS_PROGRAM §2.1
+for the placement argument. An enrolled free account carries one extra slot per
+session and three extra breakpoints, each inside a committed module and each
+firing **after** the write and after the credit. Habits and Journal are left out
+on purpose and both omissions are pinned by a test, because they are exactly the
+kind a later edit "fixes" without knowing why.
+_Verify:_ `npm test`, `npm run check:migrations`.
 
 ---
 

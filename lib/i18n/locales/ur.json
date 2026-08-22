@@ -2734,7 +2734,10 @@
     "seasonDeleteConfirmTitle": "یہ سیزن حذف کریں؟",
     "seasonDeleteConfirmBody": "{{name}} اور اُس کے ماڈیول و سیڑھی ہٹا دیے جائیں گے۔ یہ واپس نہیں ہو سکتا۔",
     "seasonDeleteBlocked_one": "ایک شخص شامل ہو چکا ہے، اِس لیے یہ سیزن صرف بند کیا جا سکتا ہے۔",
-    "seasonDeleteBlocked_other": "{{count}} افراد شامل ہو چکے ہیں، اِس لیے یہ سیزن صرف بند کیا جا سکتا ہے۔"
+    "seasonDeleteBlocked_other": "{{count}} افراد شامل ہو چکے ہیں، اِس لیے یہ سیزن صرف بند کیا جا سکتا ہے۔",
+    "seasonRungNoReward": "کوئی انعام مقرر نہیں",
+    "seasonRungPremium_one": "پریمیم ({{count}} دن)",
+    "seasonRungPremium_other": "پریمیم ({{count}} دن)"
   },
   "ads": {
     "eyebrow": "اشتہار",

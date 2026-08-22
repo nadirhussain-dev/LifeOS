@@ -8412,6 +8412,59 @@ await test('0071 a malformed effect loses its own line and not the rung', async 
   );
 });
 
+await test('0071 renaming a rung from the console does not wipe its payout', async () => {
+  /*
+   * The silent data loss this parameter's null default exists to prevent. Every
+   * caller of this RPC predates the column and sends six arguments; with an
+   * empty-array default, an operator fixing a typo in a rung's name would have
+   * cleared the badge, the gradient and the Premium window attached to it, and
+   * nothing on the screen would have said so.
+   */
+  await setTierRewards(120, [{ kind: 'badge', slug: 'keystone' }]);
+
+  await asUser(db, ADMIN, () =>
+    db.query(
+      `select public.admin_upsert_challenge_tier($1::uuid, 120, 'Keystone II', 'digital', null, null)`,
+      [SEASON],
+    ),
+  );
+
+  const row = await one(
+    `select name, rewards from public.challenge_tiers where season_id = $1 and day_threshold = 120`,
+    [SEASON],
+  );
+  expectEqual(row.name, 'Keystone II', 'the rename landed');
+  expectEqual(
+    JSON.stringify(row.rewards),
+    JSON.stringify([{ kind: 'badge', slug: 'keystone' }]),
+    'and the payout survived it',
+  );
+});
+
+await test('0071 clearing a payout on purpose is still possible', async () => {
+  // Preserving on null must not make the field unclearable — an empty array is
+  // a deliberate instruction and is obeyed.
+  await asUser(db, ADMIN, () =>
+    db.query(
+      `select public.admin_upsert_challenge_tier($1::uuid, 120, 'Keystone', 'digital', null, null,
+         '[]'::jsonb)`,
+      [SEASON],
+    ),
+  );
+  expectEqual(
+    JSON.stringify(
+      (
+        await one(
+          `select rewards from public.challenge_tiers where season_id = $1 and day_threshold = 120`,
+          [SEASON],
+        )
+      ).rewards,
+    ),
+    '[]',
+    'cleared',
+  );
+});
+
 await test('0071 the console refuses a malformed effect at the door', async () => {
   await asUser(db, ADMIN, async () => {
     await expectRejection(

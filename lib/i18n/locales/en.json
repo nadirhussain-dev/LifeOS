@@ -2734,7 +2734,10 @@
     "seasonDeleteConfirmTitle": "Delete this season?",
     "seasonDeleteConfirmBody": "{{name}} and its modules and ladder will be removed. This cannot be undone.",
     "seasonDeleteBlocked_one": "One person has joined, so this season can only be closed.",
-    "seasonDeleteBlocked_other": "{{count}} people have joined, so this season can only be closed."
+    "seasonDeleteBlocked_other": "{{count}} people have joined, so this season can only be closed.",
+    "seasonRungNoReward": "No payout configured",
+    "seasonRungPremium_one": "premium ({{count}} day)",
+    "seasonRungPremium_other": "premium ({{count}} days)"
   },
   "ads": {
     "eyebrow": "Ad",

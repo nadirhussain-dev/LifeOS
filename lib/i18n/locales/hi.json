@@ -2734,7 +2734,10 @@
     "seasonDeleteConfirmTitle": "यह सीज़न हटाएँ?",
     "seasonDeleteConfirmBody": "{{name}} और उसके मॉड्यूल व सीढ़ी हटा दिए जाएँगे। इसे वापस नहीं लाया जा सकता।",
     "seasonDeleteBlocked_one": "एक व्यक्ति जुड़ चुका है, इसलिए यह सीज़न केवल बंद किया जा सकता है।",
-    "seasonDeleteBlocked_other": "{{count}} लोग जुड़ चुके हैं, इसलिए यह सीज़न केवल बंद किया जा सकता है।"
+    "seasonDeleteBlocked_other": "{{count}} लोग जुड़ चुके हैं, इसलिए यह सीज़न केवल बंद किया जा सकता है।",
+    "seasonRungNoReward": "कोई पुरस्कार तय नहीं",
+    "seasonRungPremium_one": "प्रीमियम ({{count}} दिन)",
+    "seasonRungPremium_other": "प्रीमियम ({{count}} दिन)"
   },
   "ads": {
     "eyebrow": "विज्ञापन",

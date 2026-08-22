@@ -2906,7 +2906,10 @@
     "seasonDeleteBlocked_two": "انضم شخصان، لذا لا يمكن إلا إغلاق هذا الموسم.",
     "seasonDeleteBlocked_few": "انضم {{count}} أشخاص، لذا لا يمكن إلا إغلاق هذا الموسم.",
     "seasonDeleteBlocked_many": "انضم {{count}} شخصًا، لذا لا يمكن إلا إغلاق هذا الموسم.",
-    "seasonDeleteBlocked_other": "انضم {{count}} شخص، لذا لا يمكن إلا إغلاق هذا الموسم."
+    "seasonDeleteBlocked_other": "انضم {{count}} شخص، لذا لا يمكن إلا إغلاق هذا الموسم.",
+    "seasonRungNoReward": "لا توجد مكافأة مُعدّة",
+    "seasonRungPremium_one": "بريميوم ({{count}} يوم)",
+    "seasonRungPremium_other": "بريميوم ({{count}} يومًا)"
   },
   "ads": {
     "eyebrow": "إعلان",

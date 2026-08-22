@@ -752,7 +752,7 @@ create or replace function public.admin_upsert_challenge_tier(
   p_kind text,
   p_title text,
   p_description text,
-  p_rewards jsonb default '[]'::jsonb
+  p_rewards jsonb default null
 )
 returns void
 language plpgsql
@@ -760,14 +760,26 @@ security definer
 set search_path = public
 as $$
 declare
-  v_rewards jsonb := coalesce(p_rewards, '[]'::jsonb);
   v_effect jsonb;
 begin
   if not public.is_admin() then
     raise exception 'not an administrator' using errcode = 'insufficient_privilege';
   end if;
 
-  if jsonb_typeof(v_rewards) <> 'array' then
+  /*
+   * Null means "leave the payout alone", not "clear it".
+   *
+   * The distinction is the whole reason this parameter defaults to null rather
+   * than to an empty array. Every existing caller of this RPC predates the
+   * column and sends six arguments; under an empty-array default, an operator
+   * renaming a rung from the season console would silently wipe the badge, the
+   * gradient and the Premium window attached to it, and nothing on the screen
+   * would say so. An omitted argument must never be able to destroy data the
+   * caller has never heard of.
+   *
+   * Clearing a payout deliberately is still possible — pass `[]`.
+   */
+  if p_rewards is not null and jsonb_typeof(p_rewards) <> 'array' then
     raise exception 'rewards must be an array' using errcode = 'invalid_parameter_value';
   end if;
 
@@ -777,7 +789,7 @@ begin
    * the only place the complaint is useful — `challenge_apply_reward` skipping
    * a malformed line is a safety net, not a substitute for being told.
    */
-  for v_effect in select * from jsonb_array_elements(v_rewards)
+  for v_effect in select * from jsonb_array_elements(coalesce(p_rewards, '[]'::jsonb))
   loop
     if not public.challenge_reward_effect_ok(v_effect) then
       raise exception 'unrecognised reward effect: %', v_effect
@@ -788,19 +800,20 @@ begin
   insert into public.admin_audit_log (actor, action, target_user, detail)
   values (auth.uid(), 'challenge_upsert_tier', null,
           jsonb_build_object('season', p_season, 'day', p_day, 'kind', p_kind,
-                             'rewards', v_rewards));
+                             'rewards', p_rewards));
 
   insert into public.challenge_tiers
     (season_id, day_threshold, name, reward_kind, reward_title, reward_description,
      rewards, sort_order)
   values (p_season, p_day, p_name, coalesce(p_kind, 'digital'), p_title, p_description,
-          v_rewards, p_day)
+          coalesce(p_rewards, '[]'::jsonb), p_day)
   on conflict (season_id, day_threshold) do update
     set name = excluded.name,
         reward_kind = excluded.reward_kind,
         reward_title = excluded.reward_title,
         reward_description = excluded.reward_description,
-        rewards = excluded.rewards,
+        -- See the header: an omitted payout preserves, it does not clear.
+        rewards = coalesce(p_rewards, public.challenge_tiers.rewards),
         sort_order = excluded.sort_order;
 end;
 $$;

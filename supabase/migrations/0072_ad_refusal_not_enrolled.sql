@@ -22,19 +22,22 @@
 -- almost nobody qualifies for. Under one name, a large second figure would look
 -- like the first had gone wrong.
 --
--- `allowed_funnel_metrics()` is `LANGUAGE SQL` and reads no tables, so this is a
+-- `funnel_metrics()` is `LANGUAGE SQL` and reads no tables, so this is a
 -- straight replace with the one row added.
 -- ---------------------------------------------------------------------------
 
-create or replace function public.allowed_funnel_metrics()
+create or replace function public.funnel_metrics()
 returns text[]
 language sql
-immutable
+stable
 as $$
   select array[
     -- Onboarding, step by step. Each is the *furthest* point reached, so a
     -- funnel is a series of counts that only ever decreases.
     'onboarding_started',
+    'onboarding_reached_account',
+    'onboarding_reached_about',
+    'onboarding_reached_focus',
     'onboarding_reached_shape',
     'onboarding_reached_learn',
     'onboarding_reached_lock',
