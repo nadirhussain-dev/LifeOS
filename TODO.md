@@ -22,7 +22,7 @@ verified with `tsc` + `expo config` + `expo export` (build-level only — see ca
 - [x] Per-module reminder screens reconciled with central switches (CategoryOffNotice)
 - [x] `eas.json` + bundle identifiers for dev builds
 - [x] **Auth**: email/password sign-up/in/out + reset, guest mode, auth gate, profile
-- [x] **Sync engine (v1)**: offline-first local↔Supabase, last-write-wins, `'local'↔uid` translation (guest→account migration automatic), per-module allow-sync toggles, auto-sync on launch/foreground + manual "Sync now"
+- [x] **Sync engine (v1)**: offline-first local↔Supabase, last-write-wins, `'local'↔uid` translation (guest→account migration — **asked, then automatic**: the first sign-in over guest data prompts "add these to your account or start fresh", because unidentified guest data usually belongs to the person signing in and occasionally to whoever lent them the phone. It used to wipe silently, against the promise the account step makes on screen), per-module allow-sync toggles, auto-sync on launch/foreground + manual "Sync now"
 - [x] **Sync & Account** settings screen (profile, sync status, module toggles, sign out)
 - [x] **Supabase server schema** — `supabase/migrations/0001_init.sql` (profiles + trigger + 15 v1 tables + RLS)
 

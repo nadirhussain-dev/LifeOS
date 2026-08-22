@@ -23,10 +23,16 @@ import { alpha } from '@/lib/color';
  *
  * Now the value comes first and this is a genuine choice between three real
  * options, stated at the same weight. "Not now" is not a consolation prize: this
- * app works completely offline, and 0016's design means a guest who signs in
- * later has their existing data pushed up automatically, with no migration and
- * nothing lost. That is worth saying plainly, because most apps that offer a
- * guest mode quietly punish it.
+ * app works completely offline, and a guest who signs in later keeps everything
+ * they have written. That is worth saying plainly, because most apps that offer
+ * a guest mode quietly punish it.
+ *
+ * The promise below (`perkNothingLost`) was untrue for the whole time it was on
+ * screen: the sentinel `continueAsGuest()` stamps made a first sign-in look like
+ * an account switch, so the local database was wiped. It is true now, and it is
+ * kept true by asking rather than by assuming — the same phone can be lent to
+ * somebody else, and only the person holding it knows whose notes those are.
+ * See `reconcileAccountOnSignIn` and `useGuestDataPrompt`.
  *
  * ## Why one-tap providers are the primary path
  *
