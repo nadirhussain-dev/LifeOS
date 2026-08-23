@@ -342,6 +342,7 @@ function AppNavigator({ background }: { background: string }) {
       <Stack.Screen name="challenge/join" options={{ presentation: 'modal' }} />
       <Stack.Screen name="challenge/swap" options={{ presentation: 'modal' }} />
       <Stack.Screen name="challenge/timeline" />
+      <Stack.Screen name="challenge/rewards" />
       <Stack.Screen name="goals/index" />
       <Stack.Screen name="goals/[id]" />
       <Stack.Screen name="goals/[id]/edit" options={{ presentation: 'modal' }} />

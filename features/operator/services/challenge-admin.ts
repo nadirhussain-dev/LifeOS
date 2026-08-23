@@ -62,6 +62,17 @@ export type AdminSeasonTier = {
   rewardKind: 'digital' | 'physical';
   rewardTitle: string | null;
   rewardDescription: string | null;
+  /**
+   * What the rung actually pays out (0071), as effect objects.
+   *
+   * **Optional, and omitting it preserves what is already there.** The RPC
+   * defaults this to null and treats null as "leave it alone" rather than
+   * "clear it" — so a caller that has never heard of payouts cannot destroy
+   * one. The console relies on that when it saves a rung it only renamed; see
+   * the note in the migration for why an omitted argument must never be able to
+   * delete data.
+   */
+  rewards?: Record<string, unknown>[];
 };
 
 /**
@@ -229,7 +240,7 @@ export async function listSeasonTiers(
 ): Promise<OperatorResult<AdminSeasonTier[]>> {
   const { data, error } = await supabase
     .from('challenge_tiers')
-    .select('day_threshold, name, reward_kind, reward_title, reward_description')
+    .select('day_threshold, name, reward_kind, reward_title, reward_description, rewards')
     .eq('season_id', seasonId)
     .order('day_threshold');
   if (error) return failed(error.message);
@@ -241,6 +252,7 @@ export async function listSeasonTiers(
       rewardKind: row.reward_kind as 'digital' | 'physical',
       rewardTitle: (row.reward_title as string | null) ?? null,
       rewardDescription: (row.reward_description as string | null) ?? null,
+      rewards: Array.isArray(row.rewards) ? (row.rewards as Record<string, unknown>[]) : [],
     })),
   };
 }
@@ -256,6 +268,11 @@ export async function upsertSeasonTier(
     p_kind: tier.rewardKind,
     p_title: tier.rewardTitle,
     p_description: tier.rewardDescription,
+    // Undefined, not `[]`, when the caller did not supply one. PostgREST omits
+    // an undefined argument, the RPC's null default takes over, and the
+    // existing payout is preserved rather than wiped. Sending an empty array
+    // here would clear a badge every time somebody fixed a typo in a name.
+    p_rewards: tier.rewards,
   });
   if (error) return failed(error.message);
   return { ok: true, data: null };

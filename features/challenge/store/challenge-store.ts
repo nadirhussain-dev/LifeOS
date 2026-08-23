@@ -137,6 +137,8 @@ type ChallengeState = {
   setLiveRequired: (required: boolean) => void;
   /** Caches the counters the reminder needs to price a miss. */
   setStanding: (standing: ChallengeStanding) => void;
+  /** The ladder's names, from the query that has them. See `rungNames`. */
+  setRungNames: (rungNames: Record<number, string>) => void;
   /** Foreground time, added in chunks by the session timer. */
   addActiveSeconds: (seconds: number, day?: string) => void;
   /** Everything worth sending, oldest first — a stale day should be offered
@@ -156,6 +158,20 @@ export type ChallengeStanding = {
   maxDemotionDays: number;
   /** Ascending rung thresholds. Empty until the server has been heard from. */
   tierThresholds: number[];
+  /**
+   * The rungs' names, keyed by threshold. Empty until the ladder query has run.
+   *
+   * Separate from `tierThresholds` rather than merged into it, because the two
+   * arrive from different places and one of them is allowed to be missing.
+   * `challenge_today()` sends the thresholds — that is what prices a miss, and
+   * the reminder must work without ever having opened the challenge screen. The
+   * names come from the ladder query, which only runs when that screen is
+   * looked at, so a cold start can honestly have thresholds and no names. The
+   * copy degrades to "your next rung" when it does; merging them would instead
+   * have produced a ladder of unnamed rungs and no way to tell that apart from
+   * a ladder that had not loaded.
+   */
+  rungNames: Record<number, string>;
 };
 
 const emptyStanding = (): ChallengeStanding => ({
@@ -164,6 +180,7 @@ const emptyStanding = (): ChallengeStanding => ({
   recentMisses: 0,
   maxDemotionDays: 0,
   tierThresholds: [],
+  rungNames: {},
 });
 
 const emptyDay = (): DayBuffer => ({ writes: {}, activeSeconds: 0 });
@@ -272,7 +289,26 @@ export const useChallengeStore = create<ChallengeState>()(
 
       setLiveRequired: (liveRequired) => set({ liveRequired }),
 
-      setStanding: (standing) => set({ standing }),
+      /*
+       * The names are preserved across a standing update.
+       *
+       * `challenge_today()` refreshes on every screen focus and does not carry
+       * them, so taking the payload wholesale would blank the ladder's names
+       * several times an hour and leave the evening reminder saying "your next
+       * rung" to somebody whose app knows perfectly well it is called Ember.
+       */
+      setStanding: (standing) =>
+        set((state) => ({
+          standing: {
+            ...standing,
+            rungNames:
+              Object.keys(standing.rungNames ?? {}).length > 0
+                ? standing.rungNames
+                : state.standing.rungNames,
+          },
+        })),
+
+      setRungNames: (rungNames) => set((state) => ({ standing: { ...state.standing, rungNames } })),
 
       setAttested: (modules, day) =>
         set((s) => {

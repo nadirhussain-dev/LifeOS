@@ -20,6 +20,28 @@ export type ChallengeTier = {
   rewardKind: 'digital' | 'physical';
   rewardTitle: string | null;
   rewardDescription: string | null;
+  /**
+   * What this rung actually pays out (0071), as effect objects.
+   *
+   * Separate from `rewardTitle`, which is the operator's prose about it. The
+   * prose is what the ladder reads out; this is what the trophy case draws and
+   * what lets a locked rung show the badge it is holding — the single strongest
+   * argument for climbing, and one no sentence makes as well as the picture of
+   * the thing does.
+   */
+  rewards: RewardEffect[];
+};
+
+/** One payout on a rung. Mirrors the jsonb shape 0071 validates. */
+export type RewardEffect = {
+  kind: string;
+  /** Cosmetics only. */
+  slug?: string;
+  /** `shield` only. */
+  count?: number;
+  /** `premium` only. */
+  days?: number;
+  tier?: string;
 };
 
 /**

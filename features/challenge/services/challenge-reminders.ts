@@ -1,12 +1,15 @@
 import { setHours, setMinutes, setSeconds, startOfDay } from 'date-fns';
+import { AppState } from 'react-native';
 
 import { REWARDS_MODULE_ID } from '@/features/challenge/config/rewards-flag';
 import { costOfMissToday, outstandingModules } from '@/features/challenge/services/challenge-math';
+import { reminderCopyFor } from '@/features/challenge/services/reminder-copy';
 import { currentDay, useChallengeStore } from '@/features/challenge/store/challenge-store';
 import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 import {
   CHALLENGE_AT_RISK_KEY,
   CHALLENGE_LAST_CALL_KEY,
+  CHALLENGE_REWARD_KEY,
   CHALLENGE_WIN_BACK_KEY,
 } from '@/features/notifications/services/notification-keys';
 import i18n from '@/lib/i18n';
@@ -210,26 +213,43 @@ async function applyReminder(readOutstanding: () => string[]): Promise<void> {
   const cost = costOfMissToday(state.standing);
   const now = new Date();
 
-  // The body says what is missing and, when there is an honest number for it,
-  // what missing them costs. `costOfMissToday` returns null rather than zero
-  // whenever a number would mislead — a held shield, or a ladder the server has
-  // not sent yet — and the copy branches instead of interpolating a zero.
-  const body =
-    cost !== null
-      ? i18n.t('challenge.reminderCost', {
-          modules,
-          count: cost,
-          from: state.standing.qualifiedDays,
-          to: state.standing.qualifiedDays - cost,
-        })
-      : state.standing.shields > 0
-        ? i18n.t('challenge.reminderShielded', { modules })
-        : i18n.t('challenge.reminderOne', { modules });
+  /*
+   * The body says what is missing and then the most useful true thing that can
+   * be added to it — a rung nearly reached, the price of missing, a shield that
+   * will absorb it, or nothing.
+   *
+   * `reminder-copy.ts` owns that choice and the rotation, for two reasons. The
+   * branching is worth testing without a store, a clock or a notifications
+   * module in the way; and this notification fires on every unfinished evening
+   * of a run that can last a year, so the framing has to move or the whole
+   * category gets switched off by somebody who has read the identical sentence
+   * three hundred times.
+   *
+   * `costOfMissToday` still returns null rather than zero whenever a number
+   * would mislead, and the copy branches on that rather than interpolating a
+   * zero.
+   */
+  // The next rung above where they stand. Read off the thresholds rather than
+  // the ladder query, because those arrive with the counters and are the only
+  // half guaranteed to be here — see `rungNames` on the store.
+  const nextRungDay = state.standing.tierThresholds.find(
+    (day) => day > state.standing.qualifiedDays,
+  );
+  const copy = reminderCopyFor({
+    modules,
+    cost,
+    shields: state.standing.shields,
+    qualifiedDays: state.standing.qualifiedDays,
+    daysToRung: nextRungDay !== undefined ? nextRungDay - state.standing.qualifiedDays : null,
+    rungName: nextRungDay !== undefined ? (state.standing.rungNames[nextRungDay] ?? null) : null,
+    localDay: currentDay(),
+  });
+  const body = i18n.t(copy.bodyKey, copy.values);
 
   const fireAt = fireAtHour(REMINDER_HOUR, now);
   if (fireAt !== null) {
     await scheduleOneTimeNotification({
-      title: i18n.t('challenge.reminderTitle'),
+      title: i18n.t(copy.titleKey),
       body,
       date: fireAt,
       // `bypassQuietHours` is true for this category — a last call at 20:00 that
@@ -307,6 +327,59 @@ export function scheduleWinBack(toDays: number, nextRungDays: number | null): Pr
           : i18n.t('challenge.winBackPlain', { count: toDays }),
       date: Date.now() + WIN_BACK_DELAY_MS,
       data: { category: 'streak', route: '/challenge', key: CHALLENGE_WIN_BACK_KEY },
+    });
+  });
+}
+
+/**
+ * Announces a payout that landed while nobody was looking.
+ *
+ * ## Why this is worth a notification at all
+ *
+ * Everything else this file schedules is a warning. This is the only one that
+ * is good news, and it is the one most likely to be missed: the flush that
+ * credits a day runs on `background` as well as `active`, so the common shape
+ * is somebody finishing their last habit, closing the app, and the day —
+ * along with the rung it crossed — landing a second later with the screen
+ * already dark. Before this, that person found out the next time they happened
+ * to open the challenge screen.
+ *
+ * ## Only when the app is not in front of them
+ *
+ * The milestone sheet already handles the foreground case, and handles it
+ * better — it shows the badge. A notification on top of it would be the app
+ * telling somebody about a thing they are currently looking at.
+ *
+ * `AppState.currentState` rather than a flag threaded down from the caller:
+ * this is asked at the moment of scheduling, which is the moment the answer has
+ * to be true for.
+ *
+ * ## Rule 0.1, restated
+ *
+ * This is triggered by a day being *earned*. There is no path from an
+ * advertising callback to here, and there must never be one — see the header of
+ * 0048 and §0.1 of REWARDS_PROGRAM.
+ */
+const REWARD_NOTICE_DELAY_MS = 4000;
+
+export function notifyRewardGranted(slugs: string[], rungName: string | null): Promise<void> {
+  return serialize(async () => {
+    if (slugs.length === 0) return;
+    if (AppState.currentState === 'active') return;
+    if (!useChallengeStore.getState().enrolled || programmeDisabled()) return;
+
+    await cancelScheduledByKey(CHALLENGE_REWARD_KEY);
+    await scheduleOneTimeNotification({
+      title: rungName
+        ? i18n.t('challenge.rewardTitle', { name: rungName })
+        : i18n.t('challenge.rewardTitleGeneric'),
+      body: i18n.t('challenge.rewardBody'),
+      // A few seconds out rather than immediately: the flush that triggers this
+      // runs as the app is being backgrounded, and a notification that arrives
+      // in the same instant the app disappears reads as part of the app closing
+      // rather than as news.
+      date: Date.now() + REWARD_NOTICE_DELAY_MS,
+      data: { category: 'streak', route: '/challenge/rewards', key: CHALLENGE_REWARD_KEY },
     });
   });
 }

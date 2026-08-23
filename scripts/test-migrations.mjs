@@ -8174,4 +8174,389 @@ await test('0068 the sweep is not reachable from a user session', async () => {
   });
 });
 
+console.log('\nthe ladder pays out (0071)');
+// ---------------------------------------------------------------------------
+// Until 0071 a rung was prose. These assert the two things that make a payout
+// engine either trustworthy or expensive: that it pays, and that it pays once.
+//
+// The once matters more than the pays. `current_tier_day` *decreases* on a
+// demotion, so re-climbing fires `tier_reached` again — and the effect at the
+// top of the ladder is ninety days of Premium.
+
+const EARNER = 'aaaaaaaa-0000-4000-8000-00000000000a';
+await createUser(db, EARNER, 'earner@example.com');
+
+await asUser(db, EARNER, () =>
+  one(`select public.enroll_in_challenge($1::uuid, 0, $2::text[], $3::text[], 'dev-earn') as v`, [
+    SEASON,
+    '{habits,water,journal}',
+    '{}',
+  ]),
+);
+
+/** Puts a payout on a rung of the test season. */
+const setTierRewards = (dayThreshold, rewards) =>
+  db.query(
+    `update public.challenge_tiers set rewards = $3::jsonb where season_id = $1 and day_threshold = $2`,
+    [SEASON, dayThreshold, JSON.stringify(rewards)],
+  );
+
+const rewardSlugs = async (user) =>
+  (
+    await db.query(`select slug from public.user_rewards where user_id = $1 order by slug`, [user])
+  ).rows.map((r) => r.slug);
+
+const premiumOf = (user) =>
+  one(`select premium_until, granted_tier from public.profiles where id = $1`, [user]);
+
+/** Fast-forwards a run to `days` without walking every date. */
+const standAt = async (user, days) => {
+  await resetRun(user, { qualified_days: days - 1, perfect_run: days - 1 });
+  await db.query(`delete from public.user_rewards where user_id = $1`, [user]);
+  await db.query(
+    `update public.profiles set premium_until = null, granted_tier = null where id = $1`,
+    [user],
+  );
+  await db.query(`delete from public.premium_grants where user_id = $1`, [user]);
+};
+
+await setTierRewards(7, [
+  { kind: 'badge', slug: 'spark' },
+  { kind: 'theme', slug: 'spark-dawn' },
+]);
+await setTierRewards(30, [
+  { kind: 'badge', slug: 'ember' },
+  { kind: 'shield', count: 1 },
+]);
+await setTierRewards(90, [
+  { kind: 'badge', slug: 'blaze' },
+  { kind: 'premium', days: 7, tier: 'premium' },
+]);
+
+await test('0071 reaching a rung pays out everything on it', async () => {
+  await standAt(EARNER, 7);
+  const result = (await credit(EARNER, 500)).v;
+
+  expectEqual(result.qualifiedDays, 7, 'the rung was reached');
+  expectEqual(
+    JSON.stringify(result.rewards),
+    JSON.stringify(['badge:spark', 'theme:spark-dawn']),
+    'both effects reported to the client that earned them',
+  );
+  expectEqual(
+    (await rewardSlugs(EARNER)).join(','),
+    'badge:spark,theme:spark-dawn',
+    'and both are on the shelf',
+  );
+});
+
+await test('0071 re-reaching a rung after a fall pays nothing a second time', async () => {
+  /*
+   * The whole reason the ledger is the idempotency key. A demotion lowers
+   * `current_tier_day`, so climbing back fires `tier_reached` again — and on
+   * the real ladder that rung carries ninety days of Premium.
+   */
+  await standAt(EARNER, 7);
+  await credit(EARNER, 501);
+  const again = (await credit(EARNER, 502)).v;
+
+  expectEqual(JSON.stringify(again.rewards), '[]', 'the second pass grants nothing');
+  expectEqual((await rewardSlugs(EARNER)).length, 2, 'and adds nothing to the shelf');
+});
+
+await test('0071 a premium rung actually moves the account, through the audited door', async () => {
+  await standAt(EARNER, 90);
+  const before = Date.now();
+  const result = (await credit(EARNER, 510)).v;
+
+  // Contains, not equals: the fixture stands the run at day 90 with an empty
+  // shelf, so crossing it also settles the arrears from every rung below —
+  // which is the granter working, and is asserted on its own further down.
+  expectEqual(
+    result.rewards.includes('premium:' + SEASON + ':90'),
+    true,
+    'the rung reports its payout',
+  );
+
+  const held = await premiumOf(EARNER);
+  expectEqual(Number(held.premium_until) > before, true, 'the window is in the future');
+  expectEqual(held.granted_tier, 'premium', 'and it is a premium window');
+
+  const grant = await one(
+    `select granted_by, reason, tier from public.premium_grants where user_id = $1`,
+    [EARNER],
+  );
+  // Null rather than the user's own id: an audit row saying somebody granted
+  // themselves premium is the one sentence that table exists to prevent.
+  expectEqual(grant.granted_by, null, 'the engine granted it, not a person');
+  expectEqual(grant.reason, 'challenge:' + SEASON + ':90', 'and said which rung');
+});
+
+await test('0071 a premium rung cannot be farmed by falling and re-climbing', async () => {
+  // The same property as the badge test, asserted separately because this is
+  // the one measured in money.
+  await standAt(EARNER, 90);
+  await credit(EARNER, 511);
+  const first = Number((await premiumOf(EARNER)).premium_until);
+  const grantsAfterFirst = await count(
+    `select count(*) as n from public.premium_grants where user_id = $1`,
+    [EARNER],
+  );
+
+  await credit(EARNER, 512);
+  expectEqual(Number((await premiumOf(EARNER)).premium_until), first, 'the window did not move');
+  expectEqual(
+    await count(`select count(*) as n from public.premium_grants where user_id = $1`, [EARNER]),
+    grantsAfterFirst,
+    'and no second grant was written',
+  );
+});
+
+await test('0071 a short rung never shortens a longer window already held', async () => {
+  // 0052's semantics, inherited by the shared granter: a seven-day rung handed
+  // to somebody holding a year must not turn the year into a week.
+  await standAt(EARNER, 90);
+  const year = Date.now() + 365 * 86400000;
+  await db.query(
+    `update public.profiles set premium_until = $2, granted_tier = 'premium' where id = $1`,
+    [EARNER, year],
+  );
+
+  await credit(EARNER, 513);
+  expectEqual(Number((await premiumOf(EARNER)).premium_until), year, 'the year survived');
+});
+
+await test('0071 a shield rung respects the cap of three', async () => {
+  // §1.3 is unconditional: no fourth slot at any rung, no exception. A rung
+  // that quietly handed out a fourth would be the exception.
+  await standAt(EARNER, 30);
+  await setRun(EARNER, { shields: 3 });
+  const result = (await credit(EARNER, 520)).v;
+
+  expectEqual(result.shields, 3, 'still three');
+  expectEqual(
+    (await rewardSlugs(EARNER)).includes('shield:' + SEASON + ':30'),
+    true,
+    'the payout is recorded as spent, so it cannot be claimed again later',
+  );
+});
+
+await test('0071 a shield rung under the cap actually hands one over', async () => {
+  await standAt(EARNER, 30);
+  await setRun(EARNER, { shields: 1 });
+  const result = (await credit(EARNER, 521)).v;
+  /*
+   * Three, not two. Day thirty is also `perfect_run % shield_earn_days = 0`, so
+   * the ordinary regeneration earns one and the rung's effect adds another on
+   * top — 1 + 1 + 1. That the two paths compose without either overwriting the
+   * other is the actual property under test: the payload is read back from the
+   * table rather than from the row variable this function started with, and the
+   * snapshot would have shown the rung's shield granted and immediately lost.
+   */
+  expectEqual(result.shields, 3, 'the regeneration and the rung both landed');
+});
+
+await test('0071 arrears are paid on the next qualified day', async () => {
+  /*
+   * A rung defined after somebody passed it, a run restored by an operator, a
+   * payout lost to a failed transaction — all leave somebody standing above a
+   * rung nothing ever paid for. The granter walks the whole ladder rather than
+   * the rung just crossed, so every one of those heals by itself.
+   */
+  await standAt(EARNER, 31);
+  await db.query(`delete from public.user_rewards where user_id = $1`, [EARNER]);
+  const result = (await credit(EARNER, 530)).v;
+
+  expectEqual(
+    (await rewardSlugs(EARNER)).includes('badge:spark'),
+    true,
+    'the day-7 rung was paid too, long after it was passed',
+  );
+  expectEqual(result.rewards.length >= 3, true, 'and reported as newly granted');
+});
+
+await test('0071 the user can ask again, and asking twice grants nothing', async () => {
+  await standAt(EARNER, 8);
+  await db.query(`update public.challenge_enrollments set qualified_days = 8 where user_id = $1`, [
+    EARNER,
+  ]);
+  await db.query(`delete from public.user_rewards where user_id = $1`, [EARNER]);
+
+  const first = await asUser(db, EARNER, () =>
+    one(`select public.sync_my_challenge_rewards() as v`),
+  );
+  expectEqual(first.v.length, 2, 'the arrears arrived');
+
+  const second = await asUser(db, EARNER, () =>
+    one(`select public.sync_my_challenge_rewards() as v`),
+  );
+  expectEqual(JSON.stringify(second.v), '[]', 'and asking again grants nothing');
+});
+
+await test('0071 a malformed effect loses its own line and not the rung', async () => {
+  // A safety net, not a substitute for the console refusing it — see the next
+  // test. What matters is that a typo in one effect does not cost somebody the
+  // badge sitting next to it.
+  await setTierRewards(60, [
+    { kind: 'wormhole', slug: 'nope' },
+    { kind: 'badge', slug: 'flame' },
+  ]);
+  await standAt(EARNER, 60);
+  const result = (await credit(EARNER, 540)).v;
+
+  expectEqual(result.rewards.includes('badge:flame'), true, 'the good effect still paid');
+  expectEqual(
+    (await rewardSlugs(EARNER)).some((s) => s.startsWith('wormhole')),
+    false,
+    'and the bad one left nothing behind',
+  );
+});
+
+await test('0071 renaming a rung from the console does not wipe its payout', async () => {
+  /*
+   * The silent data loss this parameter's null default exists to prevent. Every
+   * caller of this RPC predates the column and sends six arguments; with an
+   * empty-array default, an operator fixing a typo in a rung's name would have
+   * cleared the badge, the gradient and the Premium window attached to it, and
+   * nothing on the screen would have said so.
+   */
+  await setTierRewards(120, [{ kind: 'badge', slug: 'keystone' }]);
+
+  await asUser(db, ADMIN, () =>
+    db.query(
+      `select public.admin_upsert_challenge_tier($1::uuid, 120, 'Keystone II', 'digital', null, null)`,
+      [SEASON],
+    ),
+  );
+
+  const row = await one(
+    `select name, rewards from public.challenge_tiers where season_id = $1 and day_threshold = 120`,
+    [SEASON],
+  );
+  expectEqual(row.name, 'Keystone II', 'the rename landed');
+  expectEqual(
+    JSON.stringify(row.rewards),
+    JSON.stringify([{ kind: 'badge', slug: 'keystone' }]),
+    'and the payout survived it',
+  );
+});
+
+await test('0071 clearing a payout on purpose is still possible', async () => {
+  // Preserving on null must not make the field unclearable — an empty array is
+  // a deliberate instruction and is obeyed.
+  await asUser(db, ADMIN, () =>
+    db.query(
+      `select public.admin_upsert_challenge_tier($1::uuid, 120, 'Keystone', 'digital', null, null,
+         '[]'::jsonb)`,
+      [SEASON],
+    ),
+  );
+  expectEqual(
+    JSON.stringify(
+      (
+        await one(
+          `select rewards from public.challenge_tiers where season_id = $1 and day_threshold = 120`,
+          [SEASON],
+        )
+      ).rewards,
+    ),
+    '[]',
+    'cleared',
+  );
+});
+
+await test('0071 the console refuses a malformed effect at the door', async () => {
+  await asUser(db, ADMIN, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `select public.admin_upsert_challenge_tier($1::uuid, 45, 'Bad', 'digital', null, null,
+             '[{"kind":"premium","days":9000}]'::jsonb)`,
+          [SEASON],
+        ),
+      'unrecognised reward effect',
+    );
+  });
+});
+
+await test('0071 a user cannot write themselves a reward', async () => {
+  // The entire value of a badge is that the only way to hold one is to have
+  // done the thing. There is no insert policy anywhere in 0071.
+  await asUser(db, EARNER, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `insert into public.user_rewards (user_id, slug, kind) values ($1, 'badge:year-one', 'badge')`,
+          [EARNER],
+        ),
+      'row-level security',
+    );
+  });
+});
+
+await test("0071 a user cannot read somebody else's shelf", async () => {
+  await asUser(db, RUNNER2, async () => {
+    expectEqual(
+      await count(`select count(*) as n from public.user_rewards where user_id = $1`, [EARNER]),
+      0,
+      'invisible',
+    );
+  });
+});
+
+await test('0071 the premium granter is not reachable from a user session', async () => {
+  // It is the shared body two gated callers use. Granted to `authenticated` it
+  // would be a function that hands out paid access to whoever calls it.
+  await asUser(db, EARNER, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `select public.grant_premium_window($1::uuid, $2::bigint, 'mine', 'premium', null)`,
+          [EARNER, Date.now() + 86400000],
+        ),
+      'permission denied',
+    );
+  });
+});
+
+await test('0071 nor is the granter behind it', async () => {
+  await asUser(db, EARNER, async () => {
+    await expectRejection(
+      () =>
+        db.query(`select public.challenge_grant_tier_rewards($1::uuid, $2::uuid, 365)`, [
+          EARNER,
+          SEASON,
+        ]),
+      'permission denied',
+    );
+  });
+});
+
+await test('0071 an owner grant still works, through the same shared body', async () => {
+  // `admin_grant_premium` lost its copy of the merge in this migration. This is
+  // the assertion that it lost nothing else.
+  //
+  // ADMIN is an operator, not the owner, and 0033 draws that line deliberately:
+  // granting revenue away is the one power an ordinary operator does not get.
+  // So the test asks the roster who the owner is rather than making a second
+  // one — `admins_single_owner_idx` exists precisely to refuse that.
+  const owner = (await one(`select user_id from public.admins where is_owner limit 1`)).user_id;
+  const until = Date.now() + 30 * 86400000;
+  await asUser(db, owner, () =>
+    one(`select public.admin_grant_premium($1::uuid, $2::bigint, 'a gesture', 'premium') as v`, [
+      RUNNER2,
+      until,
+    ]),
+  );
+  const held = await premiumOf(RUNNER2);
+  expectEqual(Number(held.premium_until), until, 'the window was applied');
+  expectEqual(held.granted_tier, 'premium', 'at the tier asked for');
+  expectEqual(
+    (await one(`select granted_by from public.premium_grants where user_id = $1`, [RUNNER2]))
+      .granted_by,
+    owner,
+    'and the admin is named on it',
+  );
+});
+
 summary();

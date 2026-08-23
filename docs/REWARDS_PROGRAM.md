@@ -174,23 +174,66 @@ the calendar but not a break in the chain.
 
 ### 1.5 The ladder
 
-Rungs are data (`challenge_tiers`), not constants. The reference ladder:
+Rungs are data (`challenge_tiers`), not constants — and since **0071** their
+payouts are data too, in `challenge_tiers.rewards`. Before that a rung carried
+only `reward_title`, which was prose: reaching Ember wrote an event, raised a
+toast, and gave nobody anything.
 
-| Day     | Rung         | Reward                                      | Kind         |
-| ------- | ------------ | ------------------------------------------- | ------------ |
-| 7       | Spark        | Badge + exclusive gradient theme            | Digital      |
-| 30      | Ember        | Exclusive app icon, first shield            | Digital      |
-| 60      | Flame        | Shareable "your 60 days" stats card         | Digital      |
-| 90      | Blaze        | Name on the finishers wall, opt-in          | Digital      |
-| 120     | Keystone     | The gift box becomes visible and named      | Digital      |
-| 180     | Half Year    | Prestige badge, profile frame, storage bump | Digital      |
-| 240     | Forge        | Custom chain colours, animated badge        | Digital      |
-| 300     | Summit       | Personalised "year so far" film             | Digital      |
-| **365** | **Year One** | **The physical gift box, claimable**        | **Physical** |
+The reference ladder, as the seed now writes it:
 
-**Deliberately not a reward at any rung: free Plus.** It switches off the ad
-revenue the free tier exists to generate, and it muddies the free/paid separation
-§2.3 depends on.
+| Day     | Rung         | Payout                                    | Kind         |
+| ------- | ------------ | ----------------------------------------- | ------------ |
+| 7       | Spark        | Badge, Dawn gradient                      | Digital      |
+| 30      | Ember        | Badge, Ember chain, a shield              | Digital      |
+| 60      | Flame        | Badge, Dusk gradient                      | Digital      |
+| 90      | Blaze        | Badge, Blaze frame, **7 days of Premium** | Digital      |
+| 120     | Keystone     | Badge, Steel chain                        | Digital      |
+| 180     | Half Year    | Badge, Laurel frame, **30 days Premium**  | Digital      |
+| 240     | Forge        | Badge, Forge gradient                     | Digital      |
+| 300     | Summit       | Badge, Aurora chain                       | Digital      |
+| **365** | **Year One** | Badge, Crown frame, **90 days Premium**   | **Physical** |
+
+Two things changed here from rev 4, and both were corrections rather than
+additions.
+
+**The old titles promised things that do not exist.** A finishers wall, a
+storage bump, a personalised film, an app icon — nothing had been built for any
+of them, and two had not been started. A rung describing a reward the engine
+cannot pay is worse than one describing a smaller reward it can: the first time
+somebody reaches day 300 and no film arrives, every other rung stops being
+believed. Every title now names exactly what the same row grants. The app-icon
+rung went specifically because swapping a launcher icon needs an alternate-icon
+set declared at build time, which this app does not have.
+
+**Free Plus is no longer excluded — a bounded Premium _window_ is.** Rev 4 said
+"deliberately not a reward at any rung: free Plus", on the grounds that it
+switches off the ad revenue the free tier exists to generate and muddies the
+free/paid separation §2.3 depends on. That reasoning holds for _permanent_ Plus
+and not for a window with an end date:
+
+- It is **bounded and it expires**, so the account returns to free and to ads.
+  The old objection was about a free tier nobody agreed to; seven days is a
+  trial, not a tier.
+- It starts at **Blaze — ninety qualified days**, which is a real commitment. A
+  user who has kept ninety consecutive days has demonstrated exactly the
+  behaviour a subscription is priced against, and a week inside the product they
+  have not seen is the cheapest introduction to it available. This converts;
+  permanent Plus would have cannibalised.
+- §2.3 is untouched. The finish condition is identical for everybody, the
+  paywall still never mentions the prize, and nothing here is reachable by
+  paying — the window is earned by days, and the only way to get days is to do
+  the work.
+
+The counter-argument, recorded because it is the one to revisit: it does put a
+non-cosmetic benefit on the ladder, and Gate B's "there must be a free path to
+any advantage" reasoning will have to cover it once a physical prize exists.
+The amounts are operator-editable per tier precisely so they can be reduced
+without a build.
+
+**Never taken back.** A badge already unlocked and a window already granted are
+permanent; `user_rewards` is the ledger and its unique index is what makes a
+re-climb after a demotion pay nothing — which on the top rung is the difference
+between one payout and ninety days of Premium every time somebody falls.
 
 ---
 
@@ -198,15 +241,45 @@ revenue the free tier exists to generate, and it muddies the free/paid separatio
 
 ### 2.1 Three ad formats
 
-| Format                         | Where                           | Rules                                                                                           |
-| ------------------------------ | ------------------------------- | ----------------------------------------------------------------------------------------------- |
-| **Banner** (shipped)           | Bottom of eight module screens  | Unchanged                                                                                       |
-| **Interstitial** (not built)   | Natural session boundaries only | Never mid-task, never on a save, never on the challenge screen. Min 4 minutes apart, max ~6/day |
-| **Rewarded video** (not built) | Opt-in, user-initiated          | Cosmetics, themes, storage, exports. **Never a shield, never a day**                            |
-| **Native** (later)             | Gallery feed                    | Labelled; must not mimic a post's own actions                                                   |
+| Format                       | Where                          | Rules                                                                                                                                                   |
+| ---------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Banner** (shipped)         | Bottom of eight module screens | Unchanged                                                                                                                                               |
+| **Interstitial** (shipped)   | Allowlisted breakpoints only   | Never mid-task, never on the challenge screen. 3 min apart, 2–3 per session, none on the first session of a day, none in the first 3 days after install |
+| **Rewarded video** (shipped) | Opt-in, user-initiated         | Buys a day without ads. **Never a shield, never a day**                                                                                                 |
+| **Native** (later)           | Gallery feed                   | Labelled; must not mimic a post's own actions                                                                                                           |
 
 All inherit the existing rules: nothing inside `/private/*`, nothing for Plus
 subscribers, and the operator's `ads` kill switch turns the lot off.
+
+**The programme carries its own ad surface (shipped).** An enrolled **free**
+account gets one extra interstitial slot per session (3 rather than 2) and three
+extra breakpoints — a task added, a note added, progress logged against a goal —
+and each of those only fires inside a module that run actually committed to.
+Somebody who never enrolled sees exactly the placements they saw before it
+existed, and Plus subscribers see none of it because the `ads` entitlement is
+checked before any pacing rule runs.
+
+Two constraints shape the whole thing, and both are §0.1 rather than taste:
+
+- **Every one of those breakpoints fires after the write has committed and after
+  the day has been credited.** An interstitial between the Save button and the
+  saved row would be an ad on the path that earns progress toward a prize —
+  incentivised traffic to AdMob and paid entry to a regulator, the same
+  placement refused for two independent reasons. Nothing is awaited and nothing
+  depends on the ad appearing.
+- **The challenge screen and the trophy case carry no ads at all**, at any cap.
+
+The row above says "never on a save" and this is not that. The distinction is
+whether the ad is _in_ the flow or _after_ it: the earlier wording was written
+before there was a pacing engine that could tell the difference, and
+`ad-pacing.ts`'s breakpoint allowlist is what now makes it a structural
+guarantee rather than a convention.
+
+Habits and Journal are deliberately left out of the extra surface. Ticking a
+habit is the app's highest-frequency action and the "open, tick, close" loop the
+pacing rules were written to protect; the journal autosaves, so there is no
+moment at which anybody has finished, and an ad fired on blur or on back is an
+ad fired by navigation rather than by completion.
 
 ### 2.2 Rough economics
 
@@ -424,9 +497,19 @@ Not needed for the engine as shipped; required before Gate B.
 ## 8. Not built, by design
 
 `challenge_claims`, addresses, shipping, the operator claims queue, the terms
-copy, `reward-notify` and the email set, the referral shield, and the season and
-ladder **editor** — its admin RPCs exist, so seeding a season is a SQL-editor job
-until the first season's shape has settled.
+copy, `reward-notify` and the email set, and the referral shield.
+
+The season and ladder editor **is** built (0055, and rev 5 explains why deferring
+it was a mistake). What is deliberately not built is a **payout editor**: the
+console shows each rung's payout and preserves it across an edit, but writing a
+new effect is a SQL-editor job. A JSON field in a form that also handles typos is
+how somebody clears a badge by accident, and the seed already writes the default
+ladder. The RPC accepts a payout, so the form is a small addition whenever a
+season wants a set of its own.
+
+Alternate app icons, for the same reason the icon rung was dropped in §1.5: the
+effect kind is accepted by the engine and nothing seeds it, because there is no
+alternate-icon set in the build. The day that config lands, the reward is data.
 
 ---
 
@@ -444,3 +527,10 @@ until the first season's shape has settled.
 - **rev 5 (0055)** — one server-side season state that both consoles quote; a
   season console covering dates, rules, eligible modules and the ladder; the app
   says which season and why rather than "no season is open".
+- **rev 6 (0071–0072)** — the ladder pays out. Rung payouts become data
+  (`challenge_tiers.rewards`), `user_rewards` is the shelf and its unique index
+  the exactly-once guarantee, and a bounded Premium window joins badges and
+  cosmetics at the high rungs — reversing rev 3's exclusion of free Plus for the
+  reasons in §1.5. The seeded ladder stops promising things that do not exist.
+  The programme gains its own ad surface for enrolled free accounts, placed
+  strictly after the write and after the credit (§2.1).

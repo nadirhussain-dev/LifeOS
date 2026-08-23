@@ -37,6 +37,7 @@ const LADDER: ChallengeTier[] = [
   rewardKind: 'digital' as const,
   rewardTitle: null,
   rewardDescription: null,
+  rewards: [],
 }));
 
 describe('the ladder', () => {
