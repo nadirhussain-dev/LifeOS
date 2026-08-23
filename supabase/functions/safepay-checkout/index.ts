@@ -36,7 +36,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { discountedCents } from '../_shared/money.ts';
 import { consumeRateLimit, tooManyRequests } from '../_shared/rate-limit.ts';
-import { createSafepayPlan, safepayClient, toSafepayInterval } from '../_shared/safepay.ts';
+import { createSafepayPlan, safepayClient, toSafepayRecurrence } from '../_shared/safepay.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -108,6 +108,20 @@ function resolveIdempotencyKey(
     key: `auto:${parts.planId}:${parts.couponId ?? 'none'}:${minute}`,
     supplied: false,
   };
+}
+
+/**
+ * The recurrence fields `createSafepayPlan` needs, as one spreadable object.
+ *
+ * Both call sites below build the same argument, and the failure they are being
+ * protected from is passing an interval without its count — which for a
+ * quarterly plan means billing monthly at the quarterly price. Spreading one
+ * helper makes the pair inseparable; `toSafepayRecurrence` throws rather than
+ * guessing at a period it has not been taught.
+ */
+function recurrenceOf(period: string): { interval: 'MONTH' | 'YEAR'; intervalCount: number } {
+  const { interval, count } = toSafepayRecurrence(period);
+  return { interval, intervalCount: count };
 }
 
 Deno.serve(async (req: Request) => {
@@ -331,7 +345,7 @@ Deno.serve(async (req: Request) => {
         const createdId = await createSafepayPlan({
           amountCents: discountedPriceCents!,
           currency: plan.currency as string,
-          interval: toSafepayInterval(plan.period as 'month' | 'year'),
+          ...recurrenceOf(plan.period as string),
           name: `${plan.name} (${body.couponCode})`,
         });
 
@@ -378,7 +392,7 @@ Deno.serve(async (req: Request) => {
       const createdId = await createSafepayPlan({
         amountCents: plan.price_cents as number,
         currency: plan.currency as string,
-        interval: toSafepayInterval(plan.period as 'month' | 'year'),
+        ...recurrenceOf(plan.period as string),
         name: plan.name as string,
       });
       // Only fills an empty slot. Without the `is null` guard, a concurrent

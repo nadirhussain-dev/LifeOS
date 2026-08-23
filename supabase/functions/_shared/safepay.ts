@@ -41,10 +41,11 @@ function apiBase(): string {
     : 'https://sandbox.api.getsafepay.com';
 }
 
-/** Billing period on a `billing_plans`/coupon row → Safepay's plan interval. */
-export function toSafepayInterval(period: 'month' | 'year'): 'MONTH' | 'YEAR' {
-  return period === 'year' ? 'YEAR' : 'MONTH';
-}
+// The period → recurrence mapping lives in ./interval.ts, which has no imports
+// and is therefore testable. It replaced a two-value ternary with a silent
+// default — see that file for why a quarterly plan would otherwise have billed
+// monthly at the quarterly price.
+export { toSafepayRecurrence, chargesPerYear } from './interval.ts';
 
 /**
  * Creates a Safepay Plan and returns its id. Called only when a
@@ -57,6 +58,9 @@ export async function createSafepayPlan(input: {
   amountCents: number;
   currency: string;
   interval: 'MONTH' | 'YEAR';
+  /** How many `interval`s between charges — 3 for a quarterly plan. See
+   *  ./interval.ts for why this is not a `QUARTER` unit. */
+  intervalCount: number;
   name: string;
 }): Promise<string> {
   const apiKey = Deno.env.get('SAFEPAY_API_KEY');
@@ -81,7 +85,12 @@ export async function createSafepayPlan(input: {
       amount: toSafepayAmount(input.amountCents, input.currency),
       currency: input.currency.toUpperCase(),
       interval: input.interval,
-      interval_count: 1,
+      // Was hardcoded to 1, which was correct for exactly as long as every plan
+      // was monthly or yearly. A quarterly plan is three MONTHs, and sending 1
+      // with it creates a Safepay plan that charges the three-month price every
+      // month — the same amount, three times as often, with both systems
+      // internally consistent about the wrong schedule. See ./interval.ts.
+      interval_count: input.intervalCount,
     }),
   });
 

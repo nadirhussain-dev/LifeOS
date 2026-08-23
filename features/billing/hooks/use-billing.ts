@@ -120,10 +120,22 @@ export function useEntitlement<K extends EntitlementKey>(key: K): Entitlements[K
   return useBillingStore((s) => s.entitlements[key]);
 }
 
-/** True for standard and premium. The named question behind the `isPlus` alias
- *  below, and what `has_premium()` (0059) answers server-side. */
+/**
+ * True for premium — the only paid tier since 0073.
+ *
+ * The named question behind the `isPlus` alias below, and the exact mirror of
+ * `has_premium()` server-side.
+ *
+ * The threshold moved with the tiers, and it had to. This read
+ * `atLeast(useTier(), 'standard')`, and `tierRank` floors anything it does not
+ * recognise at 0 — so the moment `standard` left the ladder the comparison
+ * became `>= 0`, true for every account in the app. Every free user would have
+ * read as paid: no ads, no upsell, every gate open, and nothing raising an
+ * error anywhere. 0073's header describes the identical hazard in the SQL
+ * function; this is the client half of it.
+ */
 export function useHasPaidTier(): boolean {
-  return atLeast(useTier(), 'standard');
+  return atLeast(useTier(), 'premium');
 }
 
 /**

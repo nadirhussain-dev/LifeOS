@@ -23,7 +23,10 @@ import { useTheme } from '@/hooks/use-theme';
 import { alpha } from '@/lib/color';
 import { toast } from '@/lib/toast-store';
 
-const PERIODS: BillingPeriod[] = ['free', 'month', 'year'];
+// Mirrors both `billing_plans`' check constraint and `admin_upsert_plan`'s own
+// validation (0073) — three copies of one list, and the RPC refuses anything
+// this array offers that it has not been taught.
+const PERIODS: BillingPeriod[] = ['free', 'month', 'quarter', 'year'];
 
 type FormState = {
   id: string;

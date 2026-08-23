@@ -3486,7 +3486,9 @@ await test('0026 you can store and read your own media', async () => {
   // actually uploads here is bumped off the free plan the same way
   // ALBUM_OWNER is, above.
   await asUser(db, M1, async () => {
-    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+    await db.query(`select public.set_my_plan('premium_monthly', $1)`, [
+      Date.now() + 30 * 86400000,
+    ]);
   });
   await asUser(db, M1, async () => {
     await put(M1, 'gallery_photos/p1.jpg', 1024);
@@ -3518,7 +3520,9 @@ await test('0026 you cannot write into another account’s folder', async () => 
   // Paid, so this actually exercises the RLS rejection being tested rather
   // than being short-circuited by 0035's plan check, which runs first.
   await asUser(db, M3, async () => {
-    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+    await db.query(`select public.set_my_plan('premium_monthly', $1)`, [
+      Date.now() + 30 * 86400000,
+    ]);
   });
   await asUser(db, M3, async () => {
     await expectRejection(() => put(VICTIM, 'gallery_photos/forged.jpg', 10), 'row-level security');
@@ -3546,7 +3550,9 @@ await test('0026 the quota is enforced on the server', async () => {
   await createUser(db, M5, 'media5@example.com');
   let quota;
   await asUser(db, M5, async () => {
-    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+    await db.query(`select public.set_my_plan('premium_monthly', $1)`, [
+      Date.now() + 30 * 86400000,
+    ]);
     // Queried as M5, not the harness's own connection: since 0037,
     // media_quota_bytes() reads the CALLER's plan, so evaluating it outside
     // asUser() would silently see no signed-in account and fall back to the
@@ -3569,7 +3575,9 @@ await test('0026 usage is reported to the account it belongs to', async () => {
   const M6 = 'aaaabbbb-0000-0000-0000-000000000006';
   await createUser(db, M6, 'media6@example.com');
   await asUser(db, M6, async () => {
-    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+    await db.query(`select public.set_my_plan('premium_monthly', $1)`, [
+      Date.now() + 30 * 86400000,
+    ]);
   });
   await asUser(db, M6, async () => {
     await put(M6, 'songs/a.mp3', 500);
@@ -3647,7 +3655,7 @@ await createUser(db, ALBUM_PEST, 'album-pest@example.com');
 // suite) — so ALBUM_OWNER is bumped off the free plan once, here, rather
 // than have those unrelated tests start failing the moment 0032 exists.
 await asUser(db, ALBUM_OWNER, async () => {
-  await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+  await db.query(`select public.set_my_plan('premium_monthly', $1)`, [Date.now() + 30 * 86400000]);
 });
 
 await test('0027 create_shared_album creates the album and its owner member together', async () => {
@@ -4609,7 +4617,7 @@ await test('0054 a voice message carries a recording and a text message may not'
 });
 
 await test('0054 a voice note is free, while a photo in the same album is not', async () => {
-  // MEDIA_PLAN_FREE is on plus_monthly by the time the 0035/0052 suite has run,
+  // MEDIA_PLAN_FREE is on premium_monthly by the time the 0035/0052 suite has run,
   // so this uses a fresh free account: the whole assertion is about the plan.
   const VOICE_FREE = '99400000-0000-0000-0000-000000000001';
   await createUser(db, VOICE_FREE, 'voice-free@example.com');
@@ -4903,11 +4911,13 @@ await test('0031 a new account defaults to the free plan', async () => {
 
 await test('0031 set_my_plan updates only the caller’s own row', async () => {
   await asUser(db, PLAN_PAID, async () => {
-    await db.query(`select public.set_my_plan('plus_yearly', $1)`, [Date.now() + 365 * 86400000]);
+    await db.query(`select public.set_my_plan('premium_yearly', $1)`, [
+      Date.now() + 365 * 86400000,
+    ]);
   });
   expectEqual(
     (await one(`select plan_id from public.profiles where id = $1`, [PLAN_PAID])).plan_id,
-    'plus_yearly',
+    'premium_yearly',
     'the caller’s own row changed',
   );
   expectEqual(
@@ -4974,7 +4984,9 @@ await test('0032 a free-plan album is capped at two active members', async () =>
 
 await test('0032 upgrading lifts both limits for the same account', async () => {
   await asUser(db, PLAN_FREE, async () => {
-    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+    await db.query(`select public.set_my_plan('premium_monthly', $1)`, [
+      Date.now() + 30 * 86400000,
+    ]);
     await db.query(
       `select public.create_shared_album('alb-plan-free-2','cipher:y','m-plan-free-owner-2',null,'act-plan-3',$1)`,
       [Date.now()],
@@ -5006,7 +5018,7 @@ await test('0032 upgrading lifts both limits for the same account', async () => 
 });
 
 await test('0032 the cap follows the album OWNER’s plan, not an invited member’s own plan', async () => {
-  // PLAN_PAID is on plus_yearly (set above); PLAN_PAID_FRIEND and
+  // PLAN_PAID is on premium_yearly (set above); PLAN_PAID_FRIEND and
   // PLAN_PAID_THIRD are ordinary free accounts, and both still fit — the
   // album's capacity is the owner's to grow, not each guest's own plan.
   await asUser(db, PLAN_PAID, async () => {
@@ -5156,8 +5168,12 @@ await test('0034 the seeded plans are readable by anyone signed in', async () =>
   await asUser(db, ROSTER_OUTSIDER, async () => {
     expectEqual(
       await count(`select count(*)::int n from public.billing_plans where active`),
-      3,
-      'the three seeded plans',
+      4,
+      // Freemium plus the three Premium intervals (0073). The legacy plus_*
+      // rows are archived rather than deleted — still honoured for whoever is
+      // on them, never offered to anyone choosing — so they are correctly not
+      // counted here.
+      'freemium and three premium intervals',
     );
   });
 });
@@ -5316,7 +5332,9 @@ await test('0052 upgrading the same account lets the photo through', async () =>
   // the test above so a regression that refuses everybody cannot pass as one
   // that merely charges for it.
   await asUser(db, MEDIA_PLAN_FREE, async () => {
-    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+    await db.query(`select public.set_my_plan('premium_monthly', $1)`, [
+      Date.now() + 30 * 86400000,
+    ]);
     await putAlbumObject('alb-media-free', 'photo-a.bin', 1024);
   });
   expectEqual(
@@ -5331,7 +5349,9 @@ await test('0052 upgrading the same account lets the photo through', async () =>
 
 await test('0035 upgrading lifts the block, still bounded by the existing byte quota', async () => {
   await asUser(db, MEDIA_PLAN_FREE, async () => {
-    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+    await db.query(`select public.set_my_plan('premium_monthly', $1)`, [
+      Date.now() + 30 * 86400000,
+    ]);
     await put(MEDIA_PLAN_FREE, 'gallery_photos/p1.jpg', 1024);
   });
   expectEqual(
@@ -5346,7 +5366,7 @@ await test('0035 upgrading lifts the block, still bounded by the existing byte q
 
   let quota;
   await asUser(db, MEDIA_PLAN_FREE, async () => {
-    // Queried as MEDIA_PLAN_FREE (now on plus_monthly), not the harness's own
+    // Queried as MEDIA_PLAN_FREE (now on premium_monthly), not the harness's own
     // connection — see the matching comment on the 0026 quota test above.
     quota = Number((await one(`select public.media_quota_bytes() as q`)).q);
   });
@@ -5379,12 +5399,16 @@ await test('0037 a paid account’s quota is the plan’s, not the old flat cons
   const QUOTA_PLUS = '99400000-0000-0000-0000-000000000002';
   await createUser(db, QUOTA_PLUS, 'quota-plus@example.com');
   await asUser(db, QUOTA_PLUS, async () => {
-    await db.query(`select public.set_my_plan('plus_monthly', $1)`, [Date.now() + 30 * 86400000]);
+    await db.query(`select public.set_my_plan('premium_monthly', $1)`, [
+      Date.now() + 30 * 86400000,
+    ]);
     const quota = Number((await one(`select public.media_quota_bytes() as q`)).q);
     // Before 0037 this was hardcoded to 150 MiB (0030) for every account —
-    // paying for Plus bought nothing. It has to actually be the 50 GB the
-    // pricing table promises now.
-    expectEqual(quota, 53687091200, '50 GB, not the free tier’s number');
+    // paying bought nothing. It has to actually be what the pricing table
+    // promises. 100 GB rather than the old 50: 0073 retired the middle tier, so
+    // the only paid plan is premium and premium's allowance is what a paying
+    // account gets.
+    expectEqual(quota, 107374182400, '100 GB, not the free tier’s number');
   });
 });
 
@@ -5588,7 +5612,7 @@ await test('0048 a module that is not eligible this season is refused', async ()
 });
 
 await test('0048 extras and the annual plan stack down to the shield floor, never below', async () => {
-  await db.query(`update public.profiles set plan_id = 'plus_yearly' where id = $1`, [RUNNER2]);
+  await db.query(`update public.profiles set plan_id = 'premium_yearly' where id = $1`, [RUNNER2]);
   await asUser(db, RUNNER2, async () => {
     await db.query(
       `select public.enroll_in_challenge($1::uuid, 0, $2::text[], $3::text[], 'dev-runner2')`,
@@ -5599,7 +5623,7 @@ await test('0048 extras and the annual plan stack down to the shield floor, neve
   // 30 base − 5 (two or more extras) − 5 (annual) = 20, which is the floor.
   expectEqual(r.shield_earn_days, 20, 'stacked interval, clamped at the floor');
   expectEqual(r.shields, 1, 'annual head start');
-  expectEqual(r.plan_at_enrolment, 'plus_yearly', 'plan recorded at enrolment');
+  expectEqual(r.plan_at_enrolment, 'premium_yearly', 'plan recorded at enrolment');
 });
 
 // --- crediting a day -------------------------------------------------------
@@ -7234,21 +7258,25 @@ await createUser(db, TIER_STD, 'tier-std@example.com');
 await createUser(db, TIER_GRANTED, 'tier-granted@example.com');
 await createUser(db, TIER_BOTH, 'tier-both@example.com');
 
-// plus_monthly backfilled to tier `standard` — see 0059's section 4.
-await db.query(`update public.profiles set plan_id = 'plus_monthly' where id = any($1::uuid[])`, [
-  [TIER_STD, TIER_BOTH],
-]);
+// premium_monthly backfilled to tier `standard` — see 0059's section 4.
+await db.query(
+  `update public.profiles set plan_id = 'premium_monthly' where id = any($1::uuid[])`,
+  [[TIER_STD, TIER_BOTH]],
+);
 
 await test('0059 tier_rank orders the ladder and floors anything unknown', async () => {
   const r = await one(`
     select public.tier_rank('freemium') f,
-           public.tier_rank('standard') s,
            public.tier_rank('premium') p,
+           public.tier_rank('standard') s,
            public.tier_rank('enterprise') u
   `);
-  expectEqual(r.f < r.s && r.s < r.p, true, 'freemium < standard < premium');
+  expectEqual(r.f < r.p, true, 'freemium < premium');
   // The safe direction: a tier this build has never heard of must be the
-  // weakest, never accidentally the strongest.
+  // weakest, never accidentally the strongest. 0073 folded 'standard' away, so
+  // it is now one of those — a client built before that migration sending it
+  // gets the weakest answer rather than a paid one.
+  expectEqual(r.s, 0, 'the retired tier floors like any unknown');
   expectEqual(r.u, 0, 'unknown ranks 0');
 });
 
@@ -7257,7 +7285,7 @@ await test('0059 every tier defines every entitlement key', async () => {
   // failure mode of a typo in the seed is a paying customer silently refused.
   const gaps = await count(`
     select count(*)::int n
-      from (select unnest(array['freemium','standard','premium']) as tier) t
+      from (select unnest(array['freemium','premium']) as tier) t
      cross join (select distinct key from public.plan_entitlements) k
      where not exists (
        select 1 from public.plan_entitlements e where e.tier = t.tier and e.key = k.key
@@ -7278,19 +7306,25 @@ await test('0059 a new account is freemium', async () => {
   });
 });
 
-await test('0059 a legacy Plus subscriber reads as standard', async () => {
+await test('0073 a legacy Plus subscriber is folded up to premium, never down', async () => {
+  /*
+   * The migration that takes media backup away from somebody who bought it is
+   * not a migration, it is a support incident. 0059 backfilled the two rows
+   * that actually sold onto `standard`; 0073 retires that tier, and these
+   * accounts move up.
+   */
   await asUser(db, TIER_STD, async () => {
-    expectEqual((await one(`select public.my_tier() t`)).t, 'standard', 'plus_monthly -> standard');
+    expectEqual((await one(`select public.my_tier() t`)).t, 'premium', 'plus -> premium');
   });
 });
 
-await test('0059 has_premium() still answers true for a Standard subscriber', async () => {
+await test('0059 has_premium() still answers true for a legacy subscriber', async () => {
   // The regression this migration could most easily have shipped. Three
   // triggers (avatar 0052, album media 0052, voice notes 0054) gate on
   // has_premium(); narrowing it to `my_tier() = 'premium'` would have stripped
   // all three from every existing paying customer the moment this ran.
   await asUser(db, TIER_STD, async () => {
-    expectEqual((await one(`select public.has_premium() v`)).v, true, 'standard is paid');
+    expectEqual((await one(`select public.has_premium() v`)).v, true, 'legacy plan is paid');
   });
   expectEqual(
     (await one(`select public.user_has_premium($1) v`, [TIER_STD])).v,
@@ -7347,19 +7381,33 @@ await test('0059 a lapsed grant drops a subscriber to their plan, not to freemiu
     TIER_BOTH,
   ]);
   await asUser(db, TIER_BOTH, async () => {
-    expectEqual((await one(`select public.my_tier() t`)).t, 'standard', 'falls back to the plan');
+    expectEqual((await one(`select public.my_tier() t`)).t, 'premium', 'falls back to the plan');
   });
 });
 
-await test('0059 a grant weaker than the plan does not demote anyone', async () => {
+await test('0073 the retired tier can no longer be granted at all', async () => {
+  /*
+   * This replaces "a grant weaker than the plan does not demote anyone", which
+   * could only be written while a middle tier existed to grant. With two tiers
+   * the weaker one is `freemium`, and `admin_grant_premium` has always refused
+   * that outright — granting freemium is a demotion wearing a grant's clothes.
+   *
+   * What is worth pinning instead is that the retired name is refused by the
+   * constraint rather than quietly stored: an operator console built before
+   * 0073, or a stale client, must not be able to write a tier nothing resolves.
+   */
   await asUser(db, ADMIN, async () => {
-    await db.query(`select public.admin_grant_premium($1, $2, 'mistake', 'standard')`, [
-      TIER_BOTH,
-      Date.now() + 30 * 86400000,
-    ]);
+    await expectRejection(
+      () =>
+        db.query(`select public.admin_grant_premium($1, $2, 'mistake', 'standard')`, [
+          TIER_BOTH,
+          Date.now() + 30 * 86400000,
+        ]),
+      'a grant must name premium',
+    );
   });
   await asUser(db, TIER_BOTH, async () => {
-    expectEqual((await one(`select public.my_tier() t`)).t, 'standard', 'still standard');
+    expectEqual((await one(`select public.my_tier() t`)).t, 'premium', 'unchanged');
   });
 });
 
@@ -7410,7 +7458,7 @@ await test('0059 a grant needs a reason, a future end, and a real tier', async (
           TIER_FREE,
           Date.now() + 86400000,
         ]),
-      'standard or premium',
+      'a grant must name premium',
     );
   });
 });
@@ -7453,9 +7501,11 @@ await test('0059 my_entitlement answers from the caller’s own tier', async () 
     expectEqual(
       (await one(`select public.my_entitlement('media_backup') v`)).v,
       true,
-      'standard does',
+      'a paid tier does',
     );
-    expectEqual((await one(`select public.my_entitlement('album_limit') v`)).v, 5, 'five albums');
+    // -1 is UNLIMITED, not an error: premium has no album cap. The five
+    // belonged to the middle tier 0073 retired.
+    expectEqual((await one(`select public.my_entitlement('album_limit') v`)).v, -1, 'unlimited');
   });
 });
 
@@ -7472,23 +7522,25 @@ await test('0059 an unconfigured key reads null, so a gate refuses', async () =>
 await test('0059 my_billing_state carries tier, grant expiry and the whole map', async () => {
   await asUser(db, TIER_STD, async () => {
     const state = (await one(`select public.my_billing_state() s`)).s;
-    expectEqual(state.tier, 'standard', 'tier');
+    expectEqual(state.tier, 'premium', 'tier');
     expectEqual(state.premiumUntil, null, 'no grant');
     expectEqual(Object.keys(state.entitlements).length, 10, 'ten keys in one round trip');
-    expectEqual(state.entitlements.album_limit, 5, 'values are the tier’s');
+    expectEqual(state.entitlements.album_limit, -1, 'values are the tier’s');
   });
 });
 
 await test('0059 an owner can retune a tier without a release', async () => {
   // The whole point of entitlements being data.
   await asUser(db, ADMIN, async () => {
-    await db.query(`select public.admin_set_entitlement('standard', 'album_limit', '9'::jsonb)`);
+    await db.query(`select public.admin_set_entitlement('premium', 'album_limit', '9'::jsonb)`);
   });
   await asUser(db, TIER_STD, async () => {
     expectEqual((await one(`select public.my_entitlement('album_limit') v`)).v, 9, 'retuned');
   });
   await asUser(db, ADMIN, async () => {
-    await db.query(`select public.admin_set_entitlement('standard', 'album_limit', '5'::jsonb)`);
+    // Put premium's own value back — `-1` is UNLIMITED, which is what the
+    // seed says and what every later test in this file reads.
+    await db.query(`select public.admin_set_entitlement('premium', 'album_limit', '-1'::jsonb)`);
   });
 });
 
@@ -7496,8 +7548,8 @@ await test('0059 entitlements are readable by any signed-in account but not anon
   await asUser(db, TIER_FREE, async () => {
     expectEqual(
       await count(`select count(*)::int n from public.plan_entitlements`),
-      30,
-      'three tiers of ten keys',
+      20,
+      'two tiers of ten keys',
     );
   });
   await asAnon(db, async () => {
@@ -7527,26 +7579,158 @@ await test('0059 the free plan is retiered rather than duplicated', async () => 
   // never writes `tier`.
 });
 
-await test('0059 the new tier plan rows are seeded but not yet offered', async () => {
-  // Unpriced until 0060 — an inactive plan is invisible to the picker
-  // (0034's billing_plans_read is `active or is_admin()`), so seeding them
-  // cannot show anyone a price nobody agreed to.
-  const rows = await db.query(
-    `select id, tier, active from public.billing_plans
-      where id in ('standard_monthly','standard_yearly','premium_monthly','premium_yearly')
-      order by id`,
-  );
-  expectEqual(rows.rows.length, 4, 'four new rows');
+await test('0073 the paywall offers freemium and three premium intervals', async () => {
+  /*
+   * Replaces 0059's "seeded but not yet offered". Those rows were placeholders
+   * at price 0, deliberately inactive so seeding them could not show anyone a
+   * price nobody had agreed to. 0073 is the migration that agreed one.
+   */
+  const rows = (
+    await db.query(
+      `select id, tier, period, price_cents, currency, active
+         from public.billing_plans
+        where active
+        order by sort_order`,
+    )
+  ).rows;
+
   expectEqual(
-    rows.rows.every((r) => r.active === false),
+    rows.map((r) => r.id).join(','),
+    'free,premium_monthly,premium_quarterly,premium_yearly',
+    'four rows, cheapest first',
+  );
+  expectEqual(rows.filter((r) => r.tier === 'premium').length, 3, 'three premium intervals');
+  expectEqual(
+    rows.filter((r) => r.id !== 'free').every((r) => r.currency === 'pkr'),
     true,
-    'all inactive until priced',
+    'priced in the currency Safepay actually charges',
   );
   expectEqual(
-    rows.rows.filter((r) => r.tier === 'premium').length,
-    2,
-    'two premium rows, monthly and yearly',
+    rows.map((r) => Number(r.price_cents)).join(','),
+    '0,34900,92900,314900',
+    'the ladder, in paisa',
   );
+
+  // The discount has to increase with commitment, or the longer plans are a
+  // worse deal than the shorter ones and the whole ladder is backwards.
+  const perMonth = { month: 34900, quarter: 92900 / 3, year: 314900 / 12 };
+  expectEqual(
+    perMonth.month > perMonth.quarter && perMonth.quarter > perMonth.year,
+    true,
+    'each longer interval costs less per month',
+  );
+});
+
+await test('0073 the retired tier keeps no plan rows behind it', async () => {
+  expectEqual(
+    await count(`select count(*)::int n from public.billing_plans where tier = 'standard'`),
+    0,
+    'nothing left on standard',
+  );
+  // The two that sold are archived, not deleted: an archived plan is still
+  // honoured for whoever is on it and simply never offered to anyone choosing.
+  const legacy = (
+    await db.query(
+      `select id, tier, active from public.billing_plans
+        where id in ('plus_monthly','plus_yearly') order by id`,
+    )
+  ).rows;
+  expectEqual(legacy.length, 2, 'both legacy rows survive');
+  expectEqual(
+    legacy.every((r) => r.active === false && r.tier === 'premium'),
+    true,
+    'archived, and folded up to premium',
+  );
+});
+
+await test('0073 a quarterly plan is a period the console can actually create', async () => {
+  // The table constraint and admin_upsert_plan validate the period list
+  // separately, so widening one without the other leaves the console unable to
+  // create the very rows the migration inserted.
+  await asUser(db, ADMIN, async () => {
+    await db.query(
+      `select public.admin_upsert_plan('q-test', 'Q', 1073741824, 9900, 'pkr', 'quarter', null, 9)`,
+    );
+  });
+  expectEqual(
+    (await one(`select period from public.billing_plans where id = 'q-test'`)).period,
+    'quarter',
+    'quarter accepted',
+  );
+  await asUser(db, ADMIN, async () => {
+    await expectRejection(
+      () =>
+        db.query(
+          `select public.admin_upsert_plan('w-test', 'W', 1, 1, 'pkr', 'fortnight', null, 9)`,
+        ),
+      'invalid period',
+    );
+  });
+  await db.query(`delete from public.billing_plans where id = 'q-test'`);
+});
+
+await test('0073 has_premium no longer answers true for everybody', async () => {
+  /*
+   * The bug this migration could most easily have shipped, and the reason the
+   * threshold had to move with the tiers.
+   *
+   * `has_premium()` was `tier_rank(my_tier()) >= tier_rank('standard')`. Drop
+   * `standard` out of `tier_rank` and that right-hand side becomes 0, so the
+   * whole expression is `>= 0` — true for every account in the product. Three
+   * triggers gate on it (avatar upload, album media, voice notes), so the
+   * silent result would have been the entire free tier acquiring all three
+   * while the paywall carried on rendering as though they had not.
+   */
+  await asUser(db, TIER_FREE, async () => {
+    expectEqual((await one(`select public.has_premium() v`)).v, false, 'freemium is not paid');
+  });
+  await asUser(db, TIER_STD, async () => {
+    expectEqual((await one(`select public.has_premium() v`)).v, true, 'premium is');
+  });
+});
+
+await test('0073 the annual perk survives the plan being renamed', async () => {
+  /*
+   * `enroll_in_challenge` matched a hardcoded `plan_id = 'plus_yearly'`. Renaming
+   * the plans would have left it compiling, enrolling, and silently never
+   * granting the head start again — no error, just a perk that stopped
+   * existing. It keys off the plan's period now.
+   */
+  const YEARLY = 'ab000000-0000-4000-8000-00000000000f';
+  await createUser(db, YEARLY, 'yearly-perk@example.com');
+  await db.query(`update public.profiles set plan_id = 'premium_yearly' where id = $1`, [YEARLY]);
+
+  const season = (
+    await one(
+      `insert into public.challenge_seasons (name, enabled, required_modules)
+       values ('Perk Season', true, 3) returning id`,
+    )
+  ).id;
+  for (const m of ['habits', 'water', 'journal']) {
+    await db.query(`insert into public.challenge_modules (season_id, module_id) values ($1, $2)`, [
+      season,
+      m,
+    ]);
+  }
+
+  await asUser(db, YEARLY, () =>
+    one(`select public.enroll_in_challenge($1::uuid, 0, $2::text[], $3::text[], null) as v`, [
+      season,
+      '{habits,water,journal}',
+      '{}',
+    ]),
+  );
+
+  const run = await one(
+    `select shields, shield_earn_days from public.challenge_enrollments
+      where user_id = $1 and season_id = $2`,
+    [YEARLY, season],
+  );
+  expectEqual(Number(run.shields), 1, 'the annual head start still arrives');
+  expectEqual(Number(run.shield_earn_days), 25, 'and the faster interval with it');
+
+  await db.query(`delete from public.challenge_enrollments where season_id = $1`, [season]);
+  await db.query(`delete from public.challenge_seasons where id = $1`, [season]);
 });
 
 // Everything above this point in the whole suite needed ADMIN's ordinary

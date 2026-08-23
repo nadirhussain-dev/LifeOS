@@ -16,7 +16,7 @@
  */
 
 export type StoragePlanId = string;
-export type BillingPeriod = 'free' | 'month' | 'year';
+export type BillingPeriod = 'free' | 'month' | 'quarter' | 'year';
 
 export type StoragePlan = {
   id: StoragePlanId;
@@ -53,24 +53,43 @@ export const STORAGE_PLANS: StoragePlan[] = [
     badge: null,
     active: true,
   },
+  /*
+   * The three Premium intervals, mirroring 0073's seed.
+   *
+   * Same storage on all three — the offer is the price, not more space, so the
+   * rows are an honest apples-to-apples comparison. Storage is sold separately
+   * and priced by the admin; these buy ad removal and the media capabilities
+   * that come with a paid account.
+   *
+   * Priced in paisa, because that is what `price_cents` holds and what Safepay
+   * is handed after `toSafepayAmount` divides by 100.
+   */
   {
-    id: 'plus_monthly',
-    name: 'Plus',
-    storageBytes: 50 * GB,
-    priceCents: 499,
-    currency: 'usd',
+    id: 'premium_monthly',
+    name: 'Premium',
+    storageBytes: 100 * GB,
+    priceCents: 34900,
+    currency: 'pkr',
     period: 'month',
     badge: null,
     active: true,
   },
   {
-    id: 'plus_yearly',
-    name: 'Plus',
-    // Same cap as monthly — the yearly plan's offer is the price, not more
-    // space, so the two rows are an honest apples-to-apples comparison.
-    storageBytes: 50 * GB,
-    priceCents: 3999,
-    currency: 'usd',
+    id: 'premium_quarterly',
+    name: 'Premium',
+    storageBytes: 100 * GB,
+    priceCents: 92900,
+    currency: 'pkr',
+    period: 'quarter',
+    badge: null,
+    active: true,
+  },
+  {
+    id: 'premium_yearly',
+    name: 'Premium',
+    storageBytes: 100 * GB,
+    priceCents: 314900,
+    currency: 'pkr',
     period: 'year',
     badge: 'best_value',
     active: true,
@@ -81,19 +100,65 @@ export function storagePlan(id: string, plans: StoragePlan[] = STORAGE_PLANS): S
   return plans.find((p) => p.id === id) ?? plans[0];
 }
 
-/** "$4.99". One currency (usd) for now — extend when a second is real. */
+/**
+ * "Rs 349", "$4.99".
+ *
+ * PKR is written without the decimals, because it is charged without them: the
+ * ladder is whole rupees, every Pakistani price tag in the wild reads "Rs 349",
+ * and ".00" on all three plans is two characters of noise on the one screen
+ * where the number is the message. The digits are still *stored* — price_cents
+ * is paisa — so a future half-rupee price is a formatting change and not a
+ * migration.
+ *
+ * Anything else falls back to the code plus two decimals, which is wrong-looking
+ * enough to notice and never wrong about the amount.
+ */
 export function formatPrice(priceCents: number, currency = 'usd'): string {
+  const code = currency.toLowerCase();
+  if (code === 'pkr') {
+    const rupees = Math.round(priceCents / 100);
+    return `Rs ${rupees.toLocaleString('en-US')}`;
+  }
   const amount = (priceCents / 100).toFixed(2);
-  const symbol = currency.toLowerCase() === 'usd' ? '$' : `${currency.toUpperCase()} `;
+  const symbol = code === 'usd' ? '$' : `${currency.toUpperCase()} `;
   return `${symbol}${amount}`;
 }
 
 export function periodI18nKey(
   period: BillingPeriod,
-): 'billing.free' | 'billing.perMonth' | 'billing.perYear' {
+): 'billing.free' | 'billing.perMonth' | 'billing.perQuarter' | 'billing.perYear' {
   if (period === 'month') return 'billing.perMonth';
+  if (period === 'quarter') return 'billing.perQuarter';
   if (period === 'year') return 'billing.perYear';
   return 'billing.free';
+}
+
+/**
+ * How many months a period covers, so two plans can be compared honestly.
+ *
+ * A quarterly price is not comparable to a monthly one until both are
+ * per-month, and "Rs 929" beside "Rs 349" reads as three times worse when it is
+ * eleven percent better. Mirrors `chargesPerYear` in
+ * supabase/functions/_shared/interval.ts — the server bills on that table and
+ * the paywall quotes from this one, so they describe the same fact.
+ */
+export function monthsInPeriod(period: BillingPeriod): number {
+  if (period === 'month') return 1;
+  if (period === 'quarter') return 3;
+  if (period === 'year') return 12;
+  return 0;
+}
+
+/**
+ * The per-month price, for the "Rs 262/mo" line under a longer plan.
+ *
+ * Returns null for a free plan rather than 0: there is no monthly equivalent of
+ * free, and rendering "Rs 0/mo" beside it invites the comparison the whole line
+ * exists to make fair.
+ */
+export function perMonthCents(plan: StoragePlan): number | null {
+  const months = monthsInPeriod(plan.period);
+  return months > 0 ? Math.round(plan.priceCents / months) : null;
 }
 
 /**

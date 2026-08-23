@@ -78,8 +78,28 @@ const PRIVATE_SEGMENT_TO_MODULE: Record<string, string> = {
   albums: 'shared-albums',
 };
 
+/**
+ * The id the private space as a whole is gated under (0074).
+ *
+ * Distinct from the five module ids above, and it has to be: those gate one
+ * screen each, and this gates the existence of the space they live in — the
+ * home, the settings, the unlock pad, setup, transfer and receive, none of
+ * which belong to a module and all of which are reachable without one.
+ *
+ * The space ships switched off. `module_flags` treats an absent row as enabled
+ * (0011 rule 1) so that a new module ships working; that default is right for
+ * an ordinary module and wrong for this one, which is why 0074 writes an
+ * explicit `false`.
+ */
+export const PRIVATE_SPACE_MODULE_ID = 'private';
+
 export function privateModuleForPath(pathname: string): string | null {
   const segments = pathname.split('?')[0].split('/').filter(Boolean);
   if (segments[0] !== 'private') return null;
   return PRIVATE_SEGMENT_TO_MODULE[segments[1] ?? ''] ?? null;
+}
+
+/** Whether a path is anywhere inside the private space, module or not. */
+export function isPrivatePath(pathname: string): boolean {
+  return pathname.split('?')[0].split('/').filter(Boolean)[0] === 'private';
 }
