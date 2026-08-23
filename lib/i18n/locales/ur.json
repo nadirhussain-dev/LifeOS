@@ -2487,7 +2487,8 @@
     "perkPlusNoAds": "کوئی اشتہار نہیں",
     "perkPlusBackup": "فوٹو، ویڈیو اور آڈیو کے لیے کلاؤڈ بیک اپ",
     "perkPlusAlbums": "مزید شیئرڈ البمز، مزید ارکان",
-    "perkPlusInsights": "بصیرت اور گہری یادیں"
+    "perkPlusInsights": "بصیرت اور گہری یادیں",
+    "perQuarter": "/سہ ماہی"
   },
   "transfer": {
     "includesAlbums_one": "اس میں {{count}} مشترکہ البم کی کلید بھی ہے، تاکہ وہ نئے فون پر بھی کھلے۔",

@@ -2487,7 +2487,8 @@
     "perkPlusNoAds": "कोई विज्ञापन नहीं",
     "perkPlusBackup": "फ़ोटो, वीडियो और ऑडियो के लिए क्लाउड बैकअप",
     "perkPlusAlbums": "अधिक शेयर्ड एल्बम, अधिक सदस्य",
-    "perkPlusInsights": "इनसाइट्स और गहरी यादें"
+    "perkPlusInsights": "इनसाइट्स और गहरी यादें",
+    "perQuarter": "/तिमाही"
   },
   "transfer": {
     "includesAlbums_one": "इसमें {{count}} साझा एल्बम की कुंजी भी है, ताकि वह नए फ़ोन पर भी खुले।",

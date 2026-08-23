@@ -2647,7 +2647,8 @@
     "perkPlusNoAds": "بدون إعلانات",
     "perkPlusBackup": "نسخ احتياطي سحابي للصور والفيديو والصوت",
     "perkPlusAlbums": "ألبومات مشتركة أكثر، وأعضاء أكثر",
-    "perkPlusInsights": "رؤى وذكريات أعمق"
+    "perkPlusInsights": "رؤى وذكريات أعمق",
+    "perQuarter": "/ربع سنوي"
   },
   "transfer": {
     "includesAlbums_one": "يحمل هذا أيضًا مفتاح {{count}} ألبوم مشترك، ليُفتح على الهاتف الجديد.",

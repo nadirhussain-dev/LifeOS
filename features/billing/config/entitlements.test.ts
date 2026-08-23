@@ -49,6 +49,29 @@ describe('the entitlement matrix', () => {
     expect(Object.keys(seed.freemium).length).toBe(Object.keys(ENTITLEMENT_DEFAULTS).length);
   });
 
+  it('reflects 0073 deleting the middle tier, not just 0059 seeding it', () => {
+    /*
+     * 0059 seeds three tiers and 0073 deletes one of them, so the seed read
+     * above is the matrix as it was *first written*, not as the database ends
+     * up. Both files have to be consulted or this suite pins a shape that no
+     * longer exists — the same pinned-migration trap that let a stale funnel
+     * allowlist pass while client and server disagreed.
+     *
+     * Asserted rather than folded into the parse, because the two statements
+     * are different: 0059 defined a standard column, and 0073 removed it.
+     */
+    const later = readFileSync(
+      join(__dirname, '../../../supabase/migrations/0073_two_tiers_and_intervals.sql'),
+      'utf8',
+    );
+    expect(later).toContain("delete from public.plan_entitlements where tier = 'standard'");
+    expect(later).toContain("check (tier in ('freemium', 'premium'))");
+
+    // And the client agrees with where that leaves things.
+    expect([...TIERS].sort()).toEqual(['freemium', 'premium']);
+    expect(Object.keys(TIER_ENTITLEMENTS).sort()).toEqual(['freemium', 'premium']);
+  });
+
   for (const tier of TIERS) {
     it(`matches migration 0059's seed for ${tier}`, () => {
       expect(TIER_ENTITLEMENTS[tier]).toEqual(seed[tier]);
@@ -67,8 +90,7 @@ describe('the entitlement matrix', () => {
 
 describe('tierRank', () => {
   it('orders the ladder', () => {
-    expect(tierRank('freemium')).toBeLessThan(tierRank('standard'));
-    expect(tierRank('standard')).toBeLessThan(tierRank('premium'));
+    expect(tierRank('freemium')).toBeLessThan(tierRank('premium'));
   });
 
   it('ranks anything unrecognised below every real tier', () => {
@@ -80,9 +102,30 @@ describe('tierRank', () => {
   });
 
   it('answers atLeast the way has_premium() does', () => {
-    expect(atLeast('freemium', 'standard')).toBe(false);
-    expect(atLeast('standard', 'standard')).toBe(true);
-    expect(atLeast('premium', 'standard')).toBe(true);
+    expect(atLeast('freemium', 'premium')).toBe(false);
+    expect(atLeast('premium', 'premium')).toBe(true);
+  });
+
+  it('does not let a retired tier become an always-true threshold', () => {
+    /*
+     * The bug 0073 could most easily have shipped, on both sides at once.
+     *
+     * `tierRank` floors anything unrecognised at 0 — the safe direction for a
+     * value being *ranked*, and the unsafe direction for one used as a
+     * *threshold*. `atLeast(tier, 'standard')` was the paid check on the client
+     * and `>= tier_rank('standard')` was the paid check on the server; the
+     * moment that tier left the ladder both became `>= 0` and every free
+     * account read as paid.
+     *
+     * Pinned as a property rather than a spelling: no retired or unknown name
+     * may ever be usable as a floor that everything clears.
+     */
+    for (const retired of ['standard', 'enterprise', 'plus', '']) {
+      expect(atLeast('freemium', retired as 'premium')).toBe(true);
+      expect(tierRank(retired)).toBe(0);
+    }
+    // Which is exactly why the real check names a tier that still exists.
+    expect(atLeast('freemium', 'premium')).toBe(false);
   });
 });
 

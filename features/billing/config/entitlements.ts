@@ -14,7 +14,15 @@
  * whose network dropped — is a free tier nobody agreed to.
  */
 
-export const TIERS = ['freemium', 'standard', 'premium'] as const;
+/**
+ * Two tiers, since 0073. You either see ads or you do not.
+ *
+ * `standard` existed between them and never sold — both of its plan rows
+ * shipped inactive at price 0. The two rows that did sell were folded **up**
+ * into premium rather than down, because the migration that takes media backup
+ * away from somebody who bought it is a support incident, not a migration.
+ */
+export const TIERS = ['freemium', 'premium'] as const;
 export type Tier = (typeof TIERS)[number];
 
 /**
@@ -59,9 +67,11 @@ export type EntitlementKey = keyof Entitlements;
 const MB = 1024 * 1024;
 const GB = 1024 * MB;
 
-/** Row for row identical to migration 0059's seed. Asserted by
- *  entitlements.test.ts — if the two ever disagree, that test fails rather
- *  than a user quietly getting the wrong ceiling. */
+/** Row for row identical to the seed as 0073 leaves it — 0059's matrix minus
+ *  the `standard` column it retired. Asserted by entitlements.test.ts, which
+ *  reads both migrations rather than either one, so neither can drift from the
+ *  client without failing the build rather than quietly giving a user the wrong
+ *  ceiling. */
 export const TIER_ENTITLEMENTS: Record<Tier, Entitlements> = {
   freemium: {
     storage_bytes: 50 * MB,
@@ -74,18 +84,6 @@ export const TIER_ENTITLEMENTS: Record<Tier, Entitlements> = {
     ads: true,
     insights: false,
     on_this_day_years: 1,
-  },
-  standard: {
-    storage_bytes: 15 * GB,
-    media_backup: true,
-    album_limit: 5,
-    album_member_limit: 10,
-    avatar_upload: true,
-    album_media_upload: true,
-    voice_notes: false,
-    ads: false,
-    insights: true,
-    on_this_day_years: 5,
   },
   premium: {
     storage_bytes: 100 * GB,

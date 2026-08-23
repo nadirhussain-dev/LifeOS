@@ -58,6 +58,7 @@ import type { VisibilityContext } from '@/features/hub/services/module-visibilit
 import { useModuleCurationStore } from '@/features/hub/store/module-curation-store';
 import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 import { isVaultSetUp } from '@/features/private/services/vault-keys';
+import { PRIVATE_SPACE_MODULE_ID } from '@/features/hub/config/route-modules';
 import { usePrivateStore } from '@/features/private/store/private-store';
 import { useProfileStore } from '@/features/profile/store/profile-store';
 import {
@@ -120,6 +121,22 @@ export default function SettingsScreen() {
   // nothing about what is inside, only whether a space exists.
   const [privateSetUp, setPrivateSetUp] = useState(false);
   const privateHidden = usePrivateStore((state) => state.hiddenFromSettings);
+  /*
+   * The operator's switch for the whole private space (0074).
+   *
+   * The space ships off and an operator turns it on once there are enough users
+   * to justify what it carries. While it is off the row is *absent*, not
+   * disabled — `private-modules.ts`'s first rule is that a greyed-out lock tells
+   * a snooping partner exactly what is being hidden, and that argument applies
+   * with more force to the door than to any room behind it.
+   *
+   * Read straight from the flags store rather than through `useModuleAccess`,
+   * which answers for a module the user is trying to open; this is a list item
+   * deciding whether to draw itself.
+   */
+  const privateSpaceOff = useModuleFlagsStore(
+    (s) => s.flags[PRIVATE_SPACE_MODULE_ID]?.enabled === false,
+  );
 
   /**
    * Whether to show the operator console at all.
@@ -471,7 +488,7 @@ export default function SettingsScreen() {
               watch. When it is gone, the long-press on the version number below
               is the way back, and the toggle that hides it says so.
             */}
-            {privateHidden ? null : (
+            {privateHidden || privateSpaceOff ? null : (
               <SettingsRow
                 icon={EyeOff}
                 label={t('private.entryLabel')}

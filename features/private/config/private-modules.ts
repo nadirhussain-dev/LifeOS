@@ -62,6 +62,24 @@ import type { Gender } from '@/features/profile/store/profile-store';
 export type PrivateModuleId =
   'vault' | 'cycle' | 'recovery' | 'intimacy' | 'shared-albums' | 'together';
 
+/**
+ * The same ids as a runtime list.
+ *
+ * The union above is erased at compile time, and the gates need to *ask* at
+ * runtime whether a given module id is one of these — see
+ * `isBehindClosedPrivateSpace`. Derived from `PRIVATE_MODULES` would be
+ * circular (that array is declared below and carries icons and tints), so it is
+ * written out and pinned by a test asserting the two agree.
+ */
+export const PRIVATE_MODULE_IDS: readonly PrivateModuleId[] = [
+  'vault',
+  'cycle',
+  'recovery',
+  'intimacy',
+  'shared-albums',
+  'together',
+] as const;
+
 export type PrivateModule = {
   id: PrivateModuleId;
   titleKey: string;

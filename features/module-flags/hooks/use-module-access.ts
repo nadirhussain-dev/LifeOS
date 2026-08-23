@@ -2,7 +2,12 @@ import { usePathname, useRouter } from 'expo-router';
 import { useCallback, useEffect } from 'react';
 import { AppState } from 'react-native';
 
-import { moduleForPath, privateModuleForPath } from '@/features/hub/config/route-modules';
+import {
+  isPrivatePath,
+  moduleForPath,
+  privateModuleForPath,
+  PRIVATE_SPACE_MODULE_ID,
+} from '@/features/hub/config/route-modules';
 import { moduleMayBeShownIn } from '@/features/hub/services/module-gate';
 import { isClosedByUser } from '@/features/hub/services/module-visibility';
 import { useModuleCurationStore } from '@/features/hub/store/module-curation-store';
@@ -146,6 +151,26 @@ export function useModuleRouteGuard(): void {
       if (privatised.includes(moduleId) && key === null) {
         router.replace('/private/unlock');
       }
+      return;
+    }
+
+    /*
+     * The whole space, before any module inside it (0074).
+     *
+     * Checked first and answered differently: a disabled module inside an
+     * enabled space sends you back to the space's home, but a disabled *space*
+     * has no home to send you to. The destination has to be outside it, or the
+     * redirect lands on `/private`, which is also inside it, and the two bounce
+     * off each other forever.
+     *
+     * `isPrivatePath` rather than `privateModuleForPath`, because the screens
+     * that belong to no module — the unlock pad, setup, transfer, receive — are
+     * exactly the ones a closed space most needs to refuse. Gating only the
+     * five modules would hide Cycle and Recovery while leaving the door they
+     * are behind wide open.
+     */
+    if (isPrivatePath(pathname) && flags[PRIVATE_SPACE_MODULE_ID]?.enabled === false) {
+      router.replace('/(tabs)/hub');
       return;
     }
 

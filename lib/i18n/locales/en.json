@@ -2487,7 +2487,8 @@
     "perkPlusNoAds": "No ads",
     "perkPlusBackup": "Cloud backup for photos, video and audio",
     "perkPlusAlbums": "More shared albums, more members",
-    "perkPlusInsights": "Insights and deeper memories"
+    "perkPlusInsights": "Insights and deeper memories",
+    "perQuarter": "/quarter"
   },
   "transfer": {
     "includesAlbums_one": "This also carries the key for {{count}} shared album, so it opens on the new phone too.",
