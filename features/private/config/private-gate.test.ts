@@ -6,7 +6,11 @@ import {
   isPrivatePath,
   privateModuleForPath,
 } from '@/features/hub/config/route-modules';
-import { PRIVATE_MODULES } from '@/features/private/config/private-modules';
+import {
+  isBehindClosedPrivateSpace,
+  moduleMayBeShownIn,
+} from '@/features/hub/services/module-gate';
+import { PRIVATE_MODULES, PRIVATE_MODULE_IDS } from '@/features/private/config/private-modules';
 
 const ROOT = join(__dirname, '..', '..', '..');
 const read = (path: string) => readFileSync(join(ROOT, path), 'utf8');
@@ -128,5 +132,72 @@ describe('the way in', () => {
     // which is the thing the feature exists to prevent.
     const settings = read('app/settings/index.tsx');
     expect(settings).toContain('privateHidden || privateSpaceOff ? null : (');
+  });
+});
+
+describe('the umbrella dominates the modules inside it', () => {
+  const closed = { private: { enabled: false } };
+  const open = { private: { enabled: true } };
+
+  it('shuts every private module while the space is shut', () => {
+    /*
+     * The leak this closes. `flags['cycle']` and `flags['private']` are two
+     * independent switches, so an operator turning Cycle back on while leaving
+     * the space closed — a reasonable-looking action — would have put Cycle's
+     * entries into search and the insight engine while `/private/cycle` was
+     * still being bounced by the route guard.
+     */
+    for (const id of PRIVATE_MODULE_IDS) {
+      expect({ id, shut: isBehindClosedPrivateSpace(id, closed) }).toEqual({ id, shut: true });
+      expect(
+        moduleMayBeShownIn(id, {
+          flags: { ...closed, [id]: { enabled: true } },
+          overrides: {},
+          privatised: [],
+          unlocked: true,
+        }),
+      ).toBe(false);
+    }
+  });
+
+  it('claims nothing outside the private space', () => {
+    for (const id of ['habits', 'journal', 'budget', 'gallery', 'rewards']) {
+      expect({ id, shut: isBehindClosedPrivateSpace(id, closed) }).toEqual({ id, shut: false });
+    }
+  });
+
+  it('does not open a module just because the space is open', () => {
+    // The reverse must not hold: opening the door does not open every room.
+    expect(isBehindClosedPrivateSpace('cycle', open)).toBe(false);
+    expect(
+      moduleMayBeShownIn('cycle', {
+        flags: { ...open, cycle: { enabled: false } },
+        overrides: {},
+        privatised: [],
+        unlocked: true,
+      }),
+    ).toBe(false);
+  });
+
+  it('treats an absent umbrella row as open, like every other flag', () => {
+    // 0011 rule 1 — absent means enabled — still applies. 0074 is what makes
+    // the shipped default closed, by writing an explicit row.
+    expect(isBehindClosedPrivateSpace('cycle', {})).toBe(false);
+  });
+
+  it('keeps the runtime id list in step with the modules themselves', () => {
+    // `PRIVATE_MODULE_IDS` is written out rather than derived, so this is what
+    // stops a sixth module being added and silently escaping the umbrella.
+    expect([...PRIVATE_MODULE_IDS].sort()).toEqual(PRIVATE_MODULES.map((m) => m.id).sort());
+  });
+});
+
+describe('what the OS is allowed to say', () => {
+  it('checks the umbrella before naming a module on a lock screen', () => {
+    // The out-of-app answer, and the leak with the widest audience: a reminder
+    // naming Cycle tells anyone glancing at the phone that this space exists.
+    const source = read('features/notifications/services/notification-visibility.ts');
+    const fn = source.slice(source.indexOf('export function moduleMayBeNamed'));
+    expect(fn.slice(0, 600)).toContain('isBehindClosedPrivateSpace');
   });
 });

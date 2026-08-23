@@ -1,6 +1,10 @@
 import { isClosedByUser } from '@/features/hub/services/module-visibility';
 import { useModuleCurationStore } from '@/features/hub/store/module-curation-store';
-import { isModuleEnabled } from '@/features/module-flags/store/module-flags-store';
+import { isBehindClosedPrivateSpace } from '@/features/hub/services/module-gate';
+import {
+  isModuleEnabled,
+  useModuleFlagsStore,
+} from '@/features/module-flags/store/module-flags-store';
 import { privatisedModules } from '@/features/private/store/private-store';
 import type { NotificationCategory } from '@/features/notifications/types/notification.types';
 import i18n from '@/lib/i18n';
@@ -98,6 +102,11 @@ function closedOverrides(): Record<string, boolean> {
  *  redact the whole sentence. */
 export function moduleMayBeNamed(moduleId: string): boolean {
   return (
+    // The private space's own switch, which shuts everything inside it (0074).
+    // Checked here as well as in `moduleMayBeShownIn` because this is the
+    // out-of-app answer — a lock-screen reminder naming Cycle while the space
+    // is closed would be the leak with the widest audience.
+    !isBehindClosedPrivateSpace(moduleId, useModuleFlagsStore.getState().flags) &&
     isModuleEnabled(moduleId) &&
     !isClosedByUser(moduleId, closedOverrides()) &&
     !privatisedModules().includes(moduleId)

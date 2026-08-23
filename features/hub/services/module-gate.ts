@@ -1,4 +1,6 @@
+import { PRIVATE_SPACE_MODULE_ID } from '@/features/hub/config/route-modules';
 import { isClosedByUser } from '@/features/hub/services/module-visibility';
+import { PRIVATE_MODULE_IDS } from '@/features/private/config/private-modules';
 import { useModuleCurationStore } from '@/features/hub/store/module-curation-store';
 import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 import { usePrivateStore } from '@/features/private/store/private-store';
@@ -36,8 +38,30 @@ export type ModuleGateContext = {
   unlocked: boolean;
 };
 
+/**
+ * Whether a module is shut because the private space as a whole is (0074).
+ *
+ * The umbrella dominates its contents, and it has to be checked separately
+ * rather than inferred: `flags['cycle']` and `flags['private']` are two
+ * independent switches, and an operator turning Cycle back on while leaving the
+ * space closed is a reasonable-looking action that would otherwise put Cycle's
+ * entries back into search and the insight engine while `/private/cycle` was
+ * still bouncing.
+ *
+ * The reverse does not hold and must not: opening the space does not open the
+ * modules in it, each of which keeps its own switch.
+ */
+export function isBehindClosedPrivateSpace(
+  moduleId: string,
+  flags: Record<string, { enabled: boolean }>,
+): boolean {
+  if (!(PRIVATE_MODULE_IDS as readonly string[]).includes(moduleId)) return false;
+  return flags[PRIVATE_SPACE_MODULE_ID]?.enabled === false;
+}
+
 /** The rule itself, pure, so the React and non-React callers cannot drift. */
 export function moduleMayBeShownIn(moduleId: string, context: ModuleGateContext): boolean {
+  if (isBehindClosedPrivateSpace(moduleId, context.flags)) return false;
   if (context.flags[moduleId]?.enabled === false) return false;
   if (isClosedByUser(moduleId, context.overrides)) return false;
   if (context.privatised.includes(moduleId) && !context.unlocked) return false;
