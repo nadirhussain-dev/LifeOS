@@ -6573,9 +6573,39 @@ const setLiveRule = (on) =>
 /** The full client-side map for a finished day — what an offline session builds. */
 const FULL_MAP = JSON.stringify({ habits: 1, water: 1, journal: 1 });
 
+/**
+ * The day the *engine* thinks it is, not the day Postgres thinks it is.
+ *
+ * These two are the same only on a machine whose session timezone matches UTC,
+ * and they disagree for part of every day everywhere else. `enroll_in_challenge`
+ * stamps `added_on` with `challenge_local_day(now(), tz, grace)`; this helper
+ * passed `current_date`. When the two landed on different dates the committed
+ * modules were not yet "added" as of the day being recorded, so
+ * `record_challenge_day` computed an **empty** required list, found nothing
+ * outstanding, and credited the day — which reads exactly like the live-write
+ * rule failing to apply.
+ *
+ * Four tests in this block failed that way on any non-UTC checkout, at some
+ * hours and not others, while CI stayed green because CI runs in UTC. It is the
+ * same trap the `today()` helper further up this file documents for
+ * `record_usage`, and the same fix: ask the server which day it means.
+ */
+const engineDay = async (season) =>
+  (
+    await one(
+      `select public.challenge_local_day(now(), 0, s.day_grace_hours) as d
+         from public.challenge_seasons s where s.id = $1`,
+      [season],
+    )
+  ).d;
+
 const recordDay = async (map) =>
-  (await one(`select public.record_challenge_day(current_date, $1::jsonb, 60, null) as v`, [map]))
-    .v;
+  (
+    await one(`select public.record_challenge_day($2::date, $1::jsonb, 60, null) as v`, [
+      map,
+      await engineDay(LIVE_SEASON),
+    ])
+  ).v;
 
 const clearDay = () =>
   db.query(`delete from public.challenge_days where user_id = $1 and season_id = $2`, [

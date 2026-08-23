@@ -259,13 +259,66 @@ security definer
 set search_path = public
 as $$
 declare
-  v_now bigint := (date_part('epoch', now()) * 1000)::bigint;
-  v_until bigint;
-  v_tier text;
+  v_result jsonb;
 begin
   if not public.is_owner() then
     raise exception 'only the owner may grant premium' using errcode = 'insufficient_privilege';
   end if;
+  /*
+   * The tier check moves *out* of the shared body and stays here.
+   *
+   * `grant_premium_window` (0071) is called by two things: this, and a rung of
+   * the streak ladder paying out. Only one of them is an operator typing a tier
+   * name into a console, so only one of them needs telling that the name is
+   * wrong — and the engine's call passes a literal that cannot be.
+   */
+  if p_tier <> 'premium' then
+    raise exception 'a grant must name premium' using errcode = 'invalid_parameter_value';
+  end if;
+
+  v_result := public.grant_premium_window(p_user_id, p_until, p_reason, p_tier, auth.uid());
+
+  insert into public.admin_audit_log (actor, action, target_user, detail)
+  values (
+    auth.uid(), 'grant_premium', p_user_id,
+    jsonb_build_object('until', p_until, 'reason', trim(p_reason), 'tier', p_tier)
+  );
+
+  return v_result;
+end;
+$$;
+
+revoke all on function public.admin_grant_premium(uuid, bigint, text, text) from public, anon;
+grant execute on function public.admin_grant_premium(uuid, bigint, text, text) to authenticated;
+
+/*
+ * And the shared body loses the retired tier too.
+ *
+ * `grant_premium_window` (0071) validates `p_tier not in ('standard','premium')`.
+ * Left alone it would happily write `standard` into `premium_grants`, where
+ * section 2's constraint refuses it — so the operator would see a constraint
+ * violation instead of the sentence the function exists to say, and the two
+ * would disagree about what a legal tier is.
+ *
+ * Everything else is 0071's, unchanged.
+ */
+create or replace function public.grant_premium_window(
+  p_user_id uuid,
+  p_until bigint,
+  p_reason text,
+  p_tier text,
+  p_granted_by uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_now bigint := (date_part('epoch', now()) * 1000)::bigint;
+  v_until bigint;
+  v_tier text;
+begin
   if p_user_id is null then
     raise exception 'a user is required' using errcode = 'invalid_parameter_value';
   end if;
@@ -275,12 +328,14 @@ begin
   if p_reason is null or length(trim(p_reason)) = 0 then
     raise exception 'a reason is required' using errcode = 'invalid_parameter_value';
   end if;
+  -- Granting `freemium` is not a grant, it is a demotion wearing a grant's
+  -- clothes. `admin_revoke_premium` is how a grant ends.
   if p_tier <> 'premium' then
     raise exception 'a grant must name premium' using errcode = 'invalid_parameter_value';
   end if;
 
   insert into public.premium_grants (user_id, granted_by, until, reason, tier)
-  values (p_user_id, auth.uid(), p_until, trim(p_reason), p_tier);
+  values (p_user_id, p_granted_by, p_until, trim(p_reason), p_tier);
 
   update public.profiles
      set premium_until = greatest(coalesce(premium_until, 0), p_until),
@@ -299,18 +354,12 @@ begin
     raise exception 'no such account' using errcode = 'no_data_found';
   end if;
 
-  insert into public.admin_audit_log (actor, action, target_user, detail)
-  values (
-    auth.uid(), 'grant_premium', p_user_id,
-    jsonb_build_object('until', p_until, 'reason', trim(p_reason), 'tier', p_tier)
-  );
-
   return jsonb_build_object('ok', true, 'premiumUntil', v_until, 'tier', v_tier);
 end;
 $$;
 
-revoke all on function public.admin_grant_premium(uuid, bigint, text, text) from public, anon;
-grant execute on function public.admin_grant_premium(uuid, bigint, text, text) to authenticated;
+revoke all on function public.grant_premium_window(uuid, bigint, text, text, uuid)
+  from public, anon, authenticated;
 
 -- ===========================================================================
 -- 4. THE PLAN ROWS PEOPLE CAN ACTUALLY BUY
