@@ -66,8 +66,9 @@ export function TodayFocusCard() {
     >
       <View className="flex-row items-center justify-between">
         <Text
-          variant="micro"
-          className="font-sora-semibold uppercase tracking-wide text-muted-foreground"
+          variant="sectionLabel"
+          // Wider than the variant's default: this one sits alone above the
+          // hero number with nothing to crowd it.
           style={{ letterSpacing: 1 }}
         >
           {t('dashboard.todaysMomentum')}

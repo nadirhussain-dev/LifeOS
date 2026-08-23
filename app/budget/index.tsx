@@ -144,10 +144,7 @@ export default function BudgetScreen() {
           <HeroCard tint={budgetTint}>
             <View className="gap-4">
               <View className="items-center gap-1">
-                <Text
-                  className="font-sora-semibold uppercase tracking-wide"
-                  style={{ color: alpha('#ffffff', 0.85), fontSize: 12 }}
-                >
+                <Text variant="sectionLabel" style={{ color: alpha('#ffffff', 0.85) }}>
                   {t('budget.remainingBalance')}
                 </Text>
                 <Text className="font-sora-extrabold text-4xl" style={{ color: '#ffffff' }}>

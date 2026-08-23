@@ -119,11 +119,7 @@ export default function MusicScreen() {
                 >
                   <ArtworkOrb seed={currentSong.id} size={46} playing={isPlaying} />
                   <View className="flex-1">
-                    <Text
-                      variant="caption"
-                      className="font-sora-semibold uppercase tracking-wide"
-                      style={{ color: tint }}
-                    >
+                    <Text variant="sectionLabel" style={{ color: tint }}>
                       {t('music.nowPlaying')}
                     </Text>
                     <Text className="font-sora-semibold text-foreground" numberOfLines={1}>

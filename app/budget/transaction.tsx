@@ -2,7 +2,7 @@ import DateTimePicker, { type DateTimePickerEvent } from '@react-native-communit
 import { format } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CalendarDays, Trash2 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 
@@ -30,6 +30,7 @@ import {
 import type { BudgetAccount, TransactionType } from '@/features/budget/types/budget.types';
 import { ledgerTints, resolveTint } from '@/constants/design-tokens';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { confirm } from '@/lib/dialog-store';
 
 const ACCOUNT_OPTIONS = ACCOUNTS.map((a) => ({ value: a.id, label: a.label }));
@@ -75,6 +76,25 @@ export default function TransactionScreen() {
     setSeeded(true);
   }
 
+  /** Same create-and-edit-in-one-screen shape as the sleep log — see the note
+   *  there for why the baseline is a ref re-taken after the edit seed. */
+  const snapshot = JSON.stringify([
+    type,
+    amount.trim(),
+    category,
+    account,
+    note.trim(),
+    occurredAt,
+    savingsGoalId,
+  ]);
+  const baseline = useRef(snapshot);
+  const rebased = useRef(false);
+  if (seeded && !rebased.current) {
+    rebased.current = true;
+    baseline.current = snapshot;
+  }
+  const release = useUnsavedChanges(snapshot !== baseline.current);
+
   const changeType = (next: TransactionType) => {
     setType(next);
     // Reset category to a valid default for the new type.
@@ -117,6 +137,7 @@ export default function TransactionScreen() {
     } else {
       addTransaction.mutate(payload);
     }
+    release();
     router.back();
   };
 
@@ -131,6 +152,7 @@ export default function TransactionScreen() {
     }).then(async (ok) => {
       if (!ok) return;
       removeTransaction.mutate(existing.id);
+      release();
       router.back();
     });
   };
@@ -189,9 +211,7 @@ export default function TransactionScreen() {
 
         {type === 'savings' ? (
           <View className="gap-2.5">
-            <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-              {t('budget.towardGoal')}
-            </Text>
+            <Text variant="sectionLabel">{t('budget.towardGoal')}</Text>
             {savingsGoals.length === 0 ? (
               <Text variant="muted">{t('budget.savingsGoalHint')}</Text>
             ) : (
@@ -214,9 +234,7 @@ export default function TransactionScreen() {
           </View>
         ) : (
           <View className="gap-2.5">
-            <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-              {t('fields.category')}
-            </Text>
+            <Text variant="sectionLabel">{t('fields.category')}</Text>
             <CategoryGrid
               items={type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES}
               value={category}
@@ -226,9 +244,7 @@ export default function TransactionScreen() {
         )}
 
         <View className="gap-2.5">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('budget.account')}
-          </Text>
+          <Text variant="sectionLabel">{t('budget.account')}</Text>
           <Segmented
             options={ACCOUNT_OPTIONS}
             value={account}

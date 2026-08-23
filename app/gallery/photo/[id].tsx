@@ -179,9 +179,7 @@ export default function PhotoDetailScreen() {
           )}
 
           <View className="gap-2">
-            <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-              {t('gallery.caption')}
-            </Text>
+            <Text variant="sectionLabel">{t('gallery.caption')}</Text>
             <Input
               value={caption}
               onChangeText={setCaption}
@@ -193,9 +191,7 @@ export default function PhotoDetailScreen() {
           </View>
 
           <View className="gap-2">
-            <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-              {t('gallery.tags')}
-            </Text>
+            <Text variant="sectionLabel">{t('gallery.tags')}</Text>
             <View className="flex-row flex-wrap items-center gap-2">
               {tags.map((tag) => (
                 <Pressable

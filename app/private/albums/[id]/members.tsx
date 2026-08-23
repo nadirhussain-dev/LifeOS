@@ -267,9 +267,7 @@ export default function SharedAlbumMembersScreen() {
       */}
       {isOwner ? (
         <View className="gap-3">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('private.together')}
-          </Text>
+          <Text variant="sectionLabel">{t('private.together')}</Text>
           <View className={cardClass({ padding: 'none' }, 'px-4')}>
             <View className="flex-row items-center gap-3 py-3.5">
               <MessageCircle size={17} color={theme.mutedForeground} />
@@ -314,9 +312,7 @@ export default function SharedAlbumMembersScreen() {
       ) : null}
 
       <View className="gap-3">
-        <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-          {t('private.addMemberStep')}
-        </Text>
+        <Text variant="sectionLabel">{t('private.addMemberStep')}</Text>
 
         {atFreeMemberLimit ? (
           <View className={cardClass({ padding: 'rowLg' }, 'gap-2')}>

@@ -480,6 +480,21 @@ export const layout = {
   sheetPadding: spacing[5], // 20
   tabBarHeight: 64,
   fabSize: 56,
+  /**
+   * Bottom padding a scrolling screen owes its last row — `pb-28` as a class.
+   *
+   * Derived, not chosen: the FAB is `fabSize` tall and sits `spacing[5]` above
+   * the safe area, so it covers the bottom 76pt of any screen it is on, and a
+   * row that stops at 76 is touching it rather than clear of it. 112 leaves a
+   * `spacing[9]`-ish gap below the button, which is the point at which the last
+   * item reads as finished rather than cut off.
+   *
+   * It had drifted to three values — 112 on eight screens, 120 on five, both
+   * groups containing FAB screens — which is a difference nobody chose and
+   * everybody's eye can find when they swap between two tabs. Screens with a
+   * docked mini-player (Music) legitimately need more and say so locally.
+   */
+  scrollBottomInset: 112,
   minTouchTarget: 44, // never smaller — accessibility floor
 } as const;
 

@@ -17,6 +17,7 @@ import { formatMoney, parseAmountToCents } from '@/features/budget/services/mone
 import { useBudgetMutations } from '@/features/budget/hooks/use-budget-mutations';
 import { useBudgetSettings, useSavingsGoals } from '@/features/budget/hooks/use-budget';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 
 export default function NewSavingsGoalScreen() {
   const router = useRouter();
@@ -34,6 +35,9 @@ export default function NewSavingsGoalScreen() {
 
   const targetCents = parseAmountToCents(target);
   const canSave = name.trim().length > 0 && targetCents > 0;
+  const release = useUnsavedChanges(
+    name.trim() !== '' || target.trim() !== '' || deadline !== null,
+  );
 
   const handleDate = (event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') setShowDate(false);
@@ -44,6 +48,7 @@ export default function NewSavingsGoalScreen() {
     if (!canSave) return;
     const color = SAVINGS_COLORS[goals.length % SAVINGS_COLORS.length];
     addSavingsGoal.mutate({ name: name.trim(), targetCents, colorToken: color, deadline });
+    release();
     router.back();
   };
 
@@ -66,9 +71,7 @@ export default function NewSavingsGoalScreen() {
         />
 
         <View className="gap-2.5">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('budget.targetAmount')}
-          </Text>
+          <Text variant="sectionLabel">{t('budget.targetAmount')}</Text>
           <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
             <Text className="font-sora-bold text-xl" style={{ color: '#22c55e' }}>
               {currency}

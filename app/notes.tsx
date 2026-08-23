@@ -13,7 +13,7 @@ import { ListSectionHeader } from '@/components/ui/list-section-header';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { moduleTints } from '@/constants/design-tokens';
+import { layout, moduleTints } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { AdSlot } from '@/features/ads/components/ad-slot';
 import { NoteCard } from '@/features/notes/components/note-card';
@@ -140,7 +140,7 @@ export default function NotesScreen() {
         <FlashList
           data={items}
           keyExtractor={(item) => (item.type === 'header' ? `header-${item.label}` : item.note.id)}
-          contentContainerStyle={{ paddingTop: 4, paddingBottom: 120 }}
+          contentContainerStyle={{ paddingTop: 4, paddingBottom: layout.scrollBottomInset }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

@@ -124,9 +124,7 @@ export default function StudySettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-3">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('study.goalsAndTimer')}
-          </Text>
+          <Text variant="sectionLabel">{t('study.goalsAndTimer')}</Text>
           <Stepper
             label={t('study.dailyGoal')}
             value={formatStudyDuration(goal * 60)}
@@ -148,9 +146,7 @@ export default function StudySettingsScreen() {
         </View>
 
         <View className="gap-3">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('study.subjects')}
-          </Text>
+          <Text variant="sectionLabel">{t('study.subjects')}</Text>
           {subjects.map((subject) => (
             <View
               key={subject.id}

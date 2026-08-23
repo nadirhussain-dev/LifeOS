@@ -108,6 +108,36 @@ export default function NoteDetailScreen() {
   }, [body]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
+   * Write whatever the debounce is still holding when the screen goes away.
+   *
+   * The two autosave effects above cancel their pending timeout on unmount,
+   * which is correct for a re-render and silently destructive on a close: leave
+   * the note within {@link AUTOSAVE_DELAY_MS} of the last keystroke — closing
+   * the keyboard and tapping back, which is exactly how a short note ends — and
+   * that half-second of typing was never written. It is a small window, but the
+   * end of a sentence lands in it more often than anything else does, and the
+   * loss is silent.
+   *
+   * Reading from a ref rather than from `title`/`body` because this effect must
+   * not re-run on every keystroke; the ref is refreshed each render, so the
+   * cleanup always sees the last values typed.
+   */
+  const latest = useRef({ title, body, noteId: note?.id, saved: note });
+  latest.current = { title, body, noteId: note?.id, saved: note };
+  useEffect(
+    () => () => {
+      const { title: t, body: b, noteId, saved } = latest.current;
+      if (!noteId || !saved) return;
+      const patch: { title?: string; body?: string } = {};
+      if (t !== saved.title) patch.title = t;
+      if (b !== (saved.body ?? '')) patch.body = b;
+      if (Object.keys(patch).length > 0) update.mutate({ id: noteId, input: patch });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  /**
    * One task per press, however fast the press.
    *
    * The write is synchronous but `router.push` is not, so the button stays

@@ -19,6 +19,7 @@ import { HabitTypePicker } from '@/features/habits/components/habit-type-picker'
 import { SchedulePicker } from '@/features/habits/components/schedule-picker';
 import { habitFormSchema, type HabitFormValues } from '@/features/habits/schemas/habit-form-schema';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 
 const QUANTIFIED_TYPES = new Set(['count', 'duration', 'distance', 'time']);
 
@@ -42,18 +43,24 @@ export function HabitForm({ defaultValues, submitLabel, onSubmit }: Props) {
     control,
     handleSubmit,
     watch,
-    formState: { isValid },
+    formState: { isValid, isDirty },
   } = useForm<HabitFormValues>({
     resolver: zodResolver(habitFormSchema),
     defaultValues,
     mode: 'onChange',
   });
 
+  // The guard lives here rather than on the two screens that mount this form,
+  // because this is where the form state is — `isDirty` is exactly the question
+  // it asks, and neither screen can see it.
+  const release = useUnsavedChanges(isDirty);
+
   const type = watch('type');
   const isQuantified = QUANTIFIED_TYPES.has(type);
 
   const submit = handleSubmit((values) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    release();
     onSubmit(values);
   });
 

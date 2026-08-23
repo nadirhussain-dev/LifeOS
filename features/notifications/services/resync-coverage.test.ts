@@ -31,6 +31,20 @@ import { join } from 'node:path';
 
 const ROOT = join(__dirname, '..', '..', '..');
 
+/*
+ * Every repo-relative path in this file is built with forward slashes, and
+ * `join(ROOT, …)` is used only to touch the filesystem — Node accepts `/` on
+ * Windows for that.
+ *
+ * It used to mix the two: `walk` and `resyncRoots` produced OS separators while
+ * `resolveImport` produced `@/`-style forward slashes for two of its three
+ * candidates. The reachability set and the scheduler list were therefore in
+ * different alphabets on Windows, every lookup missed, and the suite reported
+ * all seventeen schedulers as unreachable. CI runs on Linux, where the two
+ * alphabets are the same — so this was green in the only place anybody looked
+ * and red on every Windows checkout.
+ */
+
 /** The three primitives that put something in the OS queue. Anything calling
  *  one of these owes the rebuild a way to call it back. */
 const SCHEDULER_CALLS = [
@@ -50,7 +64,7 @@ const SCHEDULER_CALLS = [
 function resyncRoots(): string[] {
   const roots = ['features/notifications/services/reminder-scheduler.ts'];
   for (const feature of readdirSync(join(ROOT, 'features'))) {
-    const candidate = join('features', feature, 'services', 'register-reminders.ts');
+    const candidate = `features/${feature}/services/register-reminders.ts`;
     try {
       statSync(join(ROOT, candidate));
       roots.push(candidate);
@@ -63,7 +77,7 @@ function resyncRoots(): string[] {
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(join(ROOT, dir))) {
-    const rel = join(dir, entry);
+    const rel = `${dir}/${entry}`;
     if (statSync(join(ROOT, rel)).isDirectory()) walk(rel, out);
     else if (/\.tsx?$/.test(entry) && !/\.(test|spec)\./.test(entry)) out.push(rel);
   }
@@ -75,7 +89,7 @@ function walk(dir: string, out: string[] = []): string[] {
 function resolveImport(spec: string): string | null {
   if (!spec.startsWith('@/')) return null;
   const base = spec.slice(2);
-  for (const candidate of [`${base}.ts`, `${base}.tsx`, join(base, 'index.ts')]) {
+  for (const candidate of [`${base}.ts`, `${base}.tsx`, `${base}/index.ts`]) {
     try {
       if (statSync(join(ROOT, candidate)).isFile()) return candidate;
     } catch {
@@ -130,9 +144,9 @@ describe('resync coverage', () => {
     // The three that exist today. A new one is picked up automatically by
     // `resyncRoots`; this asserts the discovery itself works, so the test above
     // cannot pass by finding no roots and therefore no orphans.
-    expect(roots).toContain(join('features', 'private', 'services', 'register-reminders.ts'));
-    expect(roots).toContain(join('features', 'insights', 'services', 'register-reminders.ts'));
-    expect(roots).toContain(join('features', 'challenge', 'services', 'register-reminders.ts'));
+    expect(roots).toContain('features/private/services/register-reminders.ts');
+    expect(roots).toContain('features/insights/services/register-reminders.ts');
+    expect(roots).toContain('features/challenge/services/register-reminders.ts');
   });
 
   it('registration modules are actually imported by the app', () => {

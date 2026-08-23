@@ -23,9 +23,7 @@ export function BacklinksPanel({ backlinks }: Props) {
     <View className="gap-2">
       <View className="flex-row items-center gap-1.5">
         <Link2 size={13} color={colors[scheme].mutedForeground} />
-        <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-          Linked mentions
-        </Text>
+        <Text variant="sectionLabel">Linked mentions</Text>
       </View>
       <View className={cardClass({ padding: 'none' }, 'gap-1 px-4')}>
         {backlinks.map((backlink, index) => (

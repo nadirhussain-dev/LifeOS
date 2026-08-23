@@ -293,9 +293,7 @@ export default function SplitMembersScreen() {
 
           {removed.length > 0 ? (
             <View className="gap-2">
-              <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-                {t('split.formerMembers')}
-              </Text>
+              <Text variant="sectionLabel">{t('split.formerMembers')}</Text>
               <View className={cardClass({ padding: 'none' }, 'px-4')}>
                 {removed.map((member, index) => {
                   const label = member.displayName || member.email || t('split.someone');
@@ -334,9 +332,7 @@ export default function SplitMembersScreen() {
           ) : null}
 
           <View className="gap-3">
-            <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-              {t('split.addPeople')}
-            </Text>
+            <Text variant="sectionLabel">{t('split.addPeople')}</Text>
 
             <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
               <Mail size={16} color={colors[scheme].mutedForeground} />

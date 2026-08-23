@@ -20,6 +20,7 @@ import { formatStudyDuration } from '@/features/study/services/study-stats';
 import { useStudySubjects } from '@/features/study/hooks/use-study';
 import { useStudyMutations } from '@/features/study/hooks/use-study-mutations';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { toast } from '@/lib/toast-store';
 
 const QUICK_MINUTES = [15, 25, 50, 90];
@@ -44,6 +45,12 @@ export default function StudyLogScreen() {
   const [note, setNote] = useState('');
   const [showDate, setShowDate] = useState(false);
   const [showTime, setShowTime] = useState(false);
+
+  // Date and start time default to "now", so only a deliberate change to them
+  // — or any of the fields that start empty — is unsaved work.
+  const release = useUnsavedChanges(
+    subjectId !== null || minutes !== 25 || rating !== null || note.trim() !== '',
+  );
 
   const handleDate = (event: DateTimePickerEvent, value?: Date) => {
     if (Platform.OS === 'android') setShowDate(false);
@@ -77,6 +84,7 @@ export default function StudyLogScreen() {
       focusRating: rating,
       note: note.trim() || null,
     });
+    release();
     router.back();
   };
 
@@ -209,9 +217,7 @@ export default function StudyLogScreen() {
         )}
 
         <View className="items-center gap-2">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('study.howFocusedOptional')}
-          </Text>
+          <Text variant="sectionLabel">{t('study.howFocusedOptional')}</Text>
           <StarRating value={rating} onChange={setRating} />
         </View>
 

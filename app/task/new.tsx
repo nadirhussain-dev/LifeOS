@@ -23,6 +23,7 @@ import { useTaskMutations } from '@/features/tasks/hooks/use-task-mutations';
 import type { RecurrenceRule } from '@/features/tasks/services/task-recurrence';
 import type { TaskPriority } from '@/features/tasks/types/task.types';
 import { useKeyboardHeight } from '@/hooks/use-keyboard-height';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 
 /**
  * Full-screen modal rather than a bottom sheet. @gorhom/bottom-sheet v5's
@@ -58,6 +59,16 @@ export default function NewTaskScreen() {
   });
   const [categoryId, setCategoryId] = useState<string | null>(null);
 
+  // Anything typed or picked is work the close gesture must not throw away.
+  const release = useUnsavedChanges(
+    title.trim() !== '' ||
+      notes.trim() !== '' ||
+      priority !== 'none' ||
+      dueDate !== null ||
+      categoryId !== null ||
+      recurrence.frequency !== 'none',
+  );
+
   const focusProgress = useSharedValue(0);
   const underlineStyle = useAnimatedStyle(() => ({
     opacity: focusProgress.value,
@@ -81,6 +92,7 @@ export default function NewTaskScreen() {
       categoryId,
       reminderEnabled: reminderEnabled && dueDate !== null,
     });
+    release();
     router.back();
     /*
      * After the mutation and after the navigation, never between them.

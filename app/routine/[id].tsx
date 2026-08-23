@@ -92,9 +92,7 @@ export default function RoutineDetailScreen() {
         />
 
         <View className="gap-2">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('habits.inThisRoutine')}
-          </Text>
+          <Text variant="sectionLabel">{t('habits.inThisRoutine')}</Text>
           {routine.habits.length === 0 ? (
             <Text variant="muted">{t('habits.addHabitsHint')}</Text>
           ) : (
@@ -144,9 +142,7 @@ export default function RoutineDetailScreen() {
         </View>
 
         <View className="gap-2">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('habits.addAHabit')}
-          </Text>
+          <Text variant="sectionLabel">{t('habits.addAHabit')}</Text>
           {availableHabits.length === 0 ? (
             <Text variant="muted">{t('habits.allHabitsInRoutine')}</Text>
           ) : (

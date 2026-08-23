@@ -151,6 +151,25 @@ export const Input = forwardRef<TextInput, Props>(function Input(
    */
   const inputProps: TextInputProps & { className?: string } = {
     placeholderTextColor: c.mutedForeground,
+    /*
+     * Android draws its own underline behind every `TextInput`, and it is
+     * tinted with the platform accent — which in this app is emerald. So on
+     * Android a field rendered inside our own rounded, bordered surface also
+     * carried a green line and, on the focused state, a green wash bleeding out
+     * under the bottom edge of the field. It reads as a rendering bug because
+     * it is one: two focus indicators, one of them not ours and neither of them
+     * agreeing with the other.
+     *
+     * `transparent` rather than a colour, because this component already has a
+     * focus indicator — the border changes to `ring` and the halo appears
+     * behind it. The platform's job here is to draw text and a cursor.
+     *
+     * On the props object rather than at each call site: there were 75
+     * hand-rolled fields before this component existed, and the whole reason it
+     * exists is that a detail every call site has to remember is a detail most
+     * of them will not.
+     */
+    underlineColorAndroid: 'transparent',
     // Matches components/ui/text.tsx, for the reason given there.
     maxFontSizeMultiplier: 1.4,
     onFocus: (e) => {

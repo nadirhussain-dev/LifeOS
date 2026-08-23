@@ -11,6 +11,7 @@ import { PrivateScreen } from '@/features/private/components/private-screen';
 import { privateModule } from '@/features/private/config/private-modules';
 import { useSharedAlbumMutations } from '@/features/private/hooks/use-shared-albums';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { colors } from '@/constants/theme';
 import { toast } from '@/lib/toast-store';
 
@@ -37,9 +38,11 @@ export default function NewSharedAlbumScreen() {
 
   const [name, setName] = useState('');
   const canSave = name.trim().length > 0 && !createAlbum.isPending;
+  const release = useUnsavedChanges(name.trim() !== '');
 
   const save = () => {
     if (!canSave) return;
+    release();
     createAlbum.mutate(name.trim(), {
       onSuccess: (albumId) => {
         toast.success(t('private.createAlbum'));

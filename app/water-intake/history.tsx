@@ -62,9 +62,7 @@ export default function WaterHistoryScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View className={cardClass({ padding: 'md', elevation: 'e1' }, 'gap-3')}>
-            <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-              {t('water.lastNDays', { days: HISTORY_DAYS })}
-            </Text>
+            <Text variant="sectionLabel">{t('water.lastNDays', { days: HISTORY_DAYS })}</Text>
             <View className="h-32 flex-row items-end gap-1.5">
               {history.map((day) => {
                 const ratio = goalMl > 0 ? Math.min(day.totalMl / goalMl, 1) : 0;

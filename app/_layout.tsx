@@ -50,6 +50,7 @@ import { AppLockOverlay } from '@/features/security/components/app-lock-overlay'
 import { useAppLock } from '@/features/security/hooks/use-app-lock';
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { useAuthGate } from '@/features/auth/hooks/use-auth-gate';
+import { useGuestDataPrompt } from '@/features/sync/hooks/use-guest-data-prompt';
 import { useDeviceSessionSync } from '@/features/auth/hooks/use-device-session';
 import { DeviceGateOverlay } from '@/features/auth/components/device-gate-overlay';
 import { useUsageReporter } from '@/features/analytics/hooks/use-usage-reporter';
@@ -128,6 +129,13 @@ function NotificationCenterBridge() {
  * tree (uses router/segments). Renders nothing. */
 function AuthGate() {
   useAuthGate();
+  /*
+   * Asks what to do with a guest's data the first time they sign in, and holds
+   * sync until they answer. Here rather than on a screen because sign-in can
+   * complete on the onboarding account step, inside the auth stack, or from a
+   * deep link on a cold start — and the answer gates sync in all three.
+   */
+  useGuestDataPrompt();
   return null;
 }
 

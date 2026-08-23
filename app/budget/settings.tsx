@@ -69,9 +69,7 @@ export default function BudgetSettingsScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View className="gap-2.5">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('budget.currency')}
-          </Text>
+          <Text variant="sectionLabel">{t('budget.currency')}</Text>
           <Pressable
             accessibilityRole="button"
             onPress={() => router.push('/budget/currency')}
@@ -89,9 +87,7 @@ export default function BudgetSettingsScreen() {
         </View>
 
         <View className="gap-2.5">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('budget.monthlyBudgetOptional')}
-          </Text>
+          <Text variant="sectionLabel">{t('budget.monthlyBudgetOptional')}</Text>
           <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
             <Text className="font-sora-bold text-lg text-foreground">{currencySymbol(code)}</Text>
             <Input
@@ -109,9 +105,7 @@ export default function BudgetSettingsScreen() {
         </View>
 
         <View className="gap-2.5">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('budget.categoryBudgets')}
-          </Text>
+          <Text variant="sectionLabel">{t('budget.categoryBudgets')}</Text>
           <View className={cardClass({ padding: 'md' })}>
             <CategoryCapEditor
               limits={limits}

@@ -43,10 +43,7 @@ export function SleepTrackerCard() {
         <View className="gap-4">
           <View className="flex-row items-center gap-2">
             <Moon size={16} color="#ffffff" />
-            <Text
-              className="font-sora-semibold uppercase tracking-wide"
-              style={{ color: alpha('#ffffff', 0.85), fontSize: 12 }}
-            >
+            <Text variant="sectionLabel" style={{ color: alpha('#ffffff', 0.85) }}>
               {t('sleep.sleepingSince', { time: formatClock(minutesOfDay(sleepingSince)) })}
             </Text>
           </View>

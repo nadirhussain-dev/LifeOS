@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { TFunction } from 'i18next';
 import { BellRing, CalendarDays, X } from 'lucide-react-native';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 
@@ -21,6 +21,7 @@ import { formatMoney, parseAmountToCents } from '@/features/budget/services/mone
 import { useBudgetSettings } from '@/features/budget/hooks/use-budget';
 import { useDebtMutations, useDebts } from '@/features/budget/hooks/use-debts';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { useTheme } from '@/hooks/use-theme';
 import { notificationsAvailable } from '@/lib/notifications';
 import type { DebtDirection } from '@/features/budget/types/budget.types';
@@ -69,6 +70,24 @@ export default function DebtFormScreen() {
   }
 
   const principalCents = parseAmountToCents(amount);
+
+  /** Create-and-edit in one screen, like the transaction sheet — the baseline
+   *  is a ref re-taken once the edit seed has landed. */
+  const snapshot = JSON.stringify([
+    direction,
+    counterparty.trim(),
+    amount.trim(),
+    note.trim(),
+    dueDate,
+    reminderDaysBefore,
+  ]);
+  const baseline = useRef(snapshot);
+  const rebased = useRef(false);
+  if (seeded && !rebased.current) {
+    rebased.current = true;
+    baseline.current = snapshot;
+  }
+  const release = useUnsavedChanges(snapshot !== baseline.current);
   const canSave = counterparty.trim().length > 0 && principalCents > 0;
 
   const handleDate = (event: DateTimePickerEvent, date?: Date) => {
@@ -101,6 +120,7 @@ export default function DebtFormScreen() {
         reminderDaysBefore: effectiveReminder,
       });
     }
+    release();
     router.back();
   };
 
@@ -139,9 +159,7 @@ export default function DebtFormScreen() {
         />
 
         <View className="gap-2.5">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('budget.amount')}
-          </Text>
+          <Text variant="sectionLabel">{t('budget.amount')}</Text>
           <View className={cardClass({ padding: 'row' }, 'flex-row items-center gap-2')}>
             <Text className="font-sora-bold text-xl" style={{ color: debtTint }}>
               {currency}
@@ -211,9 +229,7 @@ export default function DebtFormScreen() {
           <View className="gap-2.5">
             <View className="flex-row items-center gap-2">
               <BellRing size={14} color={colors[scheme].mutedForeground} />
-              <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-                {t('budget.remindMeBefore')}
-              </Text>
+              <Text variant="sectionLabel">{t('budget.remindMeBefore')}</Text>
             </View>
             <View className="flex-row flex-wrap gap-2">
               {[null, ...REMINDER_DAY_OPTIONS].map((days) => {

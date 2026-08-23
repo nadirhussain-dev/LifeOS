@@ -53,9 +53,7 @@ export default function AddSongsToPlaylistScreen() {
         >
           <X size={17} color={colors[scheme].foreground} />
         </Pressable>
-        <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-          {t('music.addTo', { name: playlist.name })}
-        </Text>
+        <Text variant="sectionLabel">{t('music.addTo', { name: playlist.name })}</Text>
         <View className="h-8 w-8" />
       </View>
 

@@ -520,6 +520,22 @@ async function runSync(force: boolean): Promise<void> {
 
   const store = useSyncStore.getState();
 
+  /*
+   * Held while the guest-data question is open, and held against `force` too.
+   *
+   * A guest who has just signed in is being asked whether the notes and habits
+   * already on this device should join the account or be discarded. Pushing
+   * before they answer would settle it by doing it — the rows would be up under
+   * the new uid, and "start fresh" could no longer mean what it says. The
+   * manual "Sync now" button is no exception: a tap is not an answer to a
+   * question it does not mention.
+   *
+   * Silent rather than an error status. Nothing has failed, the app is waiting
+   * on a dialog that is already on screen, and an error on the Sync screen
+   * would send somebody looking for a problem that does not exist.
+   */
+  if (store.pendingGuestData) return;
+
   if (!force) {
     const now = Date.now();
     if (store.nextAttemptAt && now < store.nextAttemptAt) return;

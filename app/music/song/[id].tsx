@@ -87,9 +87,7 @@ export default function SongDetailScreen() {
 
       <View className="gap-5 px-5 pt-2">
         <View className="gap-1.5">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('music.songTitle')}
-          </Text>
+          <Text variant="sectionLabel">{t('music.songTitle')}</Text>
           <Input
             surface="bare"
             value={title}
@@ -99,9 +97,7 @@ export default function SongDetailScreen() {
         </View>
 
         <View className="gap-1.5">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('music.artist')}
-          </Text>
+          <Text variant="sectionLabel">{t('music.artist')}</Text>
           <Input
             surface="bare"
             value={artist}

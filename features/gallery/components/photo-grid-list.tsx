@@ -62,10 +62,7 @@ export function PhotoGridList({
       getItemType={(row) => row.type}
       renderItem={({ item }) =>
         item.type === 'header' ? (
-          <Text
-            variant="caption"
-            className="px-4 pb-1 pt-4 font-sora-semibold uppercase tracking-wide"
-          >
+          <Text variant="sectionLabel" className="px-4 pb-1 pt-4">
             {item.month}
           </Text>
         ) : (

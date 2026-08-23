@@ -26,12 +26,7 @@ export function DashboardHeader() {
       style={{ paddingTop: insets.top + 10 }}
     >
       <View className="flex-1 gap-0.5">
-        <Text
-          variant="caption"
-          className="font-sora-semibold uppercase tracking-wide text-muted-foreground"
-        >
-          {dateLabel}
-        </Text>
+        <Text variant="sectionLabel">{dateLabel}</Text>
         <Text className="font-sora-extrabold text-3xl tracking-tight text-foreground">
           {greeting}
         </Text>

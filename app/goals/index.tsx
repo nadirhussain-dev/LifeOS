@@ -13,7 +13,7 @@ import { Fab } from '@/components/ui/fab';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Segmented } from '@/components/ui/segmented';
 import { Skeleton } from '@/components/ui/skeleton';
-import { contentTints, moduleTint } from '@/constants/design-tokens';
+import { contentTints, layout, moduleTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { AdSlot } from '@/features/ads/components/ad-slot';
 import { GOAL_CATEGORIES } from '@/features/goals/config/goal-categories';
@@ -134,7 +134,11 @@ export default function GoalsScreen() {
           data={goals}
           keyExtractor={(goal) => goal.id}
           ListHeaderComponent={header}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 4, paddingBottom: 120 }}
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingTop: 4,
+            paddingBottom: layout.scrollBottomInset,
+          }}
           ItemSeparatorComponent={() => <View className="h-3" />}
           ListEmptyComponent={
             <View style={{ minHeight: 340 }}>

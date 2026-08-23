@@ -236,6 +236,64 @@ Verified with `tsc --noEmit`, `eslint .`, `jest` (55 tests) and `npm run test:sq
 
 ---
 
+## Second audit pass (2026-08-22) — five live bugs, all fixed
+
+Prompted by two user reports ("a green shade behind some inputs", "I go back
+and try to sign in and it does not work"). Both were real, and pulling on them
+found three more. Every item below shipped with a regression test.
+
+- 🔴 **[DATA] A guest's data was destroyed the first time they signed in.**
+  `continueAsGuest()` stamps `lastUserId = '__guest__'`; that is `!== uid` like
+  any other prior account, so `reconcileAccountOnSignIn()` took the
+  account-switch branch and called `wipeLocalData()`. Meanwhile the account
+  step promised, on the screen where the choice is made, "sign in later and
+  everything you have already written comes with you", and TODO.md described
+  the migration as automatic. Silent, irreversible, and against a promise still
+  on screen minutes earlier. Now the question is **asked** — guest data is
+  unidentified rather than foreign, so it is the one case that must not be
+  decided automatically — and sync is held until it is answered.
+  _Nothing caught it because nothing tested the guest path: every developer
+  signs in on a device that has already signed in._
+
+- 🟠 **[AUTH] A guest could never reach sign-in again.** `useAuthGate` bounced
+  anyone `authed` out of `(auth)`, and `authed` is `session || isGuest` with
+  `isGuest` persisted — so one tap on "continue on this device" made the auth
+  stack permanently unreachable, across restarts. Compounded by the onboarding
+  step list, which deleted the account step on the same condition. Both now key
+  off a real session; a guest has deferred the question, not answered it.
+
+- 🟡 **[UX] Android's own TextInput underline, tinted emerald.** The "green
+  shade": the platform draws an accent-tinted underline behind every field,
+  which inside the app's rounded bordered surface reads as a second focus
+  indicator agreeing with nothing. `underlineColorAndroid: 'transparent'` on the
+  shared props.
+
+- 🟡 **[UX] Social sign-in skipped a step.** Onboarding navigates by index, and
+  signing in at the account step removes that step — so `goNext` set index+1 and
+  the re-render resolved it against a shorter list, landing on `focus` and never
+  showing `about`, the step that asks somebody's name. Invisible unless you sign
+  in with Google on a fresh install and notice a question you were never asked.
+
+- 🟡 **[TESTING] The suite was red on every Windows checkout and green in CI.**
+  Two suites compared `join`-built paths against forward-slash literals. On
+  Linux they are the same string. `resync-coverage` reported all seventeen
+  schedulers as unreachable from the launch rebuild; `directional-icon` reported
+  the one file its exemption exists to permit. Both now use forward slashes
+  throughout.
+
+Two guards were also widened where the bug had hidden _inside the blind spot of
+the test meant to prevent it_: `input.test.ts` asserted "no raw TextInput
+anywhere" while scanning only `app` and `features` — the offender was in
+`components/ui/category-picker.tsx`, a shared control on more screens than most
+of the fields it did cover.
+
+**The pattern worth naming:** four of the five were invisible to anyone already
+signed in on an already-onboarded device, which is every developer, every day.
+The first-run and guest paths are the least-exercised and highest-stakes code in
+the app, and they had the least coverage.
+
+---
+
 ## Recommended sequencing
 
 1. **Stop active data harm first:** the delete-doesn't-sync bug and the account-switch bleed (both Critical/DATA) — small, high-value fixes; ideally land them while extracting the shared repository helper so the delete fix happens once.

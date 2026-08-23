@@ -17,6 +17,7 @@ import { formatProgressPercent } from '@/features/goals/services/goal-format';
 import { useGoal } from '@/features/goals/hooks/use-goals';
 import { useGoalMutations } from '@/features/goals/hooks/use-goal-mutations';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { alpha } from '@/lib/color';
 
 export default function LogProgressScreen() {
@@ -34,6 +35,8 @@ export default function LogProgressScreen() {
   const [pct, setPct] = useState<number | null>(null);
   const [addCount, setAddCount] = useState(0);
   const [note, setNote] = useState('');
+
+  const release = useUnsavedChanges(pct !== null || addCount !== 0 || note.trim() !== '');
 
   if (!goal) return null;
   const meta = goalCategoryMeta(goal.category, scheme);
@@ -68,6 +71,7 @@ export default function LogProgressScreen() {
       delta,
       note: note.trim() || null,
     });
+    release();
     router.back();
     // Logging progress and leaving is a finished flow. After the mutation and
     // after the navigation — see app/task/new.tsx for why that ordering is

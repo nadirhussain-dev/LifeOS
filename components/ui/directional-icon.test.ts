@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 
 const ROOT = join(__dirname, '..', '..');
 
@@ -15,6 +15,21 @@ function sourceFiles(...directories: string[]): string[] {
   for (const directory of directories) walk(join(ROOT, directory));
   return out;
 }
+
+/**
+ * A repo-relative path with forward slashes, on every OS.
+ *
+ * `join` produces `\` on Windows, so a path compared against a hand-written
+ * `'components/ui/directional-icon.ts'` never matched there — the exemption
+ * silently did nothing and this suite failed on the one file it exists to
+ * permit. CI runs on Linux, so it was green in the only place anybody looked
+ * and red on every Windows checkout.
+ */
+const relativePath = (absolute: string) =>
+  absolute
+    .slice(ROOT.length + 1)
+    .split(sep)
+    .join('/');
 
 /**
  * Files allowed to import a left/right glyph straight from lucide.
@@ -41,7 +56,7 @@ describe('directional glyphs are mirrored, not raw', () => {
     const offenders: string[] = [];
 
     for (const path of sourceFiles('app', 'features', 'components')) {
-      const relative = path.slice(ROOT.length + 1);
+      const relative = relativePath(path);
       if (EXEMPT.has(relative)) continue;
 
       const code = readFileSync(path, 'utf8');

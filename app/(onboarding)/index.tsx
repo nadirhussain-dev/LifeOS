@@ -154,14 +154,25 @@ export default function OnboardingScreen() {
     if (local) setCurrencyCode(local);
   }, [shape.currencyCode, setCurrencyCode]);
 
-  const authed = !!session || isGuest;
-
   const steps = useMemo<StepId[]>(() => {
     const list: StepId[] = ['welcome'];
-    // Skipped once there is a session or an explicit guest choice — including on
-    // the way back from the email flow, which is exactly when re-asking would be
-    // most confusing.
-    if (!authed) list.push('account');
+    /*
+     * Dropped once there is a **session** — including on the way back from the
+     * email flow, which is exactly when re-asking would be most confusing.
+     *
+     * Deliberately not dropped for a guest, which is what it used to do. Both
+     * are `authed`, but they are not the same fact: a session is an answered
+     * question, and "continue on this device" is a deferred one. Keying the
+     * list off `authed` meant tapping it deleted this step from the flow
+     * permanently — `isGuest` is persisted — so somebody who chose it and then
+     * walked back to the start had no way to reach sign-in ever again.
+     *
+     * Keeping it costs nothing going forward: choosing guest still advances
+     * past it, because `goNext` moves by index and the step behind them is one
+     * they have answered. It only reappears if they walk back to it, which is
+     * precisely when they want it.
+     */
+    if (!session) list.push('account');
     list.push('about', 'focus');
     if (hasAnythingToShape(focusAreas)) list.push('shape');
     // After the answers, before the finish. It needs the focus areas to name
@@ -170,7 +181,7 @@ export default function OnboardingScreen() {
     list.push('learn');
     list.push('lock', 'ready');
     return list;
-  }, [authed, focusAreas]);
+  }, [session, focusAreas]);
 
   /**
    * Clamped, because the step list can shrink underneath a stored index — signing
@@ -211,6 +222,36 @@ export default function OnboardingScreen() {
     [index, steps.length, setStep],
   );
   const goBack = useCallback(() => setStep(Math.max(index - 1, 0)), [index, setStep]);
+
+  /**
+   * Moves to a named step rather than to a number.
+   *
+   * `goNext` is an index bump, and an index is only meaningful against the list
+   * it was computed from. That is fine everywhere except the one transition
+   * that *changes the list underneath itself*: signing in at the account step
+   * removes that step, so a `goNext` issued from index 1 sets step 2 and the
+   * re-render then resolves 2 against a list one shorter — landing on `focus`
+   * and **silently skipping `about`**, the step that asks somebody's name.
+   *
+   * The file's own header warns about exactly this ("hardcoding indices around
+   * conditional screens is how a back button ends up on a screen that no longer
+   * exists"), and `goToReady` already navigates by id for the same reason. This
+   * is that, generalised.
+   *
+   * Falls back to `goNext` if the id is not in the list, so a step becoming
+   * conditional later cannot strand anybody.
+   */
+  const goTo = useCallback(
+    (id: StepId) => {
+      const target = steps.indexOf(id);
+      if (target < 0) {
+        setStep(Math.min(index + 1, steps.length - 1));
+        return;
+      }
+      setStep(target);
+    },
+    [steps, index, setStep],
+  );
 
   /**
    * Runs the seed on the way into the final screen, not on the way out of it.
@@ -332,7 +373,10 @@ export default function OnboardingScreen() {
 
         {current === 'account' ? (
           <AccountStep
-            onSignedIn={goNext}
+            isGuest={isGuest}
+            // By name, not by `goNext`. Signing in deletes this step from the
+            // list, so an index bump lands one step too far — see `goTo`.
+            onSignedIn={() => goTo('about')}
             onContinueAsGuest={() => {
               continueAsGuest();
               goNext();

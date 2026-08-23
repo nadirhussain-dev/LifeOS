@@ -95,9 +95,7 @@ export function DeviceGateOverlay() {
           </Text>
         </View>
         <View className={cardClass({ padding: 'row' }, 'w-full')}>
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('device.wipedTitle')}
-          </Text>
+          <Text variant="sectionLabel">{t('device.wipedTitle')}</Text>
           <Text className="mt-1 text-foreground">{t('device.wipedBody')}</Text>
         </View>
         <Button
@@ -186,9 +184,7 @@ export function DeviceGateOverlay() {
           to check something on a borrowed phone deserves to learn that while
           backing out is still free. */}
       <View className={cardClass({ padding: 'row' }, 'w-full')}>
-        <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-          {t('device.whatHappens')}
-        </Text>
+        <Text variant="sectionLabel">{t('device.whatHappens')}</Text>
         <Text className="mt-1 text-foreground">{t('device.whatHappensBody')}</Text>
       </View>
 

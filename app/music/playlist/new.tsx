@@ -11,6 +11,7 @@ import { Text } from '@/components/ui/text';
 import { categoryColorPalette, colors } from '@/constants/theme';
 import { usePlaylistMutations } from '@/features/music/hooks/use-playlists';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 
 export default function NewPlaylistScreen() {
   const router = useRouter();
@@ -19,11 +20,13 @@ export default function NewPlaylistScreen() {
   const { create } = usePlaylistMutations();
   const [name, setName] = useState('');
   const [colorToken, setColorToken] = useState<string>(categoryColorPalette[0]);
+  const release = useUnsavedChanges(name.trim() !== '' || colorToken !== categoryColorPalette[0]);
 
   const handleCreate = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    release();
     create.mutate(
       { name: trimmed, colorToken },
       { onSuccess: (playlist) => router.replace(`/music/playlist/${playlist.id}`) },
@@ -46,9 +49,7 @@ export default function NewPlaylistScreen() {
         />
 
         <View className="gap-2.5">
-          <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-            {t('music.color')}
-          </Text>
+          <Text variant="sectionLabel">{t('music.color')}</Text>
           <View className="flex-row gap-2.5">
             {categoryColorPalette.map((swatch) => {
               const selected = swatch === colorToken;

@@ -246,10 +246,7 @@ export default function StudyTimerScreen() {
             style={{ backgroundColor: `${tint}1f` }}
           >
             <View className="h-2 w-2 rounded-full" style={{ backgroundColor: tint }} />
-            <Text
-              className="font-sora-semibold uppercase tracking-wide"
-              style={{ color: tint, fontSize: 12 }}
-            >
+            <Text variant="sectionLabel" style={{ color: tint }}>
               {phaseLabel}
             </Text>
           </View>

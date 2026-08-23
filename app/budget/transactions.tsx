@@ -141,9 +141,7 @@ export default function TransactionsScreen() {
           renderItem={({ item }) =>
             item.type === 'header' ? (
               <View className="flex-row items-center justify-between px-5 pb-1 pt-3">
-                <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-                  {dayLabel(item.logDate, t)}
-                </Text>
+                <Text variant="sectionLabel">{dayLabel(item.logDate, t)}</Text>
                 <Text
                   variant="caption"
                   style={{

@@ -72,9 +72,7 @@ export function ReflectionSheet({ visible, focusSeconds, onSave }: Props) {
             </View>
 
             <View className="items-center gap-2">
-              <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-                {t('study.howFocused')}
-              </Text>
+              <Text variant="sectionLabel">{t('study.howFocused')}</Text>
               <StarRating value={rating} onChange={setRating} />
             </View>
 

@@ -82,17 +82,14 @@ export default function DebtsScreen() {
         />
       ) : (
         <ScrollView
-          contentContainerClassName="gap-5 px-4 pb-28"
+          contentContainerClassName="gap-5 px-5 pb-28"
           showsVerticalScrollIndicator={false}
         >
           {/* Net position hero */}
           <HeroCard tint={debtTint}>
             <View className="gap-4">
               <View className="items-center gap-1">
-                <Text
-                  className="font-sora-semibold uppercase tracking-wide"
-                  style={{ color: alpha('#ffffff', 0.85), fontSize: 12 }}
-                >
+                <Text variant="sectionLabel" style={{ color: alpha('#ffffff', 0.85) }}>
                   {t('budget.netPosition')}
                 </Text>
                 <Text className="font-sora-extrabold text-4xl" style={{ color: '#ffffff' }}>
@@ -149,9 +146,7 @@ export default function DebtsScreen() {
 
           {settled.length > 0 && (
             <View className="gap-2.5">
-              <Text variant="caption" className="font-sora-semibold uppercase tracking-wide">
-                {t('debtStatus.settled')}
-              </Text>
+              <Text variant="sectionLabel">{t('debtStatus.settled')}</Text>
               {settled.map((debt) => (
                 <DebtCard
                   key={debt.id}

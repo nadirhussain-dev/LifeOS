@@ -24,7 +24,7 @@ export function OtpField({ label, value, onChangeText, autoFocus }: Props) {
 
   return (
     <View className="gap-1.5">
-      <Text variant="caption" className="px-1 font-sora-semibold uppercase tracking-wide">
+      <Text variant="sectionLabel" className="px-1">
         {label}
       </Text>
       <View

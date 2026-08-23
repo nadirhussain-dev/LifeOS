@@ -217,6 +217,7 @@ literary: the Journal's own words. The contrast is the point.
 | Label     | 13 / 18            | SemiBold 600  | 0        | Form labels                   |
 | Caption   | 12 / 16            | Regular 400   | +0.1     | Metadata                      |
 | Micro     | 11 / 14            | Medium 500    | +0.4     | UPPERCASE eyebrows            |
+| Section   | 12 / 16            | SemiBold 600  | +0.4     | UPPERCASE group dividers      |
 | Stat      | 34                 | ExtraBold 800 | -1.0     | Numeric readouts, **tabular** |
 
 - **Numbers** use `font-variant-numeric: tabular-nums` + tight tracking so stats
@@ -225,7 +226,17 @@ literary: the Journal's own words. The contrast is the point.
   weights need their own class (`font-sora-semibold`, `font-sora-extrabold`, …).
   See the `fontFamily` block in [`tailwind.config.js`](../tailwind.config.js).
 - Map named steps to the `Text` component variants: `heading`, `subheading`,
-  `muted`, `caption`, `micro` — see [`components/ui/text.tsx`](../components/ui/text.tsx).
+  `muted`, `caption`, `micro`, `sectionLabel` — see
+  [`components/ui/text.tsx`](../components/ui/text.tsx).
+- **`micro` vs `sectionLabel`** — both uppercase, and the difference is the job,
+  not the size. `micro` is an **eyebrow**: it names the thing directly beneath
+  it (module identity above a screen title, a unit under a number) and must
+  stay quieter than what it labels. `sectionLabel` is a **divider**: it
+  separates one group of rows or fields from the next, has whitespace on both
+  sides, and has to hold its own against the card edges around it. Reach for a
+  named variant rather than re-typing the treatment — it was copy-pasted into
+  65 places before it had a name, including `ListSectionHeader`, so lists and
+  dashboards disagreed about section labels by construction.
 
 ---
 
@@ -246,7 +257,13 @@ what makes a layout feel calm before you can say why.
 
 Named layout constants (`layout.*` in the token file): screen gutter **20**,
 card padding **16**, section gap **24**, tab-bar height **64**, FAB **56**,
-minimum touch target **44** (never smaller).
+scroll bottom inset **112**, minimum touch target **44** (never smaller).
+
+The **screen gutter is 20 on every screen** — a scroll container that sets its
+own `px-4` puts its content 4px out of line with the `ScreenHeader` above it,
+and out of line with whatever screen the user came from. `layout.scrollBottomInset`
+is the matching floor: a FAB covers the bottom 76pt of the screen it sits on, so
+112 is what leaves the last row looking finished rather than cut off.
 
 ---
 
