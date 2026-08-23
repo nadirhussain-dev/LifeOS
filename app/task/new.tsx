@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
+import { showInterstitial } from '@/features/ads/services/interstitial';
 import { Bell, CalendarDays, Flag, Repeat, StickyNote, Tag } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -35,6 +36,10 @@ import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
  */
 export default function NewTaskScreen() {
   const router = useRouter();
+  // The route the ad would appear over. Passed rather than guessed — see
+  // `mayShowAdNow`, where a stale value is how an ad reaches a screen that
+  // forbids them.
+  const segments = useSegments();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const keyboardHeight = useKeyboardHeight();
@@ -89,6 +94,17 @@ export default function NewTaskScreen() {
     });
     release();
     router.back();
+    /*
+     * After the mutation and after the navigation, never between them.
+     *
+     * This placement only exists for somebody inside a streak run who committed
+     * to Tasks, and the ordering is what keeps it inside REWARDS_PROGRAM §0.1:
+     * the write is already on its way and the day's credit does not wait on
+     * anything here, so no part of earning progress passes through an ad.
+     * Nothing is awaited, and `showInterstitial` owns every gate — this call
+     * site decides only that adding a task and leaving is a finished flow.
+     */
+    void showInterstitial({ segments, breakpoint: 'task-saved' });
   };
 
   return (

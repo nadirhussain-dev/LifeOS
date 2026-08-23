@@ -2745,7 +2745,10 @@
     "seasonDeleteConfirmTitle": "یہ سیزن حذف کریں؟",
     "seasonDeleteConfirmBody": "{{name}} اور اُس کے ماڈیول و سیڑھی ہٹا دیے جائیں گے۔ یہ واپس نہیں ہو سکتا۔",
     "seasonDeleteBlocked_one": "ایک شخص شامل ہو چکا ہے، اِس لیے یہ سیزن صرف بند کیا جا سکتا ہے۔",
-    "seasonDeleteBlocked_other": "{{count}} افراد شامل ہو چکے ہیں، اِس لیے یہ سیزن صرف بند کیا جا سکتا ہے۔"
+    "seasonDeleteBlocked_other": "{{count}} افراد شامل ہو چکے ہیں، اِس لیے یہ سیزن صرف بند کیا جا سکتا ہے۔",
+    "seasonRungNoReward": "کوئی انعام مقرر نہیں",
+    "seasonRungPremium_one": "پریمیم ({{count}} دن)",
+    "seasonRungPremium_other": "پریمیم ({{count}} دن)"
   },
   "ads": {
     "eyebrow": "اشتہار",
@@ -2796,7 +2799,6 @@
     "ladderTitle": "سیڑھی",
     "perfectRun": "{{count}} صاف دن",
     "enrolFailed": "سلسلہ شروع نہیں ہو سکا",
-    "reminderTitle": "آج کا دن ضائع نہ کریں",
     "reminderOne": "باقی: {{modules}}",
     "rankLine": "شروع کرنے والوں میں سرِفہرست {{percent}}٪",
     "timelineTitle": "آپ کی تاریخ",
@@ -2876,7 +2878,67 @@
     "celebrateCompleted": "آپ نے ہر مرحلہ عبور کر لیا",
     "celebrateSeasonEnded": "آپ کا سیزن ختم — دیکھیں کیسا رہا",
     "daysLeftInRun_one": "آپ کی دوڑ میں {{count}} دن باقی",
-    "daysLeftInRun_other": "آپ کی دوڑ میں {{count}} دن باقی"
+    "daysLeftInRun_other": "آپ کی دوڑ میں {{count}} دن باقی",
+    "nudgeTitle": {
+      "0": "آج ابھی باقی ہے",
+      "1": "ایک کام باقی",
+      "2": "دن ختم ہونے سے پہلے",
+      "3": "آپ کا سلسلہ منتظر ہے"
+    },
+    "nudgeBody": {
+      "0": "{{modules}} ابھی درج نہیں۔ دن {{count}} اب بھی آپ کا ہے۔",
+      "1": "آپ اور دن {{count}} کے درمیان صرف {{modules}} ہے۔",
+      "2": "دو منٹ: {{modules}}۔ پھر دن {{count}} مکمل۔",
+      "3": "{{modules}} باقی ہے۔ دن {{count}} آدھی رات کو ختم ہو جائے گا۔"
+    },
+    "reminderNearRung_one": "{{name}} تک {{count}} دن — {{modules}} ابھی باقی۔",
+    "reminderNearRung_other": "{{name}} تک {{count}} دن — {{modules}} ابھی باقی۔",
+    "reminderNearRungPlain_one": "اگلے درجے تک {{count}} دن — {{modules}} ابھی باقی۔",
+    "reminderNearRungPlain_other": "اگلے درجے تک {{count}} دن — {{modules}} ابھی باقی۔",
+    "rewardTitle": "{{name}} کھل گیا",
+    "rewardTitleGeneric": "انعام کھل گیا",
+    "rewardBody": "آپ کا انعام چیلنج اسکرین پر منتظر ہے۔"
+  },
+  "rewards": {
+    "title": "آپ کے انعامات",
+    "badgesTitle": "بیجز",
+    "noLadder": "اس سیزن کے لیے ابھی کوئی سیڑھی ترتیب نہیں دی گئی۔",
+    "lockedAt_one": "دن {{count}}",
+    "lockedAt_other": "دن {{count}}",
+    "emptyHint": "پہلے سات دن مکمل کریں اور اسپارک بیج آپ کا ہے۔",
+    "catchingUp": "آپ ایک درجہ عبور کر چکے ہیں جس کا انعام ابھی نہیں پہنچا۔ ہم اسے لا رہے ہیں۔",
+    "emptyTitle": "ابھی کچھ نہیں کمایا",
+    "emptyBody": "سیڑھی چڑھنے کے ساتھ انعامات کھلتے ہیں۔ پہلا انعام سات دن کی دوری پر ہے۔",
+    "premiumWon_one": "پریمیم کا {{count}} دن، دن {{day}} پر حاصل ہوا",
+    "premiumWon_other": "پریمیم کے {{count}} دن، دن {{day}} پر حاصل ہوئے",
+    "section": {
+      "theme": "گریڈیئنٹس",
+      "chain": "زنجیر کے رنگ",
+      "frame": "پروفائل فریم",
+      "premium": "پریمیم"
+    },
+    "cosmetic": {
+      "spark-dawn": "سحر",
+      "flame-dusk": "شام",
+      "forge-gold": "بھٹی",
+      "ember-glow": "انگارے کی چمک",
+      "keystone-steel": "کی اسٹون اسٹیل",
+      "summit-aurora": "سمٹ ارورا",
+      "blaze-ring": "بلیز رِنگ",
+      "half-year-laurel": "لارل",
+      "year-one-crown": "تاج"
+    },
+    "open": "آپ کے انعامات",
+    "milestoneTitle": "{{name}} کھل گیا",
+    "milestoneTitleGeneric": "انعام کھل گیا",
+    "milestoneBody_one": "{{count}} دن قائم رکھا۔ یہ اس کا صلہ ہے۔",
+    "milestoneBody_other": "{{count}} دن قائم رکھے۔ یہ اس کا صلہ ہے۔",
+    "milestoneShare": "کسی کو دکھائیں",
+    "milestoneDone": "جاری رکھیں",
+    "milestoneShield": "ایک شیلڈ، آپ کے خانوں میں شامل",
+    "milestonePremium": "پریمیم کی ایک مدت",
+    "milestonePremiumDays_one": "پریمیم کا {{count}} دن",
+    "milestonePremiumDays_other": "پریمیم کے {{count}} دن"
   },
   "env": {
     "staging": "اسٹیجنگ بلڈ",

@@ -1,6 +1,8 @@
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { notifyRewardGranted } from '@/features/challenge/services/challenge-reminders';
 import { useChallengeStore } from '@/features/challenge/store/challenge-store';
 import { isSupabaseConfigured } from '@/lib/env';
+import { queryClient } from '@/lib/query-client';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -41,6 +43,8 @@ export type RecordDayResult = {
   tierDay?: number;
   completed?: boolean;
   localDay?: string;
+  /** Slugs the rung paid out on this call (0071). Absent before it. */
+  rewards?: string[];
 };
 
 let inFlight: Promise<void> | null = null;
@@ -82,6 +86,40 @@ async function runFlush(): Promise<void> {
       // this branch is reached at all.
       if (result.ok === false && result.reason === 'day out of window') {
         useChallengeStore.getState().dropDay(day.day);
+      }
+
+      /*
+       * A day that actually landed is the only moment any of this can have
+       * changed, so it is the only moment worth a refetch.
+       *
+       * `alreadyCounted` is excluded deliberately: it is the common case on a
+       * second device and on every retry of a day that already went in, and
+       * invalidating on it would refetch the ladder, the chain and the shelf
+       * for an answer that provably has not moved.
+       *
+       * Both keys, because a credited day can pay a rung out (0071) and the
+       * milestone sheet reads the event log. Without this the payout waits for
+       * whatever refetch happens next, which on a fresh screen is none — the
+       * user earns Ember and finds out about it tomorrow.
+       */
+      if (result.ok !== false && result.qualified && !result.alreadyCounted) {
+        void queryClient.invalidateQueries({ queryKey: ['challenge'] });
+        void queryClient.invalidateQueries({ queryKey: ['rewards'] });
+
+        /*
+         * And if the day paid a rung out, say so.
+         *
+         * This is the flush that runs on the way to the background, so the
+         * common shape is somebody finishing their last habit, closing the
+         * app, and the rung landing a second later with the screen already
+         * dark. `notifyRewardGranted` declines when the app is in front of
+         * them, because the milestone sheet is the better version of this and
+         * is already showing.
+         */
+        if (Array.isArray(result.rewards) && result.rewards.length > 0) {
+          const standing = useChallengeStore.getState().standing;
+          void notifyRewardGranted(result.rewards, standing.rungNames[result.tierDay ?? 0] ?? null);
+        }
       }
     } catch {
       // Left in the buffer on purpose. An offline week should show up as a

@@ -2745,7 +2745,10 @@
     "seasonDeleteConfirmTitle": "यह सीज़न हटाएँ?",
     "seasonDeleteConfirmBody": "{{name}} और उसके मॉड्यूल व सीढ़ी हटा दिए जाएँगे। इसे वापस नहीं लाया जा सकता।",
     "seasonDeleteBlocked_one": "एक व्यक्ति जुड़ चुका है, इसलिए यह सीज़न केवल बंद किया जा सकता है।",
-    "seasonDeleteBlocked_other": "{{count}} लोग जुड़ चुके हैं, इसलिए यह सीज़न केवल बंद किया जा सकता है।"
+    "seasonDeleteBlocked_other": "{{count}} लोग जुड़ चुके हैं, इसलिए यह सीज़न केवल बंद किया जा सकता है।",
+    "seasonRungNoReward": "कोई पुरस्कार तय नहीं",
+    "seasonRungPremium_one": "प्रीमियम ({{count}} दिन)",
+    "seasonRungPremium_other": "प्रीमियम ({{count}} दिन)"
   },
   "ads": {
     "eyebrow": "विज्ञापन",
@@ -2796,7 +2799,6 @@
     "ladderTitle": "सीढ़ी",
     "perfectRun": "{{count}} साफ़ दिन",
     "enrolFailed": "रन शुरू नहीं हो सका",
-    "reminderTitle": "आज का दिन न खोएँ",
     "reminderOne": "बाकी: {{modules}}",
     "rankLine": "शुरू करने वालों में शीर्ष {{percent}}%",
     "timelineTitle": "आपका इतिहास",
@@ -2876,7 +2878,67 @@
     "celebrateCompleted": "आपने हर पायदान चढ़ लिया",
     "celebrateSeasonEnded": "आपका सीज़न समाप्त — देखें कैसा रहा",
     "daysLeftInRun_one": "आपकी दौड़ में {{count}} दिन बाकी",
-    "daysLeftInRun_other": "आपकी दौड़ में {{count}} दिन बाकी"
+    "daysLeftInRun_other": "आपकी दौड़ में {{count}} दिन बाकी",
+    "nudgeTitle": {
+      "0": "आज अभी बाकी है",
+      "1": "एक काम बाकी",
+      "2": "दिन खत्म होने से पहले",
+      "3": "आपकी लय इंतज़ार में है"
+    },
+    "nudgeBody": {
+      "0": "{{modules}} अभी दर्ज नहीं। दिन {{count}} अब भी आपका है।",
+      "1": "आपके और दिन {{count}} के बीच बस {{modules}} है।",
+      "2": "दो मिनट: {{modules}}। फिर दिन {{count}} पूरा।",
+      "3": "{{modules}} बाकी है। दिन {{count}} आधी रात को बंद हो जाएगा।"
+    },
+    "reminderNearRung_one": "{{name}} तक {{count}} दिन — {{modules}} अभी बाकी।",
+    "reminderNearRung_other": "{{name}} तक {{count}} दिन — {{modules}} अभी बाकी।",
+    "reminderNearRungPlain_one": "अगले पायदान तक {{count}} दिन — {{modules}} अभी बाकी।",
+    "reminderNearRungPlain_other": "अगले पायदान तक {{count}} दिन — {{modules}} अभी बाकी।",
+    "rewardTitle": "{{name}} खुल गया",
+    "rewardTitleGeneric": "पुरस्कार खुल गया",
+    "rewardBody": "आपका पुरस्कार चैलेंज स्क्रीन पर इंतज़ार कर रहा है।"
+  },
+  "rewards": {
+    "title": "आपके पुरस्कार",
+    "badgesTitle": "बैज",
+    "noLadder": "इस सीज़न के लिए अभी कोई सीढ़ी सेट नहीं है।",
+    "lockedAt_one": "दिन {{count}}",
+    "lockedAt_other": "दिन {{count}}",
+    "emptyHint": "पहले सात दिन पूरे करें और स्पार्क बैज आपका है।",
+    "catchingUp": "आपने एक पायदान पार किया है जिसका इनाम अभी नहीं पहुँचा। हम उसे ला रहे हैं।",
+    "emptyTitle": "अभी कुछ नहीं कमाया",
+    "emptyBody": "सीढ़ी चढ़ने के साथ पुरस्कार खुलते हैं। पहला सात दिन दूर है।",
+    "premiumWon_one": "प्रीमियम का {{count}} दिन, दिन {{day}} पर मिला",
+    "premiumWon_other": "प्रीमियम के {{count}} दिन, दिन {{day}} पर मिले",
+    "section": {
+      "theme": "ग्रेडिएंट",
+      "chain": "चेन के रंग",
+      "frame": "प्रोफ़ाइल फ़्रेम",
+      "premium": "प्रीमियम"
+    },
+    "cosmetic": {
+      "spark-dawn": "भोर",
+      "flame-dusk": "साँझ",
+      "forge-gold": "भट्टी",
+      "ember-glow": "अंगार आभा",
+      "keystone-steel": "कीस्टोन स्टील",
+      "summit-aurora": "सम्मिट अरोरा",
+      "blaze-ring": "ब्लेज़ रिंग",
+      "half-year-laurel": "लॉरेल",
+      "year-one-crown": "ताज"
+    },
+    "open": "आपके पुरस्कार",
+    "milestoneTitle": "{{name}} खुल गया",
+    "milestoneTitleGeneric": "पुरस्कार खुल गया",
+    "milestoneBody_one": "{{count}} दिन बनाए रखा। यह उसका फल है।",
+    "milestoneBody_other": "{{count}} दिन बनाए रखे। यह उसका फल है।",
+    "milestoneShare": "किसी को दिखाएँ",
+    "milestoneDone": "जारी रखें",
+    "milestoneShield": "एक शील्ड, आपके खानों में जुड़ी",
+    "milestonePremium": "प्रीमियम की एक अवधि",
+    "milestonePremiumDays_one": "प्रीमियम का {{count}} दिन",
+    "milestonePremiumDays_other": "प्रीमियम के {{count}} दिन"
   },
   "env": {
     "staging": "स्टेजिंग बिल्ड",

@@ -235,6 +235,7 @@ export function costOfMissToday(standing: {
     rewardKind: 'digital' as const,
     rewardTitle: null,
     rewardDescription: null,
+    rewards: [],
   }));
 
   const target = demotionTarget(

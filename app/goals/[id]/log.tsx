@@ -1,5 +1,6 @@
 import Slider from '@react-native-community/slider';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
+import { showInterstitial } from '@/features/ads/services/interstitial';
 import { Minus, Plus } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +23,10 @@ import { alpha } from '@/lib/color';
 export default function LogProgressScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  // The route the ad would appear over. Passed rather than guessed — see
+  // `mayShowAdNow`, where a stale value is how an ad reaches a screen that
+  // forbids them.
+  const segments = useSegments();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const { data: goal } = useGoal(id);
@@ -68,6 +73,10 @@ export default function LogProgressScreen() {
     });
     release();
     router.back();
+    // Logging progress and leaving is a finished flow. After the mutation and
+    // after the navigation — see app/task/new.tsx for why that ordering is
+    // load-bearing rather than tidy.
+    void showInterstitial({ segments, breakpoint: 'goal-logged' });
   };
 
   return (

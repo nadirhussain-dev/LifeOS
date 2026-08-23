@@ -1,8 +1,8 @@
 import type { ChallengeEvent } from '@/features/challenge/hooks/use-challenge';
 
 /**
- * Which events are worth saying something about, and where the watermark may
- * move to afterwards.
+ * Which events are worth saying something about, where the watermark may move
+ * to afterwards, and which one the walk stopped at.
  *
  * The engine has always written these — `challenge_credit_day` records
  * `tier_reached`, `shield_earned` and `completed` on the very call that earns
@@ -17,29 +17,49 @@ import type { ChallengeEvent } from '@/features/challenge/hooks/use-challenge';
  * seen-watermark. A celebration that only fires if you happen to be holding the
  * phone at the moment the buffer flushes is not a celebration.
  *
- * ## Why this stops at a fall
+ * ## Toasts, and the two things that are not toasts
  *
- * `lastSeenEventId` is one watermark shared with the demotion sheet, so
- * advancing past an unseen `demoted` would silently swallow it — the sheet
- * looks for exactly that event and would never find it. So the walk stops
- * there and leaves the fall, and everything after it, for the next pass. The
- * ordering is not arbitrary either: being told "you reached Ember" *after*
- * being told you fell off it is the wrong way round.
+ * Most of these are worth a line and no more. Two are worth stopping for, and
+ * both work the same way: the walk **halts** at them, leaving them and
+ * everything after them unseen until a sheet has been acknowledged.
+ *
+ *   * `demoted` — the fall. `lastSeenEventId` is one watermark shared with the
+ *     demotion sheet, so advancing past an unseen fall would silently swallow
+ *     it: the sheet looks for exactly that event and would never find it.
+ *   * `reward_granted` — the payout (0071). A rung that finally handed over a
+ *     badge, a gradient and a week of Premium is the single best moment this
+ *     programme has, and a toast that vanishes in three seconds while somebody
+ *     is looking at their checklist is not what it is worth. Blocking also
+ *     makes it *durable*: force-quitting on the sheet means seeing it next
+ *     time, where a toast would simply have been missed.
+ *
+ * The ordering matters and falls out of the halt for free: being told "you
+ * reached Ember" after being told you fell off it is the wrong way round, and
+ * being congratulated on a payout immediately after a fall is worse.
  */
 const CELEBRATED = new Set(['tier_reached', 'shield_earned', 'completed', 'season_ended']);
 
-/** Ends the walk rather than being celebrated — see above. */
-const BLOCKING = 'demoted';
+/** Ends the walk and is shown as a sheet instead — see above. */
+const BLOCKING = new Set(['demoted', 'reward_granted']);
 
 export type Celebrations = {
   /** Oldest first, which is the order they happened and the order to show. */
   show: ChallengeEvent[];
   /**
-   * Where the seen-watermark may move to. Never past an unseen fall, and
+   * Where the seen-watermark may move to. Never past a blocking event, and
    * unchanged when there is nothing to show, so this can be assigned
    * unconditionally.
    */
   watermark: number;
+  /**
+   * The oldest unseen event that needs a sheet, or null.
+   *
+   * Returned from here rather than found again by the screen, so that "which
+   * sheet, if any" has one answer. Two independent searches produced the bug
+   * this replaced in waiting: a fall and a payout both unseen would each find
+   * themselves, and two modals would race for the same surface.
+   */
+  blockedBy: ChallengeEvent | null;
 };
 
 export function celebrationsFor(events: ChallengeEvent[], lastSeenEventId: number): Celebrations {
@@ -48,9 +68,13 @@ export function celebrationsFor(events: ChallengeEvent[], lastSeenEventId: numbe
 
   const show: ChallengeEvent[] = [];
   let watermark = lastSeenEventId;
+  let blockedBy: ChallengeEvent | null = null;
 
   for (const event of unseen) {
-    if (event.kind === BLOCKING) break;
+    if (BLOCKING.has(event.kind)) {
+      blockedBy = event;
+      break;
+    }
     // Anything else unrecognised — `enrolled`, `module_swapped`, an operator
     // grant — is not worth a toast but is still "seen", so it does not wedge
     // the walk behind an event nothing will ever announce.
@@ -58,5 +82,5 @@ export function celebrationsFor(events: ChallengeEvent[], lastSeenEventId: numbe
     watermark = event.id;
   }
 
-  return { show, watermark };
+  return { show, watermark, blockedBy };
 }

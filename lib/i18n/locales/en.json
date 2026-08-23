@@ -2745,7 +2745,10 @@
     "seasonDeleteConfirmTitle": "Delete this season?",
     "seasonDeleteConfirmBody": "{{name}} and its modules and ladder will be removed. This cannot be undone.",
     "seasonDeleteBlocked_one": "One person has joined, so this season can only be closed.",
-    "seasonDeleteBlocked_other": "{{count}} people have joined, so this season can only be closed."
+    "seasonDeleteBlocked_other": "{{count}} people have joined, so this season can only be closed.",
+    "seasonRungNoReward": "No payout configured",
+    "seasonRungPremium_one": "premium ({{count}} day)",
+    "seasonRungPremium_other": "premium ({{count}} days)"
   },
   "ads": {
     "eyebrow": "Ad",
@@ -2796,7 +2799,6 @@
     "ladderTitle": "The ladder",
     "perfectRun": "{{count}} clean days",
     "enrolFailed": "Could not start the run",
-    "reminderTitle": "Do not lose today",
     "reminderOne": "Still to do: {{modules}}",
     "rankLine": "Top {{percent}}% of everyone who started",
     "timelineTitle": "Your history",
@@ -2876,7 +2878,67 @@
     "celebrateCompleted": "You climbed every rung",
     "celebrateSeasonEnded": "Your season has ended — see how it went",
     "daysLeftInRun_one": "{{count}} day left in your run",
-    "daysLeftInRun_other": "{{count}} days left in your run"
+    "daysLeftInRun_other": "{{count}} days left in your run",
+    "nudgeTitle": {
+      "0": "Still open today",
+      "1": "One thing left",
+      "2": "Before the day closes",
+      "3": "Your run is waiting"
+    },
+    "nudgeBody": {
+      "0": "{{modules}} not logged yet. Day {{count}} is still yours.",
+      "1": "{{modules}} is all that stands between you and day {{count}}.",
+      "2": "Two minutes: {{modules}}. Then day {{count}} is done.",
+      "3": "{{modules}} still open. Day {{count}} closes at midnight."
+    },
+    "reminderNearRung_one": "{{count}} day to {{name}} — {{modules}} still to log.",
+    "reminderNearRung_other": "{{count}} days to {{name}} — {{modules}} still to log.",
+    "reminderNearRungPlain_one": "{{count}} day to your next rung — {{modules}} still to log.",
+    "reminderNearRungPlain_other": "{{count}} days to your next rung — {{modules}} still to log.",
+    "rewardTitle": "{{name}} unlocked",
+    "rewardTitleGeneric": "Reward unlocked",
+    "rewardBody": "Your reward is waiting on the challenge screen."
+  },
+  "rewards": {
+    "title": "Your rewards",
+    "badgesTitle": "Badges",
+    "noLadder": "This season has no ladder configured yet.",
+    "lockedAt_one": "Day {{count}}",
+    "lockedAt_other": "Day {{count}}",
+    "emptyHint": "Keep your first seven days and the Spark badge is yours.",
+    "catchingUp": "You've passed a rung whose reward hasn't arrived yet. We're fetching it.",
+    "emptyTitle": "Nothing earned yet",
+    "emptyBody": "Rewards unlock as you climb the ladder. The first one is seven days away.",
+    "premiumWon_one": "{{count}} day of Premium, earned on day {{day}}",
+    "premiumWon_other": "{{count}} days of Premium, earned on day {{day}}",
+    "section": {
+      "theme": "Gradients",
+      "chain": "Chain colours",
+      "frame": "Profile frames",
+      "premium": "Premium"
+    },
+    "cosmetic": {
+      "spark-dawn": "Dawn",
+      "flame-dusk": "Dusk",
+      "forge-gold": "Forge",
+      "ember-glow": "Ember Glow",
+      "keystone-steel": "Keystone Steel",
+      "summit-aurora": "Summit Aurora",
+      "blaze-ring": "Blaze Ring",
+      "half-year-laurel": "Laurel",
+      "year-one-crown": "Crown"
+    },
+    "open": "Your rewards",
+    "milestoneTitle": "{{name}} unlocked",
+    "milestoneTitleGeneric": "Reward unlocked",
+    "milestoneBody_one": "{{count}} day kept. Here is what it bought.",
+    "milestoneBody_other": "{{count}} days kept. Here is what it bought.",
+    "milestoneShare": "Show someone",
+    "milestoneDone": "Keep going",
+    "milestoneShield": "A shield, added to your slots",
+    "milestonePremium": "A window of Premium",
+    "milestonePremiumDays_one": "{{count}} day of Premium",
+    "milestonePremiumDays_other": "{{count}} days of Premium"
   },
   "env": {
     "staging": "Staging build",

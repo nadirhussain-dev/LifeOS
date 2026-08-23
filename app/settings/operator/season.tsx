@@ -520,6 +520,41 @@ function ModulesSection({
 }
 
 /** The rungs, editable one at a time. */
+/**
+ * A rung's payout, in one line an operator can scan a ladder of.
+ *
+ * Counts by kind rather than listing slugs. Nine rungs each naming three slugs
+ * is a wall of text nobody reads, and the questions this line has to answer are
+ * "does this rung pay anything at all" and "does it pay Premium" — the second
+ * because that is the only effect that costs money, and an operator should
+ * never have to open the database to find out which rungs spend it.
+ */
+function summariseRewards(
+  rewards: Record<string, unknown>[],
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  if (rewards.length === 0) return t('operator.seasonRungNoReward');
+
+  const counts = new Map<string, number>();
+  for (const effect of rewards) {
+    const kind = typeof effect.kind === 'string' ? effect.kind : 'unknown';
+    counts.set(kind, (counts.get(kind) ?? 0) + 1);
+  }
+
+  return [...counts.entries()]
+    .map(([kind, count]) => {
+      // Premium is the one worth spelling out, because the number is days of
+      // paid access and a count of "1" says nothing about whether that is a
+      // week or three months.
+      if (kind === 'premium') {
+        const days = rewards.find((r) => r.kind === 'premium')?.days;
+        return t('operator.seasonRungPremium', { count: Number(days ?? 0) });
+      }
+      return count > 1 ? `${kind} ×${count}` : kind;
+    })
+    .join(' · ');
+}
+
 function LadderSection({
   seasonId,
   rows,
@@ -573,6 +608,20 @@ function LadderSection({
             <View className="flex-1">
               <Text className="font-sora-medium text-foreground">{tier.name}</Text>
               {tier.rewardTitle ? <Text variant="caption">{tier.rewardTitle}</Text> : null}
+              {/*
+                What the rung actually pays, next to what it says it pays.
+
+                Both, deliberately. `rewardTitle` is the operator's prose and
+                `rewards` is what the engine will hand over, and the failure
+                worth catching here is exactly the two disagreeing — a rung
+                promising a gift box while granting a badge is invisible from
+                either line alone. Read-only: a JSON editor in a form that also
+                handles typos is how somebody clears a payout by accident, and
+                the seed already writes the default ladder.
+              */}
+              <Text variant="micro" style={{ color: c.mutedForeground }}>
+                {summariseRewards(tier.rewards ?? [], t)}
+              </Text>
             </View>
             {tier.rewardKind === 'physical' ? (
               <Text variant="caption">{t('operator.seasonPhysical')}</Text>

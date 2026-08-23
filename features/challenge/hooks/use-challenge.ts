@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { buildChecklist } from '@/features/challenge/services/challenge-math';
@@ -117,6 +118,10 @@ export function useChallengeToday() {
           recentMisses: response.recentMisses ?? 0,
           maxDemotionDays: response.maxDemotionDays ?? 0,
           tierThresholds: response.tierThresholds ?? [],
+          // Left empty on purpose — this payload has no names in it, and the
+          // store preserves whatever the ladder query last supplied rather than
+          // letting this refresh blank them. See `setStanding`.
+          rungNames: {},
         });
       } else {
         clearEnrolment();
@@ -185,14 +190,16 @@ export function useSeasonStatus() {
  * not a person — so this needs no session.
  */
 export function useChallengeTiers(seasonId: string | undefined) {
-  return useQuery({
+  const setRungNames = useChallengeStore((s) => s.setRungNames);
+
+  const query = useQuery({
     queryKey: ['challenge', 'tiers', seasonId ?? null],
     enabled: isSupabaseConfigured && Boolean(seasonId),
     staleTime: 5 * 60 * 1000,
     queryFn: async (): Promise<ChallengeTier[]> => {
       const { data, error } = await supabase
         .from('challenge_tiers')
-        .select('day_threshold, name, reward_kind, reward_title, reward_description')
+        .select('day_threshold, name, reward_kind, reward_title, reward_description, rewards')
         .eq('season_id', seasonId)
         .order('day_threshold');
       if (error) throw new Error(error.message);
@@ -202,9 +209,33 @@ export function useChallengeTiers(seasonId: string | undefined) {
         rewardKind: t.reward_kind as ChallengeTier['rewardKind'],
         rewardTitle: (t.reward_title as string | null) ?? null,
         rewardDescription: (t.reward_description as string | null) ?? null,
+        // Defaulted rather than assumed present: `challenge_today()` embeds its
+        // own copy of the ladder without this column, and a build talking to a
+        // database that has not had 0071 applied yet gets an undefined here.
+        // An empty payout renders as a rung with no art, which is what a
+        // pre-0071 ladder honestly is.
+        rewards: Array.isArray(t.rewards) ? (t.rewards as ChallengeTier['rewards']) : [],
       }));
     },
   });
+
+  /*
+   * Mirrored into the store, the same way `useChallengeToday` mirrors the
+   * counters and for the same reason: the evening reminder is rebuilt outside
+   * React on every write and cannot fetch anything, so anything it needs to say
+   * has to already be somewhere it can read.
+   *
+   * Names only. The thresholds it prices a miss from arrive with the counters
+   * and must not depend on this screen ever having been opened; the names are
+   * the part the copy can honestly do without.
+   */
+  const tiers = query.data;
+  useEffect(() => {
+    if (!tiers || tiers.length === 0) return;
+    setRungNames(Object.fromEntries(tiers.map((tier) => [tier.dayThreshold, tier.name])));
+  }, [tiers, setRungNames]);
+
+  return query;
 }
 
 /**
