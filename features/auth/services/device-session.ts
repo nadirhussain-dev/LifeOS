@@ -1,4 +1,9 @@
 import {
+  authErrorMessage,
+  type AuthAction,
+  type SupabaseAuthError,
+} from '@/features/auth/services/auth-errors';
+import {
   useDeviceSessionStore,
   type DeviceVerdict,
   type OtherDevice,
@@ -168,6 +173,38 @@ export async function refreshDeviceSession(): Promise<DeviceStanding> {
 }
 
 /**
+ * The same translation every other auth call in the app already got.
+ *
+ * These two requests were the only ones that skipped `authErrorMessage` and
+ * returned `error.message` straight to the screen, and the result was not
+ * merely untidy. auth-js turns any 5xx into
+ * `AuthRetryableFetchError(_getErrorMessage(response), status)`, and
+ * `_getErrorMessage` falls through to `JSON.stringify` when handed a `Response`
+ * — which carries no `msg`, `message`, `error_description` or `error`. So on a
+ * relay failure `error.message` is the entire serialised response: status,
+ * every header, the `set-cookie`, the blob ids. That is what rendered, in red,
+ * on the device-gate screen, above a button the user was being asked to trust.
+ *
+ * The mapped answer for that case is `emailNotSent`, which is also the only
+ * honest one: nothing was delivered, so waiting for a code that is coming is
+ * exactly the wrong thing to do.
+ *
+ * Reported as well as translated, on the same terms as `auth-store`'s `fail()`:
+ * a 5xx here is our fault, not the user's, and from the outside it is
+ * indistinguishable from an email that simply never arrived — so nobody files
+ * a bug about it and it is invisible until somebody sends a screenshot.
+ */
+function takeoverFailure(error: SupabaseAuthError, action: AuthAction): string {
+  if (typeof error.status === 'number' && error.status >= 500) {
+    reportError(new Error(`device takeover ${action}: ${error.status} ${error.code ?? ''}`), {
+      scope: 'device-session-otp',
+      action,
+    });
+  }
+  return authErrorMessage(error, action);
+}
+
+/**
  * Sends the one-time code that authorises taking the account over.
  *
  * Uses the same email-OTP channel as sign-up, with `shouldCreateUser: false` —
@@ -184,7 +221,7 @@ export async function sendTakeoverOtp(
     email: email.trim(),
     options: { shouldCreateUser: false },
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: takeoverFailure(error, 'sendSignInCode') };
   return { ok: true };
 }
 
@@ -207,7 +244,7 @@ export async function verifyTakeoverOtp(
     token: token.trim(),
     type: 'email',
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: takeoverFailure(error, 'verifyCode') };
   return { ok: true };
 }
 
