@@ -415,14 +415,27 @@ export default function MediaSettingsScreen() {
 
           {/* What each tier actually means, in plain bullets — static copy,
               not database-driven: this is marketing text about the two
-              tiers, not another storage/price field on billing_plans. */}
-          <View className="gap-1.5 border-t border-border pt-3">
-            <PerkRow icon={X} label={t('billing.perkFreeAds')} muted />
-            <PerkRow icon={X} label={t('billing.perkFreeLocalOnly')} muted />
-            <PerkRow icon={Check} label={t('billing.perkPlusNoAds')} />
-            <PerkRow icon={Check} label={t('billing.perkPlusBackup')} />
-            <PerkRow icon={Check} label={t('billing.perkPlusAlbums')} />
-            <PerkRow icon={Check} label={t('billing.perkPlusInsights')} />
+              tiers, not another storage/price field on billing_plans.
+
+              Headed, because unheaded it was six rows in one column: two
+              crosses then four ticks, with nothing anywhere saying that the
+              crosses describe the plan you are on and the ticks the one you
+              are not. A cross beside "Ads shown in a few places" reads as
+              "this plan has no ads" at least as easily as the truth. */}
+          <View className="gap-3 border-t border-border pt-3">
+            <View className="gap-1.5">
+              <Text variant="micro">{t('billing.perksFree')}</Text>
+              <PerkRow icon={X} label={t('billing.perkFreeAds')} muted />
+              <PerkRow icon={X} label={t('billing.perkFreeLocalOnly')} muted />
+            </View>
+
+            <View className="gap-1.5">
+              <Text variant="micro">{t('billing.perksPlus')}</Text>
+              <PerkRow icon={Check} label={t('billing.perkPlusNoAds')} />
+              <PerkRow icon={Check} label={t('billing.perkPlusBackup')} />
+              <PerkRow icon={Check} label={t('billing.perkPlusAlbums')} />
+              <PerkRow icon={Check} label={t('billing.perkPlusInsights')} />
+            </View>
           </View>
 
           {isPlus && subscription?.currentPeriodEnd ? (
