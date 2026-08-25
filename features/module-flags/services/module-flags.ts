@@ -43,7 +43,13 @@ async function runRefresh(): Promise<void> {
      * being treated identically.
      *
      * A guest has no session and so no overrides; the RPC returns the global
-     * set for them, which is the same answer the table gave.
+     * set for them, which is the same answer the table gave. That was the
+     * intent from 0024 and not the behaviour until 0076 — the function was
+     * granted to `authenticated` only, and its filter compared two nulls with
+     * `=` — so a signed-out client got an error, then an empty cache, then
+     * "every module is enabled" for as long as it stayed signed out. Every
+     * kill switch in the table was inert for guests, the closed private space
+     * (0074) being the one that showed.
      */
     const { data, error } = await supabase.rpc('my_module_flags');
     if (error || !data) return;
