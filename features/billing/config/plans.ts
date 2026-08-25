@@ -134,6 +134,26 @@ export function periodI18nKey(
 }
 
 /**
+ * The period as a plan's *name for itself* — "Monthly" — rather than as a
+ * suffix on a price, which is what `periodI18nKey` gives ("/ month").
+ *
+ * The paywall needs both and they are not the same string. Storage is
+ * identical across the three paid intervals (see the seed above: the offer is
+ * the price, not more space), so a card headed by `formatBytes` alone printed
+ * the same headline three times and left the interval to be inferred from a
+ * suffix in the caption. The cadence is what actually distinguishes them, so
+ * it has to be able to lead.
+ */
+export function cadenceI18nKey(
+  period: BillingPeriod,
+): 'billing.free' | 'billing.cadenceMonth' | 'billing.cadenceQuarter' | 'billing.cadenceYear' {
+  if (period === 'month') return 'billing.cadenceMonth';
+  if (period === 'quarter') return 'billing.cadenceQuarter';
+  if (period === 'year') return 'billing.cadenceYear';
+  return 'billing.free';
+}
+
+/**
  * How many months a period covers, so two plans can be compared honestly.
  *
  * A quarterly price is not comparable to a monthly one until both are
