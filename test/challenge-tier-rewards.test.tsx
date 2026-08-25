@@ -4,6 +4,7 @@ import React from 'react';
 
 import { MilestoneSheet } from '@/features/challenge/components/milestone-sheet';
 import { useSeasonStatus } from '@/features/challenge/hooks/use-challenge';
+import type { ChallengeTier } from '@/features/challenge/types/challenge.types';
 
 /**
  * The reload screen on `/challenge`, and the shape that caused it.
@@ -165,7 +166,11 @@ it('MilestoneSheet survives a rung that carries no rewards', () => {
         // challenge screen regardless, which is why this took the whole app down.
         visible={false}
         slugs={[]}
-        tiers={STATUS_TIERS}
+        // Cast because the whole point is a rung the type system says cannot
+        // exist. `ChallengeTier` requires `rewards`; the server sent rungs
+        // without it for four migrations, and TypeScript believing otherwise is
+        // exactly how this reached a device.
+        tiers={STATUS_TIERS as unknown as ChallengeTier[]}
         qualifiedDays={5}
         onShare={() => undefined}
         onDismiss={() => undefined}
