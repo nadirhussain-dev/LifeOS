@@ -10,7 +10,11 @@ import {
   isBehindClosedPrivateSpace,
   moduleMayBeShownIn,
 } from '@/features/hub/services/module-gate';
-import { PRIVATE_MODULES, PRIVATE_MODULE_IDS } from '@/features/private/config/private-modules';
+import {
+  PRIVATE_MODULES,
+  PRIVATE_MODULE_IDS,
+  PRIVATE_SPACE_SWITCH,
+} from '@/features/private/config/private-modules';
 
 const ROOT = join(__dirname, '..', '..', '..');
 const read = (path: string) => readFileSync(join(ROOT, path), 'utf8');
@@ -132,6 +136,74 @@ describe('the way in', () => {
     // which is the thing the feature exists to prevent.
     const settings = read('app/settings/index.tsx');
     expect(settings).toContain('privateHidden || privateSpaceOff ? null : (');
+  });
+
+  it('is not named on the one other screen that lists every module', () => {
+    /*
+     * Sync's "what syncs" mapped SYNC_MODULES unconditionally, so a closed
+     * space still had a "Private space" toggle sitting under Music. The rule
+     * above is about the door, but the harm is the name appearing at all, and
+     * this screen prints the name of every module in the app.
+     */
+    const sync = read('app/settings/sync.tsx');
+    expect(sync).toContain('PRIVATE_SPACE_MODULE_ID');
+    expect(sync).not.toMatch(/\{SYNC_MODULES\.map\(/);
+  });
+});
+
+describe('the switch an operator actually has', () => {
+  /*
+   * The gap that made the rest of this file moot in practice: the guard, the
+   * seed and the entry point all read the `private` umbrella, and no screen in
+   * the console could write it. Both operator lists were
+   * `HUB_SECTIONS + PRIVATE_MODULES`, which is the six rooms — so an operator
+   * could switch off every room while the door stayed as the seed left it, and
+   * could not open the space at all.
+   */
+  it('offers the umbrella, not only the rooms behind it', () => {
+    expect(PRIVATE_SPACE_SWITCH.id).toBe(PRIVATE_SPACE_MODULE_ID);
+    for (const screen of ['app/settings/operator.tsx', 'app/settings/operator/account.tsx']) {
+      const source = read(screen);
+      expect({ screen, offers: source.includes('PRIVATE_SPACE_SWITCH') }).toEqual({
+        screen,
+        offers: true,
+      });
+    }
+  });
+
+  it('keeps the umbrella out of the rooms', () => {
+    // Every other consumer of PRIVATE_MODULES means rooms — setup, the decoy
+    // filter, `suggestedFor`, the Hub. A seventh entry there to serve the
+    // console would put the space inside itself.
+    expect(PRIVATE_MODULE_IDS).not.toContain(PRIVATE_SPACE_MODULE_ID);
+    expect(PRIVATE_MODULES.map((m) => m.id)).not.toContain(PRIVATE_SPACE_MODULE_ID);
+  });
+});
+
+describe('who the switches reach', () => {
+  const migration = read('supabase/migrations/0076_module_flags_reach_guests.sql');
+
+  /*
+   * `my_module_flags()` is the only thing that ever fills the client's flag
+   * cache, so whoever cannot call it is a user for whom every switch in the
+   * table — this gate included — silently does nothing. 0024 shut guests out
+   * twice: the grant, and a filter that compared two nulls with `=`.
+   */
+  it('lets a signed-out client ask', () => {
+    expect(migration).toMatch(/grant execute on function public\.my_module_flags\(\) to anon/);
+  });
+
+  it('answers a null uid instead of null-propagating the filter away', () => {
+    // `null = null` is null, not true, so the grant alone would still have
+    // returned an empty set — which the client reads as "nothing is off".
+    expect(migration).toContain('is not distinct from (select auth.uid())');
+    expect(migration).not.toMatch(/coalesce\(u\.user_id, \(select auth\.uid\(\)\)\) =/);
+  });
+
+  it('does not widen the per-user half to reach them', () => {
+    // A guest has no overrides to read, and `module_flags_user` is the one
+    // part of this that is genuinely about named accounts.
+    expect(migration).not.toMatch(/grant[^;]*module_flags_user[^;]*anon/);
   });
 });
 
