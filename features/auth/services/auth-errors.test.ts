@@ -29,11 +29,29 @@ const WRONG_CODE = {
 };
 
 // Captured: POST /auth/v1/otp where the mail relay refused the recipient.
-// supabase-js reports the 500 like this — the message really is "{}".
+// supabase-js reported the 500 like this — the message really was "{}".
 const RELAY_REFUSED = {
   name: 'AuthRetryableFetchError',
   status: 500,
   message: '{}',
+};
+
+/**
+ * The same failure, as auth-js 2.110.5 reports it now — and the reason this
+ * mapper is not optional for any caller.
+ *
+ * `handleError` throws `AuthRetryableFetchError(_getErrorMessage(response))`
+ * for every 5xx, and `_getErrorMessage` falls through to `JSON.stringify` when
+ * handed a `Response`, which carries none of `msg`/`message`/
+ * `error_description`/`error`. The message is therefore the whole serialised
+ * response. A screen that printed `error.message` printed this, in red, at the
+ * user — which is exactly what the device-gate takeover screen did.
+ */
+const RELAY_REFUSED_MODERN = {
+  name: 'AuthRetryableFetchError',
+  status: 500,
+  message:
+    '{"type":"default","status":500,"ok":false,"statusText":"","headers":{"map":{"x-sb-error-code":"unexpected_failure"}},"url":"https://ref.supabase.co/auth/v1/otp","bodyUsed":false}',
 };
 
 describe('the failure that broke sign-up', () => {
@@ -66,6 +84,10 @@ describe('the failure that broke sign-up', () => {
   it('says the email was not sent, rather than showing raw JSON', () => {
     expect(authFailure(RELAY_REFUSED, 'sendSignUpCode').key).toBe('emailNotSent');
     expect(authFailure(RELAY_REFUSED, 'sendResetCode').key).toBe('emailNotSent');
+    // Whatever shape the SDK wraps the 500 in, the answer is the same — and it
+    // is never the serialised response itself.
+    expect(authFailure(RELAY_REFUSED_MODERN, 'sendSignInCode').key).toBe('emailNotSent');
+    expect(authFailure(RELAY_REFUSED_MODERN, 'verifyCode').key).toBe('serverBusy');
   });
 
   it('still calls a wrong code a wrong code', () => {

@@ -20,7 +20,7 @@ import {
   type OperatorReport,
   type UserDetail,
 } from '@/features/operator/services/operator-repository';
-import { PRIVATE_MODULES } from '@/features/private/config/private-modules';
+import { PRIVATE_MODULES, PRIVATE_SPACE_SWITCH } from '@/features/private/config/private-modules';
 import { useTheme } from '@/hooks/use-theme';
 import { confirm } from '@/lib/dialog-store';
 import { toast } from '@/lib/toast-store';
@@ -29,8 +29,15 @@ import { toast } from '@/lib/toast-store';
 // (0011_module_flags.sql) was always designed to key on either id, but until
 // now this list only ever offered the Hub half, so an operator had no way to
 // target `cycle`/`recovery`/`vault`/`intimacy`/`shared-albums` at all.
+//
+// `PRIVATE_SPACE_SWITCH` is the door those five sit behind, and per-account is
+// where it earns its keep: 0024's staged-rollout case is exactly "open this
+// for one account while it stays shut for everybody else", and without the
+// umbrella an operator could only have granted the rooms — inside a space the
+// global flag still refuses to open.
 const MODULES: { id: string; titleKey: string }[] = [
   ...HUB_SECTIONS.flatMap((section) => section.modules),
+  PRIVATE_SPACE_SWITCH,
   ...PRIVATE_MODULES,
 ];
 

@@ -132,6 +132,33 @@ export function useChallengeToday() {
 }
 
 /**
+ * One rung, with every field the client's types promise actually present.
+ *
+ * The `rewards` array is the reason this exists. Two different server payloads
+ * carry a ladder — the `challenge_tiers` table and the `tiers` array embedded in
+ * `challenge_season_status()` — and only the first has ever had the column that
+ * 0071 added. A rung from the second reached `MilestoneSheet`, which is mounted
+ * unconditionally on the challenge screen, and `tier.rewards.some(...)` threw on
+ * `undefined`. The throw reached the root error boundary, so the whole app
+ * became "Something went wrong / Reload" the moment the module was opened.
+ *
+ * 0075 adds the field to the season-status payload, but this stays and has to:
+ * an installed app talks to whatever database it is pointed at, and a build
+ * running against a server that predates 0075 must render a ladder with no
+ * payouts on it rather than refuse to render at all. Absent means "this rung
+ * pays nothing I can draw", which is exactly what a pre-0071 rung is.
+ */
+export function normalizeTier(tier: ChallengeTier): ChallengeTier {
+  return Array.isArray(tier?.rewards) ? tier : { ...tier, rewards: [] };
+}
+
+/** The same, for a whole ladder. Undefined in, undefined out — the callers
+ *  distinguish "no ladder yet" from "a ladder with no rungs". */
+export function normalizeTiers(tiers: ChallengeTier[] | undefined): ChallengeTier[] | undefined {
+  return Array.isArray(tiers) ? tiers.map(normalizeTier) : undefined;
+}
+
+/**
  * The programme's state, in one read.
  *
  * `challenge_season_status()` (0055) replaces three round trips *and*, more to
@@ -161,7 +188,11 @@ export function useSeasonStatus() {
     queryFn: async (): Promise<SeasonStatus> => {
       const { data, error } = await supabase.rpc('challenge_season_status');
       if (error) throw new Error(error.message);
-      const status = (data ?? { state: 'none' }) as SeasonStatus;
+      const raw = (data ?? { state: 'none' }) as SeasonStatus;
+      // Normalised here rather than at each of the eight places that read a
+      // rung, so the embedded ladder cannot enter the tree in a shape the
+      // components' own types say is impossible. See `normalizeTier`.
+      const status: SeasonStatus = { ...raw, tiers: normalizeTiers(raw.tiers) };
 
       // Not fatal — a run without a ladder still runs — but the ladder is what
       // the feature promises, so it should not go missing quietly. `notReady`

@@ -3,9 +3,7 @@ import { TextInput, View, type TextInputProps } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
-import { radius } from '@/constants/design-tokens';
 import { useTheme } from '@/hooks/use-theme';
-import { alpha } from '@/lib/color';
 import { cn } from '@/lib/utils';
 
 type Props = Omit<TextInputProps, 'placeholderTextColor'> & {
@@ -80,9 +78,21 @@ type Props = Omit<TextInputProps, 'placeholderTextColor'> & {
  *     fixed-height rows. Zero of the 110 inputs carried that cap, so at max
  *     text size a field's value outgrew its own label.
  *
- * The focus halo is drawn by the wrapper's always-present 2px padding rather
- * than by growing the border, so gaining focus cannot shift layout — a field
- * that nudges its neighbours when tapped is worse than no indicator at all.
+ * Focus is the border, and only the border: it changes from `input` to `ring`.
+ * It used to be that plus a halo — a wrapper whose always-present 2px padding
+ * filled with 18% `ring` while focused — and on a near-white screen that band
+ * did not read as a glow around the field, it read as a green shade leaking out
+ * of one. It was also on every field in the app, since all 80 field-bearing
+ * files come through here, so a treatment that looked like a rendering fault
+ * looked like one 80 times over.
+ *
+ * Colour alone is the trade this makes, and it is worth naming: `input` and
+ * `ring` differ in hue and in lightness, so the change survives greyscale, but
+ * a 1px border is a small thing to notice. Growing it on focus is the obvious
+ * alternative and the wrong one — React Native's box model puts the border
+ * inside the height, so a field that thickens its own border grows 2px taller
+ * and nudges every field below it. A field that moves when tapped is worse than
+ * a quiet indicator.
  *
  * `leading`/`trailing` sit inside the border because the accessory belongs to
  * the field: an eye toggle outside the box reads as a separate control, and the
@@ -127,10 +137,10 @@ export const Input = forwardRef<TextInput, Props>(function Input(
    * path gives them the placeholder token, the dynamic-type cap and the invalid
    * announcement, and changes nothing about where anything sits.
    *
-   * They do not get the focus halo. That is honest rather than ideal: the border
-   * it would ring belongs to the parent, so indicating focus properly means
-   * lifting the whole row in here — worth doing per screen, as AuthField did,
-   * and not something a bulk migration should decide.
+   * They do not get the focus border either. That is honest rather than ideal:
+   * the border it would colour belongs to the parent, so indicating focus
+   * properly means lifting the whole row in here — worth doing per screen, as
+   * AuthField did, and not something a bulk migration should decide.
    */
   const unwrapped = bare && !label && !error && !hint && !leading && !trailing;
 
@@ -161,8 +171,8 @@ export const Input = forwardRef<TextInput, Props>(function Input(
      * agreeing with the other.
      *
      * `transparent` rather than a colour, because this component already has a
-     * focus indicator — the border changes to `ring` and the halo appears
-     * behind it. The platform's job here is to draw text and a cursor.
+     * focus indicator — the border changes to `ring`. The platform's job here
+     * is to draw text and a cursor.
      *
      * On the props object rather than at each call site: there were 75
      * hand-rolled fields before this component existed, and the whole reason it
@@ -219,38 +229,7 @@ export const Input = forwardRef<TextInput, Props>(function Input(
     <View className={cn('gap-1.5', containerClassName)}>
       {label ? <Text variant="micro">{label}</Text> : null}
 
-      {bare ? (
-        field
-      ) : (
-        /*
-         * The halo. Geometry is unconditional and only the colour changes, so
-         * gaining focus cannot shift layout.
-         *
-         * Radius and padding sit in the same object as the colour, deliberately.
-         * They were a `rounded-3xl p-0.5` className while the colour came from
-         * `style`, and the corners did not survive it: the halo painted a
-         * *square* of tinted green behind a fully rounded field, so focusing the
-         * email field on the sign-in screen showed four green corners around the
-         * pill. Whatever the merge order is doing, geometry that has to agree
-         * with a colour should not be able to disagree with it, and one object
-         * has no order to get wrong.
-         *
-         * 32 against the 28 the field carries: geometrically 30 is exact, but 30
-         * is not on the scale, and an off-scale literal is what this component
-         * exists to stop other people writing. Taken from the `radius` token
-         * rather than typed, so it moves if the scale does. 32 reads as a soft
-         * outer glow; 28 would clip the corners it is meant to surround.
-         */
-        <View
-          style={{
-            borderRadius: radius['3xl'],
-            padding: 2,
-            backgroundColor: focused ? alpha(c.ring, 0.18) : 'transparent',
-          }}
-        >
-          {field}
-        </View>
-      )}
+      {field}
 
       {error ? (
         <Text

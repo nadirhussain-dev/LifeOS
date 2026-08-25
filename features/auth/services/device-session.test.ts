@@ -3,8 +3,11 @@ import {
   refreshDeviceSession,
   releaseThisDevice,
   revokeAllDevices,
+  sendTakeoverOtp,
+  verifyTakeoverOtp,
 } from '@/features/auth/services/device-session';
 import { useDeviceSessionStore } from '@/features/auth/store/device-session-store';
+import i18n from '@/lib/i18n';
 
 /**
  * The client half of the one-device rule, tested where it can actually go
@@ -19,10 +22,16 @@ import { useDeviceSessionStore } from '@/features/auth/store/device-session-stor
  */
 
 const mockRpc = jest.fn();
+const mockSignInWithOtp = jest.fn();
+const mockVerifyOtp = jest.fn();
 
 jest.mock('@/lib/supabase', () => ({
   supabase: {
     rpc: (...args: unknown[]) => mockRpc(...args),
+    auth: {
+      signInWithOtp: (...args: unknown[]) => mockSignInWithOtp(...args),
+      verifyOtp: (...args: unknown[]) => mockVerifyOtp(...args),
+    },
   },
 }));
 
@@ -38,6 +47,8 @@ jest.mock('@/lib/error-reporting', () => ({ reportError: jest.fn() }));
 
 beforeEach(() => {
   mockRpc.mockReset();
+  mockSignInWithOtp.mockReset();
+  mockVerifyOtp.mockReset();
   useDeviceSessionStore.getState().clear();
   // `clear()` deliberately spares `surrenderedFor` — see the store. Tests need
   // the genuinely blank slate that no runtime caller wants.
@@ -266,5 +277,70 @@ describe('giving the account back', () => {
 
     mockRpc.mockRejectedValue(new Error('offline'));
     await expect(revokeAllDevices()).resolves.toBeUndefined();
+  });
+});
+
+/**
+ * What the takeover screen puts in front of somebody when the code cannot be
+ * sent.
+ *
+ * These two calls were the only auth requests in the app that did not go
+ * through `authErrorMessage`, and the consequence was visible rather than
+ * theoretical. auth-js turns any 5xx into
+ * `AuthRetryableFetchError(_getErrorMessage(response), status)`, and
+ * `_getErrorMessage` falls through to `JSON.stringify` when handed a `Response`
+ * — which has no `msg`, `message`, `error_description` or `error`. So
+ * `error.message` is the whole serialised response: headers, cookies, blob ids.
+ * Returning it raw rendered that in red on the device-gate screen.
+ */
+describe('takeover code failures, as the user reads them', () => {
+  // Captured from a live project: POST /auth/v1/otp answering 500 because the
+  // mail relay would not take it. Truncated, but the shape is exact.
+  const RELAY_REFUSED_500 = {
+    name: 'AuthRetryableFetchError',
+    status: 500,
+    message:
+      '{"type":"default","status":500,"ok":false,"statusText":"","headers":{"map":{"x-sb-error-code":"unexpected_failure"}},"url":"https://ref.supabase.co/auth/v1/otp","bodyUsed":false}',
+  };
+
+  it('says the email was not sent, rather than printing the response object', async () => {
+    mockSignInWithOtp.mockResolvedValue({ error: RELAY_REFUSED_500 });
+
+    const result = await sendTakeoverOtp('someone@example.com');
+
+    expect(result.ok).toBe(false);
+    const message = (result as { ok: false; error: string }).error;
+    // The bug, stated directly: no JSON, no URL, no header names.
+    expect(message).not.toContain('{');
+    expect(message).not.toContain('supabase.co');
+    expect(message).toBe(i18n.t('authError.emailNotSent'));
+  });
+
+  it('does not create an account when the address has none', async () => {
+    mockSignInWithOtp.mockResolvedValue({ error: null });
+
+    await sendTakeoverOtp('  someone@example.com  ');
+
+    expect(mockSignInWithOtp).toHaveBeenCalledWith({
+      email: 'someone@example.com',
+      options: { shouldCreateUser: false },
+    });
+  });
+
+  /** A wrong code is the user's to fix and must read as such — never as a
+   *  server fault, and never as raw GoTrue prose. */
+  it('translates a rejected code', async () => {
+    mockVerifyOtp.mockResolvedValue({
+      error: {
+        name: 'AuthApiError',
+        code: 'otp_expired',
+        status: 403,
+        message: 'Token has expired or is invalid',
+      },
+    });
+
+    const result = await verifyTakeoverOtp('someone@example.com', '123456');
+
+    expect(result).toEqual({ ok: false, error: i18n.t('authError.codeExpired') });
   });
 });

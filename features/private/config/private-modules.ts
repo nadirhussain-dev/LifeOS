@@ -9,6 +9,7 @@ import {
 } from 'lucide-react-native';
 
 import { moduleTints, type TintPair } from '@/constants/design-tokens';
+import { PRIVATE_SPACE_MODULE_ID } from '@/features/hub/config/route-modules';
 import type { Gender } from '@/features/profile/store/profile-store';
 
 /**
@@ -175,6 +176,33 @@ export const PRIVATE_MODULES: PrivateModule[] = [
     requiresRealSpace: true,
   },
 ];
+
+/**
+ * The door, as the operator console has to list it.
+ *
+ * `module_flags` holds a row per room — vault, cycle, recovery, intimacy,
+ * shared-albums, together — and one for the space itself, and only the last of
+ * those decides whether the space exists at all: it is what the route guard
+ * reads for every `/private/*` path and what the Settings entry point asks
+ * before drawing itself. 0074 seeds it `false`, so the space ships closed.
+ *
+ * Both operator screens built their list as `HUB_SECTIONS + PRIVATE_MODULES`,
+ * and `PRIVATE_MODULES` is the six rooms. The umbrella appeared in neither, so
+ * the console could switch off every room while the door stayed exactly as the
+ * seed left it — and, the direction that actually bit, an operator who wanted
+ * to *open* the space had no switch to do it with. 0074's own closing note
+ * describes flipping "the umbrella `private` row on its own"; this is the row
+ * it was describing.
+ *
+ * Shaped as `{ id, titleKey }` because that is all either console list reads,
+ * and kept out of `PRIVATE_MODULES` because every other consumer of that array
+ * — setup, the decoy filter, `suggestedFor`, the Hub — means *rooms*. Adding a
+ * seventh entry there to serve the console would put the space inside itself.
+ */
+export const PRIVATE_SPACE_SWITCH: { id: string; titleKey: string } = {
+  id: PRIVATE_SPACE_MODULE_ID,
+  titleKey: 'private.spaceTitle',
+};
 
 export function privateModule(id: PrivateModuleId): PrivateModule | undefined {
   return PRIVATE_MODULES.find((m) => m.id === id);

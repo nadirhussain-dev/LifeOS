@@ -125,34 +125,40 @@ describe('Input token consumption', () => {
     expect(input).toMatch(/py-3 font-sans text-base text-foreground/);
   });
 
-  it('draws the focus halo with geometry that is always present', () => {
-    // A border that thickens on focus shifts every field below it. The halo is
-    // unconditional padding whose colour changes, so focus cannot move layout.
-    expect(input).toMatch(/padding: 2,/);
-    expect(input).toMatch(/backgroundColor: focused \?/);
+  it('shows focus on the border alone, with no tinted fill behind the field', () => {
+    /*
+     * Focus used to be the border *plus* a halo: a wrapper whose always-present
+     * 2px padding filled with 18% `ring` while focused. On the near-white
+     * onboarding and sign-in screens that band did not read as a glow around
+     * the field — it read as a green shade leaking out of one, which is what it
+     * was reported as. Every field in the app comes through this component, so
+     * it looked like a rendering fault on all 80 field-bearing files at once.
+     *
+     * Asserted as "nothing paints a fill from `focused`" rather than as the
+     * absence of one expression, because the halo was a `backgroundColor` on a
+     * wrapper and the next one would be just as easy to reach for.
+     */
+    expect(input).not.toMatch(/backgroundColor: focused/);
+    expect(input).not.toMatch(/alpha\(/);
+    expect(input).toMatch(/focused \? c\.ring/);
   });
 
-  it('keeps the halo radius in the same object as its colour', () => {
+  it('never grows the border on focus, which would shift every field below it', () => {
     /*
-     * The corners used to come from a `rounded-3xl` className while the colour
-     * came from `style`, and they did not survive it: the halo painted a square
-     * of tinted green behind a fully rounded field, so focusing the email field
-     * showed four green corners around the pill.
-     *
-     * Asserted as "radius and colour are declared together" rather than as a
-     * literal, because the bug was never the value — 32 was always right. It
-     * was that two halves of one shape were set through two mechanisms that
-     * could disagree.
+     * The halo existed for a real reason, and dropping it does not repeal that
+     * reason: React Native's box model puts the border inside the height, so a
+     * field that thickens its own border on focus grows 2px taller and nudges
+     * every field under it down. Colour is the only property of the border that
+     * is free to change here.
      */
-    const halo = input.slice(input.indexOf('borderRadius: radius'));
-    expect(halo).toMatch(/borderRadius: radius\['3xl'\]/);
-    expect(halo.slice(0, 220)).toMatch(/backgroundColor: focused \?/);
-    expect(input).not.toMatch(/rounded-3xl/);
+    expect(input).not.toMatch(/borderWidth: focused/);
+    expect(input).not.toMatch(/focused \? 'border-2'/);
   });
 
   it("suppresses Android's own underline, which is tinted with the accent", () => {
     /*
-     * The second green artefact, and a different one from the halo above.
+     * The other green artefact, and a different one from the focus fill
+     * removed above — this one is the platform's, not ours.
      *
      * Android draws an underline behind every `TextInput`, tinted with the
      * platform accent — emerald here. Inside our own rounded bordered surface

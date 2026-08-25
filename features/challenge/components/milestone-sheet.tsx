@@ -80,9 +80,17 @@ export function MilestoneSheet({
    * not necessarily the one that pays the badge in front of us. Falls back to
    * the highest rung standing under the day count, which is right whenever
    * there is no badge to go on.
+   *
+   * `rewards` is defaulted rather than trusted. This sheet is mounted on every
+   * render of the challenge screen — `visible` only controls the `Modal`, not
+   * whether this body runs — so a rung arriving without the field took the
+   * whole app to the root error boundary rather than merely rendering an empty
+   * sheet nobody was looking at. See `normalizeTier` in use-challenge.ts.
    */
   const rung =
-    tiers.find((tier) => tier.rewards.some((r) => r.kind === 'badge' && r.slug === badge?.name)) ??
+    tiers.find((tier) =>
+      (tier.rewards ?? []).some((r) => r.kind === 'badge' && r.slug === badge?.name),
+    ) ??
     [...tiers]
       .sort((a, b) => b.dayThreshold - a.dayThreshold)
       .find((tier) => tier.dayThreshold <= qualifiedDays);
@@ -159,7 +167,7 @@ export function MilestoneSheet({
        */
       const rungDay = Number(name.split(':').pop());
       const source = tiers.find((tier) => tier.dayThreshold === rungDay) ?? rung;
-      const days = source?.rewards.find((r) => r.kind === 'premium')?.days;
+      const days = (source?.rewards ?? []).find((r) => r.kind === 'premium')?.days;
       return days
         ? t('rewards.milestonePremiumDays', { count: days })
         : t('rewards.milestonePremium');

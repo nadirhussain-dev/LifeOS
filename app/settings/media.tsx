@@ -13,7 +13,13 @@ import { ProgressRing } from '@/components/ui/progress-ring';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { useAuthStore } from '@/features/auth/services/auth-store';
-import { formatPrice, periodI18nKey, type StoragePlan } from '@/features/billing/config/plans';
+import {
+  cadenceI18nKey,
+  formatPrice,
+  monthsInPeriod,
+  perMonthCents,
+  type StoragePlan,
+} from '@/features/billing/config/plans';
 import {
   useCancelSubscriptionMutation,
   useCreateCheckoutMutation,
@@ -351,8 +357,13 @@ export default function MediaSettingsScreen() {
                 >
                   <View className="flex-1">
                     <View className="flex-row items-center gap-2">
+                      {/* What the plan actually is, said in words. `formatBytes`
+                          on its own printed "100.0 GB" as the headline of all
+                          three paid rows — same storage, by design (the offer is
+                          the price) — so the cards differed only in a suffix
+                          buried in the caption below them. */}
                       <Text className="font-sora-medium text-foreground">
-                        {formatBytes(plan.storageBytes)}
+                        {t('billing.storageAmount', { size: formatBytes(plan.storageBytes) })}
                       </Text>
                       {plan.badge ? (
                         <View
@@ -369,9 +380,32 @@ export default function MediaSettingsScreen() {
                         </View>
                       ) : null}
                     </View>
+                    {/* Cadence leads the price rather than trailing it as a
+                        "/ month" suffix: it is the only thing separating these
+                        rows, so it is what the eye should land on. Free says
+                        "Free" once instead of "$0.00 Free", which read as a
+                        price that had failed to load. */}
                     <Text variant="caption">
-                      {formatPrice(plan.priceCents, plan.currency)} {t(periodI18nKey(plan.period))}
+                      {plan.period === 'free'
+                        ? t('billing.free')
+                        : `${t(cadenceI18nKey(plan.period))} · ${formatPrice(
+                            plan.priceCents,
+                            plan.currency,
+                          )}`}
                     </Text>
+                    {/* The comparison the longer plans are asking for, and the
+                        line `perMonthCents` was written and documented for
+                        before anything rendered it: "Rs 3,149" beside "Rs 349"
+                        reads as nine times worse when it is a quarter cheaper
+                        per month. Monthly plans skip it — it would restate
+                        their own price. */}
+                    {monthsInPeriod(plan.period) > 1 && perMonthCents(plan) !== null ? (
+                      <Text variant="caption">
+                        {t('billing.perMonthEquivalent', {
+                          price: formatPrice(perMonthCents(plan) as number, plan.currency),
+                        })}
+                      </Text>
+                    ) : null}
                   </View>
                   {active ? <Check size={18} color={c.accent} /> : null}
                 </Pressable>
@@ -381,14 +415,27 @@ export default function MediaSettingsScreen() {
 
           {/* What each tier actually means, in plain bullets — static copy,
               not database-driven: this is marketing text about the two
-              tiers, not another storage/price field on billing_plans. */}
-          <View className="gap-1.5 border-t border-border pt-3">
-            <PerkRow icon={X} label={t('billing.perkFreeAds')} muted />
-            <PerkRow icon={X} label={t('billing.perkFreeLocalOnly')} muted />
-            <PerkRow icon={Check} label={t('billing.perkPlusNoAds')} />
-            <PerkRow icon={Check} label={t('billing.perkPlusBackup')} />
-            <PerkRow icon={Check} label={t('billing.perkPlusAlbums')} />
-            <PerkRow icon={Check} label={t('billing.perkPlusInsights')} />
+              tiers, not another storage/price field on billing_plans.
+
+              Headed, because unheaded it was six rows in one column: two
+              crosses then four ticks, with nothing anywhere saying that the
+              crosses describe the plan you are on and the ticks the one you
+              are not. A cross beside "Ads shown in a few places" reads as
+              "this plan has no ads" at least as easily as the truth. */}
+          <View className="gap-3 border-t border-border pt-3">
+            <View className="gap-1.5">
+              <Text variant="micro">{t('billing.perksFree')}</Text>
+              <PerkRow icon={X} label={t('billing.perkFreeAds')} muted />
+              <PerkRow icon={X} label={t('billing.perkFreeLocalOnly')} muted />
+            </View>
+
+            <View className="gap-1.5">
+              <Text variant="micro">{t('billing.perksPlus')}</Text>
+              <PerkRow icon={Check} label={t('billing.perkPlusNoAds')} />
+              <PerkRow icon={Check} label={t('billing.perkPlusBackup')} />
+              <PerkRow icon={Check} label={t('billing.perkPlusAlbums')} />
+              <PerkRow icon={Check} label={t('billing.perkPlusInsights')} />
+            </View>
           </View>
 
           {isPlus && subscription?.currentPeriodEnd ? (
