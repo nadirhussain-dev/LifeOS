@@ -20,10 +20,7 @@ import {
   type OperatorReport,
   type UserDetail,
 } from '@/features/operator/services/operator-repository';
-import {
-  PRIVATE_MODULES,
-  PRIVATE_SPACE_SWITCH,
-} from '@/features/private/config/private-modules';
+import { PRIVATE_MODULES, PRIVATE_SPACE_SWITCH } from '@/features/private/config/private-modules';
 import { useTheme } from '@/hooks/use-theme';
 import { confirm } from '@/lib/dialog-store';
 import { toast } from '@/lib/toast-store';
