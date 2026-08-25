@@ -234,7 +234,11 @@ export async function toEdgeFunctionError(
   if (error instanceof SupabaseError) return error;
   if (!response) return toSupabaseError(error);
 
-  let body: { error?: unknown; retryAfterSeconds?: unknown } = {};
+  let body: {
+    error?: unknown;
+    message?: unknown;
+    retryAfterSeconds?: unknown;
+  } = {};
   try {
     // Cloned: the caller may want the body too, and a Response body can only be
     // read once.
@@ -244,12 +248,28 @@ export async function toEdgeFunctionError(
     // reason to lose the status, which is the more useful half anyway.
   }
 
+  /*
+   * `error` first, then `message`, then whatever the throw carried.
+   *
+   * `error` is the key our own functions answer with, so it stays the first
+   * reading. `message` is the platform's, and skipping it is why this whole
+   * mechanism could still surface the string it was written to replace: a
+   * function that fails *before* its own handler runs never gets to write an
+   * `error` key. A missing deploy answers `{"code":"NOT_FOUND","message":"..."}`
+   * and a module-scope throw — an unset secret, a bad import — answers
+   * `{"code":"BOOT_ERROR","message":"Worker failed to boot"}`. Both are 4xx/5xx
+   * with a perfectly good explanation in a key nothing was reading, so the user
+   * got "Edge Function returned a non-2xx status code" for the two failures
+   * where knowing which one it was matters most.
+   */
   const message =
     typeof body.error === 'string' && body.error
       ? body.error
-      : error instanceof Error
-        ? error.message
-        : String(error ?? 'unknown error');
+      : typeof body.message === 'string' && body.message
+        ? body.message
+        : error instanceof Error
+          ? error.message
+          : String(error ?? 'unknown error');
 
   const code = String(response.status);
 

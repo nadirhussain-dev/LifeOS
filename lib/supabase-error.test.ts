@@ -64,6 +64,39 @@ describe('toEdgeFunctionError', () => {
     expect(error).toBeInstanceOf(SupabaseError);
   });
 
+  it("reads the platform's own shape, which is what a failed deploy answers in", async () => {
+    /*
+     * The gap that let the string this function exists to replace reach a
+     * user's screen. A function that fails before its own handler runs never
+     * writes an `error` key: a missing deploy answers `NOT_FOUND` and a
+     * module-scope throw — an unset secret, a bad URL import — answers
+     * `BOOT_ERROR`, both with the explanation under `message`. Reading only
+     * `error` meant those two fell through to the generic supabase-js text,
+     * for the two failures where knowing which one it is matters most.
+     */
+    const boot = await toEdgeFunctionError(
+      httpError(),
+      response(500, { code: 'BOOT_ERROR', message: 'Worker failed to boot' }),
+    );
+    expect(boot.message).toBe('Worker failed to boot');
+
+    const missing = await toEdgeFunctionError(
+      httpError(),
+      response(404, { code: 'NOT_FOUND', message: 'Function not found' }),
+    );
+    expect(missing.message).toBe('Function not found');
+  });
+
+  it('still prefers our own `error` key when a body carries both', async () => {
+    // Our functions answer with `error`; `message` is the platform's fallback
+    // and must not win over the one written for this app's users.
+    const error = await toEdgeFunctionError(
+      httpError(),
+      response(400, { error: 'coupon expired', message: 'Bad Request' }),
+    );
+    expect(error.message).toBe('coupon expired');
+  });
+
   it('classifies a 429 as rate-limited and carries the Retry-After', async () => {
     const error = await toEdgeFunctionError(
       httpError(),
