@@ -32,7 +32,10 @@ import {
   type ReportQueueEntry,
 } from '@/features/operator/services/operator-repository';
 import { refreshModuleFlags } from '@/features/module-flags/services/module-flags';
-import { PRIVATE_MODULES } from '@/features/private/config/private-modules';
+import {
+  PRIVATE_MODULES,
+  PRIVATE_SPACE_SWITCH,
+} from '@/features/private/config/private-modules';
 import { useTheme } from '@/hooks/use-theme';
 import { confirm } from '@/lib/dialog-store';
 import { toast } from '@/lib/toast-store';
@@ -284,8 +287,15 @@ function ModuleSwitches({ onChanged }: { onChanged: () => void }) {
   // always designed to key on either, and "hide any module, including
   // private-space ones" needs the global switch to reach them too, not just
   // the per-user override list on operator/account.tsx.
+  //
+  // The umbrella leads the six rooms rather than sitting among them, because
+  // it is the only row here that can make the other six unreachable whatever
+  // their own switches say — and because, until it was added, this list was
+  // six rooms and no door: the space ships closed (0074) and nothing in the
+  // console could open it. See PRIVATE_SPACE_SWITCH.
   const modules: { id: string; titleKey: string }[] = [
     ...HUB_SECTIONS.flatMap((section) => section.modules),
+    PRIVATE_SPACE_SWITCH,
     ...PRIVATE_MODULES,
   ];
 
