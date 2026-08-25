@@ -85,7 +85,9 @@ export default function ChallengeRewardsScreen() {
     const ordered = [...(tiers.data ?? [])].sort((a, b) => a.dayThreshold - b.dayThreshold);
     return ordered.map((tier: ChallengeTier) => ({
       tier,
-      badges: tier.rewards.filter((r) => r.kind === 'badge' && r.slug).map((r) => r.slug as string),
+      badges: (tier.rewards ?? [])
+        .filter((r) => r.kind === 'badge' && r.slug)
+        .map((r) => r.slug as string),
       climbed: tier.dayThreshold <= qualifiedDays,
     }));
   }, [tiers.data, qualifiedDays]);
