@@ -24,6 +24,8 @@ import { colors } from '@/constants/theme';
 import { useUsageStore } from '@/features/analytics/store/usage-store';
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { confirmAndSignOut } from '@/features/auth/services/sign-out-flow';
+import { PRIVATE_SPACE_MODULE_ID } from '@/features/hub/config/route-modules';
+import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-store';
 import { SYNC_MODULES } from '@/features/sync/config/sync-tables';
 import { useSyncStatus } from '@/features/sync/hooks/use-sync';
 import { useOpenConflictCount } from '@/features/sync/hooks/use-sync-conflicts';
@@ -58,6 +60,31 @@ export default function SyncSettingsScreen() {
   const setAutoSync = useSyncStore((s) => s.setAutoSync);
   const modules = useSyncStore((s) => s.modules);
   const setModuleEnabled = useSyncStore((s) => s.setModuleEnabled);
+
+  /*
+   * The operator's switch for the whole private space (0074), read the same
+   * way `app/settings/index.tsx` reads it: straight from the flags store,
+   * because this is a list deciding whether to draw a row rather than a
+   * module being opened.
+   *
+   * "What syncs" listed every entry in SYNC_MODULES unconditionally, so a
+   * closed space still had a "Private space" toggle sitting under Music — on
+   * the one screen in Settings that enumerates the app's modules by name. The
+   * entry point in Settings has been absent rather than disabled since 0074
+   * for a reason (`private-modules.ts`'s first rule: a greyed-out lock names
+   * what is being hidden), and that reasoning does not stop applying because
+   * the row happens to be a sync preference.
+   *
+   * Filtered rather than skipped inside the map: the rows draw their
+   * separators from `index === 0`, so leaving a hole would put a top border
+   * on the first visible row.
+   */
+  const privateSpaceOff = useModuleFlagsStore(
+    (s) => s.flags[PRIVATE_SPACE_MODULE_ID]?.enabled === false,
+  );
+  const syncModules = privateSpaceOff
+    ? SYNC_MODULES.filter((mod) => mod.key !== PRIVATE_SPACE_MODULE_ID)
+    : SYNC_MODULES;
   const usageEnabled = useUsageStore((s) => s.enabled);
   const setUsageEnabled = useUsageStore((s) => s.setEnabled);
 
@@ -282,7 +309,7 @@ export default function SyncSettingsScreen() {
         <View className="gap-2">
           <SectionLabel>{t('sync.whatSyncs')}</SectionLabel>
           <View className={cardClass({ padding: 'none' }, 'px-4')}>
-            {SYNC_MODULES.map((mod, index) => (
+            {syncModules.map((mod, index) => (
               <View
                 key={mod.key}
                 className={
