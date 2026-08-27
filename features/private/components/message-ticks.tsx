@@ -1,6 +1,6 @@
-import { Check, CheckCheck, Clock } from 'lucide-react-native';
 import { View } from 'react-native';
 
+import { Check, CheckCheck, Clock } from '@/components/ui/icons';
 import type { MessageReceipt } from '@/features/private/hooks/use-shared-albums';
 import { alpha } from '@/lib/color';
 

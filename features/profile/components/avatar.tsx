@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
-import { type LucideIcon } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { type LucideIcon } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { avatarUrl, signedAvatarUrl } from '@/features/profile/services/avatar';
 import { useTheme } from '@/hooks/use-theme';

@@ -1,4 +1,7 @@
-import { format, getHours, getMinutes, subDays } from 'date-fns';
+import { format } from 'date-fns/format';
+import { getHours } from 'date-fns/getHours';
+import { getMinutes } from 'date-fns/getMinutes';
+import { subDays } from 'date-fns/subDays';
 
 import type { BudgetTransaction } from '@/features/budget/types/budget.types';
 import { isHabitScheduledOn } from '@/features/habits/services/habit-streaks';

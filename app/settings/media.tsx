@@ -1,10 +1,18 @@
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
-import { Check, CloudUpload, HardDrive, Sparkles, Smartphone, Wifi, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Switch, View } from 'react-native';
 
+import {
+  Check,
+  CloudUpload,
+  HardDrive,
+  Sparkles,
+  Smartphone,
+  Wifi,
+  X,
+} from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';

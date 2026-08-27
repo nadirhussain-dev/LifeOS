@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
-import { Minus, Plus, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { Minus, Plus, Trash2 } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

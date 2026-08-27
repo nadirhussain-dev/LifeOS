@@ -1,9 +1,9 @@
 import { Image } from 'expo-image';
-import { Camera, ImagePlus, Trash2 } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dimensions, Linking, Pressable, View } from 'react-native';
 
+import { Camera, ImagePlus, Trash2 } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';

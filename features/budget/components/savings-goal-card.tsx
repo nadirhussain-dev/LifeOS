@@ -1,8 +1,8 @@
-import { format } from 'date-fns';
-import { Plus } from 'lucide-react-native';
+import { format } from 'date-fns/format';
 import { Pressable, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
+import { Plus } from '@/components/ui/icons';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { Text } from '@/components/ui/text';
 import { formatMoney } from '@/features/budget/services/money';

@@ -1,9 +1,9 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { type LucideIcon } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
+import { type LucideIcon } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { glowShadow, tintGradient } from '@/lib/color';
 

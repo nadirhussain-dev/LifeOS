@@ -1,4 +1,5 @@
-import { differenceInCalendarDays, parseISO } from 'date-fns';
+import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
+import { parseISO } from 'date-fns/parseISO';
 
 import type { Period } from '@/features/private/services/cycle-math';
 import type { IntimacyEntry } from '@/features/private/services/intimacy';

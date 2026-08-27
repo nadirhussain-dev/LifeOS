@@ -1,6 +1,8 @@
-import { addMonths, format, isSameMonth, subMonths } from 'date-fns';
+import { addMonths } from 'date-fns/addMonths';
+import { format } from 'date-fns/format';
+import { isSameMonth } from 'date-fns/isSameMonth';
+import { subMonths } from 'date-fns/subMonths';
 import { useRouter } from 'expo-router';
-import { BarChart3, HandCoins, PiggyBank, Plus, Settings2, Wallet } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -8,6 +10,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { cardClass } from '@/components/ui/card';
 import { ChevronBack, ChevronForward } from '@/components/ui/directional-icon';
 import { EmptyState } from '@/components/ui/empty-state';
+import { BarChart3, HandCoins, PiggyBank, Plus, Settings2, Wallet } from '@/components/ui/icons';
 import { QueryError } from '@/components/ui/query-error';
 import { Fab } from '@/components/ui/fab';
 import { HeroCard } from '@/components/ui/hero-card';

@@ -1,4 +1,7 @@
-import { differenceInCalendarDays, format, isToday, isTomorrow } from 'date-fns';
+import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
+import { format } from 'date-fns/format';
+import { isToday } from 'date-fns/isToday';
+import { isTomorrow } from 'date-fns/isTomorrow';
 import type { TFunction } from 'i18next';
 
 export type DueState = 'overdue' | 'today' | 'soon' | 'later';

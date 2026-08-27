@@ -1,9 +1,9 @@
-import { format } from 'date-fns';
-import { CalendarClock, CheckCircle2, Target } from 'lucide-react-native';
+import { format } from 'date-fns/format';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { HeroCard } from '@/components/ui/hero-card';
+import { CalendarClock, CheckCircle2, Target } from '@/components/ui/icons';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';

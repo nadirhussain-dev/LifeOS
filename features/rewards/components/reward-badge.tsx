@@ -1,6 +1,6 @@
-import { Award, Crown, Flame, Gem, Mountain, Shield, Sparkles } from 'lucide-react-native';
 import { View } from 'react-native';
 
+import { Award, Crown, Flame, Gem, Mountain, Shield, Sparkles } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { BADGES } from '@/features/rewards/config/catalog';
 

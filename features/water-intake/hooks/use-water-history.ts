@@ -1,4 +1,4 @@
-import { subDays } from 'date-fns';
+import { subDays } from 'date-fns/subDays';
 import { useQuery } from '@tanstack/react-query';
 
 import { listDailyTotals } from '@/features/water-intake/services/water-intake-repository';

@@ -1,9 +1,10 @@
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns/format';
+import { parseISO } from 'date-fns/parseISO';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Archive, Clock3, Pencil, Trash2 } from 'lucide-react-native';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
+import { Archive, Clock3, Pencil, Trash2 } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 

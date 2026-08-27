@@ -1,10 +1,10 @@
-import { Trophy } from 'lucide-react-native';
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Trophy } from '@/components/ui/icons';
 import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Skeleton } from '@/components/ui/skeleton';

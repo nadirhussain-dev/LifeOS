@@ -1,4 +1,9 @@
-import { eachDayOfInterval, endOfMonth, format, getDay, isToday, startOfMonth } from 'date-fns';
+import { eachDayOfInterval } from 'date-fns/eachDayOfInterval';
+import { endOfMonth } from 'date-fns/endOfMonth';
+import { format } from 'date-fns/format';
+import { getDay } from 'date-fns/getDay';
+import { isToday } from 'date-fns/isToday';
+import { startOfMonth } from 'date-fns/startOfMonth';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';

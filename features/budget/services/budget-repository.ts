@@ -1,5 +1,6 @@
 import { and, desc, eq, isNull } from 'drizzle-orm';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns/format';
+import { parseISO } from 'date-fns/parseISO';
 
 import { getDb } from '@/database/client';
 import {

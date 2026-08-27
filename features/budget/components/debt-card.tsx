@@ -1,8 +1,8 @@
-import { ArrowDownLeft, ArrowUpRight, BellRing } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
+import { ArrowDownLeft, ArrowUpRight, BellRing } from '@/components/ui/icons';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/design-tokens';

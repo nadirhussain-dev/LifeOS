@@ -1,7 +1,7 @@
-import { TrendingUp } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
+import { TrendingUp } from '@/components/ui/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { WidgetCard } from '@/features/dashboard/components/widget-card';

@@ -7,8 +7,7 @@ import {
   Sparkles,
   User,
   type LucideIcon,
-} from 'lucide-react-native';
-
+} from '@/components/ui/icons';
 import type { AlbumCategory } from '@/features/gallery/types/gallery.types';
 
 export type AlbumCategoryMeta = {

@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { and, eq, isNull } from 'drizzle-orm';
 
 import { getDb } from '@/database/client';

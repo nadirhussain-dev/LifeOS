@@ -1,12 +1,15 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { addMinutes, format, parseISO, set } from 'date-fns';
+import { addMinutes } from 'date-fns/addMinutes';
+import { format } from 'date-fns/format';
+import { parseISO } from 'date-fns/parseISO';
+import { set } from 'date-fns/set';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Bell, Clock, Palette, StickyNote } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Bell, Clock, Palette, StickyNote } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Input } from '@/components/ui/input';

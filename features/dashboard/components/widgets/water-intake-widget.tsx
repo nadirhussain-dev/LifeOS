@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { BarChart3, Droplet, GlassWater, Settings2 } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import { BarChart3, Droplet, GlassWater, Settings2 } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import Animated, {
   useAnimatedStyle,

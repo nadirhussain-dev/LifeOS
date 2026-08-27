@@ -1,10 +1,10 @@
-import { LockKeyhole } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
+import { LockKeyhole } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { authenticate, getBiometricLabel } from '@/features/security/lib/biometrics';

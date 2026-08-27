@@ -1,7 +1,7 @@
-import { CalendarRange, Clock, Flame, Sigma } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
+import { CalendarRange, Clock, Flame, Sigma } from '@/components/ui/icons';
 import { StatTile } from '@/components/ui/stat-tile';
 import { formatStudyDuration } from '@/features/study/services/study-stats';
 import type { StudyStats } from '@/features/study/types/study.types';

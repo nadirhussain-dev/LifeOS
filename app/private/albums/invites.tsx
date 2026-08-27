@@ -1,10 +1,10 @@
-import { formatDistanceToNowStrict } from 'date-fns';
+import { formatDistanceToNowStrict } from 'date-fns/formatDistanceToNowStrict';
 import { useRouter } from 'expo-router';
-import { Mail, MailX } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
+import { Mail, MailX } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';

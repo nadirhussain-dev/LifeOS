@@ -1,14 +1,15 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { format, set } from 'date-fns';
+import { format } from 'date-fns/format';
+import { set } from 'date-fns/set';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { AlarmClock, BellRing, Music4, Send, Stethoscope } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, Platform, Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { ChevronForward } from '@/components/ui/directional-icon';
 import { cardClass } from '@/components/ui/card';
+import { AlarmClock, BellRing, Music4, Send, Stethoscope } from '@/components/ui/icons';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { moduleTints } from '@/constants/design-tokens';
 import { Segmented } from '@/components/ui/segmented';

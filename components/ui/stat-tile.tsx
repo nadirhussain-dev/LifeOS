@@ -1,6 +1,6 @@
-import { type LucideIcon } from 'lucide-react-native';
 import { View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { type LucideIcon } from '@/components/ui/icons';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 import { cardClass } from '@/components/ui/card';

@@ -1,5 +1,4 @@
 import { useRouter } from 'expo-router';
-import { HandCoins } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
@@ -7,6 +6,7 @@ import { ScrollView, View } from 'react-native';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Fab } from '@/components/ui/fab';
 import { HeroCard } from '@/components/ui/hero-card';
+import { HandCoins } from '@/components/ui/icons';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Segmented } from '@/components/ui/segmented';
 import { Skeleton } from '@/components/ui/skeleton';

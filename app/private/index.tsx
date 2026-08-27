@@ -1,12 +1,12 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Eye, EyeOff, Lock, Settings2, Sparkles, TrendingUp } from 'lucide-react-native';
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { cardClass } from '@/components/ui/card';
+import { Eye, EyeOff, Lock, Settings2, Sparkles, TrendingUp } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';

@@ -1,10 +1,13 @@
 import { FlashList } from '@shopify/flash-list';
-import { addDays, format, parseISO, subDays } from 'date-fns';
+import { addDays } from 'date-fns/addDays';
+import { format } from 'date-fns/format';
+import { parseISO } from 'date-fns/parseISO';
+import { subDays } from 'date-fns/subDays';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Clock3, Plus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { ChevronBack, ChevronForward } from '@/components/ui/directional-icon';
+import { Clock3, Plus } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { EmptyState } from '@/components/ui/empty-state';

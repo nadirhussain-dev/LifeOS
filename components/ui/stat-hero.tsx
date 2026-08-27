@@ -1,8 +1,8 @@
-import { type LucideIcon } from 'lucide-react-native';
 import { type ReactNode } from 'react';
 import { View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 
+import { type LucideIcon } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { fontFamily, typography } from '@/constants/design-tokens';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';

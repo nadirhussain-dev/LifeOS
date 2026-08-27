@@ -1,13 +1,13 @@
 import { FlashList } from '@shopify/flash-list';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ListMusic, Play, Plus, Shuffle } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ListMusic, Play, Plus, Shuffle } from '@/components/ui/icons';
 import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Segmented } from '@/components/ui/segmented';

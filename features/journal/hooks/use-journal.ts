@@ -1,4 +1,5 @@
-import { endOfMonth, startOfMonth } from 'date-fns';
+import { endOfMonth } from 'date-fns/endOfMonth';
+import { startOfMonth } from 'date-fns/startOfMonth';
 import { useQuery } from '@tanstack/react-query';
 
 import { calculateJournalStreak } from '@/features/journal/services/journal-streak';

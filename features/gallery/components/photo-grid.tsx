@@ -1,10 +1,10 @@
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { Image } from 'expo-image';
-import { CloudOff, Heart, Play } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dimensions, Pressable, View } from 'react-native';
 
+import { CloudOff, Heart, Play } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { radius } from '@/constants/design-tokens';
 import {

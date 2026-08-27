@@ -1,4 +1,3 @@
-import { BellRing, Compass, Lock, WifiOff, type LucideIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
@@ -6,6 +5,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
+import { BellRing, Compass, Lock, WifiOff, type LucideIcon } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { StepScaffold } from '@/features/onboarding/components/step-scaffold';
 import { remindersForFocus } from '@/features/onboarding/services/reminder-defaults';

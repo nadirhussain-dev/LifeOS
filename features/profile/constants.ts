@@ -9,8 +9,7 @@ import {
   Target,
   Wallet,
   type LucideIcon,
-} from 'lucide-react-native';
-
+} from '@/components/ui/icons';
 import { moduleTint, type ModuleName, type ThemeName } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import type { FocusArea, Gender } from '@/features/profile/store/profile-store';

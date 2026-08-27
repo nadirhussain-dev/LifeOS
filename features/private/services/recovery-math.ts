@@ -1,4 +1,5 @@
-import { differenceInCalendarDays, parseISO } from 'date-fns';
+import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
+import { parseISO } from 'date-fns/parseISO';
 
 /**
  * Streaks and urge patterns for the Recovery module.

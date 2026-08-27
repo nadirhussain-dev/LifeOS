@@ -1,9 +1,9 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { ChevronDown, ChevronUp, Plus, Trash2, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
+import { ChevronDown, ChevronUp, Plus, Trash2, X } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Input } from '@/components/ui/input';

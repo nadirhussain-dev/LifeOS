@@ -1,10 +1,10 @@
 import { useRouter } from 'expo-router';
-import { X } from 'lucide-react-native';
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { X } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';

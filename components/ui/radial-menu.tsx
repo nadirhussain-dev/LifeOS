@@ -1,5 +1,4 @@
 import * as Haptics from 'expo-haptics';
-import { type LucideIcon } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -13,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { type LucideIcon } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { accentGradient, elevation, motion, opacity } from '@/constants/design-tokens';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';

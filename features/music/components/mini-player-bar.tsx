@@ -1,6 +1,5 @@
 import { usePathname, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ChevronDown, GripVertical, Pause, Play, SkipForward } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, useWindowDimensions, View } from 'react-native';
@@ -14,6 +13,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { cardClass } from '@/components/ui/card';
+import { ChevronDown, GripVertical, Pause, Play, SkipForward } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';

@@ -1,9 +1,9 @@
-import { differenceInCalendarDays } from 'date-fns';
-import { CalendarHeart, MessagesSquare } from 'lucide-react-native';
+import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
+import { CalendarHeart, MessagesSquare } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useMilestonePulse } from '@/features/private/hooks/use-milestone-pulse';

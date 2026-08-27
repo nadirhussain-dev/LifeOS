@@ -1,8 +1,8 @@
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { Bell, BookOpen, Flame } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import { Bell, BookOpen, Flame } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Button } from '@/components/ui/button';

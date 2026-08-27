@@ -1,8 +1,8 @@
-import { Flame } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
+import { Flame } from '@/components/ui/icons';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { Text } from '@/components/ui/text';
 import { useMilestonePulse } from '@/features/private/hooks/use-milestone-pulse';

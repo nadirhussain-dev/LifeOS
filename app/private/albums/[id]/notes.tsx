@@ -1,11 +1,11 @@
-import { formatDistanceToNowStrict } from 'date-fns';
+import { formatDistanceToNowStrict } from 'date-fns/formatDistanceToNowStrict';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams } from 'expo-router';
-import { Send, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { Send, Trash2 } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';

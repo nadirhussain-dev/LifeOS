@@ -1,10 +1,10 @@
 import * as Haptics from 'expo-haptics';
-import { Check, Play, Volume2, VolumeX } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Platform, Pressable, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
+import { Check, Play, Volume2, VolumeX } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import {

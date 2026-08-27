@@ -1,11 +1,11 @@
 import { useRouter } from 'expo-router';
-import { Lock, Sparkles, TrendingDown, TrendingUp } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
+import { Lock, Sparkles, TrendingDown, TrendingUp } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';

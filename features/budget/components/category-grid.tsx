@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
-import { type LucideIcon } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
 
+import { type LucideIcon } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { resolveTint, type TintPair } from '@/constants/design-tokens';
 import { useColorScheme } from '@/hooks/use-color-scheme';

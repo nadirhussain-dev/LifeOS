@@ -1,10 +1,10 @@
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { ArrowUpDown, Search, Target } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
+import { ArrowUpDown, Search, Target } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/chip';
 import { EmptyState } from '@/components/ui/empty-state';

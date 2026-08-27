@@ -1,13 +1,11 @@
-import {
-  endOfMonth,
-  endOfWeek,
-  endOfYear,
-  format,
-  startOfMonth,
-  startOfWeek,
-  startOfYear,
-  subMonths,
-} from 'date-fns';
+import { endOfMonth } from 'date-fns/endOfMonth';
+import { endOfWeek } from 'date-fns/endOfWeek';
+import { endOfYear } from 'date-fns/endOfYear';
+import { format } from 'date-fns/format';
+import { startOfMonth } from 'date-fns/startOfMonth';
+import { startOfWeek } from 'date-fns/startOfWeek';
+import { startOfYear } from 'date-fns/startOfYear';
+import { subMonths } from 'date-fns/subMonths';
 import type { TFunction } from 'i18next';
 
 import type { ThemeName } from '@/constants/design-tokens';

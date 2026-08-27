@@ -1,6 +1,5 @@
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Archive, Check, Pencil, Plus, RotateCcw, TrendingUp, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -9,6 +8,7 @@ import { cardClass } from '@/components/ui/card';
 import { CelebrationOverlay } from '@/components/ui/celebration-overlay';
 import { GradientButton } from '@/components/ui/gradient-button';
 import { HeroCard } from '@/components/ui/hero-card';
+import { Archive, Check, Pencil, Plus, RotateCcw, TrendingUp, Trash2 } from '@/components/ui/icons';
 import { LineChart } from '@/components/ui/line-chart';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { ScreenHeader } from '@/components/ui/screen-header';

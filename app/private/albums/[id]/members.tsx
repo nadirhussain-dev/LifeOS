@@ -1,5 +1,9 @@
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Pressable, Switch, View } from 'react-native';
+
 import {
   Flag,
   KeyRound,
@@ -9,11 +13,7 @@ import {
   NotebookPen,
   Send,
   Trash2,
-} from 'lucide-react-native';
-import { useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Pressable, Switch, View } from 'react-native';
-
+} from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';

@@ -1,4 +1,9 @@
-import { format, setHours, setMinutes, setSeconds, startOfDay, subDays } from 'date-fns';
+import { format } from 'date-fns/format';
+import { setHours } from 'date-fns/setHours';
+import { setMinutes } from 'date-fns/setMinutes';
+import { setSeconds } from 'date-fns/setSeconds';
+import { startOfDay } from 'date-fns/startOfDay';
+import { subDays } from 'date-fns/subDays';
 
 import { setDebtReminderNotificationId } from '@/features/budget/services/debts-repository';
 import { formatMoney } from '@/features/budget/services/money';

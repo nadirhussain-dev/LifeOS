@@ -1,4 +1,6 @@
-import { isPast, isToday, startOfDay } from 'date-fns';
+import { isPast } from 'date-fns/isPast';
+import { isToday } from 'date-fns/isToday';
+import { startOfDay } from 'date-fns/startOfDay';
 
 import type { Task, TaskDueBucket } from '@/features/tasks/types/task.types';
 

@@ -1,9 +1,9 @@
 import * as Haptics from 'expo-haptics';
-import { Check, ListChecks, Plus, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { Check, ListChecks, Plus, X } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { Text } from '@/components/ui/text';

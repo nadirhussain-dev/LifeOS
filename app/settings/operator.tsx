@@ -1,6 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Pressable, ScrollView, Switch, View } from 'react-native';
+
 import {
   CreditCard,
   Flame,
@@ -11,11 +15,7 @@ import {
   UserSearch,
   UsersRound,
   Users,
-} from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, Switch, View } from 'react-native';
-
+} from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';

@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
-import { StickyNote } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { StickyNote } from '@/components/ui/icons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { WidgetCard } from '@/features/dashboard/components/widget-card';

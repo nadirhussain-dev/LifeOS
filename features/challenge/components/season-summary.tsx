@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
-import { Trophy, CalendarCheck } from 'lucide-react-native';
 
 import { cardClass } from '@/components/ui/card';
+import { Trophy, CalendarCheck } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import type { ChallengeTier, FinishedRun } from '@/features/challenge/types/challenge.types';
 import { useTheme } from '@/hooks/use-theme';

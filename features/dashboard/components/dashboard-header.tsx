@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
-import { Bell, Search, Settings } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import { Bell, Search, Settings } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 

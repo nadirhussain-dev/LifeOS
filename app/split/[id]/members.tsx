@@ -1,11 +1,11 @@
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { Flag, Mail, Send, Trash2, UserPlus } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Share, View } from 'react-native';
 
+import { Flag, Mail, Send, Trash2, UserPlus } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

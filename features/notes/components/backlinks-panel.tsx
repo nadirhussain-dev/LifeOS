@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { Link2 } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
+import { Link2 } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { cardClass } from '@/components/ui/card';

@@ -20,7 +20,7 @@ import {
   Utensils,
   Wallet,
   type LucideIcon,
-} from 'lucide-react-native';
+} from '@/components/ui/icons';
 
 import type {
   BudgetAccount,

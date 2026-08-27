@@ -1,4 +1,5 @@
-import { addDays, parseISO } from 'date-fns';
+import { addDays } from 'date-fns/addDays';
+import { parseISO } from 'date-fns/parseISO';
 import { and, eq, gte, isNull, lte } from 'drizzle-orm';
 
 import { getDb } from '@/database/client';

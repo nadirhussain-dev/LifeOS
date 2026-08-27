@@ -1,9 +1,9 @@
-import { Check } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
+import { Check } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { CURRENCIES, currencySymbol } from '@/features/budget/config/currencies';
 import { suggestedHabits } from '@/features/onboarding/config/starter-habits';

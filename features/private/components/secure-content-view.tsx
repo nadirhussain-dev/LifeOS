@@ -1,9 +1,9 @@
 import { Image } from 'expo-image';
-import { EyeOff, Flag } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { EyeOff, Flag } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useSecureScreen } from '@/features/private/components/secure-screen';

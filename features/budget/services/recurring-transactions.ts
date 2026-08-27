@@ -1,4 +1,9 @@
-import { addMonths, addWeeks, addYears, format, isAfter, parseISO } from 'date-fns';
+import { addMonths } from 'date-fns/addMonths';
+import { addWeeks } from 'date-fns/addWeeks';
+import { addYears } from 'date-fns/addYears';
+import { format } from 'date-fns/format';
+import { isAfter } from 'date-fns/isAfter';
+import { parseISO } from 'date-fns/parseISO';
 
 /**
  * Which occurrences of a recurring transaction are owed.

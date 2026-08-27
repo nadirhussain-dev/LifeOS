@@ -13,7 +13,8 @@ import {
   subjectBreakdown,
   todayKey,
 } from '@/features/study/services/study-stats';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns/format';
+import { subDays } from 'date-fns/subDays';
 
 export function useStudySubjects() {
   return useQuery({ queryKey: ['study', 'subjects'], queryFn: async () => listStudySubjects() });

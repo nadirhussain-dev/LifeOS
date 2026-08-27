@@ -1,8 +1,8 @@
-import { type LucideIcon } from 'lucide-react-native';
 import { type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { ChevronForward } from '@/components/ui/directional-icon';
+import { type LucideIcon } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';

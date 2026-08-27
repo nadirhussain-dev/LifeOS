@@ -1,8 +1,8 @@
-import { ListMusic } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ListMusic } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';

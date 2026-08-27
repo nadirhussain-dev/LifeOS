@@ -1,7 +1,7 @@
-import { Flame, Moon, Trophy, Waves } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
+import { Flame, Moon, Trophy, Waves } from '@/components/ui/icons';
 import { StatTile } from '@/components/ui/stat-tile';
 import { formatDuration } from '@/features/sleep/services/sleep-stats';
 import type { SleepStats } from '@/features/sleep/types/sleep.types';

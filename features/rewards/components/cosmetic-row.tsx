@@ -1,7 +1,7 @@
-import { Check } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { Check } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { CHAINS, FRAMES, THEMES } from '@/features/rewards/config/catalog';
 import type { CosmeticKind } from '@/features/rewards/types/rewards.types';

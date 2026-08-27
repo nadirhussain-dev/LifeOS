@@ -5,10 +5,10 @@ import {
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
-import { Minus, Plus } from 'lucide-react-native';
 import { forwardRef, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import { Minus, Plus } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Input } from '@/components/ui/input';

@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
-import { Ban, Clock, Gauge, Hash, MapPin, ToggleLeft } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import { Ban, Clock, Gauge, Hash, MapPin, ToggleLeft } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Text } from '@/components/ui/text';

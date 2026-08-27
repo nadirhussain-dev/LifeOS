@@ -1,12 +1,12 @@
-import { set } from 'date-fns';
+import { set } from 'date-fns/set';
 import { useRouter } from 'expo-router';
-import { BellRing, Minus, Moon, Plus, Sun } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, Switch, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { BellRing, Minus, Moon, Plus, Sun } from '@/components/ui/icons';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';

@@ -1,10 +1,10 @@
 import * as Haptics from 'expo-haptics';
-import { Check, Info, TriangleAlert, type LucideIcon } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
 import { AccessibilityInfo, Pressable, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Check, Info, TriangleAlert, type LucideIcon } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { colors as dsColors, elevation, layout } from '@/constants/design-tokens';
 import { useColorScheme } from '@/hooks/use-color-scheme';

@@ -5,11 +5,11 @@ import {
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
-import { RotateCcw } from 'lucide-react-native';
 import { forwardRef, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, Switch, View } from 'react-native';
 
+import { RotateCcw } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { HUB_SECTIONS, type HubModule } from '@/features/hub/config/modules';
 import {

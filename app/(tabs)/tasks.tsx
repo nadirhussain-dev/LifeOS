@@ -1,9 +1,9 @@
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { CheckCircle2, Search } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { CheckCircle2, Search } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { layout } from '@/constants/design-tokens';
 

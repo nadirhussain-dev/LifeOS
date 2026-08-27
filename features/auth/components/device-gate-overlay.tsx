@@ -1,5 +1,4 @@
-import { formatDistanceToNow } from 'date-fns';
-import { MonitorSmartphone, SmartphoneNfc } from 'lucide-react-native';
+import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
@@ -7,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
+import { MonitorSmartphone, SmartphoneNfc } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { OTP_LENGTH, OtpField } from '@/features/auth/components/otp-field';

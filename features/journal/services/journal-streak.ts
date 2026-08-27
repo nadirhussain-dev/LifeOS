@@ -1,4 +1,4 @@
-import { subDays } from 'date-fns';
+import { subDays } from 'date-fns/subDays';
 
 import { toDateKey } from '@/lib/date';
 

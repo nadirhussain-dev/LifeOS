@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
-import { BellOff } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Linking, Pressable, View } from 'react-native';
 
 import { ChevronForward } from '@/components/ui/directional-icon';
+import { BellOff } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useNotificationsStore } from '@/features/notifications/store/notifications-store';

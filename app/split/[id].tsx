@@ -1,13 +1,13 @@
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Flag, HandCoins, LogOut, Plus, Receipt, Trash2, UserPlus } from 'lucide-react-native';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Flag, HandCoins, LogOut, Plus, Receipt, Trash2, UserPlus } from '@/components/ui/icons';
 import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SectionHeader } from '@/components/ui/section-header';

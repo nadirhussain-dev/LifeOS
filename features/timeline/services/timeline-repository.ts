@@ -1,4 +1,6 @@
-import { endOfDay, parseISO, startOfDay } from 'date-fns';
+import { endOfDay } from 'date-fns/endOfDay';
+import { parseISO } from 'date-fns/parseISO';
+import { startOfDay } from 'date-fns/startOfDay';
 import { and, eq, gte, isNull, lte } from 'drizzle-orm';
 
 import { getDb } from '@/database/client';

@@ -1,5 +1,5 @@
 import { FlashList } from '@shopify/flash-list';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { useMemo } from 'react';
 import { View } from 'react-native';
 

@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
-import { Star } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
 
+import { Star } from '@/components/ui/icons';
 import { colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 

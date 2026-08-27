@@ -1,7 +1,7 @@
 import Slider from '@react-native-community/slider';
 import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { showInterstitial } from '@/features/ads/services/interstitial';
-import { Minus, Plus } from 'lucide-react-native';
+import { Minus, Plus } from '@/components/ui/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';

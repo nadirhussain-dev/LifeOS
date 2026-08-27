@@ -1,4 +1,4 @@
-import { differenceInCalendarDays } from 'date-fns';
+import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
 import type { TFunction } from 'i18next';
 
 import { colors } from '@/constants/design-tokens';

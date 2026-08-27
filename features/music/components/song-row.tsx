@@ -1,10 +1,10 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { CloudOff, Heart, Pause, Play, Trash2, X } from 'lucide-react-native';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { CloudOff, Heart, Pause, Play, Trash2, X } from '@/components/ui/icons';
 import { SwipeableRow } from '@/components/ui/swipeable-row';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';

@@ -38,6 +38,24 @@ module.exports = {
   moduleNameMapper: {
     '^lucide-react-native$': '<rootDir>/test/lucide-stub.js',
     /**
+     * The same stub for the per-icon subpaths, which is how the app reaches
+     * icons now: screens import `components/ui/icons.ts` (generated), and that
+     * re-exports each glyph from `lucide-react-native/icons/<name>`.
+     *
+     * Needed because the pattern above is anchored, so a subpath fell straight
+     * through to real resolution — and the `react-native` condition in the
+     * package's exports map points at `dist/esm/icons/*.mjs`, untranspiled ESM
+     * inside `node_modules`, which is `Cannot use import statement outside a
+     * module`. Nineteen suites died on it the moment the call sites moved.
+     *
+     * Allowlisting the package in `transformIgnorePatterns` is the other fix
+     * and still the wrong one, for the reason in test/lucide-stub.js: ~1,500
+     * icon modules through babel is ~45s a run, for glyph data no test reads.
+     * The stub's Proxy already answers `default`, which is the shape a per-icon
+     * module has, so it serves both specifiers unchanged.
+     */
+    '^lucide-react-native/icons/.+$': '<rootDir>/test/lucide-stub.js',
+    /**
      * The Deno edge functions import supabase-js by URL, which Jest cannot
      * resolve — so until this mapping existed they could not be tested at all,
      * and they are excluded from both tsconfig and eslint besides. That blind

@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
-import { Pencil } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import { Pencil } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { cardClass } from '@/components/ui/card';

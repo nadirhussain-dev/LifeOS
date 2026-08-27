@@ -1,9 +1,9 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Bell, Minus, Plus, Target } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Switch, View } from 'react-native';
+import { Bell, Minus, Plus, Target } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { cardClass } from '@/components/ui/card';

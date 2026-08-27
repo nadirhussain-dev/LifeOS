@@ -1,8 +1,8 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { format, set } from 'date-fns';
+import { format } from 'date-fns/format';
+import { set } from 'date-fns/set';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Bell, CalendarClock, Clock } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, Switch, View } from 'react-native';
@@ -10,6 +10,7 @@ import { Platform, Pressable, ScrollView, Switch, View } from 'react-native';
 import { AttributeRow } from '@/components/ui/attribute-row';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
+import { Bell, CalendarClock, Clock } from '@/components/ui/icons';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';

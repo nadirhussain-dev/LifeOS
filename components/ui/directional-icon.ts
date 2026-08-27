@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight } from '@/components/ui/icons';
 import { I18nManager } from 'react-native';
 
 /**

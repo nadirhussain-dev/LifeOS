@@ -6,8 +6,7 @@ import {
   Lock,
   ShieldCheck,
   type LucideIcon,
-} from 'lucide-react-native';
-
+} from '@/components/ui/icons';
 import { moduleTints, type TintPair } from '@/constants/design-tokens';
 import { PRIVATE_SPACE_MODULE_ID } from '@/features/hub/config/route-modules';
 import type { Gender } from '@/features/profile/store/profile-store';

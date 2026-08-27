@@ -1,12 +1,12 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { TFunction } from 'i18next';
-import { BellRing, CalendarDays, X } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { BellRing, CalendarDays, X } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/chip';
 import { cardClass } from '@/components/ui/card';

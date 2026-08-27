@@ -12,7 +12,7 @@ import {
   Target,
   Wallet,
   type LucideIcon,
-} from 'lucide-react-native';
+} from '@/components/ui/icons';
 import type { TFunction } from 'i18next';
 
 import type { GoalCategory, GoalPriority } from '@/features/goals/types/goal.types';
