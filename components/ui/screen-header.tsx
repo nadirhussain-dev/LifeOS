@@ -1,11 +1,11 @@
 import { useRouter } from 'expo-router';
-import { type LucideIcon } from 'lucide-react-native';
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChevronBack } from '@/components/ui/directional-icon';
+import { type LucideIcon } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { resolveTint, type TintPair } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';

@@ -1,10 +1,10 @@
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { Briefcase, Home, Plane, Shapes, Users, type LucideIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { Briefcase, Home, Plane, Shapes, Users, type LucideIcon } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { InlineError } from '@/components/ui/query-error';

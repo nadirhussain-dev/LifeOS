@@ -1,11 +1,11 @@
 import * as Clipboard from 'expo-clipboard';
-import { Copy, KeyRound, Share2 } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
+import { Copy, KeyRound, Share2 } from '@/components/ui/icons';
 import { PrivateScreen } from '@/features/private/components/private-screen';
 import { collectAlbumKeys } from '@/features/private/services/album-keys';
 import { listAlbums } from '@/features/private/services/album-repository';

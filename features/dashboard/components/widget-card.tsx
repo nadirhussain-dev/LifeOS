@@ -1,5 +1,5 @@
-import { type LucideIcon } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
+import { type LucideIcon } from '@/components/ui/icons';
 import { useTheme } from '@/hooks/use-theme';
 
 import { cardClass } from '@/components/ui/card';

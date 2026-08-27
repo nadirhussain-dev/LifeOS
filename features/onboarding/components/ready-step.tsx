@@ -1,9 +1,9 @@
-import { Check, Sparkles } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Button } from '@/components/ui/button';
+import { Check, Sparkles } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { currencySymbol } from '@/features/budget/config/currencies';
 import { StepScaffold } from '@/features/onboarding/components/step-scaffold';

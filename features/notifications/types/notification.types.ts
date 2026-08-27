@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react-native';
+import type { LucideIcon } from '@/components/ui/icons';
 import {
   BellRing,
   BookOpen,
@@ -16,7 +16,7 @@ import {
   Target,
   Users,
   Wallet,
-} from 'lucide-react-native';
+} from '@/components/ui/icons';
 
 /**
  * Every local notification Daykeep schedules is tagged with one of these

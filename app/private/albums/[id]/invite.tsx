@@ -1,12 +1,12 @@
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams } from 'expo-router';
-import { Copy, KeyRound, Link as LinkIcon, Share2 } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Share, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
+import { Copy, KeyRound, Link as LinkIcon, Share2 } from '@/components/ui/icons';
 import { InlineError } from '@/components/ui/query-error';
 import { Text } from '@/components/ui/text';
 import {

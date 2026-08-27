@@ -1,6 +1,5 @@
 import { format, parseISO } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { BarChart3, Hourglass, Moon, Settings2, Sun } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
@@ -8,6 +7,7 @@ import { ScrollView, View } from 'react-native';
 import { cardClass } from '@/components/ui/card';
 import { BarChart, type BarDatum } from '@/components/ui/bar-chart';
 import { EmptyState } from '@/components/ui/empty-state';
+import { BarChart3, Hourglass, Moon, Settings2, Sun } from '@/components/ui/icons';
 import { QueryError } from '@/components/ui/query-error';
 import { Fab } from '@/components/ui/fab';
 import { ProgressBar } from '@/components/ui/progress-bar';

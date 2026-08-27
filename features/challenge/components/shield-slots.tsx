@@ -1,8 +1,8 @@
-import { ShieldCheck } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
+import { ShieldCheck } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { daysToNextShield } from '@/features/challenge/services/challenge-math';
 import { useTheme } from '@/hooks/use-theme';

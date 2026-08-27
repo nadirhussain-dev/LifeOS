@@ -2,6 +2,10 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Dimensions, Pressable, View } from 'react-native';
+
 import {
   Camera,
   CalendarDays,
@@ -11,11 +15,7 @@ import {
   Trash2,
   UserPlus,
   Users,
-} from 'lucide-react-native';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Dimensions, Pressable, View } from 'react-native';
-
+} from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';

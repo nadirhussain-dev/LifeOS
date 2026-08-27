@@ -1,8 +1,8 @@
 import * as Haptics from 'expo-haptics';
-import { Battery, Moon, Target, Waves } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import { Battery, Moon, Target, Waves } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';

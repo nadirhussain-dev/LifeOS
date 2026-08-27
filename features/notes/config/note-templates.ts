@@ -1,4 +1,4 @@
-import { Lightbulb, ListChecks, Sun, Users, type LucideIcon } from 'lucide-react-native';
+import { Lightbulb, ListChecks, Sun, Users, type LucideIcon } from '@/components/ui/icons';
 
 export type NoteTemplate = {
   id: string;

@@ -1,3 +1,5 @@
+import { format } from 'date-fns';
+
 import {
   Clock3,
   Flame,
@@ -13,9 +15,7 @@ import {
   Users,
   Wallet,
   type LucideIcon,
-} from 'lucide-react-native';
-import { format } from 'date-fns';
-
+} from '@/components/ui/icons';
 import { moduleTints, type TintPair } from '@/constants/design-tokens';
 import type { SearchResultKind } from '@/features/search/services/global-search';
 

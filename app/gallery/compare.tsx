@@ -3,12 +3,12 @@ import { differenceInCalendarDays, format } from 'date-fns';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import { Bookmark, GitCompareArrows, Share2, Sparkles, TrendingUp } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dimensions, Image, Pressable, ScrollView, View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 
+import { Bookmark, GitCompareArrows, Share2, Sparkles, TrendingUp } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { GradientButton } from '@/components/ui/gradient-button';

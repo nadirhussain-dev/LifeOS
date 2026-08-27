@@ -7,11 +7,11 @@ import {
 } from '@gorhom/bottom-sheet';
 import { formatDistanceToNowStrict } from 'date-fns';
 import * as Haptics from 'expo-haptics';
-import { Send, Trash2 } from 'lucide-react-native';
 import { forwardRef, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { Send, Trash2 } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';

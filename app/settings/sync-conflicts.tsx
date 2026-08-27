@@ -1,11 +1,11 @@
 import { formatDistanceToNow } from 'date-fns';
-import { CheckCircle2, RotateCcw } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { CheckCircle2, RotateCcw } from '@/components/ui/icons';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { SYNC_MODULES } from '@/features/sync/config/sync-tables';

@@ -1,9 +1,9 @@
 import { useRouter } from 'expo-router';
-import { Camera, LogOut, ShieldCheck, Trash2, UserCircle } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, Pressable, ScrollView, View } from 'react-native';
 
+import { Camera, LogOut, ShieldCheck, Trash2, UserCircle } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

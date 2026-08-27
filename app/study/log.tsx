@@ -1,11 +1,11 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format, set } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { CalendarDays, Clock, Minus, Plus } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { CalendarDays, Clock, Minus, Plus } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/chip';
 import { cardClass } from '@/components/ui/card';

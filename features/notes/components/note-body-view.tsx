@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
-import { Check } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, View } from 'react-native';
+import { Check } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Text } from '@/components/ui/text';

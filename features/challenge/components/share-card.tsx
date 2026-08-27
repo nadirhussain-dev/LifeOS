@@ -1,11 +1,11 @@
 import * as Sharing from 'expo-sharing';
-import { Flame } from 'lucide-react-native';
 import { forwardRef, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 
 import { Button } from '@/components/ui/button';
+import { Flame } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import type { ChainDay } from '@/features/challenge/types/challenge.types';
 import { RewardBadge } from '@/features/rewards/components/reward-badge';

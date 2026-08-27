@@ -5,9 +5,8 @@ import { Pressable, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Search, UserCircle } from 'lucide-react-native';
-
 import { cardClass } from '@/components/ui/card';
+import { Search, UserCircle } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { layout, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';

@@ -1,11 +1,11 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format, set, subDays } from 'date-fns';
 import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
-import { CalendarDays, Moon, Sun, Trash2 } from 'lucide-react-native';
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { CalendarDays, Moon, Sun, Trash2 } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/chip';
 import { cardClass } from '@/components/ui/card';

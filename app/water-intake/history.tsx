@@ -1,8 +1,8 @@
 import { format, isToday, parseISO } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { GlassWater, Settings2 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
+import { GlassWater, Settings2 } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { cardClass } from '@/components/ui/card';

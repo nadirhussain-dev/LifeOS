@@ -1,8 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Music2 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { Music2 } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { songGradient } from '@/features/music/utils/song-art';
 import { alpha, glowShadow, tintGradientTriple } from '@/lib/color';

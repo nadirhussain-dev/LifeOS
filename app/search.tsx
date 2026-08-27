@@ -1,10 +1,10 @@
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { Images, ListMusic, Music2, Search, X, type LucideIcon } from 'lucide-react-native';
 import { useDeferredValue, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Keyboard, Pressable, View } from 'react-native';
 
+import { Images, ListMusic, Music2, Search, X, type LucideIcon } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SheetHeader } from '@/components/ui/sheet-header';

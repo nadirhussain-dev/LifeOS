@@ -1,7 +1,6 @@
 import { format } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { X } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, useWindowDimensions, View } from 'react-native';
@@ -17,6 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { X } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import {
   displayUri,

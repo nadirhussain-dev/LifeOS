@@ -1,9 +1,9 @@
-import { X } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { X } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { useDevErrorStore } from '@/lib/dev-error-store';
 

@@ -1,12 +1,12 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { HandCoins } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
 import { ArrowForward } from '@/components/ui/directional-icon';
 import { EmptyState } from '@/components/ui/empty-state';
+import { HandCoins } from '@/components/ui/icons';
 import { InlineError } from '@/components/ui/query-error';
 import { SheetHeader } from '@/components/ui/sheet-header';
 import { Text } from '@/components/ui/text';

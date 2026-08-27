@@ -1,5 +1,4 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { KeyRound, Lock } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
@@ -13,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
+import { KeyRound, Lock } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import type { VaultTransitionMode } from '@/features/private/hooks/use-vault-transition';

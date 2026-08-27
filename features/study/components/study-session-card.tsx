@@ -1,9 +1,9 @@
 import { format, parseISO } from 'date-fns';
-import { BookOpen, Star } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
+import { BookOpen, Star } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { formatStudyDuration } from '@/features/study/services/study-stats';
 import type { StudySession, StudySubject } from '@/features/study/types/study.types';

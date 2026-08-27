@@ -2,6 +2,11 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Linking, Pressable, ScrollView, Switch, View } from 'react-native';
+
+import { cardClass } from '@/components/ui/card';
 import {
   Bell,
   BookOpen,
@@ -29,12 +34,7 @@ import {
   Sun,
   Trash2,
   UserX,
-} from 'lucide-react-native';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Linking, Pressable, ScrollView, Switch, View } from 'react-native';
-
-import { cardClass } from '@/components/ui/card';
+} from '@/components/ui/icons';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { moduleTints } from '@/constants/design-tokens';
 import { SettingsRow } from '@/components/ui/settings-row';

@@ -1,9 +1,9 @@
 import { useLocalSearchParams } from 'expo-router';
-import { CheckCircle2, ShieldAlert, ShieldX, XCircle } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { CheckCircle2, ShieldAlert, ShieldX, XCircle } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Button } from '@/components/ui/button';

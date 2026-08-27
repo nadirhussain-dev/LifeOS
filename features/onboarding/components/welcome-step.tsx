@@ -1,10 +1,10 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Leaf } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import { Button } from '@/components/ui/button';
+import { Leaf } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { StepScaffold } from '@/features/onboarding/components/step-scaffold';
 import { accentGradient } from '@/constants/design-tokens';

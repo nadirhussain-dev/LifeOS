@@ -1,5 +1,4 @@
 import { useRouter } from 'expo-router';
-import { Moon, Sunrise } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
@@ -7,6 +6,7 @@ import { Pressable, View } from 'react-native';
 import { cardClass } from '@/components/ui/card';
 import { GradientButton } from '@/components/ui/gradient-button';
 import { HeroCard } from '@/components/ui/hero-card';
+import { Moon, Sunrise } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { formatClock, formatDuration, minutesOfDay } from '@/features/sleep/services/sleep-stats';
 import { useSleepTrackerStore } from '@/features/sleep/store/sleep-tracker-store';

@@ -1,9 +1,9 @@
-import { PlayCircle } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
+import { PlayCircle } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { isRewardedReady, preloadRewarded, showRewarded } from '@/features/ads/services/rewarded';
 import { useAdFreeStore } from '@/features/ads/store/ad-free-store';

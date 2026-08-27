@@ -1,10 +1,10 @@
 import { format } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Plus, Trash2 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
 import { GradientButton } from '@/components/ui/gradient-button';
+import { Plus, Trash2 } from '@/components/ui/icons';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';

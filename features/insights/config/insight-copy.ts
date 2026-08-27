@@ -7,8 +7,7 @@ import {
   Repeat,
   Wallet,
   type LucideIcon,
-} from 'lucide-react-native';
-
+} from '@/components/ui/icons';
 import type { ModuleName } from '@/constants/design-tokens';
 import type { InsightKey, InsightModule } from '@/features/insights/types/insights.types';
 

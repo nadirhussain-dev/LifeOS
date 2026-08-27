@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter, useSegments } from 'expo-router';
 import { showInterstitial } from '@/features/ads/services/interstitial';
-import { Bell, Star, Tag } from 'lucide-react-native';
+import { Bell, Star, Tag } from '@/components/ui/icons';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';

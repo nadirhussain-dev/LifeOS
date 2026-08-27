@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
-import { Bold, Code, Italic, ListChecks } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
+import { Bold, Code, Italic, ListChecks } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { colors } from '@/constants/theme';

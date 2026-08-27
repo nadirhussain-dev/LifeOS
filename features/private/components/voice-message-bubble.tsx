@@ -1,7 +1,7 @@
-import { AlertCircle, Pause, Play } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
+import { AlertCircle, Pause, Play } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { useVoicePlayer } from '@/features/private/hooks/use-voice-player';
 import { formatVoiceDuration } from '@/features/private/services/voice-notes';

@@ -1,8 +1,8 @@
-import { ShieldCheck } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
+import { ShieldCheck } from '@/components/ui/icons';
 import { StepScaffold } from '@/features/onboarding/components/step-scaffold';
 import { useTheme } from '@/hooks/use-theme';
 import { alpha } from '@/lib/color';

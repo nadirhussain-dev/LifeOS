@@ -1,5 +1,11 @@
 import { type BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import * as Haptics from 'expo-haptics';
+import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Pressable, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import {
   BookOpen,
   CheckSquare,
@@ -7,13 +13,7 @@ import {
   LayoutGrid,
   Repeat,
   type LucideIcon,
-} from 'lucide-react-native';
-import { useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Pressable, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+} from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { fontFamily, motion, typography } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';

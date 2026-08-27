@@ -1,8 +1,8 @@
-import { AtSign, Check, LoaderCircle, TriangleAlert, X } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
+import { AtSign, Check, LoaderCircle, TriangleAlert, X } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';

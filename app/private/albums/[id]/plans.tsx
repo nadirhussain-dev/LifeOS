@@ -1,12 +1,12 @@
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useLocalSearchParams } from 'expo-router';
 import { format } from 'date-fns';
-import { CalendarPlus } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
+import { CalendarPlus } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { PlanSheet, type PlanSheetTarget } from '@/features/private/components/plan-sheet';

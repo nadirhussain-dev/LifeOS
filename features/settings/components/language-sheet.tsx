@@ -1,8 +1,8 @@
-import { Check, Languages } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Check, Languages } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { isRTL } from '@/features/settings/lib/layout-direction';

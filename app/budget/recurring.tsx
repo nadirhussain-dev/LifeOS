@@ -1,11 +1,11 @@
 import { format, parseISO } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { Repeat, Trash2 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Repeat, Trash2 } from '@/components/ui/icons';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';

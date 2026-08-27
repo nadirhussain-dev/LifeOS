@@ -2,7 +2,6 @@ import DateTimePicker, { type DateTimePickerEvent } from '@react-native-communit
 import { format, set } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { Bell, CalendarDays, Clock } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, Switch, View } from 'react-native';
@@ -10,6 +9,7 @@ import { Platform, Pressable, ScrollView, Switch, View } from 'react-native';
 import { AttributeRow } from '@/components/ui/attribute-row';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
+import { Bell, CalendarDays, Clock } from '@/components/ui/icons';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { WeekdayPicker } from '@/components/ui/weekday-picker';

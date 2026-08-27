@@ -1,10 +1,10 @@
 import { differenceInCalendarDays, format } from 'date-fns';
 import { Image } from 'expo-image';
-import { GitCompareArrows, ImagePlus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
+import { GitCompareArrows, ImagePlus } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { ArrowForward } from '@/components/ui/directional-icon';
 import { moduleTint } from '@/constants/design-tokens';

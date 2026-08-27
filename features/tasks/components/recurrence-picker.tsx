@@ -1,8 +1,8 @@
 import * as Haptics from 'expo-haptics';
-import { Minus, Plus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { Minus, Plus } from '@/components/ui/icons';
 import { Segmented } from '@/components/ui/segmented';
 import { Text } from '@/components/ui/text';
 import { WeekdayPicker } from '@/components/ui/weekday-picker';

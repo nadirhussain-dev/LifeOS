@@ -1,10 +1,10 @@
 import * as Haptics from 'expo-haptics';
 import { format } from 'date-fns';
-import { Check, Plus } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { Check, Plus } from '@/components/ui/icons';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
 import { Input } from '@/components/ui/input';

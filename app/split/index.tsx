@@ -1,13 +1,4 @@
 import { useRouter } from 'expo-router';
-import {
-  Briefcase,
-  CloudOff,
-  Home,
-  Plane,
-  Shapes,
-  Users,
-  type LucideIcon,
-} from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
@@ -16,6 +7,15 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Fab } from '@/components/ui/fab';
+import {
+  Briefcase,
+  CloudOff,
+  Home,
+  Plane,
+  Shapes,
+  Users,
+  type LucideIcon,
+} from '@/components/ui/icons';
 import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Skeleton } from '@/components/ui/skeleton';

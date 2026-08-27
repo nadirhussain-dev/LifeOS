@@ -1,9 +1,9 @@
 import { format, isToday } from 'date-fns';
 import * as Haptics from 'expo-haptics';
-import { Archive, Check, ListChecks, Trash2 } from 'lucide-react-native';
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import { Archive, Check, ListChecks, Trash2 } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import Animated, {
   useAnimatedStyle,

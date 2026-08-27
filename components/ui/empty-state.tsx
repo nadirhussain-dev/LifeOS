@@ -1,6 +1,6 @@
-import { type LucideIcon } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { View } from 'react-native';
+import { type LucideIcon } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import Animated, {
   FadeIn,

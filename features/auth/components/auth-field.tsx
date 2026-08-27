@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, type KeyboardTypeOptions } from 'react-native';
-import { Eye, EyeOff } from 'lucide-react-native';
 
+import { Eye, EyeOff } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { useTheme } from '@/hooks/use-theme';
 

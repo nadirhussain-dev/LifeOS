@@ -1,5 +1,4 @@
 import { format } from 'date-fns';
-import { ShieldAlert } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, View } from 'react-native';
@@ -7,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ShieldAlert } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useAuthStore } from '@/features/auth/services/auth-store';

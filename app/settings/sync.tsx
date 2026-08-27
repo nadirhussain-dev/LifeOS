@@ -1,6 +1,12 @@
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
+import { Pressable, ScrollView, Switch, View } from 'react-native';
+
+import { cardClass } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { EnvironmentNotice } from '@/components/ui/environment-badge';
 import {
   CheckCircle2,
   CloudUpload,
@@ -10,13 +16,7 @@ import {
   Trash2,
   TriangleAlert,
   UserCircle,
-} from 'lucide-react-native';
-import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, Switch, View } from 'react-native';
-
-import { cardClass } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { EnvironmentNotice } from '@/components/ui/environment-badge';
+} from '@/components/ui/icons';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { moduleTints } from '@/constants/design-tokens';
 import { Text } from '@/components/ui/text';

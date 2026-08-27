@@ -1,8 +1,8 @@
 import { format } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { Clock3, Plus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import { Clock3, Plus } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Skeleton } from '@/components/ui/skeleton';

@@ -1,9 +1,9 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { type LucideIcon } from 'lucide-react-native';
 import { useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
+import { type LucideIcon } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { formatClock, minutesOfDay } from '@/features/sleep/services/sleep-stats';
 

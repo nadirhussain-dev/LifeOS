@@ -6,6 +6,9 @@ import {
 } from '@gorhom/bottom-sheet';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
+import { forwardRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Pressable } from 'react-native';
 import {
   BookOpen,
   CheckSquare,
@@ -13,10 +16,7 @@ import {
   Repeat,
   StickyNote,
   type LucideIcon,
-} from 'lucide-react-native';
-import { forwardRef, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Pressable } from 'react-native';
+} from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Text } from '@/components/ui/text';

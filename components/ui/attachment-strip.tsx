@@ -1,6 +1,9 @@
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Image, Modal, Pressable, ScrollView, View } from 'react-native';
 import {
   File as FileIcon,
   ImagePlus,
@@ -9,10 +12,7 @@ import {
   Play,
   Trash2,
   X,
-} from 'lucide-react-native';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Image, Modal, Pressable, ScrollView, View } from 'react-native';
+} from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 

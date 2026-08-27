@@ -1,10 +1,10 @@
 import { useRouter } from 'expo-router';
-import { Images, Mail, Plus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
+import { Images, Mail, Plus } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { useAuthStore } from '@/features/auth/services/auth-store';

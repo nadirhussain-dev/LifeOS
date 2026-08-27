@@ -1,11 +1,11 @@
 import { useRouter } from 'expo-router';
-import { ArrowDownRight, ArrowUpRight, Minus, Sparkles } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ArrowDownRight, ArrowUpRight, Minus, Sparkles } from '@/components/ui/icons';
 import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SectionHeader } from '@/components/ui/section-header';

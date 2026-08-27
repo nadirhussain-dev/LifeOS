@@ -1,9 +1,9 @@
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { Repeat, Search } from 'lucide-react-native';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, View } from 'react-native';
+import { Repeat, Search } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 

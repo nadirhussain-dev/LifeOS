@@ -1,4 +1,9 @@
 import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import {
   ChevronDown,
   Heart,
@@ -12,12 +17,7 @@ import {
   SkipBack,
   SkipForward,
   X,
-} from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Pressable, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+} from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { ArtworkOrb } from '@/features/music/components/artwork-orb';
 import { AuroraBackground } from '@/features/music/components/aurora-background';

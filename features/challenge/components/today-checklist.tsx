@@ -1,5 +1,4 @@
 import { useRouter } from 'expo-router';
-import { Check, CloudOff } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
@@ -12,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { cardClass } from '@/components/ui/card';
+import { Check, CloudOff } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { useDayClosed } from '@/features/challenge/hooks/use-day-closed';
 import type { ChecklistItem } from '@/features/challenge/types/challenge.types';

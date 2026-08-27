@@ -2,11 +2,11 @@ import { FlashList } from '@shopify/flash-list';
 import { format, isToday, isYesterday, parseISO } from 'date-fns';
 import { useRouter } from 'expo-router';
 import type { TFunction } from 'i18next';
-import { Receipt, Search } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
+import { Receipt, Search } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { QueryError } from '@/components/ui/query-error';

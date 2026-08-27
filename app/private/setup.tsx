@@ -1,11 +1,11 @@
 import { useRouter } from 'expo-router';
-import { ShieldCheck, TriangleAlert } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
+import { ShieldCheck, TriangleAlert } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';

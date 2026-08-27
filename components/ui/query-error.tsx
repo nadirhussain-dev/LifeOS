@@ -1,3 +1,6 @@
+import { useTranslation } from 'react-i18next';
+import { Pressable, View } from 'react-native';
+
 import {
   CloudOff,
   Hourglass,
@@ -5,10 +8,7 @@ import {
   ServerCrash,
   TriangleAlert,
   WifiOff,
-} from 'lucide-react-native';
-import { useTranslation } from 'react-i18next';
-import { Pressable, View } from 'react-native';
-
+} from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';

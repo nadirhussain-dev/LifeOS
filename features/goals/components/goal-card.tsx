@@ -1,9 +1,9 @@
-import { CheckCircle2, Flag, ListChecks } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { cardClass } from '@/components/ui/card';
+import { CheckCircle2, Flag, ListChecks } from '@/components/ui/icons';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';

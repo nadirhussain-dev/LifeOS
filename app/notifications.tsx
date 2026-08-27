@@ -1,10 +1,10 @@
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'expo-router';
-import { BellOff, CheckCheck, Clock, Trash2 } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, Pressable, ScrollView, View } from 'react-native';
 
+import { BellOff, CheckCheck, Clock, Trash2 } from '@/components/ui/icons';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { moduleTints } from '@/constants/design-tokens';
 import { Text } from '@/components/ui/text';

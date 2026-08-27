@@ -59,8 +59,19 @@ describe('directional glyphs are mirrored, not raw', () => {
       const relative = relativePath(path);
       if (EXEMPT.has(relative)) continue;
 
+      /*
+       * Both specifiers, because the icons moved and this guard must not go
+       * quiet when they do. Screens now import from the app's own barrel
+       * (`components/ui/icons.ts`, generated — see scripts/gen-icon-barrel.mjs);
+       * matching only the upstream package would have found nothing in any
+       * screen and passed vacuously, which is the worst way for a guard to
+       * fail. `lucide-react-native` stays matched so a direct import — which
+       * eslint bans, but a disable comment can reopen — is still caught here.
+       */
       const code = readFileSync(path, 'utf8');
-      const lucide = code.match(/import \{([^}]*)\} from 'lucide-react-native';/s);
+      const lucide = code.match(
+        /import \{([^}]*)\} from '(?:lucide-react-native|@\/components\/ui\/icons)';/s,
+      );
       if (!lucide) continue;
 
       const raw = ['ChevronLeft', 'ChevronRight', 'ArrowLeft', 'ArrowRight'].filter((icon) =>

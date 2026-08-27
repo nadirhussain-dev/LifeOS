@@ -1,11 +1,11 @@
 import { useRouter } from 'expo-router';
-import { GitCompareArrows, Images, Plus } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dimensions, Pressable, ScrollView, View } from 'react-native';
 
 import { EmptyState } from '@/components/ui/empty-state';
 import { Fab } from '@/components/ui/fab';
+import { GitCompareArrows, Images, Plus } from '@/components/ui/icons';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Skeleton } from '@/components/ui/skeleton';

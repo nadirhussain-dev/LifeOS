@@ -1,10 +1,10 @@
 import { format, parseISO } from 'date-fns';
-import { Moon, Star, Sun } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';
 import { ArrowForward } from '@/components/ui/directional-icon';
+import { Moon, Star, Sun } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { moduleTint, contentTints } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';

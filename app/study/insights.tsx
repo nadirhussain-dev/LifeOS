@@ -8,12 +8,12 @@ import {
   subMonths,
 } from 'date-fns';
 import { useState } from 'react';
-import { Clock, Hash, Star, Sunrise } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
 import { BarChart, type BarDatum } from '@/components/ui/bar-chart';
 import { cardClass } from '@/components/ui/card';
+import { Clock, Hash, Star, Sunrise } from '@/components/ui/icons';
 import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Segmented } from '@/components/ui/segmented';

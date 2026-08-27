@@ -1,6 +1,12 @@
 import { format, parseISO } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, View } from 'react-native';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { cardClass } from '@/components/ui/card';
+import { BarChart, type BarDatum } from '@/components/ui/bar-chart';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   BarChart3,
   GraduationCap,
@@ -10,13 +16,7 @@ import {
   Plus,
   Settings2,
   Timer,
-} from 'lucide-react-native';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
-import { cardClass } from '@/components/ui/card';
-import { BarChart, type BarDatum } from '@/components/ui/bar-chart';
-import { EmptyState } from '@/components/ui/empty-state';
+} from '@/components/ui/icons';
 import { QueryError } from '@/components/ui/query-error';
 import { GradientButton } from '@/components/ui/gradient-button';
 import { ProgressBar } from '@/components/ui/progress-bar';

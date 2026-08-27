@@ -1,7 +1,7 @@
-import { Archive, ArchiveRestore, Star, Trash2 } from 'lucide-react-native';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import { Archive, ArchiveRestore, Star, Trash2 } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { SwipeableRow } from '@/components/ui/swipeable-row';

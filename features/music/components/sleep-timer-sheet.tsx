@@ -1,8 +1,8 @@
-import { Moon, TimerOff } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Moon, TimerOff } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';

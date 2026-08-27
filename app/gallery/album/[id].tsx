@@ -1,4 +1,9 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Pressable, ScrollView, View } from 'react-native';
+
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   CalendarClock,
   GitCompareArrows,
@@ -6,12 +11,7 @@ import {
   ImagePlus,
   Play,
   Trash2,
-} from 'lucide-react-native';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, View } from 'react-native';
-
-import { EmptyState } from '@/components/ui/empty-state';
+} from '@/components/ui/icons';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';

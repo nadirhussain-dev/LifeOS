@@ -1,9 +1,9 @@
 import { Image } from 'expo-image';
-import { Heart } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { Heart } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { decryptPhotoAsDataUri } from '@/features/private/services/album-cache';
 import type { AlbumPhoto } from '@/features/private/types/shared-album.types';

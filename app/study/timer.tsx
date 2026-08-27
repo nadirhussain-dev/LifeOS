@@ -2,13 +2,13 @@ import * as Haptics from 'expo-haptics';
 import { format } from 'date-fns';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useRouter, useSegments } from 'expo-router';
-import { BellOff, Moon, Pause, Play, Square, SkipForward } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BackHandler, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CelebrationOverlay } from '@/components/ui/celebration-overlay';
+import { BellOff, Moon, Pause, Play, Square, SkipForward } from '@/components/ui/icons';
 import { ProgressRing } from '@/components/ui/progress-ring';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';

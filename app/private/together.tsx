@@ -1,12 +1,5 @@
 import { format, parseISO } from 'date-fns';
 import { useRouter } from 'expo-router';
-import {
-  CalendarHeart,
-  Droplets,
-  ImagePlus,
-  MessagesSquare,
-  NotebookPen,
-} from 'lucide-react-native';
 import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
@@ -14,6 +7,13 @@ import { Pressable, Switch, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
+import {
+  CalendarHeart,
+  Droplets,
+  ImagePlus,
+  MessagesSquare,
+  NotebookPen,
+} from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';

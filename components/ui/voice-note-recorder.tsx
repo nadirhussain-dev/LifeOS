@@ -5,10 +5,10 @@ import {
   useAudioRecorderState,
 } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
-import { Mic, Square } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from 'react-native';
+import { Mic, Square } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Text } from '@/components/ui/text';
