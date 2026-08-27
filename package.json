@@ -11,6 +11,8 @@
     "typecheck": "tsc --noEmit",
     "assets": "node scripts/make-brand-assets.mjs",
     "assets:grain": "node scripts/make-grain.mjs",
+    "icons": "node scripts/gen-icon-barrel.mjs",
+    "check:icons": "node scripts/gen-icon-barrel.mjs --check",
     "version:bump": "node scripts/bump-version.mjs",
     "secrets:push": "supabase secrets set --env-file supabase/.env",
     "secrets:list": "supabase secrets list",
