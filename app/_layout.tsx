@@ -89,6 +89,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { initAds } from '@/lib/ads-init';
 import { configureAndroidChannels, configureNotificationHandler } from '@/lib/notifications';
 import { queryClient } from '@/lib/query-client';
+import { markStartupGate, reportStartupIfComplete } from '@/lib/performance';
 import { initSentry } from '@/lib/sentry';
 
 SplashScreen.preventAutoHideAsync();
@@ -492,6 +493,22 @@ export default function RootLayout() {
     // Refresh the home-screen widget's snapshot with today's counts (Android).
     syncTodayWidget();
   }, [init, dbReady]);
+
+  /**
+   * Cold-start timing.
+   *
+   * These are exactly the four gates the render below blocks on, so the metric
+   * measures the wait the person actually had rather than a proxy for it. Each
+   * mark is idempotent and the report fires once, so this re-running on every
+   * render costs four map lookups. See lib/performance.ts.
+   */
+  useEffect(() => {
+    if (fontsLoaded) markStartupGate('fonts');
+    if (isInitialized) markStartupGate('session');
+    if (profileHydrated) markStartupGate('profile');
+    if (dbReady) markStartupGate('database');
+    reportStartupIfComplete();
+  }, [fontsLoaded, isInitialized, profileHydrated, dbReady]);
 
   useEffect(() => {
     // `dbError` hides the splash too, or the failure screen below would sit

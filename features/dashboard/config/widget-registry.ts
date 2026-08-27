@@ -7,18 +7,36 @@ import { ReflectWidget } from '@/features/dashboard/components/widgets/reflect-w
 import { TodayTasksWidget } from '@/features/dashboard/components/widgets/today-tasks-widget';
 import { TodayTimelineWidget } from '@/features/dashboard/components/widgets/today-timeline-widget';
 import { WaterIntakeWidget } from '@/features/dashboard/components/widgets/water-intake-widget';
+import { memo } from 'react';
+
 import type { WidgetId } from '@/features/dashboard/types/dashboard.types';
 
+/**
+ * Every widget, memoized.
+ *
+ * None of them take props — each one reads its own data through its own query
+ * hook — so without `memo` all nine re-render whenever anything above them on
+ * the dashboard renders: a theme read, a store subscription, a widget being
+ * reordered. Nine subtrees rebuilt to produce identical output, on the screen
+ * that opens first and is scrolled most.
+ *
+ * `memo` on a propless component is the strongest possible form of it: there is
+ * no props comparison that can fail, so each widget re-renders only when its
+ * own hooks say its data changed, which is exactly the intent.
+ *
+ * Applied here rather than in nine files so the property is visible in one
+ * place and a new widget inherits it by being added to this map.
+ */
 export const WIDGET_REGISTRY: Record<WidgetId, React.ComponentType> = {
-  'today-tasks': TodayTasksWidget,
-  'habit-row': HabitRowWidget,
-  'today-timeline': TodayTimelineWidget,
-  reflect: ReflectWidget,
-  'recent-notes': RecentNotesWidget,
-  'water-intake': WaterIntakeWidget,
-  'productivity-summary': ProductivitySummaryWidget,
-  'daily-quote': DailyQuoteWidget,
-  'insight-teaser': InsightTeaserWidget,
+  'today-tasks': memo(TodayTasksWidget),
+  'habit-row': memo(HabitRowWidget),
+  'today-timeline': memo(TodayTimelineWidget),
+  reflect: memo(ReflectWidget),
+  'recent-notes': memo(RecentNotesWidget),
+  'water-intake': memo(WaterIntakeWidget),
+  'productivity-summary': memo(ProductivitySummaryWidget),
+  'daily-quote': memo(DailyQuoteWidget),
+  'insight-teaser': memo(InsightTeaserWidget),
 };
 
 /**
