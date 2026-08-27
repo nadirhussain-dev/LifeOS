@@ -32,10 +32,20 @@ export function StudySessionCard({ session, subject, onLongPress }: Props) {
   const color = subject?.colorToken ?? tint('study');
 
   return (
+    /* A long press is the only route to delete on this card, and it is a
+       gesture screen-reader users cannot perform — so the hint below was
+       describing an action they had no way to take. Exposed as an
+       accessibility action instead, which is the same remedy the swipe-only
+       rows already use (see SwipeableRow and task-row.tsx). */
     <Pressable
       onLongPress={() => onLongPress(session)}
       className={cardClass({ padding: 'md' }, 'flex-row items-center gap-3')}
+      accessibilityRole="button"
       accessibilityHint={t('study.longPressDelete')}
+      accessibilityActions={[{ name: 'delete', label: t('common.delete') }]}
+      onAccessibilityAction={(event) =>
+        event.nativeEvent.actionName === 'delete' ? onLongPress(session) : undefined
+      }
     >
       <View
         className="h-11 w-11 items-center justify-center rounded-xl"

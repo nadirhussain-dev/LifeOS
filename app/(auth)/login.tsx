@@ -123,7 +123,7 @@ export default function LoginScreen() {
           />
 
           <Link href="/(auth)/forgot-password" asChild>
-            <Pressable hitSlop={8} className="self-end">
+            <Pressable accessibilityRole="link" hitSlop={8} className="self-end">
               <Text variant="caption" className="font-sora-medium">
                 {t('auth.forgotPassword')}
               </Text>
@@ -162,7 +162,7 @@ export default function LoginScreen() {
         <View className="flex-row items-center justify-center gap-1">
           <Text variant="muted">{t('auth.newHere')}</Text>
           <Link href="/(auth)/sign-up" asChild>
-            <Pressable hitSlop={8}>
+            <Pressable accessibilityRole="link" hitSlop={8}>
               <Text className="font-sora-semibold text-accent">{t('auth.createAccount')}</Text>
             </Pressable>
           </Link>
