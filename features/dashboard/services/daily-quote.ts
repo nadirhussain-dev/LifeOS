@@ -1,12 +1,24 @@
 import type { DailyQuoteData } from '@/features/dashboard/types/dashboard.types';
 
-function delay<T>(value: T, ms = 500) {
-  return new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
-}
+/**
+ * The dashboard's daily quote — real, shipped content, not a stand-in.
+ *
+ * This file was `dashboard-mock-data.ts`, and the name was doing real damage:
+ * the pool below is curated content that ships with the app, but it sat behind
+ * a `delay(300)` imitating a network round trip. Nothing is fetched, so that
+ * delay bought nothing except a skeleton on the most-viewed card in the app,
+ * on every cold open. Both are gone.
+ *
+ * **Known gap, left visible rather than papered over:** these strings are
+ * English and do not go through i18n, so an Arabic, Urdu or Hindi user reads
+ * them in English on their home screen. Translating attributed quotations is
+ * content work rather than a code change, and `check:i18n` requires all four
+ * locales to land together — so this needs 90 translations decided by a human,
+ * not a plausible-looking guess. Until then the gap is documented here and in
+ * the audit rather than hidden behind a helper that looks localized.
+ */
 
-// A large enough pool that the day-of-year rotation doesn't visibly repeat
-// within a season — see fetchDailyQuote below.
-const QUOTES: DailyQuoteData[] = [
+const QUOTES: readonly DailyQuoteData[] = [
   { quote: 'Simplicity is the ultimate sophistication.', author: 'Leonardo da Vinci' },
   { quote: 'Do the hard things first.', author: 'Unknown' },
   { quote: 'Small steps every day.', author: 'Unknown' },
@@ -69,9 +81,34 @@ const QUOTES: DailyQuoteData[] = [
   { quote: 'A little progress each day adds up to big results.', author: 'Satya Nani' },
 ];
 
-export function fetchDailyQuote() {
-  const dayOfYear = Math.floor(
-    (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86_400_000,
-  );
-  return delay<DailyQuoteData>(QUOTES[dayOfYear % QUOTES.length], 300);
+/** The pool and its size, exported for the rotation test — which checks that
+ *  consecutive days land on consecutive entries, and so needs to know where an
+ *  entry sits rather than only what it says. */
+export const QUOTE_POOL: readonly DailyQuoteData[] = QUOTES;
+export const QUOTE_COUNT = QUOTES.length;
+
+/**
+ * The quote for a given local calendar day.
+ *
+ * Takes the date instead of reading the clock so the rotation can be tested at
+ * a year boundary and across a DST transition — it is off-by-one-prone and had
+ * no test.
+ *
+ * The day index is computed from the *local* Y/M/D re-projected onto UTC. The
+ * previous version subtracted local-midnight-of-Dec-31 from `Date.now()` and
+ * floored the result: across a DST transition that difference stops being a
+ * whole number of days, so for part of one day a year the dashboard showed
+ * yesterday's quote. Normalising both ends to UTC removes the clock arithmetic
+ * from the question entirely.
+ */
+export function quoteForDate(date: Date): DailyQuoteData {
+  const startOfYear = Date.UTC(date.getFullYear(), 0, 1);
+  const thisDay = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayOfYear = Math.round((thisDay - startOfYear) / 86_400_000);
+  return QUOTES[dayOfYear % QUOTES.length];
+}
+
+/** Query function for `useDailyQuote`. Synchronous: there is nothing to await. */
+export function fetchDailyQuote(): DailyQuoteData {
+  return quoteForDate(new Date());
 }

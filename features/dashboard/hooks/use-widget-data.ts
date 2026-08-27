@@ -3,7 +3,7 @@ import { isToday } from 'date-fns/isToday';
 import { subDays } from 'date-fns/subDays';
 import { useQuery } from '@tanstack/react-query';
 
-import { fetchDailyQuote } from '@/features/dashboard/services/dashboard-mock-data';
+import { fetchDailyQuote } from '@/features/dashboard/services/daily-quote';
 import { listTransactions } from '@/features/budget/services/budget-repository';
 import {
   listAllHabitLogsBetween,
@@ -123,7 +123,15 @@ export function useProductivitySummary() {
 }
 
 export function useDailyQuote() {
-  return useQuery({ queryKey: ['dashboard', 'daily-quote'], queryFn: fetchDailyQuote });
+  return useQuery({
+    queryKey: ['dashboard', 'daily-quote'],
+    queryFn: fetchDailyQuote,
+    // The value is a local array lookup keyed by calendar day, so the global
+    // 60s staleTime had this recomputing all day to return the same string.
+    // An hour is short enough to pick up the change after local midnight
+    // without the dashboard ever showing a skeleton for it.
+    staleTime: 60 * 60 * 1000,
+  });
 }
 
 /** Same join + engine as the full Insights screen (see features/insights),
