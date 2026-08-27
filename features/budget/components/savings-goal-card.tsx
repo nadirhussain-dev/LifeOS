@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { Pressable, View } from 'react-native';
 
 import { cardClass } from '@/components/ui/card';

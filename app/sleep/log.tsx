@@ -1,5 +1,7 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { format, set, subDays } from 'date-fns';
+import { format } from 'date-fns/format';
+import { set } from 'date-fns/set';
+import { subDays } from 'date-fns/subDays';
 import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';

@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 
 import { setCalendarEventReminderNotificationId } from '@/features/timeline/services/calendar-events-repository';
 import i18n from '@/lib/i18n';

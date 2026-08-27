@@ -1,4 +1,4 @@
-import { isToday } from 'date-fns';
+import { isToday } from 'date-fns/isToday';
 
 import { listDebts } from '@/features/budget/services/debts-repository';
 import { listHabitsWithToday } from '@/features/habits/services/habits-repository';

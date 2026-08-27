@@ -1,12 +1,10 @@
-import {
-  endOfMonth,
-  format,
-  isWithinInterval,
-  parseISO,
-  startOfMonth,
-  subDays,
-  subMonths,
-} from 'date-fns';
+import { endOfMonth } from 'date-fns/endOfMonth';
+import { format } from 'date-fns/format';
+import { isWithinInterval } from 'date-fns/isWithinInterval';
+import { parseISO } from 'date-fns/parseISO';
+import { startOfMonth } from 'date-fns/startOfMonth';
+import { subDays } from 'date-fns/subDays';
+import { subMonths } from 'date-fns/subMonths';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';

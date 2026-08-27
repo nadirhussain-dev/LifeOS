@@ -1,4 +1,5 @@
-import { differenceInCalendarDays, format } from 'date-fns';
+import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
+import { format } from 'date-fns/format';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';

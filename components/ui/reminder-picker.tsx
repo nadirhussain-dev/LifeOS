@@ -1,4 +1,7 @@
-import { addDays, addHours, format, set } from 'date-fns';
+import { addDays } from 'date-fns/addDays';
+import { addHours } from 'date-fns/addHours';
+import { format } from 'date-fns/format';
+import { set } from 'date-fns/set';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';

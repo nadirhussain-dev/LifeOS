@@ -1,4 +1,4 @@
-import { set } from 'date-fns';
+import { set } from 'date-fns/set';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';

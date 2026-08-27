@@ -1,4 +1,6 @@
-import { addDays, parseISO, set } from 'date-fns';
+import { addDays } from 'date-fns/addDays';
+import { parseISO } from 'date-fns/parseISO';
+import { set } from 'date-fns/set';
 
 import { listCycleEntries } from '@/features/private/services/cycle';
 import {

@@ -42,6 +42,11 @@ module.exports = defineConfig([
               message:
                 "Import icons from '@/components/ui/icons' instead — importing lucide's barrel pulls all 1,748 icons into the bundle (~1.63 MB). Add the icon there with `npm run icons`.",
             },
+            {
+              name: 'date-fns',
+              message:
+                "Import from the function's own path instead — `date-fns/format`, not `date-fns`. The entry point re-exports every function and Metro does not tree-shake (~254 KB).",
+            },
           ],
         },
       ],

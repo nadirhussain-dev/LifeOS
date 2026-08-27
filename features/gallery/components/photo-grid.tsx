@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { Image } from 'expo-image';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

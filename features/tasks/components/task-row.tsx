@@ -1,4 +1,5 @@
-import { format, isToday } from 'date-fns';
+import { format } from 'date-fns/format';
+import { isToday } from 'date-fns/isToday';
 import * as Haptics from 'expo-haptics';
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';

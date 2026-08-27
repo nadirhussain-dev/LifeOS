@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { format } from 'date-fns';
+import { format } from 'date-fns/format';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useRouter, useSegments } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';

@@ -1,11 +1,9 @@
-import {
-  addYears,
-  differenceInCalendarDays,
-  isSameDay,
-  parseISO,
-  setYear,
-  subYears,
-} from 'date-fns';
+import { addYears } from 'date-fns/addYears';
+import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
+import { isSameDay } from 'date-fns/isSameDay';
+import { parseISO } from 'date-fns/parseISO';
+import { setYear } from 'date-fns/setYear';
+import { subYears } from 'date-fns/subYears';
 
 import type { AlbumMilestone, AlbumPhoto } from '@/features/private/types/shared-album.types';
 

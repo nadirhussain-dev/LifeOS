@@ -1,4 +1,8 @@
-import { addDays, differenceInCalendarDays, getDay, parseISO, subDays } from 'date-fns';
+import { addDays } from 'date-fns/addDays';
+import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
+import { getDay } from 'date-fns/getDay';
+import { parseISO } from 'date-fns/parseISO';
+import { subDays } from 'date-fns/subDays';
 
 import { toDateKey } from '@/lib/date';
 import type {

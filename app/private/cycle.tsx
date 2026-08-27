@@ -1,5 +1,8 @@
 import { type BottomSheetModal } from '@gorhom/bottom-sheet';
-import { addMonths, format, parseISO, subMonths } from 'date-fns';
+import { addMonths } from 'date-fns/addMonths';
+import { format } from 'date-fns/format';
+import { parseISO } from 'date-fns/parseISO';
+import { subMonths } from 'date-fns/subMonths';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';

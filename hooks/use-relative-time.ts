@@ -1,4 +1,4 @@
-import { formatDistanceToNowStrict } from 'date-fns';
+import { formatDistanceToNowStrict } from 'date-fns/formatDistanceToNowStrict';
 import { useEffect, useState } from 'react';
 
 /** Live-updating "2h ago" label, refreshed every minute. */

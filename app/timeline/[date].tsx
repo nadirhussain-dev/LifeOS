@@ -1,5 +1,8 @@
 import { FlashList } from '@shopify/flash-list';
-import { addDays, format, parseISO, subDays } from 'date-fns';
+import { addDays } from 'date-fns/addDays';
+import { format } from 'date-fns/format';
+import { parseISO } from 'date-fns/parseISO';
+import { subDays } from 'date-fns/subDays';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';

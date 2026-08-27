@@ -1,4 +1,7 @@
-import { addMonths, format, isSameMonth, subMonths } from 'date-fns';
+import { addMonths } from 'date-fns/addMonths';
+import { format } from 'date-fns/format';
+import { isSameMonth } from 'date-fns/isSameMonth';
+import { subMonths } from 'date-fns/subMonths';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';

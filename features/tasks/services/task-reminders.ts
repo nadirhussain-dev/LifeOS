@@ -1,4 +1,5 @@
-import { set, startOfDay } from 'date-fns';
+import { set } from 'date-fns/set';
+import { startOfDay } from 'date-fns/startOfDay';
 
 import { setTaskReminderNotificationId } from '@/features/tasks/services/tasks-repository';
 import i18n from '@/lib/i18n';

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns/format';
+import { subDays } from 'date-fns/subDays';
 import { useMemo } from 'react';
 
 import { useTransactions } from '@/features/budget/hooks/use-budget';

@@ -1,4 +1,7 @@
-import { setHours, setMinutes, setSeconds, startOfDay } from 'date-fns';
+import { setHours } from 'date-fns/setHours';
+import { setMinutes } from 'date-fns/setMinutes';
+import { setSeconds } from 'date-fns/setSeconds';
+import { startOfDay } from 'date-fns/startOfDay';
 import { AppState } from 'react-native';
 
 import { REWARDS_MODULE_ID } from '@/features/challenge/config/rewards-flag';

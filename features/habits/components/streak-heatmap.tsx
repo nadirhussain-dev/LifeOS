@@ -1,4 +1,5 @@
-import { addDays, subDays } from 'date-fns';
+import { addDays } from 'date-fns/addDays';
+import { subDays } from 'date-fns/subDays';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';

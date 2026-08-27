@@ -1,4 +1,6 @@
-import { format, isToday, subDays } from 'date-fns';
+import { format } from 'date-fns/format';
+import { isToday } from 'date-fns/isToday';
+import { subDays } from 'date-fns/subDays';
 import { useQuery } from '@tanstack/react-query';
 
 import { fetchDailyQuote } from '@/features/dashboard/services/dashboard-mock-data';

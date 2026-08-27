@@ -5,7 +5,7 @@ import {
   BottomSheetTextInput,
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
-import { formatDistanceToNowStrict } from 'date-fns';
+import { formatDistanceToNowStrict } from 'date-fns/formatDistanceToNowStrict';
 import * as Haptics from 'expo-haptics';
 import { forwardRef, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';

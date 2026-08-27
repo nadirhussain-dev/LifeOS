@@ -1,4 +1,4 @@
-import { isToday } from 'date-fns';
+import { isToday } from 'date-fns/isToday';
 import { Platform } from 'react-native';
 import { requestWidgetUpdate } from 'react-native-android-widget';
 

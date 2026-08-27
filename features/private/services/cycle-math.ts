@@ -1,4 +1,7 @@
-import { addDays, differenceInCalendarDays, format, parseISO } from 'date-fns';
+import { addDays } from 'date-fns/addDays';
+import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
+import { format } from 'date-fns/format';
+import { parseISO } from 'date-fns/parseISO';
 
 /**
  * Cycle derivations, kept free of the encrypted store so they can be tested

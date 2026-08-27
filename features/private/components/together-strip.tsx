@@ -1,4 +1,4 @@
-import { differenceInCalendarDays } from 'date-fns';
+import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import Animated from 'react-native-reanimated';

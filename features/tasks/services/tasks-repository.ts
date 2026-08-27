@@ -1,4 +1,6 @@
-import { endOfDay, startOfDay, subDays } from 'date-fns';
+import { endOfDay } from 'date-fns/endOfDay';
+import { startOfDay } from 'date-fns/startOfDay';
+import { subDays } from 'date-fns/subDays';
 import { and, eq, gte, inArray, isNull, lte, sql } from 'drizzle-orm';
 
 import { getDb } from '@/database/client';

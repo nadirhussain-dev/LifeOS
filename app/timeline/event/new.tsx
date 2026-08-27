@@ -1,5 +1,8 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { addMinutes, format, parseISO, set } from 'date-fns';
+import { addMinutes } from 'date-fns/addMinutes';
+import { format } from 'date-fns/format';
+import { parseISO } from 'date-fns/parseISO';
+import { set } from 'date-fns/set';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
