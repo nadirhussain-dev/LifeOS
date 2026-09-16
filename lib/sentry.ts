@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/react-native';
 
 import { env } from '@/lib/env';
 import { setErrorSink } from '@/lib/error-reporting';
+import { setMetricSink } from '@/lib/performance';
 
 let initialized = false;
 
@@ -31,6 +32,16 @@ export function initSentry(): void {
     });
     setErrorSink((error, context) => {
       Sentry.captureException(error, context ? { extra: context } : undefined);
+    });
+    // Startup timing goes to the same place, as a measurement rather than an
+    // exception. `tracesSampleRate` is 0 by design (see above), so this is sent
+    // as one breadcrumb-plus-message rather than a span — enough to trend cold
+    // start and to see which gate moved, without turning on tracing.
+    setMetricSink((name, milliseconds, context) => {
+      Sentry.captureMessage(name, {
+        level: context?.overBudget ? 'warning' : 'info',
+        extra: { ...context, milliseconds },
+      });
     });
     initialized = true;
   } catch {

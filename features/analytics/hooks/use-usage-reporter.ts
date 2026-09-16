@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
 import { flushFunnel } from '@/features/analytics/services/funnel-reporter';
+import { trackFunnel } from '@/features/analytics/store/funnel-store';
 import { flushUsage } from '@/features/analytics/services/usage-reporter';
 import { trackModuleOpen, useUsageStore } from '@/features/analytics/store/usage-store';
 import { moduleForPath } from '@/features/hub/config/route-modules';
@@ -42,11 +43,37 @@ export function useUsageReporter() {
       void flushUsage();
       void flushFunnel();
     };
+
+    /**
+     * One `app_opened` per foreground session — the counter retention is
+     * computed from (see migration 0077).
+     *
+     * Counted here rather than at the root because this is already the file
+     * that owns "the app is being used": it holds the only AppState listener on
+     * the analytics side and it already waits for `hydrated`, which is when
+     * consent is known. Firing before that would either lose the count or
+     * record it against an answer that had not been read yet.
+     *
+     * `active` alone is not a session boundary. iOS sends it after a passing
+     * `inactive` — a notification banner, the app switcher, a permission sheet
+     * — so counting every `active` would inflate a day's sessions several times
+     * over and make the retention denominator meaningless. Only a return from
+     * `background` counts, plus the mount itself for the cold start.
+     */
+    let wasBackgrounded = false;
     flush();
+    trackFunnel('app_opened');
+
     const sub = AppState.addEventListener('change', (state) => {
       // On the way out: the buffer is at its fullest and the request is not
       // competing with anything the user is waiting for.
       if (state === 'background' || state === 'active') flush();
+
+      if (state === 'background') wasBackgrounded = true;
+      else if (state === 'active' && wasBackgrounded) {
+        wasBackgrounded = false;
+        trackFunnel('app_opened');
+      }
     });
     return () => sub.remove();
   }, [hydrated]);

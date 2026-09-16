@@ -154,7 +154,7 @@ export default function SignUpScreen() {
         <View className="flex-row items-center justify-center gap-1">
           <Text variant="muted">{t('auth.alreadyHaveAccount')}</Text>
           <Link href="/(auth)/login" asChild>
-            <Pressable hitSlop={8}>
+            <Pressable accessibilityRole="link" hitSlop={8}>
               <Text className="font-sora-semibold text-accent">{t('auth.signIn')}</Text>
             </Pressable>
           </Link>

@@ -153,10 +153,49 @@ beforeEach(() => {
   );
 });
 
-const qc = () =>
-  new QueryClient({
-    defaultOptions: { queries: { retry: false, staleTime: 0, refetchOnWindowFocus: false } },
+/**
+ * Every client this suite builds, so `afterEach` can shut them down.
+ *
+ * Without that this suite does not exit. A query that goes unused schedules its
+ * own garbage collection through `timeoutManager.setTimeout` (query-core's
+ * removable.js) and nothing unrefs it, so the handle holds the Node worker open
+ * for the full `gcTime` — five minutes on the v5 default. In the whole run that
+ * surfaced as jest's "a worker process has failed to exit gracefully … force
+ * exited" at the end of an otherwise green suite; run on its own, the file
+ * simply sat there for five minutes after its last assertion.
+ *
+ * `--detectOpenHandles` never showed it, because it forces `--runInBand` and
+ * the main process tears down on its own — so the warning only ever appeared in
+ * the mode that could not explain it.
+ */
+const clients: QueryClient[] = [];
+
+const qc = () => {
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        staleTime: 0,
+        refetchOnWindowFocus: false,
+        // Nothing here outlives its test, so there is no cache worth keeping —
+        // and a zero gcTime means no timer is ever scheduled to keep alive.
+        gcTime: 0,
+      },
+    },
   });
+  clients.push(client);
+  return client;
+};
+
+afterEach(() => {
+  // Testing Library unmounts the tree, but the client is not part of the tree:
+  // `clear()` drops the cache (and any gc timer still pending with it) and
+  // `unmount()` removes the focus/online listeners the client subscribed.
+  for (const client of clients.splice(0)) {
+    client.clear();
+    client.unmount();
+  }
+});
 
 it('MilestoneSheet survives a rung that carries no rewards', () => {
   expect(() =>

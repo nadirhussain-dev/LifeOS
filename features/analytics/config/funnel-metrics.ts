@@ -37,6 +37,22 @@ export const FUNNEL_METRICS = [
   /** A challenge breakpoint fired for somebody not in a run, or in a module
    *  they did not commit to. Allowlisted server-side in 0072. */
   'ad_refused_not_enrolled',
+
+  /**
+   * One per foreground session. The only metric here that is not about a
+   * one-time moment, and the reason it exists is retention: with a day-keyed
+   * counter per install, "was this install active on day N" is answerable, and
+   * therefore so are D1/D7/D30 — none of which the app could measure at all
+   * before. Growth decisions were being made against onboarding completion and
+   * ad impressions, which say nothing about whether anybody came back.
+   *
+   * Not in PRE_CONSENT_METRICS: unlike the onboarding steps it has no reason to
+   * accrue before the question is answered, so retention is measured over
+   * consented installs only. That is the honest trade and it is the right way
+   * round — a retention curve is a product signal, not a thing worth collecting
+   * from somebody who has not agreed to it.
+   */
+  'app_opened',
 ] as const;
 
 export type FunnelMetric = (typeof FUNNEL_METRICS)[number];
