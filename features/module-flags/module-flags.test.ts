@@ -130,7 +130,14 @@ describe('module flags fail open', () => {
     await refreshModuleFlags();
 
     expect(isModuleEnabled('notes')).toBe(false);
-    expect(Object.keys(useModuleFlagsStore.getState().flags)).toEqual(['notes']);
+    // The point is that no key called "undefined" reached the cache, not that
+    // the cache holds exactly one entry — this build's own disables
+    // (module-availability.ts) are merged in on every write and are expected
+    // to be sitting alongside it.
+    const keys = Object.keys(useModuleFlagsStore.getState().flags);
+    expect(keys).toContain('notes');
+    expect(keys).not.toContain('undefined');
+    expect(keys.every((key) => key.length > 0)).toBe(true);
   });
 
   it('rebuilds reminders only when the disabled set actually changed', async () => {

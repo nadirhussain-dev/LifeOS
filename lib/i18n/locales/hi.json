@@ -2640,6 +2640,7 @@
     "rewardsSwitch": "स्ट्रीक चैलेंज",
     "rewardsEnabled": "चैलेंज चालू",
     "rewardsEnabledSubtitle": "बंद करने पर हर खाते से छिप जाएगा। डेटा अछूता रहता है।",
+    "rewardsLockedByBuild": "इस बिल्ड में रोका गया है। रिमोट स्विच इसे चालू नहीं कर सकता।",
     "rewardsTitle": "स्ट्रीक चैलेंज",
     "rewardsNoSeason": "अभी कोई सीज़न नहीं है। चैलेंज चालू करने से पहले एक बनाएँ।",
     "rewardsRuns": "रन",

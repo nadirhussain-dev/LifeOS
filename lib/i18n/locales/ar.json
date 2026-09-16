@@ -2800,6 +2800,7 @@
     "rewardsSwitch": "تحدي السلسلة",
     "rewardsEnabled": "التحدي مفعّل",
     "rewardsEnabledSubtitle": "إيقافه يخفيه عن كل الحسابات. لا تُمس أي بيانات.",
+    "rewardsLockedByBuild": "مُعطَّل في هذه النسخة. لا يمكن للمفتاح البعيد تشغيله.",
     "rewardsTitle": "تحدي السلسلة",
     "rewardsNoSeason": "لا يوجد موسم بعد. أنشئ واحدًا قبل تفعيل التحدي.",
     "rewardsRuns": "المشاركات",
