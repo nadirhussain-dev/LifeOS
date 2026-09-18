@@ -1300,6 +1300,7 @@
     "itemsCount_one": "{{count}} آئٹم",
     "itemsCount_other": "{{count}} آئٹمز",
     "albumEmptyTitle": "ابھی یہاں کچھ نہیں",
+    "albumFallbackTitle": "البم",
     "albumEmptyBody": "ٹریکنگ شروع کرنے کے لیے اس البم میں اپنی پہلی تصویر یا ویڈیو شامل کریں۔",
     "newAlbumTitle": "نیا البم",
     "albumName": "البم کا نام",

@@ -28,10 +28,21 @@ export function PhotoGridList({
   photos,
   timeline,
   onPressPhoto,
+  header,
 }: {
   photos: GalleryPhoto[];
   timeline?: boolean;
   onPressPhoto: (photo: GalleryPhoto) => void;
+  /**
+   * Content scrolled above the grid, as FlashList's own list header.
+   *
+   * A caller that wants something above the photos must pass it here rather
+   * than wrapping this component in a ScrollView: a virtualized list inside a
+   * scroll view is given unbounded height, so every row mounts and the
+   * recycling that makes this component worth having stops happening. That is
+   * exactly how the album screen was written before.
+   */
+  header?: React.ReactElement;
 }) {
   const size = tileSize();
 
@@ -75,6 +86,7 @@ export function PhotoGridList({
           </View>
         )
       }
+      ListHeaderComponent={header}
       contentContainerStyle={{ paddingTop: timeline ? 0 : 16, paddingBottom: 40 }}
       showsVerticalScrollIndicator={false}
     />

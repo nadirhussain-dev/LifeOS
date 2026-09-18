@@ -7,6 +7,7 @@ import { CalendarClock, Grid3x3, Heart, Images, Plus, Search } from '@/component
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Fab } from '@/components/ui/fab';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { moduleTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
@@ -22,7 +23,7 @@ export default function AllPhotosScreen() {
   const { t } = useTranslation();
   const tint = moduleTint('gallery', scheme);
 
-  const { data: photos = [] } = usePhotos();
+  const { data: photos = [], isError, error, refetch } = usePhotos();
   const [timeline, setTimeline] = useState(true);
   const [favoritesOnly, setFavoritesOnly] = useState(favoritesParam === '1');
   const [query, setQuery] = useState('');
@@ -108,7 +109,9 @@ export default function AllPhotosScreen() {
         </View>
       )}
 
-      {filtered.length === 0 ? (
+      {isError ? (
+        <QueryError error={error} onRetry={() => refetch()} />
+      ) : filtered.length === 0 ? (
         <EmptyState
           icon={favoritesOnly ? Heart : Images}
           title={

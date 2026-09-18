@@ -13,6 +13,7 @@ import { Bookmark, GitCompareArrows, Share2, Sparkles, TrendingUp } from '@/comp
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { GradientButton } from '@/components/ui/gradient-button';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Segmented } from '@/components/ui/segmented';
 import { Text } from '@/components/ui/text';
@@ -37,8 +38,10 @@ export default function CompareScreen() {
   const { t } = useTranslation();
   // Arriving from a subject card scopes the comparison to that subject.
   const { album: albumId } = useLocalSearchParams<{ album?: string }>();
-  const { data: allPhotos = [], isLoading: loadingAll } = usePhotos();
-  const { data: albumPhotos = [], isLoading: loadingAlbum } = usePhotosByAlbum(albumId);
+  const allQuery = usePhotos();
+  const albumQuery = usePhotosByAlbum(albumId);
+  const { data: allPhotos = [], isLoading: loadingAll } = allQuery;
+  const { data: albumPhotos = [], isLoading: loadingAlbum } = albumQuery;
 
   const COMPARE_TINT = moduleTint('gallery', scheme);
 
@@ -136,6 +139,23 @@ export default function CompareScreen() {
   // Wait for the source query before judging the library empty, otherwise the
   // empty state flashes on every entry.
   const loading = albumId ? loadingAlbum : loadingAll;
+  // Only the query this screen is actually reading. Arriving with an album
+  // scopes the comparison to it, and a failure of the whole-library read is
+  // then not this screen's problem to report.
+  const sourceQuery = albumId ? albumQuery : allQuery;
+
+  if (sourceQuery.isError) {
+    return (
+      <View className="flex-1 bg-background">
+        <ScreenHeader
+          title={t('gallery.beforeAfter')}
+          eyebrow={t('gallery.title')}
+          tint={COMPARE_TINT}
+        />
+        <QueryError error={sourceQuery.error} onRetry={() => sourceQuery.refetch()} />
+      </View>
+    );
+  }
 
   if (!loading && stills.length < 2) {
     return (

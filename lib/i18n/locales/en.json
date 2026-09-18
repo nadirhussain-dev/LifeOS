@@ -1300,6 +1300,7 @@
     "itemsCount_one": "{{count}} item",
     "itemsCount_other": "{{count}} items",
     "albumEmptyTitle": "Nothing here yet",
+    "albumFallbackTitle": "Album",
     "albumEmptyBody": "Add your first photo or video to this album to start tracking.",
     "newAlbumTitle": "New Album",
     "albumName": "Album name",

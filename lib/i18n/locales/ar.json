@@ -1388,6 +1388,7 @@
     "itemsCount_many": "{{count}} عنصرًا",
     "itemsCount_other": "{{count}} عنصر",
     "albumEmptyTitle": "لا شيء هنا بعد",
+    "albumFallbackTitle": "الألبوم",
     "albumEmptyBody": "أضف أول صورة أو مقطع إلى هذا الألبوم لبدء التتبّع.",
     "newAlbumTitle": "ألبوم جديد",
     "albumName": "اسم الألبوم",

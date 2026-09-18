@@ -1300,6 +1300,7 @@
     "itemsCount_one": "{{count}} आइटम",
     "itemsCount_other": "{{count}} आइटम",
     "albumEmptyTitle": "अभी यहाँ कुछ नहीं",
+    "albumFallbackTitle": "एलबम",
     "albumEmptyBody": "ट्रैकिंग शुरू करने के लिए इस अल्बम में अपनी पहली तस्वीर या वीडियो जोड़ें।",
     "newAlbumTitle": "नया अल्बम",
     "albumName": "अल्बम का नाम",
