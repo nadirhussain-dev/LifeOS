@@ -11,6 +11,7 @@ import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { QueryError } from '@/components/ui/query-error';
 import { PrivateScreen } from '@/features/private/components/private-screen';
 import { privateModule } from '@/features/private/config/private-modules';
 import { nextCheckInPrompt } from '@/features/private/services/check-in-prompts';
@@ -44,7 +45,8 @@ export default function AlbumNotesScreen() {
   const space = usePrivateStore((s) => s.space);
   const userId = useAuthStore((s) => s.user?.id ?? null);
   useAlbumRealtime(id);
-  const { data } = useAlbumDetail(id);
+  const detailQuery = useAlbumDetail(id);
+  const { data } = detailQuery;
   const { data: albumKey } = useAlbumKey(id);
   const { isOwner } = useMyAlbumMembership(data);
   const { data: notes = [] } = useAlbumNotes(id, albumKey ?? null);
@@ -53,6 +55,18 @@ export default function AlbumNotesScreen() {
   const [draft, setDraft] = useState('');
   const canSend = isOwner || !!data?.album?.allowNotes;
   const prompt = t(nextCheckInPrompt());
+
+  // The album itself failing to load leaves every field below reading from
+  // `data?.` — the send affordance disabled, the member list empty, the
+  // permissions unknown — which looks like an album with nothing in it rather
+  // than one that could not be reached.
+  if (detailQuery.isError) {
+    return (
+      <PrivateScreen moduleId="shared-albums" title={t('private.notesTitle')} tint={tint}>
+        <QueryError error={detailQuery.error} onRetry={() => detailQuery.refetch()} />
+      </PrivateScreen>
+    );
+  }
 
   if (space !== 'real') {
     return (

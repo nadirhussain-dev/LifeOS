@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { CheckCircle2, RotateCcw } from '@/components/ui/icons';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { SYNC_MODULES } from '@/features/sync/config/sync-tables';
@@ -30,7 +31,8 @@ import { confirm } from '@/lib/dialog-store';
 export default function SyncConflictsScreen() {
   const { t } = useTranslation();
   const { c } = useTheme();
-  const { conflicts, isLoading, restore, keepRemote, dismissAll } = useSyncConflicts();
+  const { conflicts, isLoading, isError, error, refetch, restore, keepRemote, dismissAll } =
+    useSyncConflicts();
 
   const confirmDismissAll = () =>
     void confirm({
@@ -50,7 +52,9 @@ export default function SyncConflictsScreen() {
         tint={c.accent}
       />
 
-      {!isLoading && conflicts.length === 0 ? (
+      {isError ? (
+        <QueryError error={error} onRetry={() => refetch()} />
+      ) : !isLoading && conflicts.length === 0 ? (
         <EmptyState
           icon={CheckCircle2}
           title={t('sync.conflictsEmptyTitle')}

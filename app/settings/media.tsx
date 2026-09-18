@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { AdFreeOffer } from '@/features/ads/components/ad-free-offer';
 import { ProgressRing } from '@/components/ui/progress-ring';
+import { InlineError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { useAuthStore } from '@/features/auth/services/auth-store';
@@ -67,7 +68,8 @@ export default function MediaSettingsScreen() {
   const usage = useMediaSyncStore((s) => s.usage);
   const lastError = useMediaSyncStore((s) => s.lastError);
   const { planId, isPlus } = usePlan();
-  const { data: plans = [] } = usePlans();
+  const plansQuery = usePlans();
+  const { data: plans = [] } = plansQuery;
   const { data: subscription = null } = useMySubscription();
   const needsRenewalConfirmation = usePendingRenewalConfirmation(subscription);
   const checkout = useCreateCheckoutMutation();
@@ -345,6 +347,14 @@ export default function MediaSettingsScreen() {
               style={{ fontFamily: 'Sora_400Regular' }}
             />
           ) : null}
+
+          {/* Inline rather than a full-screen error: the plan catalogue is one
+              section of this screen, and the media-sync switches above it work
+              perfectly well without it. Blocking the whole screen would take
+              away the settings the person most likely came here to change. An
+              empty section, though, reads as "no plans available", which is a
+              statement about the product rather than about the request. */}
+          {plansQuery.isError ? <InlineError error={plansQuery.error} /> : null}
 
           <View className="gap-2">
             {plans.map((plan) => {

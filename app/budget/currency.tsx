@@ -7,6 +7,7 @@ import { Pressable, View } from 'react-native';
 import { Check, Search } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint, moduleTints, resolveTint } from '@/constants/design-tokens';
@@ -26,7 +27,8 @@ export default function CurrencyPickerScreen() {
   const scheme = useColorScheme() ?? 'light';
   const budgetTint = resolveTint(BUDGET_TINT, scheme);
   const { t } = useTranslation();
-  const { data: settings } = useBudgetSettings();
+  const settingsQuery = useBudgetSettings();
+  const { data: settings } = settingsQuery;
   const { saveSettings } = useBudgetMutations();
   const [query, setQuery] = useState('');
 
@@ -47,6 +49,22 @@ export default function CurrencyPickerScreen() {
     saveSettings.mutate({ currency: code });
     router.back();
   };
+
+  /**
+   * A settings form seeded from a read that failed is a form full of
+   * defaults, and saving it writes those defaults over the real values —
+   * silently, because nothing on screen said the read had failed. The same
+   * shape as the create-or-edit screens, with settings rather than a row as
+   * the thing overwritten.
+   */
+  if (settingsQuery.isError) {
+    return (
+      <View className="flex-1 bg-background">
+        <ScreenHeader />
+        <QueryError error={settingsQuery.error} onRetry={() => settingsQuery.refetch()} />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-background">

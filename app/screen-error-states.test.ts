@@ -63,60 +63,46 @@ function screenFiles(dir: string, out: string[] = []): string[] {
 }
 
 /**
- * Screens that read query data and do not yet report a failure.
+ * Screens that read from a query and deliberately do not report its failure.
  *
- * Grouped by module so the remaining work reads as work rather than as a flat
- * list of paths.
+ * Not a backlog — a set of decisions, each of which has to be argued rather
+ * than assumed. The default is that a failed read gets said out loud; these
+ * are the cases where saying it costs more than it buys, and the test exists
+ * to stop the list growing without a reason attached.
+ *
+ * Two shapes are exempt for opposite reasons:
+ *
+ *   - the read is *cosmetic*, and blocking the screen would take away the
+ *     thing the person came to do, or
+ *   - the screen is mid-activity (a playing song, a running timer), where an
+ *     error panel interrupts something the failure did not actually break.
+ *
+ * Where a section of a screen depends on the read but the rest does not, the
+ * answer is `InlineError` in that section rather than an entry here — see
+ * `settings/media.tsx` and `study/log.tsx`, both of which were on this list
+ * until it became clear that an empty catalogue and an empty subject picker
+ * each invited a wrong action.
  */
-const KNOWN_GAPS: readonly string[] = [
-  // (auth)
-  'app/(auth)/reset-password.tsx',
-  // budget
-  'app/budget/currency.tsx',
-  'app/budget/recurring/new.tsx',
-  'app/budget/savings/[id].tsx',
-  'app/budget/savings/new.tsx',
-  'app/budget/settings.tsx',
-  // goals
-  'app/goals/[id].tsx',
-  'app/goals/[id]/edit.tsx',
-  'app/goals/[id]/log.tsx',
-  // habit
-  'app/habit/[id].tsx',
-  'app/habit/[id]/edit.tsx',
-  // journal
-  'app/journal/[date].tsx',
-  // music
-  'app/music/now-playing.tsx',
-  'app/music/playlist/[id].tsx',
-  'app/music/playlist/[id]/add-songs.tsx',
-  'app/music/song/[id].tsx',
-  // private
-  'app/private/albums/[id].tsx',
-  'app/private/albums/[id]/chat.tsx',
-  'app/private/albums/[id]/invite.tsx',
-  'app/private/albums/[id]/notes.tsx',
-  'app/private/albums/[id]/plans.tsx',
-  'app/private/albums/index.tsx',
-  'app/private/albums/invites.tsx',
-  'app/private/together.tsx',
-  // routine
-  'app/routine/[id].tsx',
-  // settings
-  'app/settings/media.tsx',
-  'app/settings/operator/pricing.tsx',
-  'app/settings/sync-conflicts.tsx',
-  // sleep
-  'app/sleep/settings.tsx',
-  // study
-  'app/study/log.tsx',
-  'app/study/settings.tsx',
-  'app/study/timer.tsx',
-  // task
-  'app/task/[id].tsx',
-  // timeline
-  'app/timeline/[date].tsx',
-];
+const DEGRADES_BY_DESIGN: Readonly<Record<string, string>> = {
+  'app/(auth)/reset-password.tsx':
+    'Not a query at all — `const { data } = await supabase.auth.getSession()`. ' +
+    'Matched by shape, and the shape is all this scan can see.',
+  'app/budget/recurring/new.tsx':
+    'Reads settings for a currency symbol it never persists. A failed read ' +
+    'shows "USD" beside a field the person is typing an amount into; ' +
+    'refusing to render the form would stop them creating the rule at all.',
+  'app/budget/savings/new.tsx': 'Same as budget/recurring/new.tsx — the currency is display only.',
+  'app/music/now-playing.tsx':
+    'The song comes from the player store, not a query. The library read ' +
+    'only supplies live favourite state and falls back to the playing song, ' +
+    'so a failure costs the accuracy of one star on a screen whose audio is ' +
+    'unaffected.',
+  'app/study/timer.tsx':
+    'The timer is store state; the subjects read only names it. Putting an ' +
+    'error panel over a running focus block would interrupt the one thing ' +
+    'the failure did not break — and focus mode has already silenced the ' +
+    "app's notifications, so the interruption would be the only one.",
+};
 
 describe('screens report failed reads', () => {
   const offenders = screenFiles(SCREENS)
@@ -126,21 +112,24 @@ describe('screens report failed reads', () => {
     })
     .sort();
 
-  it('has no screen missing an error state outside the known backlog', () => {
-    const unexpected = offenders.filter((path) => !KNOWN_GAPS.includes(path));
-    expect(unexpected).toEqual([]);
+  it('has no screen silently swallowing a failed read', () => {
+    const unexplained = offenders.filter((path) => !(path in DEGRADES_BY_DESIGN));
+    expect(unexplained).toEqual([]);
   });
 
-  it('keeps the backlog honest — every entry is still a real gap', () => {
-    // A fixed screen left in the list would let it silently regress later, and
-    // would overstate the remaining work.
-    const stale = KNOWN_GAPS.filter((path) => !offenders.includes(path));
+  it('keeps every exemption honest — each one is still a real case', () => {
+    // An exemption left behind after a screen was fixed would let it regress
+    // later under cover of a reason that no longer applies.
+    const stale = Object.keys(DEGRADES_BY_DESIGN).filter((path) => !offenders.includes(path));
     expect(stale).toEqual([]);
   });
 
-  it('covers the Gallery module, which had no error state on any screen', () => {
-    const gallery = offenders.filter((path) => path.startsWith('app/gallery/'));
-    expect(gallery).toEqual([]);
+  it('gives every exemption a reason worth reading', () => {
+    // A one-word entry is how this list turns back into a backlog.
+    for (const [path, reason] of Object.entries(DEGRADES_BY_DESIGN)) {
+      expect(reason.length).toBeGreaterThan(60);
+      expect(path).toMatch(/^app\/.*\.tsx$/);
+    }
   });
 });
 

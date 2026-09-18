@@ -9,6 +9,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 
 import { cardClass } from '@/components/ui/card';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
@@ -33,11 +34,35 @@ export default function HabitDetailScreen() {
   const { t } = useTranslation();
   const quickLogRef = useRef<BottomSheetModal>(null);
 
-  const { data: habit } = useHabit(id);
-  const { data: logData } = useHabitLogs(id);
+  const habitQuery = useHabit(id);
+  const { data: habit } = habitQuery;
+  const logsQuery = useHabitLogs(id);
+  const { data: logData } = logsQuery;
   const { logToday, unlogToday, logDate, archive, remove } = useHabitMutations();
 
-  if (!habit || !logData) return null;
+  /**
+   * A failed read is not a missing subject. The same blank screen used to
+   * answer "still loading", "just deleted" and "the read failed" — only the
+   * first two are right to render nothing. The header carries no title
+   * because the title came from the read that failed.
+   */
+  if (!habit || !logData) {
+    if (habitQuery.isError || logsQuery.isError) {
+      return (
+        <View className="flex-1 bg-background">
+          <ScreenHeader />
+          <QueryError
+            error={habitQuery.error ?? logsQuery.error}
+            onRetry={() => {
+              void habitQuery.refetch();
+              void logsQuery.refetch();
+            }}
+          />
+        </View>
+      );
+    }
+    return null;
+  }
 
   const { logs, skips } = logData;
   const streaks = calculateHabitStreaks(habit, logs, skips);

@@ -4,6 +4,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { Archive, Pencil, RotateCcw } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
@@ -70,7 +71,8 @@ export default function OperatorPricingScreen() {
   const { t } = useTranslation();
   const { c } = useTheme();
 
-  const { data: plans = [] } = usePlans();
+  const plansQuery = usePlans();
+  const { data: plans = [] } = plansQuery;
   const upsert = useAdminUpsertPlanMutation();
   const setActive = useAdminSetPlanActiveMutation();
 
@@ -106,6 +108,22 @@ export default function OperatorPricingScreen() {
 
   const toggleActive = (plan: StoragePlan, active: boolean) =>
     setActive.mutate({ id: plan.id, active }, { onError: () => toast.error(t('errors.unknown')) });
+
+  /**
+   * An operator looking at an empty plan list will conclude none are
+   * configured — and `editingExisting` is computed from that same list, so
+   * creating one here would be treated as new and could collide with a plan
+   * that is really there. A failed read must not be able to look like an
+   * empty catalogue on the screen that edits pricing.
+   */
+  if (plansQuery.isError) {
+    return (
+      <View className="flex-1 bg-background">
+        <ScreenHeader title={t('billing.plans')} />
+        <QueryError error={plansQuery.error} onRetry={() => plansQuery.refetch()} />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-background">

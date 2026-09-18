@@ -8,6 +8,7 @@ import { Pressable, View } from 'react-native';
 import { ListMusic, Play, Plus, Trash2 } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
@@ -31,7 +32,8 @@ export default function PlaylistDetailScreen() {
   const tint = moduleTint('music', scheme);
   const { t } = useTranslation();
 
-  const { data: playlist } = usePlaylist(id);
+  const playlistQuery = usePlaylist(id);
+  const { data: playlist } = playlistQuery;
   const { data: songs = [], isLoading } = usePlaylistSongs(id);
   const { rename, remove, removeSong } = usePlaylistMutations();
   const { currentSong, isPlaying, playQueue } = useNowPlaying();
@@ -51,7 +53,28 @@ export default function PlaylistDetailScreen() {
     return () => clearTimeout(timeout);
   }, [name]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!playlist) return null;
+  /**
+   * A failed read is not a missing subject. The same blank screen used to
+   * answer "still loading", "just deleted" and "the read failed" — only the
+   * first two are right to render nothing. The header carries no title
+   * because the title came from the read that failed.
+   */
+  if (!playlist) {
+    if (playlistQuery.isError) {
+      return (
+        <View className="flex-1 bg-background">
+          <ScreenHeader />
+          <QueryError
+            error={playlistQuery.error}
+            onRetry={() => {
+              void playlistQuery.refetch();
+            }}
+          />
+        </View>
+      );
+    }
+    return null;
+  }
 
   const handleDeletePlaylist = () => {
     void confirm({

@@ -7,6 +7,8 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmptyState } from '@/components/ui/empty-state';
+import { QueryError } from '@/components/ui/query-error';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { Check, ListMusic, X } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
@@ -28,14 +30,31 @@ export default function AddSongsToPlaylistScreen() {
   const tint = moduleTint('music', scheme);
   const { t } = useTranslation();
 
-  const { data: playlist } = usePlaylist(id);
-  const { data: library = [] } = useSongs();
+  const playlistQuery = usePlaylist(id);
+  const { data: playlist } = playlistQuery;
+  const libraryQuery = useSongs();
+  const { data: library = [] } = libraryQuery;
   const { data: playlistSongs = [] } = usePlaylistSongs(id);
   const { addSong, removeSong } = usePlaylistMutations();
 
   const memberIds = useMemo(() => new Set(playlistSongs.map((song) => song.id)), [playlistSongs]);
 
-  if (!playlist) return null;
+  /**
+   * A failed read is not a missing playlist. Same blank screen as "loading"
+   * and "just deleted" before this; only those two are right to render
+   * nothing. No title in the header — it came from the read that failed.
+   */
+  if (!playlist) {
+    if (playlistQuery.isError) {
+      return (
+        <View className="flex-1 bg-background">
+          <ScreenHeader />
+          <QueryError error={playlistQuery.error} onRetry={() => playlistQuery.refetch()} />
+        </View>
+      );
+    }
+    return null;
+  }
 
   return (
     <View className="flex-1 bg-background">
@@ -57,7 +76,9 @@ export default function AddSongsToPlaylistScreen() {
         <View className="h-8 w-8" />
       </View>
 
-      {library.length === 0 ? (
+      {libraryQuery.isError ? (
+        <QueryError error={libraryQuery.error} onRetry={() => libraryQuery.refetch()} />
+      ) : library.length === 0 ? (
         <EmptyState
           icon={ListMusic}
           title={t('music.libraryEmptyTitle')}

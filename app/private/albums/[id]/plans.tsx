@@ -10,6 +10,7 @@ import { CalendarPlus } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { PlanSheet, type PlanSheetTarget } from '@/features/private/components/plan-sheet';
+import { QueryError } from '@/components/ui/query-error';
 import { PrivateScreen } from '@/features/private/components/private-screen';
 import { privateModule } from '@/features/private/config/private-modules';
 import {
@@ -42,13 +43,26 @@ export default function AlbumPlansScreen() {
 
   const space = usePrivateStore((s) => s.space);
   useAlbumRealtime(id);
-  const { data } = useAlbumDetail(id);
+  const detailQuery = useAlbumDetail(id);
+  const { data } = detailQuery;
   const { data: albumKey } = useAlbumKey(id);
   const { data: events = [] } = useAlbumEvents(id, albumKey ?? null);
   const mutations = useAlbumPlanMutations(id);
 
   const sheetRef = useRef<BottomSheetModal>(null);
   const [target, setTarget] = useState<PlanSheetTarget | null>(null);
+
+  // The album itself failing to load leaves every field below reading from
+  // `data?.` — the send affordance disabled, the member list empty, the
+  // permissions unknown — which looks like an album with nothing in it rather
+  // than one that could not be reached.
+  if (detailQuery.isError) {
+    return (
+      <PrivateScreen moduleId="shared-albums" title={t('private.plansTitle')} tint={tint}>
+        <QueryError error={detailQuery.error} onRetry={() => detailQuery.refetch()} />
+      </PrivateScreen>
+    );
+  }
 
   if (space !== 'real') {
     return (

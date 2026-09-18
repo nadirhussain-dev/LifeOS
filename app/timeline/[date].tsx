@@ -11,6 +11,7 @@ import { Clock3, Plus } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { EmptyState } from '@/components/ui/empty-state';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -28,7 +29,7 @@ export default function TimelineScreen() {
   const { t } = useTranslation();
 
   const date = parseISO(dateKey);
-  const { data: events = [], isLoading } = useTimelineForDate(dateKey);
+  const { data: events = [], isLoading, isError, error, refetch } = useTimelineForDate(dateKey);
   const { remove } = useCalendarEventMutations();
 
   const goToDate = (next: Date) => router.setParams({ date: toDateKey(next) });
@@ -69,7 +70,9 @@ export default function TimelineScreen() {
         </Pressable>
       </View>
 
-      {isLoading ? (
+      {isError ? (
+        <QueryError error={error} onRetry={() => refetch()} />
+      ) : isLoading ? (
         <View className="gap-2.5 px-4">
           <Skeleton className="h-14 w-full rounded-2xl" />
           <Skeleton className="h-14 w-full rounded-2xl" />

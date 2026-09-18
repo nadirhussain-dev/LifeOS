@@ -11,6 +11,7 @@ import { HeroCard } from '@/components/ui/hero-card';
 import { Archive, Check, Pencil, Plus, RotateCcw, TrendingUp, Trash2 } from '@/components/ui/icons';
 import { LineChart } from '@/components/ui/line-chart';
 import { ProgressRing } from '@/components/ui/progress-ring';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Text } from '@/components/ui/text';
@@ -49,12 +50,33 @@ export default function GoalDetailScreen() {
   const { t } = useTranslation();
   const [celebrate, setCelebrate] = useState(false);
 
-  const { data: goal } = useGoal(id);
+  const goalQuery = useGoal(id);
+  const { data: goal } = goalQuery;
   const { data: milestones = [] } = useGoalMilestones(id);
   const { data: logs = [] } = useGoalProgressLogs(id);
   const mutations = useGoalMutations();
 
-  if (!goal) return null;
+  /**
+   * A failed read is not a missing subject.
+   *
+   * This guard used to answer "still loading", "just deleted" and "the read
+   * failed" with the same blank screen — no header, no explanation, no retry,
+   * and no way to tell whether the thing is gone or the app is broken. The
+   * first two are still right to render nothing; the third gets its own
+   * screen. The header carries no title because the title came from the read
+   * that failed.
+   */
+  if (!goal) {
+    if (goalQuery.isError) {
+      return (
+        <View className="flex-1 bg-background">
+          <ScreenHeader />
+          <QueryError error={goalQuery.error} onRetry={() => goalQuery.refetch()} />
+        </View>
+      );
+    }
+    return null;
+  }
 
   const meta = goalCategoryMeta(goal.category, scheme);
   const Icon = meta.icon;

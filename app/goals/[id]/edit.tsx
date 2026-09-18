@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
+import { QueryError } from '@/components/ui/query-error';
 import { SheetHeader } from '@/components/ui/sheet-header';
 import { GoalForm } from '@/features/goals/components/goal-form';
 import { useGoal } from '@/features/goals/hooks/use-goals';
@@ -12,10 +13,27 @@ export default function EditGoalScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t } = useTranslation();
-  const { data: goal } = useGoal(id);
+  const goalQuery = useGoal(id);
+  const { data: goal } = goalQuery;
   const { update } = useGoalMutations();
 
-  if (!goal) return null;
+  /**
+   * A failed read is not a missing subject: this screen edits something it
+   * could not fetch, so every field would sit at its default and the form
+   * would read as a wiped record. Loading and just-deleted still render
+   * nothing — only the failure gets a screen.
+   */
+  if (!goal) {
+    if (goalQuery.isError) {
+      return (
+        <View className="flex-1 bg-background">
+          <SheetHeader title={t('goals.editGoal')} />
+          <QueryError error={goalQuery.error} onRetry={() => goalQuery.refetch()} />
+        </View>
+      );
+    }
+    return null;
+  }
 
   const defaults: GoalFormValues = {
     title: goal.title,

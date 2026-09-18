@@ -12,6 +12,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Input } from '@/components/ui/input';
 import { AttachmentStrip } from '@/components/ui/attachment-strip';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { VoiceNoteRecorder } from '@/components/ui/voice-note-recorder';
@@ -39,7 +40,8 @@ export default function JournalEntryScreen() {
   const { t } = useTranslation();
   const keyboardHeight = useKeyboardHeight();
 
-  const { data: entry } = useJournalEntry(entryDate);
+  const entryQuery = useJournalEntry(entryDate);
+  const { data: entry } = entryQuery;
   const { data: prompts = [] } = useJournalPrompts();
   const { data: reflections = [] } = useJournalReflections(entry?.id ?? null);
   const { data: attachments = [] } = useJournalAttachments(entry?.id ?? null);
@@ -63,7 +65,27 @@ export default function JournalEntryScreen() {
     return () => clearTimeout(timeout);
   }, [body]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!entry) return null;
+  /**
+   * A failed read is not a missing subject.
+   *
+   * This guard used to answer "still loading", "just deleted" and "the read
+   * failed" with the same blank screen — no header, no explanation, no retry,
+   * and no way to tell whether the thing is gone or the app is broken. The
+   * first two are still right to render nothing; the third gets its own
+   * screen. The header carries no title because the title came from the read
+   * that failed.
+   */
+  if (!entry) {
+    if (entryQuery.isError) {
+      return (
+        <View className="flex-1 bg-background">
+          <ScreenHeader />
+          <QueryError error={entryQuery.error} onRetry={() => entryQuery.refetch()} />
+        </View>
+      );
+    }
+    return null;
+  }
 
   const wash = entry.mood
     ? `${resolveTint(MOOD_TINT[entry.mood], scheme)}33`

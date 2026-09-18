@@ -22,6 +22,7 @@ import { useAuthStore } from '@/features/auth/services/auth-store';
 import { AlbumDateField } from '@/features/private/components/album-date-field';
 import { MilestoneSheet } from '@/features/private/components/milestone-sheet';
 import { OnThisDayCard } from '@/features/private/components/on-this-day-card';
+import { QueryError } from '@/components/ui/query-error';
 import { PrivateScreen } from '@/features/private/components/private-screen';
 import { filterByRole, privateModule } from '@/features/private/config/private-modules';
 import {
@@ -214,7 +215,8 @@ function TogetherHubView({ hub, tint }: { hub: SharedAlbum; tint: string }) {
   useAlbumRealtime(hub.id);
   const { data: albumKey } = useAlbumKey(hub.id);
   const { name, locked } = useAlbumName(hub.id, hub.nameCiphertext);
-  const { data: detail } = useAlbumDetail(hub.id);
+  const detailQuery = useAlbumDetail(hub.id);
+  const { data: detail } = detailQuery;
   const { data: milestones = [] } = useAlbumMilestones(hub.id, albumKey ?? null);
   const milestoneMutations = useAlbumMilestoneMutations(hub.id);
   const { clearTogetherHub, setRelationshipStartDate, setCycleShare } = useSharedAlbumMutations(
@@ -283,6 +285,18 @@ function TogetherHubView({ hub, tint }: { hub: SharedAlbum; tint: string }) {
     }).then((ok) => {
       if (ok) clearTogetherHub.mutate(hub.id);
     });
+
+  // The hub's own record failing leaves the whole screen reading from
+  // `detail?.` — no members, no milestones, no relationship date — which is
+  // the shape of a hub somebody cleared rather than one that could not be
+  // reached.
+  if (detailQuery.isError) {
+    return (
+      <PrivateScreen moduleId="together" title={t('private.togetherModuleTitle')} tint={tint}>
+        <QueryError error={detailQuery.error} onRetry={() => detailQuery.refetch()} />
+      </PrivateScreen>
+    );
+  }
 
   return (
     <PrivateScreen
