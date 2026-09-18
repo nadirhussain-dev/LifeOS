@@ -30,9 +30,16 @@ import { join } from 'node:path';
 
 const SCREENS = 'app';
 
-/** Files that are routes but render no query data (layouts, modals over props). */
+/**
+ * Whether the screen reads anything from a query at all.
+ *
+ * Any `{ data ... } = useSomething()` destructure counts, plus a bare
+ * `isLoading`. The first version keyed on `data: x =` and `data = []`, which
+ * missed `const { data: existing } = useTransaction(id)` — and those edit
+ * forms turned out to hold the worst instance of the bug, not the mildest.
+ */
 function readsQueryData(source: string): boolean {
-  return /\bdata:\s*\w+\s*=|\bdata\s*=\s*\[\]|\bisLoading\b/.test(source);
+  return /\{\s*data\s*[,:}]/.test(source) || /\bisLoading\b/.test(source);
 }
 
 function handlesFailure(source: string): boolean {
@@ -62,39 +69,52 @@ function screenFiles(dir: string, out: string[] = []): string[] {
  * list of paths.
  */
 const KNOWN_GAPS: readonly string[] = [
+  // (auth)
+  'app/(auth)/reset-password.tsx',
   // budget
-  'app/budget/debts/index.tsx',
-  'app/budget/recurring.tsx',
+  'app/budget/currency.tsx',
+  'app/budget/recurring/new.tsx',
   'app/budget/savings/[id].tsx',
   'app/budget/savings/new.tsx',
-  'app/budget/transaction.tsx',
+  'app/budget/settings.tsx',
+  // goals
+  'app/goals/[id].tsx',
+  'app/goals/[id]/edit.tsx',
+  'app/goals/[id]/log.tsx',
+  // habit
+  'app/habit/[id].tsx',
+  'app/habit/[id]/edit.tsx',
+  // journal
+  'app/journal/[date].tsx',
   // music
   'app/music/now-playing.tsx',
   'app/music/playlist/[id].tsx',
   'app/music/playlist/[id]/add-songs.tsx',
   'app/music/song/[id].tsx',
-  // the private space
+  // private
   'app/private/albums/[id].tsx',
   'app/private/albums/[id]/chat.tsx',
+  'app/private/albums/[id]/invite.tsx',
   'app/private/albums/[id]/notes.tsx',
   'app/private/albums/[id]/plans.tsx',
   'app/private/albums/index.tsx',
   'app/private/albums/invites.tsx',
   'app/private/together.tsx',
-  // study
-  'app/study/log.tsx',
-  'app/study/settings.tsx',
-  'app/study/timer.tsx',
+  // routine
+  'app/routine/[id].tsx',
   // settings
   'app/settings/media.tsx',
   'app/settings/operator/pricing.tsx',
   'app/settings/sync-conflicts.tsx',
-  // one each
-  'app/goals/[id].tsx',
-  'app/journal/[date].tsx',
-  'app/notes.tsx',
-  'app/routine/[id].tsx',
+  // sleep
+  'app/sleep/settings.tsx',
+  // study
+  'app/study/log.tsx',
+  'app/study/settings.tsx',
+  'app/study/timer.tsx',
+  // task
   'app/task/[id].tsx',
+  // timeline
   'app/timeline/[date].tsx',
 ];
 
@@ -121,5 +141,42 @@ describe('screens report failed reads', () => {
   it('covers the Gallery module, which had no error state on any screen', () => {
     const gallery = offenders.filter((path) => path.startsWith('app/gallery/'));
     expect(gallery).toEqual([]);
+  });
+});
+
+/**
+ * A screen that both creates and edits must never create while editing.
+ *
+ * Three screens share one shape: `if (isEdit && existing) { update } else {
+ * create }`. It is correct while the read succeeds and silently wrong when it
+ * does not — a failed read leaves `existing` undefined, the branch falls
+ * through, and saving writes a *second* row beside the one the person meant to
+ * edit. A duplicate transaction in the ledger, a second night's sleep, a second
+ * IOU against the same person, none of them announced.
+ *
+ * Detected by shape rather than by name so a fourth screen written to the same
+ * pattern is caught on the day it is added, which is the only day the guard is
+ * cheap to write.
+ */
+const CREATE_OR_EDIT = /if\s*\(isEdit\s*&&\s*existing\)/;
+const GUARDED = /if\s*\(isEdit\s*&&\s*!existing\)\s*return;/;
+
+describe('a create-or-edit screen never creates while editing', () => {
+  const screens = screenFiles(SCREENS)
+    .map((path) => ({ path, source: readFileSync(path, 'utf8') }))
+    .filter(({ source }) => CREATE_OR_EDIT.test(source));
+
+  it('finds the screens that have both paths', () => {
+    // Guards the detector itself: a rename that stops it matching would
+    // otherwise make every assertion below vacuously true.
+    expect(screens.map((s) => s.path).sort()).toEqual([
+      'app/budget/debts/new.tsx',
+      'app/budget/transaction.tsx',
+      'app/sleep/log.tsx',
+    ]);
+  });
+
+  it.each(screens.map((s) => s.path))('%s refuses to save an edit it could not read', (path) => {
+    expect(GUARDED.test(readFileSync(path, 'utf8'))).toBe(true);
   });
 });

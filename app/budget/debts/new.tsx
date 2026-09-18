@@ -12,6 +12,7 @@ import { Chip } from '@/components/ui/chip';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Segmented } from '@/components/ui/segmented';
+import { QueryError } from '@/components/ui/query-error';
 import { SheetHeader } from '@/components/ui/sheet-header';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -39,7 +40,8 @@ export default function DebtFormScreen() {
   const debtTint = useTheme().resolve(DEBT_TINT);
   const { t } = useTranslation();
   const { data: settings } = useBudgetSettings();
-  const { debts } = useDebts();
+  const debtsQuery = useDebts();
+  const { debts } = debtsQuery;
   const { addDebt, editDebt } = useDebtMutations();
   const currency = settings?.currency ?? '$';
   const isEdit = !!id;
@@ -97,6 +99,11 @@ export default function DebtFormScreen() {
 
   const save = () => {
     if (!canSave) return;
+    // Editing an IOU we could not read is not a save: the branch below falls
+    // through to `addDebt` when `existing` is missing, which would record a
+    // *second* IOU against the same person. Same shape as the budget
+    // transaction screen — see the note there.
+    if (isEdit && !existing) return;
     const effectiveReminder = dueDate ? reminderDaysBefore : null;
     if (isEdit && existing) {
       editDebt.mutate({
@@ -123,6 +130,18 @@ export default function DebtFormScreen() {
     release();
     router.back();
   };
+
+  // An edit screen whose IOU failed to load has nothing to edit. `existing` is
+  // found in the debts list rather than fetched by id, so a failure of that
+  // one read is what empties this form.
+  if (isEdit && debtsQuery.isError) {
+    return (
+      <View className="flex-1 bg-background">
+        <SheetHeader title={t('budget.editIou')} />
+        <QueryError error={debtsQuery.error} onRetry={() => debtsQuery.refetch()} />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-background">

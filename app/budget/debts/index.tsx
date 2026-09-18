@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Fab } from '@/components/ui/fab';
 import { HeroCard } from '@/components/ui/hero-card';
 import { HandCoins } from '@/components/ui/icons';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Segmented } from '@/components/ui/segmented';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -38,7 +39,7 @@ export default function DebtsScreen() {
   const debtTint = useTheme().resolve(DEBT_TINT);
   const { t } = useTranslation();
   const { data: settings } = useBudgetSettings();
-  const { debts, totals, isLoading } = useDebts();
+  const { debts, totals, isLoading, isError, error, refetch } = useDebts();
   const currency = settings?.currency ?? '$';
 
   const filterOptions = [
@@ -66,7 +67,9 @@ export default function DebtsScreen() {
         tint={moduleTint('budget', scheme)}
       />
 
-      {isLoading ? (
+      {isError ? (
+        <QueryError error={error} onRetry={() => refetch()} />
+      ) : isLoading ? (
         <View className="gap-3 px-4 pt-2">
           <Skeleton className="h-40 w-full rounded-2xl" />
           <Skeleton className="h-20 w-full rounded-2xl" />

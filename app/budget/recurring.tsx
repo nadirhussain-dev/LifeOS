@@ -7,6 +7,7 @@ import { Pressable, ScrollView, Switch, View } from 'react-native';
 import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Repeat, Trash2 } from '@/components/ui/icons';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -37,7 +38,7 @@ export default function RecurringScreen() {
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
-  const { data: rules = [] } = useRecurring();
+  const { data: rules = [], isError, error, refetch } = useRecurring();
   const { setActive, remove } = useRecurringMutations();
   const { data: settings } = useBudgetSettings();
   const currency = settings?.currency ?? 'USD';
@@ -58,7 +59,9 @@ export default function RecurringScreen() {
     <View className="flex-1 bg-background">
       <ScreenHeader title={t('budget.recurring')} />
 
-      {rules.length === 0 ? (
+      {isError ? (
+        <QueryError error={error} onRetry={() => refetch()} />
+      ) : rules.length === 0 ? (
         <EmptyState
           icon={Repeat}
           title={t('budget.noRecurringTitle')}

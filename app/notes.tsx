@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Fab } from '@/components/ui/fab';
 import { ListSectionHeader } from '@/components/ui/list-section-header';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -60,7 +61,13 @@ export default function NotesScreen() {
     [archive, unarchive],
   );
 
-  const { data: notes = [], isLoading, refetch } = showArchived ? archivedNotes : activeNotes;
+  const {
+    data: notes = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = showArchived ? archivedNotes : activeNotes;
 
   // Pull-to-refresh existed on the dashboard and nowhere else, so the reflex
   // gesture did nothing on every list in the app.
@@ -124,7 +131,9 @@ export default function NotesScreen() {
         </View>
       </View>
 
-      {isLoading ? (
+      {isError ? (
+        <QueryError error={error} onRetry={() => refetch()} />
+      ) : isLoading ? (
         <View className="gap-2.5 px-5">
           <Skeleton className="h-16 w-full rounded-2xl" />
           <Skeleton className="h-16 w-full rounded-2xl" />

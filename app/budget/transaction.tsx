@@ -11,6 +11,7 @@ import { Chip } from '@/components/ui/chip';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Segmented } from '@/components/ui/segmented';
+import { QueryError } from '@/components/ui/query-error';
 import { SheetHeader } from '@/components/ui/sheet-header';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -51,7 +52,8 @@ export default function TransactionScreen() {
   const { addTransaction, editTransaction, removeTransaction } = useBudgetMutations();
   const { data: settings } = useBudgetSettings();
   const { data: savingsGoals = [] } = useSavingsGoals();
-  const { data: existing } = useTransaction(id);
+  const existingQuery = useTransaction(id);
+  const { data: existing } = existingQuery;
   const currency = settings?.currency ?? '$';
   const isEdit = !!id;
 
@@ -113,6 +115,21 @@ export default function TransactionScreen() {
 
   const save = () => {
     if (!canSave) return;
+    /*
+     * Editing something we could not read is not a save.
+     *
+     * The branch below falls through to `addTransaction` whenever `existing`
+     * is missing — which is correct for the create screen and silently wrong
+     * here: a failed read of `id` left the form on its defaults, and saving it
+     * wrote a *second* transaction into the ledger while the real one sat
+     * untouched. A duplicate entry in a money module, from a read the person
+     * was never told had failed.
+     *
+     * The screen refuses to render the form in this state (see below), so this
+     * is the belt to that braces — the two guards fail for different reasons
+     * and a future edit to one should not be able to reopen the hole.
+     */
+    if (isEdit && !existing) return;
     const payload = {
       type,
       amountCents,
@@ -158,6 +175,24 @@ export default function TransactionScreen() {
   };
 
   const tint = resolveTint(ledgerTints[type], scheme);
+
+  /**
+   * An edit screen whose subject failed to load has nothing to edit.
+   *
+   * Rendering the form anyway showed every field at its create-screen default
+   * — amount empty, category "food", today's date — which reads as a
+   * transaction that has been wiped rather than one that could not be
+   * fetched. Only in edit mode: the create screen wants none of this, and the
+   * settings and savings-goal reads it shares are degradations, not blockers.
+   */
+  if (isEdit && existingQuery.isError) {
+    return (
+      <View className="flex-1 bg-background">
+        <SheetHeader title={t('budget.editTransaction')} />
+        <QueryError error={existingQuery.error} onRetry={() => existingQuery.refetch()} />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-background">
