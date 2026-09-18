@@ -1,9 +1,9 @@
-import { format } from 'date-fns/format';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { formatDate, formatTime } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { CelebrationOverlay } from '@/components/ui/celebration-overlay';
 import { GradientButton } from '@/components/ui/gradient-button';
@@ -262,7 +262,7 @@ export default function GoalDetailScreen() {
               <Check size={18} color={dsColors[scheme].success} />
               <Text className="font-sora-semibold text-foreground">
                 {goal.completedAt
-                  ? t('goals.completedOn', { date: format(goal.completedAt, 'MMM d, yyyy') })
+                  ? t('goals.completedOn', { date: formatDate(goal.completedAt, 'medium') })
                   : t('goals.completed')}
               </Text>
             </View>
@@ -368,7 +368,7 @@ export default function GoalDetailScreen() {
                     <Text className="font-sora-medium text-foreground">
                       {log.note?.trim() || t('goals.progressUpdate')}
                     </Text>
-                    <Text variant="caption">{format(log.loggedAt, 'EEE, MMM d · h:mm a')}</Text>
+                    <Text variant="caption">{`${formatDate(log.loggedAt, 'weekdayDayMonth')} · ${formatTime(log.loggedAt)}`}</Text>
                   </View>
                   <View
                     className="rounded-full px-2.5 py-1"

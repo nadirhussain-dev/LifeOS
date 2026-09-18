@@ -1,9 +1,9 @@
-import { format } from 'date-fns/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { CheckCircle2, Pencil, RotateCcw, Trash2 } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
@@ -102,7 +102,7 @@ export default function DebtDetailScreen() {
               {borrowed ? t('budget.youOwe') : t('budget.owesYou')}{' '}
               {formatMoney(debt.principalCents, debt.currency)}
               {debt.dueDate
-                ? ` · ${t('budget.dueOn', { date: format(debt.dueDate, 'MMM d, yyyy') })}`
+                ? ` · ${t('budget.dueOn', { date: formatDate(debt.dueDate, 'medium') })}`
                 : ''}
             </Text>
             <Text className="font-sora-semibold" style={{ color: tint }}>
@@ -123,7 +123,7 @@ export default function DebtDetailScreen() {
               <CheckCircle2 size={18} color={colors[scheme].success} />
               <Text className="font-sora-medium text-foreground">
                 {debt.settledAt
-                  ? t('budget.settledOn', { date: format(debt.settledAt, 'MMM d, yyyy') })
+                  ? t('budget.settledOn', { date: formatDate(debt.settledAt, 'medium') })
                   : t('debtStatus.settled')}
               </Text>
             </View>

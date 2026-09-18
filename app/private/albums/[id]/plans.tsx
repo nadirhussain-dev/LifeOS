@@ -5,6 +5,7 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { CalendarPlus } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
@@ -171,7 +172,7 @@ function PlanRow({
           {event.title ?? t('private.commentLocked')}
         </Text>
         <Text variant="caption" style={{ color: tint }}>
-          {format(new Date(`${event.eventDate}T00:00:00`), 'd MMM yyyy')}
+          {formatDate(new Date(`${event.eventDate}T00:00:00`), 'medium')}
         </Text>
       </View>
       {event.notes ? (

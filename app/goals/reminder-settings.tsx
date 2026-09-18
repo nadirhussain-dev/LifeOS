@@ -1,5 +1,4 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { format } from 'date-fns/format';
 import { set } from 'date-fns/set';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -7,6 +6,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, Switch, View } from 'react-native';
 
+import { formatTime } from '@/lib/date-format';
 import { AttributeRow } from '@/components/ui/attribute-row';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
@@ -148,7 +148,7 @@ export default function GoalReminderSettingsScreen() {
                   className="flex-row items-center gap-1.5 self-start rounded-full border border-border px-3 py-1.5"
                 >
                   <Clock size={14} color={c.mutedForeground} />
-                  <Text variant="muted">{format(time, 'h:mm a')}</Text>
+                  <Text variant="muted">{formatTime(time)}</Text>
                 </Pressable>
               )}
             </AttributeRow>
@@ -158,10 +158,10 @@ export default function GoalReminderSettingsScreen() {
         {draft.enabled && (
           <Text variant="muted">
             {draft.daysBefore === 0
-              ? t('goals.reminderSummaryToday', { time: format(time, 'h:mm a') })
+              ? t('goals.reminderSummaryToday', { time: formatTime(time) })
               : t('goals.reminderSummary', {
                   count: draft.daysBefore,
-                  time: format(time, 'h:mm a'),
+                  time: formatTime(time),
                 })}
           </Text>
         )}

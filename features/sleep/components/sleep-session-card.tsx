@@ -1,8 +1,8 @@
-import { format } from 'date-fns/format';
 import { parseISO } from 'date-fns/parseISO';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { ArrowForward } from '@/components/ui/directional-icon';
 import { Moon, Star, Sun } from '@/components/ui/icons';
@@ -45,7 +45,7 @@ export function SleepSessionCard({ session, goalMinutes, onPress }: Props) {
       <View className="flex-1 gap-1">
         <View className="flex-row items-center gap-2">
           <Text className="font-sora-semibold text-foreground">
-            {format(parseISO(session.logDate), 'EEE, MMM d')}
+            {formatDate(parseISO(session.logDate), 'weekdayDayMonth')}
           </Text>
           {metGoal && (
             <View className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: '#22c55e' }} />

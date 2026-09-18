@@ -1,8 +1,8 @@
-import { format } from 'date-fns/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { GradientButton } from '@/components/ui/gradient-button';
 import { Plus, Trash2 } from '@/components/ui/icons';
 import { ProgressRing } from '@/components/ui/progress-ring';
@@ -113,7 +113,7 @@ export default function SavingsGoalDetailScreen() {
                 ? t('budget.goalReached')
                 : t('budget.amountToGo', { amount: formatMoney(remaining, currency) }) +
                   (goal.deadline
-                    ? ` · ${t('budget.byDate', { date: format(goal.deadline, 'MMM yyyy') })}`
+                    ? ` · ${t('budget.byDate', { date: formatDate(goal.deadline, 'monthYear') })}`
                     : '')}
             </Text>
           </View>

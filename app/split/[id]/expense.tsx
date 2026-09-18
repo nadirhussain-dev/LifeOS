@@ -1,11 +1,11 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { format } from 'date-fns/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { CalendarDays, Check, Trash2 } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/chip';
@@ -272,12 +272,14 @@ export default function SplitExpenseScreen() {
               <Pressable
                 onPress={() => setShowDatePicker(true)}
                 accessibilityRole="button"
-                accessibilityLabel={`${t('split.date')}: ${format(spentAt, 'PPP')}`}
+                accessibilityLabel={`${t('split.date')}: ${formatDate(spentAt, 'long')}`}
                 className={cardClass({ padding: 'none' }, 'flex-row items-center gap-2 px-4')}
                 style={{ height: 56 }}
               >
                 <CalendarDays size={16} color={colors[scheme].mutedForeground} />
-                <Text className="font-sora-medium text-foreground">{format(spentAt, 'd MMM')}</Text>
+                <Text className="font-sora-medium text-foreground">
+                  {formatDate(spentAt, 'dayMonth')}
+                </Text>
               </Pressable>
             </View>
           </View>

@@ -5,6 +5,7 @@ import { set } from 'date-fns/set';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import { formatTime } from '@/lib/date-format';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Text } from '@/components/ui/text';
@@ -108,7 +109,7 @@ export function ReminderPicker({ value, onChange, category = 'notes' }: Props) {
       </View>
       {shiftedTo !== null && (
         <Text variant="caption">
-          {t('reminder.quietHoursShift', { time: format(shiftedTo, 'h:mm a') })}
+          {t('reminder.quietHoursShift', { time: formatTime(shiftedTo) })}
         </Text>
       )}
     </View>

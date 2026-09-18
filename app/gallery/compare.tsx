@@ -1,6 +1,5 @@
 import Slider from '@react-native-community/slider';
 import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
-import { format } from 'date-fns/format';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
@@ -9,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Dimensions, Image, Pressable, ScrollView, View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 
+import { formatDate } from '@/lib/date-format';
 import { Bookmark, GitCompareArrows, Share2, Sparkles, TrendingUp } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -231,7 +231,7 @@ export default function CompareScreen() {
               <Text className="font-sora-bold text-foreground">{t('gallery.myProgress')}</Text>
               <Text variant="caption">
                 {ready
-                  ? `${format(before!.takenAt, 'MMM d, yyyy')} → ${format(after!.takenAt, 'MMM d, yyyy')}`
+                  ? `${formatDate(before!.takenAt, 'medium')} → ${formatDate(after!.takenAt, 'medium')}`
                   : t('gallery.pickBeforeAfter')}
               </Text>
             </View>
@@ -300,7 +300,7 @@ export default function CompareScreen() {
                       </View>
                     </View>
                     <Text variant="caption" className="mt-1 text-center">
-                      {format(photo.takenAt, 'MMM d, yyyy')}
+                      {formatDate(photo.takenAt, 'medium')}
                     </Text>
                   </View>
                 ))}

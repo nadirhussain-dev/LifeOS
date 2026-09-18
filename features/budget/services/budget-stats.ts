@@ -1,13 +1,13 @@
 import { endOfMonth } from 'date-fns/endOfMonth';
 import { endOfWeek } from 'date-fns/endOfWeek';
 import { endOfYear } from 'date-fns/endOfYear';
-import { format } from 'date-fns/format';
 import { startOfMonth } from 'date-fns/startOfMonth';
 import { startOfWeek } from 'date-fns/startOfWeek';
 import { startOfYear } from 'date-fns/startOfYear';
 import { subMonths } from 'date-fns/subMonths';
 import type { TFunction } from 'i18next';
 
+import { formatMonth } from '@/lib/date-format';
 import type { ThemeName } from '@/constants/design-tokens';
 
 import { expenseCategoryMeta } from '@/features/budget/config/budget-config';
@@ -111,7 +111,7 @@ export function monthlyTrend(
     const inMonth = filterByRange(transactions, start, end);
     const summary = summarize(inMonth);
     points.push({
-      label: format(anchor, 'MMM'),
+      label: formatMonth(anchor, 'short'),
       incomeCents: summary.incomeCents,
       expenseCents: summary.expenseCents,
     });

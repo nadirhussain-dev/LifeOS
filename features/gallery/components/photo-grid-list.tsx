@@ -1,8 +1,8 @@
 import { FlashList } from '@shopify/flash-list';
-import { format } from 'date-fns/format';
 import { useMemo } from 'react';
 import { View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { Text } from '@/components/ui/text';
 import { COLUMNS, GAP, PhotoTile, tileSize } from '@/features/gallery/components/photo-grid';
 import type { GalleryPhoto } from '@/features/gallery/types/gallery.types';
@@ -52,7 +52,7 @@ export function PhotoGridList({
     }
     const map = new Map<string, GalleryPhoto[]>();
     for (const photo of photos) {
-      const k = format(photo.takenAt, 'MMMM yyyy');
+      const k = formatDate(photo.takenAt, 'monthYearLong');
       if (!map.has(k)) map.set(k, []);
       map.get(k)!.push(photo);
     }

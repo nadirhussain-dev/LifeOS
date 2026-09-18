@@ -3,6 +3,7 @@ import { isToday } from 'date-fns/isToday';
 import { subDays } from 'date-fns/subDays';
 import { useQuery } from '@tanstack/react-query';
 
+import { formatTime } from '@/lib/date-format';
 import { fetchDailyQuote } from '@/features/dashboard/services/daily-quote';
 import { listTransactions } from '@/features/budget/services/budget-repository';
 import {
@@ -51,7 +52,7 @@ export function useTodayTasks() {
           title: task.title,
           done: false,
           overdue: getDueBucket(task) === 'overdue',
-          dueLabel: task.hasDueTime && task.dueDate ? format(task.dueDate, 'h:mm a') : undefined,
+          dueLabel: task.hasDueTime && task.dueDate ? formatTime(task.dueDate) : undefined,
         })),
       };
     },

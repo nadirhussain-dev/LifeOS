@@ -146,7 +146,7 @@ export function WaterIntakeWidget() {
             className="flex-row items-center justify-center gap-1.5"
           >
             <BarChart3 size={12} color={colors[scheme].mutedForeground} />
-            <Text variant="caption">View last 14 days</Text>
+            <Text variant="caption">{t('water.viewLast14Days')}</Text>
           </Pressable>
         </View>
       )}

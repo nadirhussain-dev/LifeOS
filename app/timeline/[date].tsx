@@ -1,11 +1,11 @@
 import { FlashList } from '@shopify/flash-list';
 import { addDays } from 'date-fns/addDays';
-import { format } from 'date-fns/format';
 import { parseISO } from 'date-fns/parseISO';
 import { subDays } from 'date-fns/subDays';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import { formatDate } from '@/lib/date-format';
 import { ChevronBack, ChevronForward } from '@/components/ui/directional-icon';
 import { Clock3, Plus } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -59,7 +59,7 @@ export default function TimelineScreen() {
         >
           <ChevronBack size={18} color={colors[scheme].mutedForeground} />
         </Pressable>
-        <Text variant="subheading">{format(date, 'EEEE, MMM d')}</Text>
+        <Text variant="subheading">{formatDate(date, 'weekdayDayMonthLong')}</Text>
         <Pressable
           accessibilityRole="button"
           onPress={() => goToDate(addDays(date, 1))}

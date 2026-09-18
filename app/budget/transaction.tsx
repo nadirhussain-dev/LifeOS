@@ -1,10 +1,10 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { format } from 'date-fns/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { CalendarDays, Trash2 } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/chip';
@@ -307,7 +307,7 @@ export default function TransactionScreen() {
               className="rounded-lg bg-muted px-3 py-1.5"
             >
               <Text className="font-sora-semibold text-foreground">
-                {format(occurredAt, 'MMM d, yyyy')}
+                {formatDate(occurredAt, 'medium')}
               </Text>
             </Pressable>
           )}

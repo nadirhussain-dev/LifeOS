@@ -1,10 +1,10 @@
-import { format } from 'date-fns/format';
 import { parseISO } from 'date-fns/parseISO';
 import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { formatDayOfMonth, formatWeekday } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { BarChart, type BarDatum } from '@/components/ui/bar-chart';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -86,7 +86,9 @@ export default function StudyScreen() {
 
   const chartData: BarDatum[] = trend.map((point) => ({
     label:
-      range === 'week' ? format(parseISO(point.date), 'EEEEE') : format(parseISO(point.date), 'd'),
+      range === 'week'
+        ? formatWeekday(parseISO(point.date), 'narrow')
+        : formatDayOfMonth(parseISO(point.date)),
     value: Math.round(point.seconds / 60),
     color: point.metGoal ? studyTint : alpha(studyTint, 0.4),
   }));

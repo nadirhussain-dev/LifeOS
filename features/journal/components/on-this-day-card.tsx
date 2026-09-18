@@ -1,9 +1,9 @@
-import { format } from 'date-fns/format';
 import { parseISO } from 'date-fns/parseISO';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { preview, type OnThisDayEntry } from '@/features/journal/services/on-this-day';
@@ -67,7 +67,7 @@ export function OnThisDayCard({ entries }: Props) {
                   ? t('journal.onThisDayYear')
                   : t('journal.onThisDayYears', { count: yearsAgo })}
               </Text>
-              <Text variant="caption">{format(parseISO(entry.entryDate), 'd MMM yyyy')}</Text>
+              <Text variant="caption">{formatDate(parseISO(entry.entryDate), 'medium')}</Text>
             </View>
 
             {/* An entry can be a mood with no words. Showing an empty line under

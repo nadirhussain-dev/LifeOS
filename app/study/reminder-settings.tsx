@@ -1,5 +1,4 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { format } from 'date-fns/format';
 import { set } from 'date-fns/set';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -7,6 +6,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, Switch, View } from 'react-native';
 
+import { formatTime } from '@/lib/date-format';
 import { AttributeRow } from '@/components/ui/attribute-row';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
@@ -122,7 +122,7 @@ export default function StudyReminderSettingsScreen() {
                   className="flex-row items-center gap-1.5 self-start rounded-full border border-border px-3 py-1.5"
                 >
                   <Clock size={14} color={c.mutedForeground} />
-                  <Text variant="muted">{format(time, 'h:mm a')}</Text>
+                  <Text variant="muted">{formatTime(time)}</Text>
                 </Pressable>
               )}
             </AttributeRow>
@@ -139,7 +139,7 @@ export default function StudyReminderSettingsScreen() {
           <Text variant="muted">
             {t('study.reminderSummary', {
               count: draft.days.length,
-              time: format(time, 'h:mm a'),
+              time: formatTime(time),
             })}
           </Text>
         )}

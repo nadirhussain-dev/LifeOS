@@ -1,7 +1,7 @@
-import { format } from 'date-fns/format';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import { formatTime } from '@/lib/date-format';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Text } from '@/components/ui/text';
@@ -71,11 +71,11 @@ export function TimelineEventRow({ event, onDeleteCalendarEvent }: Props) {
           className="font-sora-medium"
           style={{ color: colors[scheme].mutedForeground }}
         >
-          {format(event.time, 'h:mm a')}
+          {formatTime(event.time)}
         </Text>
         {event.endTime && (
           <Text variant="caption" style={{ color: colors[scheme].mutedForeground }}>
-            – {format(event.endTime, 'h:mm a')}
+            – {formatTime(event.endTime)}
           </Text>
         )}
       </View>

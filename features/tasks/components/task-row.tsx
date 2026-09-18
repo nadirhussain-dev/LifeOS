@@ -1,9 +1,9 @@
-import { format } from 'date-fns/format';
 import { isToday } from 'date-fns/isToday';
 import * as Haptics from 'expo-haptics';
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import { formatDate } from '@/lib/date-format';
 import { Archive, Check, ListChecks, Trash2 } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import Animated, {
@@ -48,7 +48,7 @@ function DueDateLabel({ task }: { task: Task }) {
         : 'text-muted-foreground';
   return (
     <Text className={`font-sora-medium text-xs ${variant}`}>
-      {isToday(task.dueDate) ? t('common.today') : format(task.dueDate, 'MMM d')}
+      {isToday(task.dueDate) ? t('common.today') : formatDate(task.dueDate, 'dayMonth')}
     </Text>
   );
 }

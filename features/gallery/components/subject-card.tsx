@@ -1,9 +1,9 @@
 import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
-import { format } from 'date-fns/format';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { GitCompareArrows, ImagePlus } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
@@ -37,7 +37,7 @@ function End({ uri, takenAt, label }: { uri: string; takenAt: number; label: str
       <View>
         <Text variant="micro">{label}</Text>
         <Text variant="caption" className="font-sora-medium text-foreground">
-          {format(takenAt, 'MMM d, yyyy')}
+          {formatDate(takenAt, 'medium')}
         </Text>
       </View>
     </View>

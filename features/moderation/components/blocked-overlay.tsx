@@ -1,9 +1,9 @@
-import { format } from 'date-fns/format';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { formatDateTime } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShieldAlert } from '@/components/ui/icons';
@@ -75,9 +75,7 @@ export function BlockedOverlay() {
 
   if (status !== 'blocked') return null;
 
-  const until = standing?.expiresAt
-    ? format(new Date(standing.expiresAt), 'd MMM yyyy, HH:mm')
-    : null;
+  const until = standing?.expiresAt ? formatDateTime(new Date(standing.expiresAt), 'medium') : null;
 
   return (
     <View

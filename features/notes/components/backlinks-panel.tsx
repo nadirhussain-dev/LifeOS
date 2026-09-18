@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { Link2 } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -16,6 +17,7 @@ type Props = {
 export function BacklinksPanel({ backlinks }: Props) {
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
+  const { t } = useTranslation();
 
   if (backlinks.length === 0) return null;
 
@@ -23,7 +25,7 @@ export function BacklinksPanel({ backlinks }: Props) {
     <View className="gap-2">
       <View className="flex-row items-center gap-1.5">
         <Link2 size={13} color={colors[scheme].mutedForeground} />
-        <Text variant="sectionLabel">Linked mentions</Text>
+        <Text variant="sectionLabel">{t('notes.linkedMentions')}</Text>
       </View>
       <View className={cardClass({ padding: 'none' }, 'gap-1 px-4')}>
         {backlinks.map((backlink, index) => (

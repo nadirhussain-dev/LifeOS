@@ -1,10 +1,10 @@
-import { format } from 'date-fns/format';
 import { parseISO } from 'date-fns/parseISO';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
+import { formatDayOfMonth, formatWeekday } from '@/lib/date-format';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { DualTrendChart } from '@/components/ui/dual-trend-chart';
@@ -69,7 +69,10 @@ export default function InsightsScreen() {
   const totalSpendCents = daily.reduce((sum, d) => sum + d.spendCents, 0);
 
   const chartData = daily.map((d) => ({
-    label: range === 'week' ? format(parseISO(d.date), 'EEEEE') : format(parseISO(d.date), 'd'),
+    label:
+      range === 'week'
+        ? formatWeekday(parseISO(d.date), 'narrow')
+        : formatDayOfMonth(parseISO(d.date)),
     barValue: (d.sleepMinutes ?? 0) / 60,
     lineValue: d.focusRating,
   }));

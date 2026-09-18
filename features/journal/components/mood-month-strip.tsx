@@ -1,11 +1,11 @@
 import { eachDayOfInterval } from 'date-fns/eachDayOfInterval';
 import { endOfMonth } from 'date-fns/endOfMonth';
-import { format } from 'date-fns/format';
 import { getDay } from 'date-fns/getDay';
 import { isToday } from 'date-fns/isToday';
 import { startOfMonth } from 'date-fns/startOfMonth';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import { formatDate, formatDayOfMonth, formatMonth } from '@/lib/date-format';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { cardClass } from '@/components/ui/card';
@@ -52,7 +52,7 @@ export function MoodMonthStrip({ monthAnchor, entries, onSelectDate }: Props) {
   return (
     <View className={cardClass({ padding: 'md', elevation: 'e1' }, 'gap-2')}>
       <Text variant="micro" className="font-sora-semibold">
-        {format(monthAnchor, 'MMMM')}
+        {formatMonth(monthAnchor, 'long')}
       </Text>
 
       <View className="flex-row">
@@ -84,7 +84,7 @@ export function MoodMonthStrip({ monthAnchor, entries, onSelectDate }: Props) {
                 accessibilityRole="button"
                 onPress={() => onSelectDate(dateKey)}
                 disabled={isFuture}
-                accessibilityLabel={format(day, 'MMMM d')}
+                accessibilityLabel={formatDate(day, 'dayMonthLong')}
                 accessibilityState={{ disabled: isFuture }}
                 className="flex-1 items-center justify-center rounded-full"
                 style={{
@@ -99,7 +99,7 @@ export function MoodMonthStrip({ monthAnchor, entries, onSelectDate }: Props) {
                   className="font-sora-medium"
                   style={{ color: tint ?? colors[scheme].mutedForeground }}
                 >
-                  {format(day, 'd')}
+                  {formatDayOfMonth(day)}
                 </Text>
               </Pressable>
             </View>

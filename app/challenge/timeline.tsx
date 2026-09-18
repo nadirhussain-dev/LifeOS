@@ -1,7 +1,7 @@
-import { format } from 'date-fns/format';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -102,7 +102,7 @@ export default function ChallengeTimelineScreen() {
                 >
                   {describe(event)}
                 </Text>
-                <Text variant="caption">{format(new Date(event.createdAt), 'd MMM yyyy')}</Text>
+                <Text variant="caption">{formatDate(new Date(event.createdAt), 'medium')}</Text>
               </View>
             ))}
           </View>

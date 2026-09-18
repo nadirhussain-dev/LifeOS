@@ -1,9 +1,9 @@
-import { format } from 'date-fns/format';
 import { parseISO } from 'date-fns/parseISO';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Switch, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Repeat, Trash2 } from '@/components/ui/icons';
@@ -87,7 +87,7 @@ export default function RecurringScreen() {
                       {t(FREQUENCY_LABEL_KEY[rule.frequency], { count: rule.interval })}
                       {next && rule.isActive
                         ? ` · ${t('budget.nextOn', {
-                            date: format(parseISO(next), 'MMM d'),
+                            date: formatDate(parseISO(next), 'dayMonth'),
                           })}`
                         : ''}
                     </Text>

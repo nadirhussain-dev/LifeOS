@@ -1,9 +1,9 @@
-import { format } from 'date-fns/format';
 import { parseISO } from 'date-fns/parseISO';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
+import { formatDate } from '@/lib/date-format';
 import { Archive, Clock3, Pencil, Trash2 } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
@@ -266,7 +266,7 @@ export default function HabitDetailScreen() {
               onPress={() => router.push(`/timeline/${log.logDate}`)}
               className="flex-row items-center justify-between border-t border-border py-2.5"
             >
-              <Text variant="muted">{format(parseISO(log.logDate), 'EEE, MMM d')}</Text>
+              <Text variant="muted">{formatDate(parseISO(log.logDate), 'weekdayDayMonth')}</Text>
               <Text className="font-sora-medium">
                 {log.value}
                 {habit.unit ? ` ${habit.unit}` : ''}

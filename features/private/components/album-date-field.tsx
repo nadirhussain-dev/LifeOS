@@ -4,6 +4,7 @@ import { parseISO } from 'date-fns/parseISO';
 import { useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { CalendarDays } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -45,7 +46,7 @@ export function AlbumDateField({ value, onChange }: Props) {
             className="flex-row items-center gap-1.5 rounded-full border border-border px-3 py-1.5"
           >
             <CalendarDays size={14} color={colors[scheme].mutedForeground} />
-            <Text variant="muted">{format(date, 'MMM d, yyyy')}</Text>
+            <Text variant="muted">{formatDate(date, 'medium')}</Text>
           </Pressable>
           {showPicker ? (
             <DateTimePicker value={date} mode="date" display="default" onChange={handleChange} />

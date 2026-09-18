@@ -1,11 +1,11 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { format } from 'date-fns/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import type { TFunction } from 'i18next';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { BellRing, CalendarDays, X } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/chip';
@@ -219,7 +219,7 @@ export default function DebtFormScreen() {
                 className="rounded-lg bg-muted px-3 py-1.5"
               >
                 <Text className="font-sora-semibold text-foreground">
-                  {dueDate ? format(dueDate, 'MMM d, yyyy') : t('fields.none')}
+                  {dueDate ? formatDate(dueDate, 'medium') : t('fields.none')}
                 </Text>
               </Pressable>
             )}

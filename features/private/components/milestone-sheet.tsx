@@ -11,6 +11,7 @@ import { forwardRef, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, Switch, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { Repeat, Trash2 } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -99,7 +100,7 @@ export const MilestoneSheet = forwardRef<BottomSheetModal, Props>(function Miles
                   {m.title ?? t('private.commentLocked')}
                 </Text>
                 <View className="flex-row items-center gap-1.5">
-                  <Text variant="caption">{format(parseISO(m.milestoneDate), 'd MMM yyyy')}</Text>
+                  <Text variant="caption">{formatDate(parseISO(m.milestoneDate), 'medium')}</Text>
                   {m.recurring ? <Repeat size={11} color={theme.mutedForeground} /> : null}
                 </View>
               </View>

@@ -16,6 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { formatDate } from '@/lib/date-format';
 import { X } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import {
@@ -223,7 +224,7 @@ export default function StoryPlayerScreen() {
           </View>
           <View className="flex-row items-center justify-between">
             <Text style={{ color: '#ffffff', fontSize: 13 }} className="font-sora-semibold">
-              {format(current.takenAt, 'EEEE, MMM d, yyyy')}
+              {formatDate(current.takenAt, 'full')}
             </Text>
             <Pressable
               accessibilityRole="button"

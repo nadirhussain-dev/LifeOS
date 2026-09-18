@@ -1,10 +1,10 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { format } from 'date-fns/format';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { CalendarDays } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
@@ -109,7 +109,7 @@ export default function NewSavingsGoalScreen() {
               className="rounded-lg bg-muted px-3 py-1.5"
             >
               <Text className="font-sora-semibold text-foreground">
-                {deadline ? format(deadline, 'MMM yyyy') : t('fields.none')}
+                {deadline ? formatDate(deadline, 'monthYear') : t('fields.none')}
               </Text>
             </Pressable>
           )}

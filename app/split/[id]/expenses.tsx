@@ -1,9 +1,9 @@
 import { FlashList } from '@shopify/flash-list';
-import { format } from 'date-fns/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Receipt } from '@/components/ui/icons';
@@ -71,7 +71,7 @@ export default function SplitGroupExpensesScreen() {
                 <Pressable
                   onPress={() => router.push(`/split/${id}/expense?expense=${expense.id}`)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${expense.description}, ${money}, ${t('split.paidBy', { name: payer })}, ${format(expense.spentAt, 'PPP')}`}
+                  accessibilityLabel={`${expense.description}, ${money}, ${t('split.paidBy', { name: payer })}, ${formatDate(expense.spentAt, 'long')}`}
                   className={
                     index === 0
                       ? 'flex-row items-center gap-3 py-3'
@@ -83,7 +83,8 @@ export default function SplitGroupExpensesScreen() {
                       {expense.description}
                     </Text>
                     <Text variant="caption">
-                      {t('split.paidBy', { name: payer })} · {format(expense.spentAt, 'MMM d')}
+                      {t('split.paidBy', { name: payer })} ·{' '}
+                      {formatDate(expense.spentAt, 'dayMonth')}
                     </Text>
                   </View>
                   <Text className="font-sora-semibold text-foreground">{money}</Text>

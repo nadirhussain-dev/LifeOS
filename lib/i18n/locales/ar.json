@@ -497,7 +497,8 @@
     "reminderTitle": "تذكير بملاحظة",
     "reminderBody": "ألقِ نظرة على هذه الملاحظة.",
     "notFound": "لم تعد هذه الملاحظة موجودة",
-    "notFoundBody": "قد تكون حُذفت على هذا الجهاز أو على جهاز آخر."
+    "notFoundBody": "قد تكون حُذفت على هذا الجهاز أو على جهاز آخر.",
+    "linkedMentions": "الإشارات المرتبطة"
   },
   "budget": {
     "title": "الميزانية",
@@ -1503,7 +1504,8 @@
     "checkTimesBody": "يجب أن تكون بداية نافذة التذكير قبل نهايتها.",
     "enableForReminders": "فعّل إشعارات Daykeep في إعدادات جهازك لتصلك تذكيرات الماء.",
     "reminderNotifTitle": "وقت شرب الماء 💧",
-    "reminderNotifBody": "مضى وقت طويل — اشرب بعض الماء."
+    "reminderNotifBody": "مضى وقت طويل — اشرب بعض الماء.",
+    "viewLast14Days": "عرض آخر 14 يومًا"
   },
   "hubSection": {
     "growth": "التركيز والنمو",

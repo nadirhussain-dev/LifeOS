@@ -1,11 +1,11 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { format } from 'date-fns/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image } from 'expo-image';
 import { Dimensions, Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { CalendarDays, Heart, Trash2, X } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
@@ -178,7 +178,7 @@ export default function PhotoDetailScreen() {
                 className="rounded-lg bg-surface px-3 py-1.5"
               >
                 <Text className="font-sora-semibold text-foreground">
-                  {format(photo.takenAt, 'MMM d, yyyy')}
+                  {formatDate(photo.takenAt, 'medium')}
                 </Text>
               </Pressable>
             )}

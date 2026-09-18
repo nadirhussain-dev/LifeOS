@@ -1,9 +1,9 @@
-import { format } from 'date-fns/format';
 import { isToday } from 'date-fns/isToday';
 import { parseISO } from 'date-fns/parseISO';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
+import { formatDate, formatWeekday } from '@/lib/date-format';
 import { GlassWater, Settings2 } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -88,7 +88,7 @@ export default function WaterHistoryScreen() {
                           : undefined
                       }
                     >
-                      {format(parseISO(day.date), 'EEEEE')}
+                      {formatWeekday(parseISO(day.date), 'narrow')}
                     </Text>
                   </View>
                 );
@@ -106,7 +106,7 @@ export default function WaterHistoryScreen() {
                     : 'flex-row items-center justify-between border-t border-border py-3'
                 }
               >
-                <Text variant="muted">{format(parseISO(day.date), 'EEEE, MMM d')}</Text>
+                <Text variant="muted">{formatDate(parseISO(day.date), 'weekdayDayMonthLong')}</Text>
                 <Text
                   className="font-sora-medium"
                   style={day.totalMl >= goalMl && goalMl > 0 ? { color: waterTint } : undefined}

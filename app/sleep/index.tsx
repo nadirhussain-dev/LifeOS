@@ -1,10 +1,10 @@
-import { format } from 'date-fns/format';
 import { parseISO } from 'date-fns/parseISO';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
+import { formatDate, formatDayOfMonth, formatWeekday } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { BarChart, type BarDatum } from '@/components/ui/bar-chart';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -46,7 +46,9 @@ export default function SleepScreen() {
 
   const chartData: BarDatum[] = trend.map((point) => ({
     label:
-      range === 'week' ? format(parseISO(point.date), 'EEEEE') : format(parseISO(point.date), 'd'),
+      range === 'week'
+        ? formatWeekday(parseISO(point.date), 'narrow')
+        : formatDayOfMonth(parseISO(point.date)),
     value: point.durationMinutes,
     color: point.metGoal ? sleepTint : alpha(sleepTint, 0.4),
   }));
@@ -103,7 +105,7 @@ export default function SleepScreen() {
                 eyebrow={
                   latest
                     ? t('sleep.lastNight', {
-                        date: format(parseISO(latest.logDate), 'EEE, MMM d'),
+                        date: formatDate(parseISO(latest.logDate), 'weekdayDayMonth'),
                       })
                     : t('sleep.lastNightEyebrow', { defaultValue: 'Last night' })
                 }

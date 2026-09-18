@@ -481,7 +481,8 @@
     "reminderTitle": "Note reminder",
     "reminderBody": "Take a look at this note.",
     "notFound": "This note no longer exists",
-    "notFoundBody": "It may have been deleted on this or another device."
+    "notFoundBody": "It may have been deleted on this or another device.",
+    "linkedMentions": "Linked mentions"
   },
   "budget": {
     "title": "Budget",
@@ -1399,7 +1400,8 @@
     "checkTimesBody": "The start of your reminder window needs to be before the end.",
     "enableForReminders": "Enable notifications for Daykeep in your device settings to get water reminders.",
     "reminderNotifTitle": "Time to hydrate 💧",
-    "reminderNotifBody": "It’s been a while — grab some water."
+    "reminderNotifBody": "It’s been a while — grab some water.",
+    "viewLast14Days": "View last 14 days"
   },
   "hubSection": {
     "growth": "Focus & Growth",

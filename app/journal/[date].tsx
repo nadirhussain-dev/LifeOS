@@ -1,4 +1,3 @@
-import { format } from 'date-fns/format';
 import { parseISO } from 'date-fns/parseISO';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,6 +6,7 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { formatDate, formatWeekday } from '@/lib/date-format';
 import { Clock3, MapPin, Trash2 } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -155,7 +155,7 @@ export default function JournalEntryScreen() {
       <View className="gap-1 px-5 pb-5">
         <View className="flex-row items-center justify-between">
           <Text variant="micro" className="font-sora-semibold">
-            {format(date, 'EEEE')}
+            {formatWeekday(date, 'long')}
           </Text>
           <Pressable
             accessibilityRole="button"
@@ -172,7 +172,7 @@ export default function JournalEntryScreen() {
           style={{ fontSize: 32, lineHeight: 40, fontFamily: 'Literata_600SemiBold' }}
           className="text-foreground"
         >
-          {format(date, 'MMMM d')}
+          {formatDate(date, 'dayMonthLong')}
         </Text>
       </View>
 

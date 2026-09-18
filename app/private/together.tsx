@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Pressable, Switch, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import {
@@ -384,7 +385,7 @@ function TogetherHubView({ hub, tint }: { hub: SharedAlbum; tint: string }) {
               {partnerCycleSummary.predictedNextStart ? (
                 <Text variant="caption">
                   {t('private.estimatedNext', {
-                    date: format(parseISO(partnerCycleSummary.predictedNextStart), 'd MMM'),
+                    date: formatDate(parseISO(partnerCycleSummary.predictedNextStart), 'dayMonth'),
                   })}
                 </Text>
               ) : null}
