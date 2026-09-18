@@ -68,6 +68,26 @@ function open() {
 
 let mockDb: ReturnType<typeof drizzle>;
 
+/**
+ * This build does not ship the streak programme
+ * (features/hub/config/module-availability.ts), and the flag store bakes that
+ * in — on its initial state, on every write, and again when `persist`
+ * rehydrates. This suite is about reminder *identity* across restarts and
+ * concurrent syncs, which is a property of the scheduling layer and outlives
+ * any decision about whether the programme ships, so it runs against a build
+ * that does ship it. `describe('what must not be scheduled')` below covers the
+ * disabled case on purpose, by setting the flag itself.
+ *
+ * Mocked rather than reset in `beforeEach`: `jest.resetModules()` mid-test
+ * builds a second store whose rehydration would re-apply the disable after any
+ * `setState`, and a mock is reapplied to the fresh registry where a `setState`
+ * is not.
+ */
+jest.mock('@/features/hub/config/module-availability', () => ({
+  LOCALLY_DISABLED_MODULES: [],
+  isLocallyDisabled: () => false,
+}));
+
 jest.mock('@/database/client', () => ({
   getDb: () => mockDb,
 }));

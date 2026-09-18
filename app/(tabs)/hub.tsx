@@ -14,6 +14,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AdSlot } from '@/features/ads/components/ad-slot';
 import { useAuthStore } from '@/features/auth/services/auth-store';
 import { ModuleCard } from '@/features/hub/components/module-card';
+import { isLocallyDisabled } from '@/features/hub/config/module-availability';
 import { HUB_SECTIONS, type HubModule } from '@/features/hub/config/modules';
 import { hiddenReason, type VisibilityContext } from '@/features/hub/services/module-visibility';
 import { useModuleCurationStore } from '@/features/hub/store/module-curation-store';
@@ -101,11 +102,17 @@ export default function HubScreen() {
 
   /** Disabled modules, with whatever the operator said about them. Shown rather
    * than silently vanished: a module that disappears without explanation
-   * generates the support mail the message was meant to prevent. */
+   * generates the support mail the message was meant to prevent.
+   *
+   * Build-time disables are the exception and are filtered out. That reasoning
+   * is about a module that was on this person's Hub yesterday and is not
+   * today; a module this build has never shipped has no such gap to explain,
+   * and listing it as "unavailable" would advertise a feature they cannot get
+   * at by waiting. See features/hub/config/module-availability.ts. */
   const disabled = useMemo(
     () =>
       HUB_SECTIONS.flatMap((section) => section.modules).filter(
-        (module) => flags[module.id]?.enabled === false,
+        (module) => flags[module.id]?.enabled === false && !isLocallyDisabled(module.id),
       ),
     [flags],
   );

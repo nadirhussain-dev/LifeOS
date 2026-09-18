@@ -11,6 +11,7 @@ import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { REWARDS_MODULE_ID } from '@/features/challenge/config/rewards-flag';
+import { isLocallyDisabled } from '@/features/hub/config/module-availability';
 import { SeasonNotice } from '@/features/challenge/components/season-notice';
 import {
   operatorFix,
@@ -344,6 +345,11 @@ function RewardsSwitch() {
   const { t } = useTranslation();
   const { c } = useTheme();
   const enabled = useModuleFlagsStore((s) => s.flags[REWARDS_MODULE_ID]?.enabled !== false);
+  // This build ships without the programme, and the local disable outranks the
+  // remote one by design (module-availability.ts). Writing `true` to the table
+  // from here would succeed and change nothing visible, so the control says so
+  // instead of pretending — a switch that flips back is worse than a locked one.
+  const lockedByBuild = isLocallyDisabled(REWARDS_MODULE_ID);
   const [busy, setBusy] = useState(false);
 
   const toggle = async (next: boolean) => {
@@ -364,11 +370,15 @@ function RewardsSwitch() {
         <View className="flex-row items-center gap-3 py-3.5">
           <View className="flex-1">
             <Text className="font-sora-medium text-foreground">{t('operator.rewardsEnabled')}</Text>
-            <Text variant="caption">{t('operator.rewardsEnabledSubtitle')}</Text>
+            <Text variant="caption">
+              {lockedByBuild
+                ? t('operator.rewardsLockedByBuild')
+                : t('operator.rewardsEnabledSubtitle')}
+            </Text>
           </View>
           <Switch
             value={enabled}
-            disabled={busy}
+            disabled={busy || lockedByBuild}
             onValueChange={(next) => void toggle(next)}
             trackColor={{ true: c.accent, false: c.border }}
           />

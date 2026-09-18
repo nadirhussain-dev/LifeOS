@@ -2640,6 +2640,7 @@
     "rewardsSwitch": "Streak challenge",
     "rewardsEnabled": "Challenge enabled",
     "rewardsEnabledSubtitle": "Off hides it from every account. No data is touched.",
+    "rewardsLockedByBuild": "Held back in this build. The remote switch cannot turn it on.",
     "rewardsTitle": "Streak challenge",
     "rewardsNoSeason": "No season exists yet. Create one before enabling the challenge.",
     "rewardsRuns": "Runs",

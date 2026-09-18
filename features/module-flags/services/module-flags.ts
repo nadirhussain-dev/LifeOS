@@ -65,7 +65,12 @@ async function runRefresh(): Promise<void> {
     }
     const before = disabledSet(useModuleFlagsStore.getState().flags);
     useModuleFlagsStore.getState().setFlags(flags);
-    const after = disabledSet(flags);
+    // Read `after` back out of the store rather than from the response: the
+    // store applies this build's own disables on write (module-availability.ts),
+    // so comparing the raw response against the stored state would report a
+    // change on every single refresh and resync every reminder the app owns
+    // each time the app is foregrounded.
+    const after = disabledSet(useModuleFlagsStore.getState().flags);
 
     // A module the operator has just pulled may still have a fortnight of its
     // reminders queued with the OS, and those keep firing — pointing at a

@@ -2640,6 +2640,7 @@
     "rewardsSwitch": "سلسلہ چیلنج",
     "rewardsEnabled": "چیلنج فعال",
     "rewardsEnabledSubtitle": "بند کرنے پر ہر اکاؤنٹ سے چھپ جائے گا۔ ڈیٹا محفوظ رہتا ہے۔",
+    "rewardsLockedByBuild": "اس بلڈ میں روکا گیا ہے۔ ریموٹ سوئچ اسے آن نہیں کر سکتا۔",
     "rewardsTitle": "سلسلہ چیلنج",
     "rewardsNoSeason": "ابھی کوئی سیزن نہیں۔ چیلنج فعال کرنے سے پہلے ایک بنائیں۔",
     "rewardsRuns": "سلسلے",
