@@ -734,6 +734,7 @@
     "name": "नाम",
     "forgotPassword": "पासवर्ड भूल गए?",
     "continueGuest": "बिना खाते के जारी रखें",
+    "continueGuestHint": "सब कुछ ऑफ़लाइन काम करता है। बाद में साइन इन करें, आपका सारा डेटा साथ आ जाएगा।",
     "signingIn": "साइन इन हो रहा है…",
     "passwordPlaceholder": "आपका पासवर्ड",
     "enterEmailPassword": "अपना ईमेल और पासवर्ड दर्ज करें।",

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { AuthField } from '@/features/auth/components/auth-field';
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { postAuthDestination } from '@/features/auth/services/post-auth-destination';
 import {
   checkPassword,
   passwordProblemKey,
@@ -98,7 +99,11 @@ export default function ResetPasswordScreen() {
     // Straight in, with the confirmation trailing. A dialog whose only button
     // is "Continue" asks the user to acknowledge something they just did.
     toast.success(t('auth.allSet'));
-    router.replace('/(tabs)');
+    // Through the shared decision, not straight to the tabs. An account that
+    // has never finished onboarding — a password set from a recovery link
+    // before first run completed — would otherwise flash the dashboard on its
+    // way into the wizard.
+    router.replace(postAuthDestination());
   };
 
   return (

@@ -9,6 +9,7 @@ import { Text } from '@/components/ui/text';
 import { AuthField } from '@/features/auth/components/auth-field';
 import { SocialAuthButtons } from '@/features/auth/components/social-auth-buttons';
 import { useAuthStore } from '@/features/auth/services/auth-store';
+import { postAuthDestination } from '@/features/auth/services/post-auth-destination';
 import { useTheme } from '@/hooks/use-theme';
 import { useSplashStore } from '@/hooks/use-splash-store';
 import { isSupabaseConfigured } from '@/lib/env';
@@ -168,18 +169,33 @@ export default function LoginScreen() {
           </Link>
         </View>
 
-        <Pressable
-          accessibilityRole="button"
+        {/* A real option, not an underlined afterthought.
+ 
+            This app works completely offline and a guest who signs in later
+            keeps everything they wrote, so "without an account" is a supported
+            way to use it rather than a degraded one — and it was styled as the
+            least important thing on the screen. Somebody who opened the app,
+            tapped "Sign in" from the welcome screen and then discovered they
+            had no account had to find grey underlined text below the fold to
+            get out.
+
+            The destination is the shared decision, not `/(tabs)`. Hardcoding
+            the tabs here is what stranded a first-time user: the gate would
+            notice they were not onboarded and replace them back onto the
+            welcome screen they had just come from, so the button looked like it
+            had restarted the app. See post-auth-destination.ts. */}
+        <Button
+          label={t('auth.continueGuest')}
+          variant="ghost"
+          size="lg"
           onPress={() => {
             continueAsGuest();
-            router.replace('/(tabs)');
+            router.replace(postAuthDestination());
           }}
-          className="items-center py-2"
-        >
-          <Text variant="muted" className="underline">
-            {t('auth.continueGuest')}
-          </Text>
-        </Pressable>
+        />
+        <Text variant="caption" className="-mt-1 text-center">
+          {t('auth.continueGuestHint')}
+        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );

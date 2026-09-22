@@ -50,14 +50,25 @@ describe('the welcome comes before the sign-in wall', () => {
     // The device-scoped boolean let a brand-new account inherit somebody
     // else's completed onboarding. Every screen that routes on it has to ask
     // the same function, or the one that does not becomes the way back in.
+    //
+    // Two of these now ask it through `postAuthDestination()`, which is that
+    // same function behind one name — factored out because two *other* exits
+    // from the auth stack had skipped the question entirely and sent
+    // first-time users to a dashboard the gate immediately took away again.
+    // Either spelling satisfies the rule; neither being present does not.
     for (const path of [
       'app/index.tsx',
       'features/auth/hooks/use-auth-gate.ts',
       'app/auth/callback.tsx',
       'app/(auth)/create-password.tsx',
     ]) {
-      expect(read(path)).toContain('onboardingScope(');
+      const source = read(path);
+      expect([path, /onboardingScope\(|postAuthDestination\(/.test(source)]).toEqual([path, true]);
     }
+
+    // ...and the helper itself is where the real call has to live, or the
+    // assertion above becomes satisfiable by a function that decides nothing.
+    expect(read('features/auth/services/post-auth-destination.ts')).toContain('onboardingScope(');
   });
 
   it('lets an unonboarded visitor reach the auth stack', () => {

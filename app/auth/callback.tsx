@@ -8,8 +8,7 @@ import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { exchangeOAuthCode } from '@/features/auth/services/oauth';
 import { useAuthStore } from '@/features/auth/services/auth-store';
-import { onboardingScope } from '@/features/onboarding/services/onboarding-scope';
-import { useProfileStore } from '@/features/profile/store/profile-store';
+import { postAuthDestination } from '@/features/auth/services/post-auth-destination';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 /**
@@ -65,15 +64,7 @@ export default function AuthCallbackScreen() {
       // Same decision as the gate's, from the same function — a second
       // hand-rolled version of it here is how the two drifted before, and the
       // symptom was a sign-in that landed somewhere the gate then bounced.
-      const auth = useAuthStore.getState();
-      const profileState = useProfileStore.getState();
-      const { onboarded } = onboardingScope({
-        userId: auth.session?.user.id ?? null,
-        onboardedUserIds: profileState.onboardedUserIds,
-        deviceOnboarded: profileState.onboardingComplete,
-        accountOnboardedAt: auth.profile?.onboardingCompletedAt ?? null,
-      });
-      router.replace(onboarded ? '/(tabs)' : '/(onboarding)');
+      router.replace(postAuthDestination());
     };
 
     void (async () => {
