@@ -34,9 +34,6 @@ export const FUNNEL_METRICS = [
   'ad_refused_ad_free_route',
   'ad_refused_not_a_breakpoint',
   'ad_refused_launch',
-  /** A challenge breakpoint fired for somebody not in a run, or in a module
-   *  they did not commit to. Allowlisted server-side in 0072. */
-  'ad_refused_not_enrolled',
 
   /**
    * One per foreground session. The only metric here that is not about a

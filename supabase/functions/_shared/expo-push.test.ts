@@ -143,10 +143,10 @@ describe('sendExpoPush', () => {
       {
         ...content,
         channelId: 'daykeep-general-v3',
-        collapseId: 'challenge:at-risk',
+        collapseId: 'task:abc123',
         priority: 'high',
         ttl: 3600,
-        data: { route: '/challenge', key: 'challenge:at-risk' },
+        data: { route: '/task', key: 'task:abc123' },
       },
       { fetch: fn, accessToken: 'secret' },
     );
@@ -156,7 +156,7 @@ describe('sendExpoPush', () => {
       channelId: 'daykeep-general-v3',
       // The server-side counterpart to the local scheduler's dedupe key: four
       // sends about one thing become one notification on the device.
-      collapseId: 'challenge:at-risk',
+      collapseId: 'task:abc123',
       priority: 'high',
       ttl: 3600,
     });

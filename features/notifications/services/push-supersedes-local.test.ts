@@ -10,7 +10,7 @@ import * as schema from '@/database/schema';
  *
  * This is the contract that lets push and local coexist. A local notification
  * carries text fixed when it was scheduled and cannot evaluate anything at fire
- * time; a server can. So a push about `challenge:at-risk` has to be able to
+ * time; a server can. So a push about `task:<id>` has to be able to
  * cancel the queued local reminder, or the user gets both — the duplicate this
  * whole body of work removes, reintroduced from the other side.
  *

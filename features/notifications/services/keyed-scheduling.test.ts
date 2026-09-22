@@ -8,9 +8,10 @@ import * as schema from '@/database/schema';
  * The keyed-scheduling contract, tested on the primitives rather than through
  * one feature.
  *
- * `challenge-reminder-identity.test.ts` proves the mechanism fixes the bug it
- * was built for. This proves the mechanism itself — that a key makes a schedule
- * idempotent for any caller, that keys from different modules cannot collide,
+ * The feature test that drove this out was `challenge-reminder-identity.test.ts`,
+ * removed with the streak programme. This proves the mechanism itself — that a
+ * key makes a schedule idempotent for any caller, that keys cannot collide
+ * across modules,
  * that a set can be rebuilt without cancelling its own members, and that the
  * sweep catches whatever slips past all of it.
  */
@@ -71,8 +72,9 @@ type Queued = { id: string; data: Record<string, unknown> };
 const mockQueue: Queued[] = [];
 let mockNextNotificationId = 1;
 
-/** Both native calls yield, so concurrent callers really do interleave — see
- *  the longer note in challenge-reminder-identity.test.ts. */
+/** Both native calls yield, so concurrent callers really do interleave. That is
+ *  the race the lock in `withKey` exists for: without the yield the test would
+ *  pass against a scheduler that has no lock at all. */
 jest.mock('expo-notifications', () => ({
   SchedulableTriggerInputTypes: {
     DATE: 'date',

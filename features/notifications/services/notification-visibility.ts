@@ -42,7 +42,6 @@ export const MODULE_FOR_CATEGORY: Record<NotificationCategory, string | null> = 
   notes: 'notes',
   goals: 'goals',
   split: 'split',
-  streak: 'habits',
   digest: null,
   review: null,
   together: 'together',
