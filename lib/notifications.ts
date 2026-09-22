@@ -84,11 +84,18 @@ export function configureNotificationHandler(): void {
 
   Notifications.setNotificationHandler({
     handleNotification: async (notification) => {
+      // The one exception to the shield below: the alert that says the focus
+      // block is over. Swallowing it would mean the timer's own alarm is the
+      // single notification the timer suppresses — and it would then be
+      // re-announced afterwards as "1 reminder was held while you focused",
+      // which is both wrong and too late to be useful.
+      const isTimerAlert = notification.request.content.data?.timerAlert === true;
+
       // A study focus block must not be interrupted. The reminder is swallowed
       // rather than shown — it is already a row in the in-app inbox, and
       // features/study/services/focus-mode.ts re-announces everything held here
       // as one summary the moment the block ends, so nothing is lost.
-      if (isFocusModeActive()) {
+      if (isFocusModeActive() && !isTimerAlert) {
         holdNotificationDuringFocus(notification.request.content.title ?? '');
         return {
           shouldPlaySound: false,
@@ -583,6 +590,80 @@ async function scheduleOneTime(params: {
       repeats: 'none',
     });
   }
+  return scheduleId;
+}
+
+/**
+ * The end of a timer the user is running right now.
+ *
+ * Deliberately outside the reminder taxonomy, because it is an alarm rather
+ * than a reminder and every part of that policy is wrong for it:
+ *
+ *  - **Quiet hours.** A reminder that lands at 22:30 is shifted to the morning,
+ *    which is right for a hydration nudge and absurd for a pomodoro — the block
+ *    ends when it ends, and an alert eight hours later is not a late alert, it
+ *    is a wrong one.
+ *  - **The category switch.** Turning off Study reminders means "stop nudging
+ *    me about studying". It does not mean "start a 25-minute timer and then say
+ *    nothing", which is a broken feature rather than a respected preference.
+ *    The timer's own controls are where somebody turns the timer off.
+ *  - **The inbox.** "Your break has started" is worthless ten minutes later;
+ *    logging it would fill the inbox with rows nobody can act on.
+ *
+ * It keeps the two things that are right: the keyed-scheduling contract, so a
+ * restart or a second call cannot leave two alarms queued, and the
+ * time-sensitive channel, so it actually peeks instead of landing silently in
+ * the shade.
+ *
+ * `timerAlert` in the payload is what lets it through the focus shield — see
+ * `configureNotificationHandler`, which swallows everything else while a block
+ * is running and would otherwise swallow the very alert that says the block is
+ * over.
+ */
+export function scheduleTimerAlert(params: {
+  title: string;
+  body: string;
+  date: number;
+  /** Stable identity, so scheduling twice replaces rather than duplicates. */
+  key: string;
+  /** Deep link for a tap — the screen the timer is running on. */
+  route?: string;
+}): Promise<string | null> {
+  return withKey(params.key, () => scheduleTimer(params));
+}
+
+async function scheduleTimer(params: {
+  title: string;
+  body: string;
+  date: number;
+  key: string;
+  route?: string;
+}): Promise<string | null> {
+  const Notifications = getNotifications();
+  if (!Notifications) return null;
+  if (params.date <= Date.now()) return null;
+  if (!hasHeadroom(SCHEDULING_BUDGET)) return null;
+
+  const granted = await requestNotificationPermission();
+  if (!granted) return null;
+  await channelsSettled();
+
+  const data = { key: params.key, route: params.route, timerAlert: true };
+  const scheduleId = await Notifications.scheduleNotificationAsync({
+    content: {
+      title: params.title,
+      body: params.body,
+      data,
+      sound: contentSoundFor(selectedSoundId()),
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: params.date,
+      channelId: channelIdFor('time-sensitive', selectedSoundId()),
+    },
+  });
+  spendSlot();
+  if (queueCache) queueCache.push({ identifier: scheduleId, data });
   return scheduleId;
 }
 
