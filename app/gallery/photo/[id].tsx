@@ -1,14 +1,15 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { format } from 'date-fns/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image } from 'expo-image';
 import { Dimensions, Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { CalendarDays, Heart, Trash2, X } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
@@ -26,7 +27,8 @@ export default function PhotoDetailScreen() {
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const tint = moduleTint('gallery', scheme);
-  const { data: photo } = usePhoto(id);
+  const photoQuery = usePhoto(id);
+  const { data: photo } = photoQuery;
   const { editPhoto, toggleFavorite, removePhoto } = useGalleryMutations();
 
   const [caption, setCaption] = useState('');
@@ -41,7 +43,19 @@ export default function PhotoDetailScreen() {
     setSeeded(true);
   }
 
-  if (!photo) return null;
+  // A failed read used to land on the same `return null` as "still loading"
+  // and "just deleted", leaving a blank screen with no way to retry.
+  if (!photo) {
+    if (photoQuery.isError) {
+      return (
+        <View className="flex-1 bg-background">
+          <ScreenHeader title={t('gallery.title')} />
+          <QueryError error={photoQuery.error} onRetry={() => photoQuery.refetch()} />
+        </View>
+      );
+    }
+    return null;
+  }
 
   const screenWidth = Dimensions.get('window').width;
   const aspect = photo.width && photo.height ? photo.width / photo.height : 1;
@@ -164,7 +178,7 @@ export default function PhotoDetailScreen() {
                 className="rounded-lg bg-surface px-3 py-1.5"
               >
                 <Text className="font-sora-semibold text-foreground">
-                  {format(photo.takenAt, 'MMM d, yyyy')}
+                  {formatDate(photo.takenAt, 'medium')}
                 </Text>
               </Pressable>
             )}

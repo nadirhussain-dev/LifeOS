@@ -7,6 +7,7 @@ import { startOfMonth } from 'date-fns/startOfMonth';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { formatDate, formatDayOfMonth } from '@/lib/date-format';
 import { ChevronBack, ChevronForward } from '@/components/ui/directional-icon';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
@@ -79,7 +80,7 @@ export function CycleMonthStrip({
           <ChevronBack size={16} color={theme.mutedForeground} />
         </Pressable>
         <Text variant="micro" className="font-sora-semibold">
-          {format(monthAnchor, 'MMMM yyyy')}
+          {formatDate(monthAnchor, 'monthYearLong')}
         </Text>
         <Pressable accessibilityRole="button" onPress={onNextMonth} hitSlop={8}>
           <ChevronForward size={16} color={theme.mutedForeground} />
@@ -119,7 +120,7 @@ export function CycleMonthStrip({
                 accessibilityRole="button"
                 onPress={() => onSelectDate(dateKey)}
                 disabled={isFuture}
-                accessibilityLabel={format(day, 'MMMM d')}
+                accessibilityLabel={formatDate(day, 'dayMonthLong')}
                 accessibilityState={{ disabled: isFuture }}
                 className="flex-1 items-center justify-center rounded-full"
                 style={{
@@ -134,7 +135,7 @@ export function CycleMonthStrip({
                   className="font-sora-medium"
                   style={{ color: entry ? tint : theme.mutedForeground }}
                 >
-                  {format(day, 'd')}
+                  {formatDayOfMonth(day)}
                 </Text>
               </Pressable>
             </View>

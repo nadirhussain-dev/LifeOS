@@ -1,6 +1,5 @@
 import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
 import { endOfMonth } from 'date-fns/endOfMonth';
-import { format } from 'date-fns/format';
 import { isWithinInterval } from 'date-fns/isWithinInterval';
 import { parseISO } from 'date-fns/parseISO';
 import { startOfMonth } from 'date-fns/startOfMonth';
@@ -9,6 +8,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
+import { formatDayOfMonth, formatMonth, formatWeekday } from '@/lib/date-format';
 import { BarChart, type BarDatum } from '@/components/ui/bar-chart';
 import { cardClass } from '@/components/ui/card';
 import { CalendarDays, Moon, Star, Target } from '@/components/ui/icons';
@@ -45,7 +45,7 @@ function buildMonthlyTrend(sessions: SleepSession[], months: number): BarDatum[]
       inMonth.length > 0
         ? inMonth.reduce((sum, s) => sum + s.durationMinutes, 0) / inMonth.length
         : 0;
-    points.push({ label: format(monthDate, 'MMM'), value: Math.round(avg) });
+    points.push({ label: formatMonth(monthDate, 'short'), value: Math.round(avg) });
   }
   return points;
 }
@@ -90,8 +90,8 @@ export default function SleepInsightsScreen() {
       : trend.map((point) => ({
           label:
             range === 'week'
-              ? format(parseISO(point.date), 'EEEEE')
-              : format(parseISO(point.date), 'd'),
+              ? formatWeekday(parseISO(point.date), 'narrow')
+              : formatDayOfMonth(parseISO(point.date)),
           value: point.durationMinutes,
           color: point.metGoal ? sleepTint : alpha(sleepTint, 0.4),
         }));

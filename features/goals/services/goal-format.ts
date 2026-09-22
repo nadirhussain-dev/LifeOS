@@ -1,8 +1,9 @@
 import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
-import { format } from 'date-fns/format';
 import { isToday } from 'date-fns/isToday';
 import { isTomorrow } from 'date-fns/isTomorrow';
 import type { TFunction } from 'i18next';
+
+import { formatDate } from '@/lib/date-format';
 
 export type DueState = 'overdue' | 'today' | 'soon' | 'later';
 
@@ -23,7 +24,7 @@ export function formatDueDate(dueDate: number, t: TFunction): DueInfo {
   if (isToday(date)) return { label: t('goals.dueToday'), state: 'today' };
   if (isTomorrow(date)) return { label: t('goals.dueTomorrow'), state: 'soon' };
   if (days <= 7) return { label: t('goals.dueInDays', { count: days }), state: 'soon' };
-  return { label: t('goals.dueOn', { date: format(date, 'MMM d') }), state: 'later' };
+  return { label: t('goals.dueOn', { date: formatDate(date, 'dayMonth') }), state: 'later' };
 }
 
 export function formatProgressPercent(progress: number): string {

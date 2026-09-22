@@ -1,7 +1,7 @@
-import { format } from 'date-fns/format';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { HeroCard } from '@/components/ui/hero-card';
 import { CalendarClock, CheckCircle2, Target } from '@/components/ui/icons';
 import { ProgressRing } from '@/components/ui/progress-ring';
@@ -29,7 +29,7 @@ export function GoalsStatsHeader({ activeCount, completedCount, avgProgress, nex
     {
       icon: CalendarClock,
       text: nextDue
-        ? t('goals.nextDue', { date: format(nextDue, 'MMM d') })
+        ? t('goals.nextDue', { date: formatDate(nextDue, 'dayMonth') })
         : t('goals.noDeadlines'),
     },
   ];

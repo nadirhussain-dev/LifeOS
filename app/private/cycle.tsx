@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -191,7 +192,7 @@ export default function CycleScreen() {
         <Text variant="caption" className="px-1">
           {/* Explicitly an estimate from her own history — see cycle-math.ts
               for why this module makes no medical claims. */}
-          {t('private.estimatedNext', { date: format(parseISO(nextStart), 'd MMM') })}
+          {t('private.estimatedNext', { date: formatDate(parseISO(nextStart), 'dayMonth') })}
         </Text>
       ) : (
         <Text variant="caption" className="px-1">
@@ -206,8 +207,8 @@ export default function CycleScreen() {
         >
           <Text className="font-sora-medium text-foreground">
             {t('private.fertileWindowRange', {
-              start: format(parseISO(fertile.start), 'd MMM'),
-              end: format(parseISO(fertile.end), 'd MMM'),
+              start: formatDate(parseISO(fertile.start), 'dayMonth'),
+              end: formatDate(parseISO(fertile.end), 'dayMonth'),
             })}
           </Text>
           {/* Persistent, not a one-time dialog — see cycle-math.ts's header on
@@ -293,7 +294,7 @@ export default function CycleScreen() {
               className={cardClass({ padding: 'row' }, 'flex-row items-center justify-between')}
             >
               <Text className="font-sora-medium text-foreground">
-                {format(parseISO(period.start), 'd MMM yyyy')}
+                {formatDate(parseISO(period.start), 'medium')}
               </Text>
               <Text variant="caption">{t('private.days', { count: period.days })}</Text>
             </View>
@@ -315,7 +316,7 @@ export default function CycleScreen() {
             >
               <View className="flex-row items-center justify-between">
                 <Text className="font-sora-medium text-foreground">
-                  {format(parseISO(entry.date), 'd MMM yyyy')}
+                  {formatDate(parseISO(entry.date), 'medium')}
                 </Text>
                 {entry.flow ? (
                   <Text variant="caption" style={{ color: tint }}>

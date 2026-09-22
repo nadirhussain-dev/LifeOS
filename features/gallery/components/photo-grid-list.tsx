@@ -1,8 +1,8 @@
 import { FlashList } from '@shopify/flash-list';
-import { format } from 'date-fns/format';
 import { useMemo } from 'react';
 import { View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { Text } from '@/components/ui/text';
 import { COLUMNS, GAP, PhotoTile, tileSize } from '@/features/gallery/components/photo-grid';
 import type { GalleryPhoto } from '@/features/gallery/types/gallery.types';
@@ -28,10 +28,21 @@ export function PhotoGridList({
   photos,
   timeline,
   onPressPhoto,
+  header,
 }: {
   photos: GalleryPhoto[];
   timeline?: boolean;
   onPressPhoto: (photo: GalleryPhoto) => void;
+  /**
+   * Content scrolled above the grid, as FlashList's own list header.
+   *
+   * A caller that wants something above the photos must pass it here rather
+   * than wrapping this component in a ScrollView: a virtualized list inside a
+   * scroll view is given unbounded height, so every row mounts and the
+   * recycling that makes this component worth having stops happening. That is
+   * exactly how the album screen was written before.
+   */
+  header?: React.ReactElement;
 }) {
   const size = tileSize();
 
@@ -41,7 +52,7 @@ export function PhotoGridList({
     }
     const map = new Map<string, GalleryPhoto[]>();
     for (const photo of photos) {
-      const k = format(photo.takenAt, 'MMMM yyyy');
+      const k = formatDate(photo.takenAt, 'monthYearLong');
       if (!map.has(k)) map.set(k, []);
       map.get(k)!.push(photo);
     }
@@ -75,6 +86,7 @@ export function PhotoGridList({
           </View>
         )
       }
+      ListHeaderComponent={header}
       contentContainerStyle={{ paddingTop: timeline ? 0 : 16, paddingBottom: 40 }}
       showsVerticalScrollIndicator={false}
     />

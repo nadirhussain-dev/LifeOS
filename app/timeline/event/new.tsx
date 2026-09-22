@@ -1,6 +1,5 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { addMinutes } from 'date-fns/addMinutes';
-import { format } from 'date-fns/format';
 import { parseISO } from 'date-fns/parseISO';
 import { set } from 'date-fns/set';
 import * as Haptics from 'expo-haptics';
@@ -9,6 +8,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { formatDate, formatTime } from '@/lib/date-format';
 import { Bell, Clock, Palette, StickyNote } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -113,7 +113,7 @@ export default function NewCalendarEventScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-1">
-          <Text variant="sectionLabel">{format(parseISO(dateKey), 'EEEE, MMM d')}</Text>
+          <Text variant="sectionLabel">{formatDate(parseISO(dateKey), 'weekdayDayMonthLong')}</Text>
           <Input
             surface="bare"
             value={title}
@@ -148,7 +148,7 @@ export default function NewCalendarEventScreen() {
                 className="flex-row items-center gap-1.5 self-start rounded-full border border-border px-3 py-1.5"
               >
                 <Clock size={14} color={colors[scheme].mutedForeground} />
-                <Text variant="muted">{format(time, 'h:mm a')}</Text>
+                <Text variant="muted">{formatTime(time)}</Text>
               </Pressable>
             )}
           </AttributeRow>

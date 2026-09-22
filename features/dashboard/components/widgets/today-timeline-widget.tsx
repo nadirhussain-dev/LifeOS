@@ -1,7 +1,7 @@
-import { format } from 'date-fns/format';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import { formatTime } from '@/lib/date-format';
 import { Clock3, Plus } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -60,8 +60,8 @@ export function TodayTimelineWidget() {
                 {event.title}
               </Text>
               <Text variant="caption">
-                {format(event.time, 'h:mm a')}
-                {event.endTime ? ` – ${format(event.endTime, 'h:mm a')}` : ''}
+                {formatTime(event.time)}
+                {event.endTime ? ` – ${formatTime(event.endTime)}` : ''}
               </Text>
             </View>
           ))}

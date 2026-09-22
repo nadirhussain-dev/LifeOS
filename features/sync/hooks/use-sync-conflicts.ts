@@ -27,6 +27,12 @@ export function useSyncConflicts() {
   return {
     conflicts: query.data ?? [],
     isLoading: query.isLoading,
+    // Surfaced so the screen can tell "no conflicts" from "could not read
+    // them". They are not the same answer: one means sync is healthy, the
+    // other means the screen that reports on sync is itself broken.
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
     restore: useCallback(
       (conflict: SyncConflict) => {
         restoreConflict(conflict);

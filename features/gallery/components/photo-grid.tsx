@@ -1,9 +1,9 @@
-import { format } from 'date-fns/format';
 import { Image } from 'expo-image';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dimensions, Pressable, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { CloudOff, Heart, Play } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { radius } from '@/constants/design-tokens';
@@ -121,7 +121,7 @@ export function PhotoGrid({ photos, onPressPhoto, timeline }: Props) {
     if (!timeline) return null;
     const map = new Map<string, GalleryPhoto[]>();
     for (const photo of photos) {
-      const key = format(photo.takenAt, 'MMMM yyyy');
+      const key = formatDate(photo.takenAt, 'monthYearLong');
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(photo);
     }

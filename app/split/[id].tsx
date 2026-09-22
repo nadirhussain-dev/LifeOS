@@ -1,10 +1,10 @@
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { format } from 'date-fns/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Flag, HandCoins, LogOut, Plus, Receipt, Trash2, UserPlus } from '@/components/ui/icons';
@@ -342,7 +342,7 @@ export default function SplitGroupScreen() {
                       key={expense.id}
                       onPress={() => router.push(`/split/${id}/expense?expense=${expense.id}`)}
                       accessibilityRole="button"
-                      accessibilityLabel={`${expense.description}, ${money}, ${t('split.paidBy', { name: payer })}, ${format(expense.spentAt, 'PPP')}`}
+                      accessibilityLabel={`${expense.description}, ${money}, ${t('split.paidBy', { name: payer })}, ${formatDate(expense.spentAt, 'long')}`}
                       className={
                         index === 0
                           ? 'flex-row items-center gap-3 py-3'
@@ -354,7 +354,8 @@ export default function SplitGroupScreen() {
                           {expense.description}
                         </Text>
                         <Text variant="caption">
-                          {t('split.paidBy', { name: payer })} · {format(expense.spentAt, 'MMM d')}
+                          {t('split.paidBy', { name: payer })} ·{' '}
+                          {formatDate(expense.spentAt, 'dayMonth')}
                         </Text>
                       </View>
                       <Text className="font-sora-semibold text-foreground">{money}</Text>
@@ -381,7 +382,7 @@ export default function SplitGroupScreen() {
                         name: String(entry.meta?.name ?? t('split.someone')),
                       })}
                     </Text>
-                    <Text variant="caption">{format(entry.createdAt, 'MMM d')}</Text>
+                    <Text variant="caption">{formatDate(entry.createdAt, 'dayMonth')}</Text>
                   </View>
                 ))}
               </View>

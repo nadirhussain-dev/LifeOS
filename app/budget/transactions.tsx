@@ -1,5 +1,4 @@
 import { FlashList } from '@shopify/flash-list';
-import { format } from 'date-fns/format';
 import { isToday } from 'date-fns/isToday';
 import { isYesterday } from 'date-fns/isYesterday';
 import { parseISO } from 'date-fns/parseISO';
@@ -9,6 +8,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { Receipt, Search } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -30,7 +30,7 @@ function dayLabel(logDate: string, t: TFunction): string {
   const date = parseISO(logDate);
   if (isToday(date)) return t('common.today');
   if (isYesterday(date)) return t('common.yesterday');
-  return format(date, 'EEE, MMM d');
+  return formatDate(date, 'weekdayDayMonth');
 }
 
 export default function TransactionsScreen() {

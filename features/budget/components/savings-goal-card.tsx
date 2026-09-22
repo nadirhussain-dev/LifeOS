@@ -1,6 +1,6 @@
-import { format } from 'date-fns/format';
 import { Pressable, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { Plus } from '@/components/ui/icons';
 import { ProgressBar } from '@/components/ui/progress-bar';
@@ -57,7 +57,7 @@ export function SavingsGoalCard({ goal, currency, onPress, onAdd }: Props) {
           {complete
             ? 'Reached 🎉'
             : goal.deadline
-              ? `by ${format(goal.deadline, 'MMM yyyy')}`
+              ? `by ${formatDate(goal.deadline, 'monthYear')}`
               : `${Math.round(goal.progress * 100)}%`}
         </Text>
       </View>

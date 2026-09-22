@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { EmptyState } from '@/components/ui/empty-state';
 import {
@@ -12,13 +12,14 @@ import {
   Play,
   Trash2,
 } from '@/components/ui/icons';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { albumCategoryMeta } from '@/features/gallery/config/album-categories';
 import { AddMediaSheet } from '@/features/gallery/components/add-media-sheet';
-import { PhotoGrid } from '@/features/gallery/components/photo-grid';
+import { PhotoGridList } from '@/features/gallery/components/photo-grid-list';
 import { useAlbum, usePhotosByAlbum } from '@/features/gallery/hooks/use-gallery';
 import { useGalleryMutations } from '@/features/gallery/hooks/use-gallery-mutations';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -34,11 +35,43 @@ export default function AlbumDetailScreen() {
   const [timeline, setTimeline] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
 
-  const { data: album } = useAlbum(id);
-  const { data: photos = [] } = usePhotosByAlbum(id);
+  const albumQuery = useAlbum(id);
+  const photosQuery = usePhotosByAlbum(id);
+  const { data: album } = albumQuery;
+  const { data: photos = [] } = photosQuery;
   const { removeAlbum } = useGalleryMutations();
 
-  if (!album) return null;
+  const isError = albumQuery.isError || photosQuery.isError;
+  const error = albumQuery.error ?? photosQuery.error;
+  const retry = () => {
+    void albumQuery.refetch();
+    void photosQuery.refetch();
+  };
+
+  /**
+   * No album and no error is the ordinary case: the read is still in flight,
+   * or the album was just deleted from the header action and this screen is
+   * one frame ahead of the pop. Rendering nothing is right for both.
+   *
+   * A *failed* read is not that. It used to land here too and leave a blank
+   * screen with no header, no explanation and no way to retry — the one
+   * outcome where the person has to guess whether the album is gone or the
+   * app is broken. It gets its own screen, with the header omitted because
+   * every field in it (the name, the category, the count) comes from the read
+   * that just failed.
+   */
+  if (!album) {
+    if (isError) {
+      return (
+        <View className="flex-1 bg-background">
+          <ScreenHeader title={t('gallery.albumFallbackTitle')} tint={tint} />
+          <QueryError error={error} onRetry={retry} />
+        </View>
+      );
+    }
+    return null;
+  }
+
   const meta = albumCategoryMeta(album.category);
 
   const addPhotos = () => setAddOpen(true);
@@ -100,7 +133,9 @@ export default function AlbumDetailScreen() {
         }
       />
 
-      {photos.length === 0 ? (
+      {isError ? (
+        <QueryError error={error} onRetry={retry} />
+      ) : photos.length === 0 ? (
         <EmptyState
           icon={ImagePlus}
           title={t('gallery.albumEmptyTitle')}
@@ -110,43 +145,42 @@ export default function AlbumDetailScreen() {
           onAction={addPhotos}
         />
       ) : (
-        <ScrollView
-          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Two ends and everything between: the reason a subject exists. */}
-          {photos.length > 1 && (
-            <View className="mb-4 flex-row gap-2.5">
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push(`/gallery/compare?album=${album.id}`)}
-                className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl py-3"
-                style={{ backgroundColor: alpha(tint, 0.12) }}
-              >
-                <GitCompareArrows size={16} color={tint} />
-                <Text className="font-sora-semibold" style={{ color: tint }}>
-                  {t('gallery.compare')}
-                </Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push(`/gallery/story/all?album=${album.id}`)}
-                className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-border py-3"
-              >
-                <Play size={15} color={colors[scheme].foreground} />
-                <Text className="font-sora-semibold text-foreground">
-                  {t('gallery.playProgression')}
-                </Text>
-              </Pressable>
-            </View>
-          )}
-
-          <PhotoGrid
-            photos={photos}
-            timeline={timeline}
-            onPressPhoto={(photo) => router.push(`/gallery/photo/${photo.id}`)}
-          />
-        </ScrollView>
+        <PhotoGridList
+          photos={photos}
+          timeline={timeline}
+          onPressPhoto={(photo) => router.push(`/gallery/photo/${photo.id}`)}
+          /* Two ends and everything between: the reason a subject exists.
+           * Passed as the list's own header rather than wrapped around it in a
+           * ScrollView — see PhotoGridList for why that distinction is the
+           * whole point of this screen's change. */
+          header={
+            photos.length > 1 ? (
+              <View className="mb-4 flex-row gap-2.5 px-4 pt-4">
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push(`/gallery/compare?album=${album.id}`)}
+                  className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl py-3"
+                  style={{ backgroundColor: alpha(tint, 0.12) }}
+                >
+                  <GitCompareArrows size={16} color={tint} />
+                  <Text className="font-sora-semibold" style={{ color: tint }}>
+                    {t('gallery.compare')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push(`/gallery/story/all?album=${album.id}`)}
+                  className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-border py-3"
+                >
+                  <Play size={15} color={colors[scheme].foreground} />
+                  <Text className="font-sora-semibold text-foreground">
+                    {t('gallery.playProgression')}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : undefined
+          }
+        />
       )}
 
       <AddMediaSheet visible={addOpen} onClose={() => setAddOpen(false)} albumId={album.id} />

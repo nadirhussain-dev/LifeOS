@@ -481,7 +481,8 @@
     "reminderTitle": "نوٹ یاد دہانی",
     "reminderBody": "اس نوٹ پر ایک نظر ڈالیں۔",
     "notFound": "یہ نوٹ اب موجود نہیں ہے",
-    "notFoundBody": "اسے اس یا کسی دوسرے ڈیوائس پر حذف کیا گیا ہو سکتا ہے۔"
+    "notFoundBody": "اسے اس یا کسی دوسرے ڈیوائس پر حذف کیا گیا ہو سکتا ہے۔",
+    "linkedMentions": "منسلک حوالہ جات"
   },
   "budget": {
     "title": "بجٹ",
@@ -1300,6 +1301,7 @@
     "itemsCount_one": "{{count}} آئٹم",
     "itemsCount_other": "{{count}} آئٹمز",
     "albumEmptyTitle": "ابھی یہاں کچھ نہیں",
+    "albumFallbackTitle": "البم",
     "albumEmptyBody": "ٹریکنگ شروع کرنے کے لیے اس البم میں اپنی پہلی تصویر یا ویڈیو شامل کریں۔",
     "newAlbumTitle": "نیا البم",
     "albumName": "البم کا نام",
@@ -1398,7 +1400,8 @@
     "checkTimesBody": "یاد دہانی کی مدت کا آغاز اختتام سے پہلے ہونا چاہیے۔",
     "enableForReminders": "پانی کی یاد دہانیاں پانے کے لیے ڈیوائس کی ترتیبات میں Daykeep کے نوٹیفکیشن فعال کریں۔",
     "reminderNotifTitle": "پانی پینے کا وقت 💧",
-    "reminderNotifBody": "کافی دیر ہو گئی — تھوڑا پانی پیئیں۔"
+    "reminderNotifBody": "کافی دیر ہو گئی — تھوڑا پانی پیئیں۔",
+    "viewLast14Days": "پچھلے 14 دن دیکھیں"
   },
   "hubSection": {
     "growth": "توجہ اور ترقی",

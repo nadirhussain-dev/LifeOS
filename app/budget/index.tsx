@@ -1,5 +1,4 @@
 import { addMonths } from 'date-fns/addMonths';
-import { format } from 'date-fns/format';
 import { isSameMonth } from 'date-fns/isSameMonth';
 import { subMonths } from 'date-fns/subMonths';
 import { useRouter } from 'expo-router';
@@ -7,6 +6,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { ChevronBack, ChevronForward } from '@/components/ui/directional-icon';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -130,7 +130,7 @@ export default function BudgetScreen() {
               <ChevronBack size={18} color={colors[scheme].foreground} />
             </Pressable>
             <Text className="font-sora-semibold text-foreground">
-              {format(anchor, 'MMMM yyyy')}
+              {formatDate(anchor, 'monthYearLong')}
             </Text>
             <Pressable
               accessibilityRole="button"

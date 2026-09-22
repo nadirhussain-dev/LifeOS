@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
+import { formatDayOfMonth, formatMonth, formatWeekday } from '@/lib/date-format';
 import { BarChart, type BarDatum } from '@/components/ui/bar-chart';
 import { cardClass } from '@/components/ui/card';
 import { Clock, Hash, Star, Sunrise } from '@/components/ui/icons';
@@ -48,7 +49,7 @@ function buildMonthlyStudyTrend(sessions: StudySession[], months: number): BarDa
     const totalSeconds = sessions
       .filter((s) => isWithinInterval(parseISO(s.logDate), { start, end }))
       .reduce((sum, s) => sum + s.durationSeconds, 0);
-    points.push({ label: format(monthDate, 'MMM'), value: Math.round(totalSeconds / 60) });
+    points.push({ label: formatMonth(monthDate, 'short'), value: Math.round(totalSeconds / 60) });
   }
   return points;
 }
@@ -74,8 +75,8 @@ export default function StudyInsightsScreen() {
       : trend.map((point) => ({
           label:
             range === 'week'
-              ? format(parseISO(point.date), 'EEEEE')
-              : format(parseISO(point.date), 'd'),
+              ? formatWeekday(parseISO(point.date), 'narrow')
+              : formatDayOfMonth(parseISO(point.date)),
           value: Math.round(point.seconds / 60),
           color: point.metGoal ? studyTint : alpha(studyTint, 0.4),
         }));

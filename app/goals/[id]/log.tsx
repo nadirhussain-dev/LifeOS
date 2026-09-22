@@ -9,6 +9,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { GradientButton } from '@/components/ui/gradient-button';
+import { QueryError } from '@/components/ui/query-error';
 import { SheetHeader } from '@/components/ui/sheet-header';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -29,7 +30,8 @@ export default function LogProgressScreen() {
   const segments = useSegments();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
-  const { data: goal } = useGoal(id);
+  const goalQuery = useGoal(id);
+  const { data: goal } = goalQuery;
   const { logProgress } = useGoalMutations();
 
   const [pct, setPct] = useState<number | null>(null);
@@ -38,7 +40,23 @@ export default function LogProgressScreen() {
 
   const release = useUnsavedChanges(pct !== null || addCount !== 0 || note.trim() !== '');
 
-  if (!goal) return null;
+  /**
+   * A failed read is not a missing subject: this screen edits something it
+   * could not fetch, so every field would sit at its default and the form
+   * would read as a wiped record. Loading and just-deleted still render
+   * nothing — only the failure gets a screen.
+   */
+  if (!goal) {
+    if (goalQuery.isError) {
+      return (
+        <View className="flex-1 bg-background">
+          <SheetHeader title={t('goals.logProgressTitle')} />
+          <QueryError error={goalQuery.error} onRetry={() => goalQuery.refetch()} />
+        </View>
+      );
+    }
+    return null;
+  }
   const meta = goalCategoryMeta(goal.category, scheme);
   const isCount = goal.progressMode === 'count';
 

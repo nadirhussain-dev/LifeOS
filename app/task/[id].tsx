@@ -20,6 +20,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -53,7 +54,8 @@ export default function TaskDetailScreen() {
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const keyboardHeight = useKeyboardHeight();
-  const { data: task } = useTask(id);
+  const taskQuery = useTask(id);
+  const { data: task } = taskQuery;
   const { data: sourceNote } = useSourceNote(task?.sourceNoteId);
   const { update, archive, remove } = useTaskMutations();
   const { data: allTags = [] } = useNoteTags();
@@ -88,7 +90,27 @@ export default function TaskDetailScreen() {
     return () => clearTimeout(timeout);
   }, [notes]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!task) return null;
+  /**
+   * A failed read is not a missing subject.
+   *
+   * This guard used to answer "still loading", "just deleted" and "the read
+   * failed" with the same blank screen — no header, no explanation, no retry,
+   * and no way to tell whether the thing is gone or the app is broken. The
+   * first two are still right to render nothing; the third gets its own
+   * screen. The header carries no title because the title came from the read
+   * that failed.
+   */
+  if (!task) {
+    if (taskQuery.isError) {
+      return (
+        <View className="flex-1 bg-background">
+          <ScreenHeader />
+          <QueryError error={taskQuery.error} onRetry={() => taskQuery.refetch()} />
+        </View>
+      );
+    }
+    return null;
+  }
 
   return (
     <View className="flex-1 bg-background">

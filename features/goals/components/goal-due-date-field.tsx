@@ -1,9 +1,9 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { format } from 'date-fns/format';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { CalendarDays, X } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -44,7 +44,7 @@ export function GoalDueDateField({ value, onChange }: Props) {
         >
           <CalendarDays size={14} color={colors[scheme].mutedForeground} />
           <Text variant="muted">
-            {value ? format(value, 'MMM d, yyyy') : t('goals.setTargetDate')}
+            {value ? formatDate(value, 'medium') : t('goals.setTargetDate')}
           </Text>
         </Pressable>
       )}

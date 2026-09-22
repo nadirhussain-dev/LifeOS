@@ -1,8 +1,8 @@
-import { format } from 'date-fns/format';
 import { isToday } from 'date-fns/isToday';
 import { parseISO } from 'date-fns/parseISO';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { formatDayOfMonth, formatWeekday } from '@/lib/date-format';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { cardClass } from '@/components/ui/card';
@@ -35,10 +35,10 @@ export function DayCard({ entry, onPress }: Props) {
       >
         <View className="w-11 items-center">
           <Text variant="micro" className="font-sora-semibold">
-            {format(date, 'EEE')}
+            {formatWeekday(date, 'short')}
           </Text>
           <Text style={{ fontSize: 20 }} className="font-sora-bold text-foreground">
-            {format(date, 'd')}
+            {formatDayOfMonth(date)}
           </Text>
         </View>
 

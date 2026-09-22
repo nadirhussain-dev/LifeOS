@@ -8,6 +8,7 @@ import { Mail, MailX } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
+import { QueryError } from '@/components/ui/query-error';
 import { PrivateScreen } from '@/features/private/components/private-screen';
 import { privateModule } from '@/features/private/config/private-modules';
 import {
@@ -40,7 +41,7 @@ export default function AlbumInvitesScreen() {
   const tint = resolveTint(TINT, scheme);
   const { t } = useTranslation();
 
-  const { data: invites = [], isLoading } = useMyAlbumInvitations();
+  const { data: invites = [], isLoading, isError, error, refetch } = useMyAlbumInvitations();
   const decline = useDeclineAlbumInvite();
 
   const declineOne = (invite: MyAlbumInvite) =>
@@ -59,7 +60,9 @@ export default function AlbumInvitesScreen() {
 
   return (
     <PrivateScreen moduleId="shared-albums" title={t('private.invitesTitle')} tint={tint}>
-      {!isLoading && invites.length === 0 ? (
+      {isError ? (
+        <QueryError error={error} onRetry={() => refetch()} />
+      ) : !isLoading && invites.length === 0 ? (
         <View className="items-center gap-2 py-16">
           <Mail size={28} color={alpha(tint, 0.5)} strokeWidth={1.6} />
           <Text variant="subheading">{t('private.invitesEmpty')}</Text>

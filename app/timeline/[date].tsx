@@ -1,16 +1,17 @@
 import { FlashList } from '@shopify/flash-list';
 import { addDays } from 'date-fns/addDays';
-import { format } from 'date-fns/format';
 import { parseISO } from 'date-fns/parseISO';
 import { subDays } from 'date-fns/subDays';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
+import { formatDate } from '@/lib/date-format';
 import { ChevronBack, ChevronForward } from '@/components/ui/directional-icon';
 import { Clock3, Plus } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { EmptyState } from '@/components/ui/empty-state';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -28,7 +29,7 @@ export default function TimelineScreen() {
   const { t } = useTranslation();
 
   const date = parseISO(dateKey);
-  const { data: events = [], isLoading } = useTimelineForDate(dateKey);
+  const { data: events = [], isLoading, isError, error, refetch } = useTimelineForDate(dateKey);
   const { remove } = useCalendarEventMutations();
 
   const goToDate = (next: Date) => router.setParams({ date: toDateKey(next) });
@@ -58,7 +59,7 @@ export default function TimelineScreen() {
         >
           <ChevronBack size={18} color={colors[scheme].mutedForeground} />
         </Pressable>
-        <Text variant="subheading">{format(date, 'EEEE, MMM d')}</Text>
+        <Text variant="subheading">{formatDate(date, 'weekdayDayMonthLong')}</Text>
         <Pressable
           accessibilityRole="button"
           onPress={() => goToDate(addDays(date, 1))}
@@ -69,7 +70,9 @@ export default function TimelineScreen() {
         </Pressable>
       </View>
 
-      {isLoading ? (
+      {isError ? (
+        <QueryError error={error} onRetry={() => refetch()} />
+      ) : isLoading ? (
         <View className="gap-2.5 px-4">
           <Skeleton className="h-14 w-full rounded-2xl" />
           <Skeleton className="h-14 w-full rounded-2xl" />

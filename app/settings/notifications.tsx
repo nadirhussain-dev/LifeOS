@@ -1,5 +1,4 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { format } from 'date-fns/format';
 import { set } from 'date-fns/set';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
@@ -7,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Linking, Platform, Pressable, ScrollView, Switch, View } from 'react-native';
 
+import { formatTime } from '@/lib/date-format';
 import { ChevronForward } from '@/components/ui/directional-icon';
 import { cardClass } from '@/components/ui/card';
 import { AlarmClock, BellRing, Music4, Send, Stethoscope } from '@/components/ui/icons';
@@ -98,7 +98,7 @@ function TimeRow({
             onPress={() => setShowPicker(true)}
             className="rounded-full border border-border px-3 py-1.5"
           >
-            <Text variant="muted">{format(value, 'h:mm a')}</Text>
+            <Text variant="muted">{formatTime(value)}</Text>
           </Pressable>
           {showPicker && (
             <DateTimePicker value={value} mode="time" display="default" onChange={handle} />

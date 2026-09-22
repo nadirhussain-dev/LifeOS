@@ -16,6 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { formatDate } from '@/lib/date-format';
 import { X } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import {
@@ -56,7 +57,7 @@ export default function StoryPlayerScreen() {
   const scheme = useColorScheme() ?? 'light';
   const tint = moduleTint('gallery', scheme);
   const { width, height } = useWindowDimensions();
-  const { data: photos = [] } = usePhotos();
+  const { data: photos = [], isError } = usePhotos();
 
   const story = useMemo<GalleryPhoto[]>(() => {
     // A story is nothing but full-bleed pixels, so media whose file lives on
@@ -79,9 +80,15 @@ export default function StoryPlayerScreen() {
   const current = story[index];
 
   // Bail out if there's nothing to show.
+  //
+  // A failed read counts. Without it the screen sits on the black backdrop
+  // below forever: the read returns no photos, so the "loaded but empty" test
+  // never fires, and a story player has no frame to put an error panel in.
+  // Going back returns the person to the screen that launched this one, which
+  // reports the failure properly and offers the retry.
   useEffect(() => {
-    if (photos.length > 0 && story.length === 0) router.back();
-  }, [photos.length, story.length, router]);
+    if (isError || (photos.length > 0 && story.length === 0)) router.back();
+  }, [isError, photos.length, story.length, router]);
 
   const goNext = () => {
     setIndex((i) => {
@@ -217,7 +224,7 @@ export default function StoryPlayerScreen() {
           </View>
           <View className="flex-row items-center justify-between">
             <Text style={{ color: '#ffffff', fontSize: 13 }} className="font-sora-semibold">
-              {format(current.takenAt, 'EEEE, MMM d, yyyy')}
+              {formatDate(current.takenAt, 'full')}
             </Text>
             <Pressable
               accessibilityRole="button"

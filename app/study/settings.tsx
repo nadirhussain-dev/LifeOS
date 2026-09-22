@@ -7,6 +7,7 @@ import { Minus, Plus, Trash2 } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
@@ -65,7 +66,8 @@ export default function StudySettingsScreen() {
   const { tint } = useTheme();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
-  const { data: settings } = useStudySettings();
+  const settingsQuery = useStudySettings();
+  const { data: settings } = settingsQuery;
   const { data: subjects = [] } = useStudySubjects();
   const { saveSettings, addSubject, removeSubject } = useStudyMutations();
 
@@ -109,6 +111,22 @@ export default function StudySettingsScreen() {
       removeSubject.mutate(id);
     });
   };
+
+  /**
+   * A settings form seeded from a read that failed is a form full of
+   * defaults, and saving it writes those defaults over the real values —
+   * silently, because nothing on screen said the read had failed. The same
+   * shape as the create-or-edit screens, with settings rather than a row as
+   * the thing overwritten.
+   */
+  if (settingsQuery.isError) {
+    return (
+      <View className="flex-1 bg-background">
+        <ScreenHeader />
+        <QueryError error={settingsQuery.error} onRetry={() => settingsQuery.refetch()} />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-background">

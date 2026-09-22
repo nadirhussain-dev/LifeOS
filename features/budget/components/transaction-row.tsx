@@ -1,6 +1,6 @@
-import { format } from 'date-fns/format';
 import { Pressable, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { categoryMetaFor } from '@/features/budget/config/budget-config';
@@ -39,7 +39,7 @@ export function TransactionRow({ transaction, currency, onPress }: Props) {
           {transaction.note?.trim() || meta.label}
         </Text>
         <Text variant="caption" className="capitalize">
-          {meta.label} · {transaction.account} · {format(transaction.occurredAt, 'MMM d')}
+          {meta.label} · {transaction.account} · {formatDate(transaction.occurredAt, 'dayMonth')}
         </Text>
       </View>
       <Text className="font-sora-bold" style={{ color: resolve(ledgerTints[transaction.type]) }}>

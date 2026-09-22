@@ -1,11 +1,11 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { format } from 'date-fns/format';
 import { set } from 'date-fns/set';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, Switch, View } from 'react-native';
+import { formatTime } from '@/lib/date-format';
 import { Bell, Clock } from '@/components/ui/icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -116,7 +116,7 @@ export default function JournalReminderSettingsScreen() {
                   className="flex-row items-center gap-1.5 self-start rounded-full border border-border px-3 py-1.5"
                 >
                   <Clock size={14} color={colors[scheme].mutedForeground} />
-                  <Text variant="muted">{format(time, 'h:mm a')}</Text>
+                  <Text variant="muted">{formatTime(time)}</Text>
                 </Pressable>
               )}
             </AttributeRow>
@@ -124,9 +124,7 @@ export default function JournalReminderSettingsScreen() {
         </View>
 
         {draft.enabled && (
-          <Text variant="muted">
-            {t('journal.reminderSummary', { time: format(time, 'h:mm a') })}
-          </Text>
+          <Text variant="muted">{t('journal.reminderSummary', { time: formatTime(time) })}</Text>
         )}
 
         {Platform.OS === 'android' && showPicker ? (

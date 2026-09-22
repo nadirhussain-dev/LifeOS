@@ -156,3 +156,104 @@ describe('usage analytics consent', () => {
     expect(decide).toContain('pending: {}');
   });
 });
+
+/**
+ * Release configuration that has to be supplied before a store build, and
+ * cannot be supplied from in here.
+ *
+ * Same spirit as the rest of this file — static facts, invisible from inside
+ * the app, that surface weeks later as a failed submission. The difference is
+ * that these are *not* assertions that the config is correct: the values are
+ * an Apple account's, and inventing them would be worse than leaving them
+ * blank. What is asserted is that the blanks are still recognisable as blanks.
+ *
+ * The failure being prevented is the half-filled profile. `eas submit` with
+ * two of three iOS fields replaced does not say "you forgot one" — it
+ * authenticates, finds nothing matching, and reports something about the app
+ * not existing. Either all three are placeholders or none of them are.
+ */
+describe('ios submit profile', () => {
+  const easJson = JSON.parse(read('eas.json'));
+  const ios = easJson.submit?.production?.ios ?? {};
+  const FIELDS = ['appleId', 'ascAppId', 'appleTeamId'] as const;
+  const isPlaceholder = (value: unknown) =>
+    typeof value === 'string' && value.startsWith('REPLACE_WITH_');
+
+  it('names every field a submission needs', () => {
+    // A missing key and a placeholder fail differently: the placeholder is
+    // visible in a diff, the missing key is only visible to somebody who
+    // already knows it should be there.
+    for (const field of FIELDS) {
+      expect(ios).toHaveProperty(field);
+    }
+  });
+
+  it('is either entirely unconfigured or entirely configured', () => {
+    const placeholders = FIELDS.filter((field) => isPlaceholder(ios[field]));
+    expect(placeholders.length === 0 || placeholders.length === FIELDS.length).toBe(true);
+  });
+
+  it('keeps the Android half configured, since it already is', () => {
+    const android = easJson.submit?.production?.android ?? {};
+    expect(android.serviceAccountKeyPath).toBeTruthy();
+    expect(android.serviceAccountKeyPath).not.toMatch(/^REPLACE_WITH_/);
+  });
+});
+
+/**
+ * Sentry source maps on the profile whose stack traces nobody can read.
+ *
+ * `SENTRY_DISABLE_AUTO_UPLOAD` is set on every build profile, which is what
+ * lets a build succeed without a Sentry token — a deliberate trade, and the
+ * right one for development and staging. On production it means every crash
+ * report arrives minified: the difference between a stack trace and a wall of
+ * `a.b.c(d)`, discovered during the first incident rather than before it.
+ *
+ * Not asserted as "must be enabled", because enabling it makes a production
+ * build fail when the token is absent, and that is a decision about release
+ * process rather than about code. Asserted instead is that the cost is stated
+ * where somebody running the build will see it — app.config.js warns, and this
+ * pins the warning so it cannot be deleted as noise.
+ */
+describe('production crash reports', () => {
+  it('says out loud when production stack traces will be minified', () => {
+    const config = read('app.config.js');
+    expect(config).toContain('SENTRY_DISABLE_AUTO_UPLOAD');
+    expect(config).toMatch(/MINIFIED/);
+    // And names the three variables, so the warning is actionable rather than
+    // just alarming.
+    for (const name of ['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN']) {
+      expect(config).toContain(name);
+    }
+  });
+
+  it('warns when the DSN itself is missing, which turns reporting off entirely', () => {
+    const config = read('app.config.js');
+    expect(config).toContain('EXPO_PUBLIC_SENTRY_DSN');
+    expect(config).toMatch(/reporting is OFF/i);
+  });
+});
+
+/**
+ * `expo-updates` is a dependency, and there is no `updates` block in app.json.
+ *
+ * That reads like an oversight and is not one. The module is here for
+ * `Updates.reloadAsync()`, which restarts the app when the layout direction
+ * changes — see features/settings/lib/layout-direction.ts, which notes that it
+ * works with no update URL configured. Turning on OTA would be a decision
+ * about what the app does at launch, not a missing line.
+ *
+ * Pinned so that nobody adds the URL on the assumption it was forgotten, and
+ * so that nobody removes the dependency on the assumption it is unused.
+ */
+describe('expo-updates is a reload mechanism, not an update channel', () => {
+  it('ships no update URL', () => {
+    expect(appJson.updates).toBeUndefined();
+  });
+
+  it('is depended on for the reload that the RTL switch needs', () => {
+    const direction = read('features/settings/lib/layout-direction.ts');
+    expect(direction).toContain('expo-updates');
+    expect(direction).toContain('reloadAsync');
+  });
+});

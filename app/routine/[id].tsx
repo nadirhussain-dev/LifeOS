@@ -8,6 +8,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
@@ -24,7 +25,8 @@ export default function RoutineDetailScreen() {
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
 
-  const { data: routines = [] } = useRoutines();
+  const routinesQuery = useRoutines();
+  const { data: routines = [] } = routinesQuery;
   const { data: allHabits = [] } = useHabits();
   const { rename, remove, addHabit, removeHabit, reorder } = useRoutineMutations();
 
@@ -44,7 +46,23 @@ export default function RoutineDetailScreen() {
     return () => clearTimeout(timeout);
   }, [name]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!routine) return null;
+  /**
+   * A failed read is not a missing subject. The subject is found in a list
+   * rather than fetched by id, so a failure of that one read empties the
+   * search and lands here — previously on the same blank screen as "still
+   * loading" and "just deleted", with no way to tell them apart or retry.
+   */
+  if (!routine) {
+    if (routinesQuery.isError) {
+      return (
+        <View className="flex-1 bg-background">
+          <ScreenHeader />
+          <QueryError error={routinesQuery.error} onRetry={() => routinesQuery.refetch()} />
+        </View>
+      );
+    }
+    return null;
+  }
 
   const habitIdsInRoutine = new Set(routine.habits.map((habit) => habit.id));
   const availableHabits = allHabits.filter((habit) => !habitIdsInRoutine.has(habit.id));

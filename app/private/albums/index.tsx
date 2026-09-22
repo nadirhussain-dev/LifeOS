@@ -11,6 +11,7 @@ import { useAuthStore } from '@/features/auth/services/auth-store';
 import { FREE_ALBUM_LIMIT } from '@/features/billing/config/plans';
 import { usePlan } from '@/features/billing/hooks/use-billing';
 import { privateModule } from '@/features/private/config/private-modules';
+import { QueryError } from '@/components/ui/query-error';
 import { PrivateScreen } from '@/features/private/components/private-screen';
 import { useMyAlbumInvitations } from '@/features/private/hooks/use-album-invites';
 import { useAlbumName, useAlbums } from '@/features/private/hooks/use-shared-albums';
@@ -49,7 +50,8 @@ export default function SharedAlbumsScreen() {
   const space = usePrivateStore((s) => s.space);
   const session = useAuthStore((s) => s.session);
   const userId = useAuthStore((s) => s.user?.id ?? null);
-  const { data: albums = [] } = useAlbums();
+  const albumsQuery = useAlbums();
+  const { data: albums = [] } = albumsQuery;
   const { isPlus } = usePlan();
   // Pending invitations addressed to this account — see use-album-invites.ts.
   // The hook call stays unconditional (Rules of Hooks); it no-ops until
@@ -81,6 +83,17 @@ export default function SharedAlbumsScreen() {
             onPress={() => router.push('/(auth)/login')}
           />
         </View>
+      </PrivateScreen>
+    );
+  }
+
+  // The album list failing is not an empty album list: the screen would
+  // otherwise offer "create your first album" to somebody who already has
+  // several, and the free-limit arithmetic below would be computed over zero.
+  if (albumsQuery.isError) {
+    return (
+      <PrivateScreen moduleId="shared-albums" title={t('private.sharedAlbumsTitle')} tint={tint}>
+        <QueryError error={albumsQuery.error} onRetry={() => albumsQuery.refetch()} />
       </PrivateScreen>
     );
   }

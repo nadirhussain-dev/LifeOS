@@ -10,6 +10,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Mic, Send, Trash2 } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { ChevronBack } from '@/components/ui/directional-icon';
+import { QueryError } from '@/components/ui/query-error';
+import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTints, resolveTint } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
@@ -79,7 +81,8 @@ export default function AlbumChatScreen() {
   }, [key, router]);
 
   useAlbumRealtime(id);
-  const { data } = useAlbumDetail(id);
+  const detailQuery = useAlbumDetail(id);
+  const { data } = detailQuery;
   const { data: albumKey } = useAlbumKey(id);
   const { isOwner } = useMyAlbumMembership(data);
   const {
@@ -182,6 +185,17 @@ export default function AlbumChatScreen() {
   }, [typingIds, data?.members, t]);
 
   if (!key) return null;
+  // Without the album record there are no members, so no names on messages and
+  // no permission to post — a chat that renders as empty and inert rather than
+  // as one that could not be reached.
+  if (detailQuery.isError) {
+    return (
+      <View className="flex-1 bg-background">
+        <ScreenHeader />
+        <QueryError error={detailQuery.error} onRetry={() => detailQuery.refetch()} />
+      </View>
+    );
+  }
   if (space !== 'real') {
     return (
       <View className="flex-1 items-center justify-center bg-background px-6">

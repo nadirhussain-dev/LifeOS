@@ -6,12 +6,14 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { formatDate, formatTime } from '@/lib/date-format';
 import { CalendarDays, Clock, Minus, Plus } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/chip';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StarRating } from '@/components/ui/star-rating';
+import { InlineError } from '@/components/ui/query-error';
 import { SheetHeader } from '@/components/ui/sheet-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint, moduleTints } from '@/constants/design-tokens';
@@ -33,7 +35,8 @@ export default function StudyLogScreen() {
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
   const studyTint = moduleTint('study', scheme);
-  const { data: subjects = [] } = useStudySubjects();
+  const subjectsQuery = useStudySubjects();
+  const { data: subjects = [] } = subjectsQuery;
   const { logSession, addSubject } = useStudyMutations();
 
   const [subjectId, setSubjectId] = useState<string | null>(null);
@@ -100,6 +103,12 @@ export default function StudyLogScreen() {
       >
         <View className="gap-2.5">
           <Text variant="micro">{t('study.subject')}</Text>
+          {/* Inline, not a full-screen error: logging a session is the point of
+              this screen and works with no subject at all. But an empty picker
+              reads as "you have no subjects", and the create affordance right
+              below it would then make a second copy of one the person already
+              has. Saying the list failed is what stops that. */}
+          {subjectsQuery.isError ? <InlineError error={subjectsQuery.error} /> : null}
           <SubjectPicker
             subjects={subjects}
             value={subjectId}
@@ -177,7 +186,9 @@ export default function StudyLogScreen() {
               />
             ) : (
               <Pressable accessibilityRole="button" onPress={() => setShowDate(true)}>
-                <Text className="font-sora-semibold text-foreground">{format(date, 'MMM d')}</Text>
+                <Text className="font-sora-semibold text-foreground">
+                  {formatDate(date, 'dayMonth')}
+                </Text>
               </Pressable>
             )}
           </View>
@@ -197,9 +208,7 @@ export default function StudyLogScreen() {
               />
             ) : (
               <Pressable accessibilityRole="button" onPress={() => setShowTime(true)}>
-                <Text className="font-sora-semibold text-foreground">
-                  {format(startTime, 'h:mm a')}
-                </Text>
+                <Text className="font-sora-semibold text-foreground">{formatTime(startTime)}</Text>
               </Pressable>
             )}
           </View>

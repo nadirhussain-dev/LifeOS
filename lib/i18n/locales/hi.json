@@ -481,7 +481,8 @@
     "reminderTitle": "नोट अनुस्मारक",
     "reminderBody": "इस नोट पर एक नज़र डालें।",
     "notFound": "यह नोट अब मौजूद नहीं है",
-    "notFoundBody": "इसे इस या किसी अन्य डिवाइस पर हटाया गया हो सकता है।"
+    "notFoundBody": "इसे इस या किसी अन्य डिवाइस पर हटाया गया हो सकता है।",
+    "linkedMentions": "लिंक किए गए उल्लेख"
   },
   "budget": {
     "title": "बजट",
@@ -1300,6 +1301,7 @@
     "itemsCount_one": "{{count}} आइटम",
     "itemsCount_other": "{{count}} आइटम",
     "albumEmptyTitle": "अभी यहाँ कुछ नहीं",
+    "albumFallbackTitle": "एलबम",
     "albumEmptyBody": "ट्रैकिंग शुरू करने के लिए इस अल्बम में अपनी पहली तस्वीर या वीडियो जोड़ें।",
     "newAlbumTitle": "नया अल्बम",
     "albumName": "अल्बम का नाम",
@@ -1398,7 +1400,8 @@
     "checkTimesBody": "याद दिलाने की अवधि की शुरुआत अंत से पहले होनी चाहिए।",
     "enableForReminders": "पानी की याद पाने के लिए डिवाइस सेटिंग्स में Daykeep के नोटिफ़िकेशन चालू करें।",
     "reminderNotifTitle": "पानी पीने का समय 💧",
-    "reminderNotifBody": "काफ़ी देर हो गई — थोड़ा पानी पिएँ।"
+    "reminderNotifBody": "काफ़ी देर हो गई — थोड़ा पानी पिएँ।",
+    "viewLast14Days": "पिछले 14 दिन देखें"
   },
   "hubSection": {
     "growth": "फ़ोकस और विकास",

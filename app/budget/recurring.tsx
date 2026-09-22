@@ -1,12 +1,13 @@
-import { format } from 'date-fns/format';
 import { parseISO } from 'date-fns/parseISO';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, Switch, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Repeat, Trash2 } from '@/components/ui/icons';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
@@ -37,7 +38,7 @@ export default function RecurringScreen() {
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
-  const { data: rules = [] } = useRecurring();
+  const { data: rules = [], isError, error, refetch } = useRecurring();
   const { setActive, remove } = useRecurringMutations();
   const { data: settings } = useBudgetSettings();
   const currency = settings?.currency ?? 'USD';
@@ -58,7 +59,9 @@ export default function RecurringScreen() {
     <View className="flex-1 bg-background">
       <ScreenHeader title={t('budget.recurring')} />
 
-      {rules.length === 0 ? (
+      {isError ? (
+        <QueryError error={error} onRetry={() => refetch()} />
+      ) : rules.length === 0 ? (
         <EmptyState
           icon={Repeat}
           title={t('budget.noRecurringTitle')}
@@ -84,7 +87,7 @@ export default function RecurringScreen() {
                       {t(FREQUENCY_LABEL_KEY[rule.frequency], { count: rule.interval })}
                       {next && rule.isActive
                         ? ` · ${t('budget.nextOn', {
-                            date: format(parseISO(next), 'MMM d'),
+                            date: formatDate(parseISO(next), 'dayMonth'),
                           })}`
                         : ''}
                     </Text>

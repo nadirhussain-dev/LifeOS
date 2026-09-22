@@ -1,11 +1,12 @@
-import { format } from 'date-fns/format';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { GradientButton } from '@/components/ui/gradient-button';
 import { Plus, Trash2 } from '@/components/ui/icons';
 import { ProgressRing } from '@/components/ui/progress-ring';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint } from '@/constants/design-tokens';
@@ -26,14 +27,31 @@ export default function SavingsGoalDetailScreen() {
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
-  const { data: goals = [] } = useSavingsGoals();
+  const goalsQuery = useSavingsGoals();
+  const { data: goals = [] } = goalsQuery;
   const { data: transactions = [] } = useTransactions();
   const { data: settings } = useBudgetSettings();
   const { removeSavingsGoal } = useBudgetMutations();
   const currency = settings?.currency ?? '$';
 
   const goal = goals.find((g) => g.id === id);
-  if (!goal) return null;
+  /**
+   * A failed read is not a missing subject. The subject is found in a list
+   * rather than fetched by id, so a failure of that one read empties the
+   * search and lands here — previously on the same blank screen as "still
+   * loading" and "just deleted", with no way to tell them apart or retry.
+   */
+  if (!goal) {
+    if (goalsQuery.isError) {
+      return (
+        <View className="flex-1 bg-background">
+          <ScreenHeader />
+          <QueryError error={goalsQuery.error} onRetry={() => goalsQuery.refetch()} />
+        </View>
+      );
+    }
+    return null;
+  }
 
   const contributions = transactions.filter((t) => t.type === 'savings' && t.savingsGoalId === id);
   const remaining = Math.max(0, goal.targetCents - goal.savedCents);
@@ -95,7 +113,7 @@ export default function SavingsGoalDetailScreen() {
                 ? t('budget.goalReached')
                 : t('budget.amountToGo', { amount: formatMoney(remaining, currency) }) +
                   (goal.deadline
-                    ? ` · ${t('budget.byDate', { date: format(goal.deadline, 'MMM yyyy') })}`
+                    ? ` · ${t('budget.byDate', { date: formatDate(goal.deadline, 'monthYear') })}`
                     : '')}
             </Text>
           </View>

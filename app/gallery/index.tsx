@@ -6,6 +6,7 @@ import { Dimensions, Pressable, ScrollView, View } from 'react-native';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Fab } from '@/components/ui/fab';
 import { GitCompareArrows, Images, Plus } from '@/components/ui/icons';
+import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -44,8 +45,27 @@ export default function GalleryScreen() {
   const { t } = useTranslation();
   const [addOpen, setAddOpen] = useState(false);
 
-  const { data: albums = [], isLoading } = useAlbums();
-  const { data: photos = [] } = usePhotos();
+  const albumsQuery = useAlbums();
+  const photosQuery = usePhotos();
+
+  const { data: albums = [], isLoading } = albumsQuery;
+  const { data: photos = [] } = photosQuery;
+
+  /**
+   * Either read failing is a failure of this screen.
+   *
+   * Both come from the same local database, so in practice they fail together
+   * — but reporting only the albums query would leave a photos failure
+   * rendering as "no photos yet", which is the exact confusion QueryError
+   * exists to prevent. The first error is the one shown: two copies of the
+   * same cause is not more informative than one.
+   */
+  const isError = albumsQuery.isError || photosQuery.isError;
+  const error = albumsQuery.error ?? photosQuery.error;
+  const retry = () => {
+    void albumsQuery.refetch();
+    void photosQuery.refetch();
+  };
 
   const tint = moduleTint('gallery', scheme);
   const recent = photos.slice(0, RECENT_COUNT);
@@ -71,7 +91,9 @@ export default function GalleryScreen() {
         }
       />
 
-      {isLoading ? (
+      {isError ? (
+        <QueryError error={error} onRetry={retry} />
+      ) : isLoading ? (
         <View className="gap-3 px-5 pt-2">
           <Skeleton className="h-52 w-full rounded-2xl" />
           <Skeleton className="h-52 w-full rounded-2xl" />

@@ -7,6 +7,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Platform, Pressable, ScrollView, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { CalendarDays, Moon, Sun, Trash2 } from '@/components/ui/icons';
 import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/chip';
@@ -14,6 +15,7 @@ import { cardClass } from '@/components/ui/card';
 import { showInterstitial } from '@/features/ads/services/interstitial';
 import { Button } from '@/components/ui/button';
 import { StarRating } from '@/components/ui/star-rating';
+import { QueryError } from '@/components/ui/query-error';
 import { SheetHeader } from '@/components/ui/sheet-header';
 import { Text } from '@/components/ui/text';
 import { moduleTint, moduleTints } from '@/constants/design-tokens';
@@ -64,7 +66,8 @@ export default function SleepLogScreen() {
   const { t } = useTranslation();
   const sleepTint = moduleTint('sleep', scheme);
   const { create, update, remove } = useSleepMutations();
-  const { data: existing } = useSleepSession(id);
+  const existingQuery = useSleepSession(id);
+  const { data: existing } = existingQuery;
 
   const isEdit = !!id;
 
@@ -148,6 +151,11 @@ export default function SleepLogScreen() {
   };
 
   const save = () => {
+    // Editing a session we could not read is not a save: the branch below
+    // falls through to `create` when `existing` is missing, which would log a
+    // *second* night beside the one being edited. Same shape as the budget
+    // transaction screen — see the note there.
+    if (isEdit && !existing) return;
     const { bedtime, wakeTime, logDate } = buildTimestamps(nightDate, bed, wake);
     // Sleep can't happen in the future.
     if (wakeTime > Date.now()) {
@@ -201,6 +209,17 @@ export default function SleepLogScreen() {
     });
   };
 
+  // An edit screen whose session failed to load has nothing to edit, and its
+  // fields would otherwise show a blank night at today's date.
+  if (isEdit && existingQuery.isError) {
+    return (
+      <View className="flex-1 bg-background">
+        <SheetHeader title={t('sleep.editSleep')} />
+        <QueryError error={existingQuery.error} onRetry={() => existingQuery.refetch()} />
+      </View>
+    );
+  }
+
   return (
     <View className="flex-1 bg-background">
       <SheetHeader
@@ -245,7 +264,7 @@ export default function SleepLogScreen() {
               className="rounded-lg border border-border bg-surface px-3 py-1.5"
             >
               <Text className="font-sora-semibold text-foreground">
-                {format(nightDate, 'MMM d, yyyy')}
+                {formatDate(nightDate, 'medium')}
               </Text>
             </Pressable>
           )}

@@ -1,10 +1,10 @@
-import { format } from 'date-fns/format';
 import { setHours } from 'date-fns/setHours';
 import { setMinutes } from 'date-fns/setMinutes';
 import { setSeconds } from 'date-fns/setSeconds';
 import { startOfDay } from 'date-fns/startOfDay';
 import { subDays } from 'date-fns/subDays';
 
+import { formatDate } from '@/lib/date-format';
 import { setDebtReminderNotificationId } from '@/features/budget/services/debts-repository';
 import { formatMoney } from '@/features/budget/services/money';
 import i18n from '@/lib/i18n';
@@ -39,7 +39,7 @@ export async function syncDebtReminder(debt: Debt): Promise<void> {
   }
 
   const amount = formatMoney(remaining, debt.currency);
-  const dueLabel = debt.dueDate ? format(debt.dueDate, 'MMM d') : '';
+  const dueLabel = debt.dueDate ? formatDate(debt.dueDate, 'dayMonth') : '';
   const borrowed = debt.direction === 'borrowed';
   const title = i18n.t(borrowed ? 'budget.debtReminderOweTitle' : 'budget.debtReminderOwedTitle', {
     name: debt.counterparty,

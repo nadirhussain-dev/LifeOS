@@ -1,9 +1,9 @@
 import * as Haptics from 'expo-haptics';
-import { format } from 'date-fns/format';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { formatDate } from '@/lib/date-format';
 import { Check, Plus } from '@/components/ui/icons';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
@@ -91,7 +91,7 @@ export function MilestoneTimeline({ milestones, tint, onToggle, onAdd, onRemove 
               </Text>
               {milestone.isCompleted && milestone.completedAt && (
                 <Text variant="caption">
-                  {t('goals.doneOn', { date: format(milestone.completedAt, 'MMM d') })}
+                  {t('goals.doneOn', { date: formatDate(milestone.completedAt, 'dayMonth') })}
                 </Text>
               )}
             </Pressable>

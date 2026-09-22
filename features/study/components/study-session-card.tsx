@@ -1,8 +1,8 @@
-import { format } from 'date-fns/format';
 import { parseISO } from 'date-fns/parseISO';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { BookOpen, Star } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
@@ -59,7 +59,8 @@ export function StudySessionCard({ session, subject, onLongPress }: Props) {
           {session.note ? ` · ${session.note}` : ''}
         </Text>
         <Text variant="caption">
-          {format(parseISO(session.logDate), 'EEE, MMM d')} · {t(MODE_LABEL_KEY[session.mode])}
+          {formatDate(parseISO(session.logDate), 'weekdayDayMonth')} ·{' '}
+          {t(MODE_LABEL_KEY[session.mode])}
         </Text>
       </View>
       <View className="items-end gap-1">

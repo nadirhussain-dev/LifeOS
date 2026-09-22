@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { formatDate } from '@/lib/date-format';
 import { Input } from '@/components/ui/input';
 import { cardClass } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -145,7 +146,7 @@ export default function IntimacyScreen() {
             >
               <View className="flex-row items-center justify-between">
                 <Text className="font-sora-medium text-foreground">
-                  {format(parseISO(entry.date), 'd MMM yyyy')}
+                  {formatDate(parseISO(entry.date), 'medium')}
                 </Text>
                 {entry.mood !== null ? (
                   <Text variant="caption" style={{ color: tint }}>

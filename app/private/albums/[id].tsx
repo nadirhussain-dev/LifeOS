@@ -26,6 +26,7 @@ import { AlbumCommentSheet } from '@/features/private/components/album-comment-s
 import { MilestoneSheet } from '@/features/private/components/milestone-sheet';
 import { OnThisDayCard } from '@/features/private/components/on-this-day-card';
 import { TogetherStrip } from '@/features/private/components/together-strip';
+import { QueryError } from '@/components/ui/query-error';
 import { PrivateScreen } from '@/features/private/components/private-screen';
 import { privateModule } from '@/features/private/config/private-modules';
 import { SecureContentView, SecureImage } from '@/features/private/components/secure-content-view';
@@ -79,7 +80,8 @@ export default function SharedAlbumScreen() {
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const profile = useAuthStore((s) => s.profile);
 
-  const { data } = useAlbumDetail(id);
+  const detailQuery = useAlbumDetail(id);
+  const { data } = detailQuery;
   const { data: albumKey } = useAlbumKey(id);
   const { name, locked } = useAlbumName(id, data?.album?.nameCiphertext);
   const { isOwner } = useMyAlbumMembership(data);
@@ -205,6 +207,18 @@ export default function SharedAlbumScreen() {
     });
     reportSheet.current?.present();
   };
+
+  // Without the album itself, everything below reads from `data?.` — no
+  // members, no permissions, no photos — which renders as an album somebody
+  // emptied rather than one that could not be reached. In a shared space that
+  // is the more alarming of the two readings, so it must not be the default.
+  if (detailQuery.isError) {
+    return (
+      <PrivateScreen moduleId="shared-albums" title={t('private.sharedAlbumsTitle')} tint={tint}>
+        <QueryError error={detailQuery.error} onRetry={() => detailQuery.refetch()} />
+      </PrivateScreen>
+    );
+  }
 
   if (space !== 'real') {
     return (

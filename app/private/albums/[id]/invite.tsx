@@ -7,7 +7,7 @@ import { Pressable, ScrollView, Share, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { cardClass } from '@/components/ui/card';
 import { Copy, KeyRound, Link as LinkIcon, Share2 } from '@/components/ui/icons';
-import { InlineError } from '@/components/ui/query-error';
+import { InlineError, QueryError } from '@/components/ui/query-error';
 import { Text } from '@/components/ui/text';
 import {
   useAlbumDetail,
@@ -40,7 +40,8 @@ export default function AlbumInviteScreen() {
   const { t } = useTranslation();
   const { c } = useTheme();
 
-  const { data } = useAlbumDetail(id);
+  const detailQuery = useAlbumDetail(id);
+  const { data } = detailQuery;
   const { data: albumKey } = useAlbumKey(id);
   const { invite } = useSharedAlbumMutations(id);
   const inviterName = useAuthStore((s) => s.profile?.displayName ?? s.profile?.email ?? null);
@@ -120,6 +121,18 @@ export default function AlbumInviteScreen() {
   // version is what made this invite unusable everywhere except the sending
   // device.
   const link = bundle?.token ? albumInviteUrl(bundle.token) : null;
+
+  // The album itself failing to load leaves every field below reading from
+  // `data?.` — the send affordance disabled, the member list empty, the
+  // permissions unknown — which looks like an album with nothing in it rather
+  // than one that could not be reached.
+  if (detailQuery.isError) {
+    return (
+      <PrivateScreen moduleId="shared-albums" title={t('private.invite')} tint={c.accent}>
+        <QueryError error={detailQuery.error} onRetry={() => detailQuery.refetch()} />
+      </PrivateScreen>
+    );
+  }
 
   return (
     <PrivateScreen moduleId="shared-albums" title={t('private.invite')} tint={c.accent}>
