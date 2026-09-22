@@ -34,6 +34,12 @@ export function DonutChart({
 }: Props) {
   const scheme = useColorScheme() ?? 'light';
   const radius = (size - strokeWidth) / 2;
+  // The hole is a circle, so a line of text across it has less room than its
+  // diameter — the chord shortens as the text sits further from the centre.
+  // 0.86 is the width of the chord at the top of a two-line block in a 180px
+  // ring, and it is the content box because otherwise `children` lays out
+  // against the full 180 and a long total draws straight over the slices.
+  const holeWidth = (size - strokeWidth * 2) * 0.86;
   const circumference = 2 * Math.PI * radius;
   const total = data.reduce((sum, slice) => sum + slice.value, 0);
   const gapLength = (gap / 360) * circumference;
@@ -75,7 +81,11 @@ export function DonutChart({
             return circle;
           })}
       </Svg>
-      {children}
+      {children ? (
+        <View style={{ width: holeWidth, alignItems: 'center', justifyContent: 'center' }}>
+          {children}
+        </View>
+      ) : null}
     </View>
   );
 }

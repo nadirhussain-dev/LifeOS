@@ -26,6 +26,7 @@ import { colors } from '@/constants/theme';
 import { AdSlot } from '@/features/ads/components/ad-slot';
 import { ACCOUNTS, DEBT_TINT } from '@/features/budget/config/budget-config';
 import { ExpenseDonut } from '@/features/budget/components/expense-donut';
+import { MoneyText } from '@/features/budget/components/money-text';
 import { SavingsGoalCard } from '@/features/budget/components/savings-goal-card';
 import { TransactionRow } from '@/features/budget/components/transaction-row';
 import { formatMoney } from '@/features/budget/services/money';
@@ -150,12 +151,26 @@ export default function BudgetScreen() {
                 <Text variant="sectionLabel" style={{ color: alpha('#ffffff', 0.85) }}>
                   {t('budget.remainingBalance')}
                 </Text>
-                <Text className="font-sora-extrabold text-4xl" style={{ color: '#ffffff' }}>
-                  {formatMoney(summary.balanceCents, currency)}
-                </Text>
+                {/* The screen's largest figure and the one with no ceiling: at
+                    a fixed 36px a seven-digit balance wrapped onto a second
+                    line inside the hero and collided with the row beneath it. */}
+                <MoneyText
+                  cents={summary.balanceCents}
+                  currency={currency}
+                  size={36}
+                  minSize={22}
+                  align="center"
+                  className="font-sora-extrabold"
+                  style={{ color: '#ffffff' }}
+                />
               </View>
+              {/* Three amounts across a third of a phone width each. They had
+                  no gap and no shrink, so any figure past four digits ran into
+                  its neighbours and the row read as one unbroken number. The
+                  gap is what separates them; the fit is what keeps each one
+                  inside its own third. */}
               <View
-                className="flex-row rounded-2xl p-3"
+                className="flex-row gap-2 rounded-2xl p-3"
                 style={{ backgroundColor: alpha('#ffffff', 0.15) }}
               >
                 {[
@@ -164,9 +179,15 @@ export default function BudgetScreen() {
                   { label: t('budget.savings'), value: summary.savingsCents, dot: '#e0e7ff' },
                 ].map((item) => (
                   <View key={item.label} className="flex-1 items-center gap-1">
-                    <Text className="font-sora-bold" style={{ color: '#ffffff' }}>
-                      {formatMoney(item.value, currency)}
-                    </Text>
+                    <MoneyText
+                      cents={item.value}
+                      currency={currency}
+                      size={15}
+                      minSize={11}
+                      align="center"
+                      className="font-sora-bold"
+                      style={{ color: '#ffffff' }}
+                    />
                     <View className="flex-row items-center gap-1">
                       <View
                         className="h-1.5 w-1.5 rounded-full"
@@ -190,13 +211,23 @@ export default function BudgetScreen() {
               return (
                 <View
                   key={entry.account}
-                  className={cardClass({ padding: 'none' }, 'flex-1 items-center gap-1.5 py-3.5')}
+                  className={cardClass(
+                    { padding: 'none' },
+                    'flex-1 items-center gap-1.5 px-2 py-3.5',
+                  )}
                 >
                   <Icon size={16} color={colors[scheme].mutedForeground} />
-                  <Text className="font-sora-bold text-foreground">
-                    {formatMoney(entry.balanceCents, currency)}
+                  <MoneyText
+                    cents={entry.balanceCents}
+                    currency={currency}
+                    size={15}
+                    minSize={11}
+                    align="center"
+                    className="font-sora-bold text-foreground"
+                  />
+                  <Text variant="caption" numberOfLines={1}>
+                    {meta?.label}
                   </Text>
-                  <Text variant="caption">{meta?.label}</Text>
                 </View>
               );
             })}
@@ -231,9 +262,15 @@ export default function BudgetScreen() {
           {/* Budget vs actual */}
           {monthlyBudgetCents != null && monthlyBudgetCents > 0 && (
             <View className={cardClass({ padding: 'md' }, 'gap-2.5')}>
-              <View className="flex-row items-center justify-between">
-                <Text variant="subheading">{t('budget.monthlyBudget')}</Text>
-                <Text variant="caption">
+              {/* Two amounts sat beside the heading with nothing able to give
+                  way, so a large budget pushed the pair straight through the
+                  heading. Both sides shrink and truncate now; neither can
+                  overrun the other. */}
+              <View className="flex-row items-center justify-between gap-3">
+                <Text variant="subheading" className="shrink" numberOfLines={1}>
+                  {t('budget.monthlyBudget')}
+                </Text>
+                <Text variant="caption" className="shrink" numberOfLines={1}>
                   {formatMoney(summary.expenseCents, currency)}{' '}
                   {t('budget.ofAmount', { amount: formatMoney(monthlyBudgetCents, currency) })}
                 </Text>

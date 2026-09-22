@@ -47,4 +47,32 @@ describe('formatMoneyCompact', () => {
     expect(formatMoneyCompact(120000, 'USD')).toBe('$1.2k');
     expect(formatMoneyCompact(95000, 'USD')).toBe('$950');
   });
+
+  it('abbreviates millions and billions', () => {
+    // The k step on its own turned a nine-figure balance into "$10000k" —
+    // longer than the amounts this is meant to shorten.
+    expect(formatMoneyCompact(340_000_000, 'USD')).toBe('$3.4m');
+    expect(formatMoneyCompact(123_456_789_00, 'USD')).toBe('$123m');
+    expect(formatMoneyCompact(250_000_000_000, 'USD')).toBe('$2.5b');
+  });
+
+  it('rounds before choosing how many decimals to show', () => {
+    // 9.99m formats to "10.0" at one decimal, and every other value of ten and
+    // over drops the decimal — so this one must too.
+    expect(formatMoneyCompact(999_900_000, 'USD')).toBe('$10m');
+  });
+
+  it('keeps the sign', () => {
+    expect(formatMoneyCompact(-340_000_000, 'USD')).toBe('-$3.4m');
+  });
+
+  it('never gets longer than the figure it stands in for', () => {
+    // The property that matters at the call site: this is only ever reached
+    // because the full string did not fit.
+    for (const cents of [95_000, 120_000, 340_000_000, 999_900_000, 250_000_000_000]) {
+      expect(formatMoneyCompact(cents, 'USD').length).toBeLessThanOrEqual(
+        formatMoney(cents, 'USD').length,
+      );
+    }
+  });
 });

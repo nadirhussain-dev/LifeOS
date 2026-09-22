@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import { DonutChart } from '@/components/ui/donut-chart';
 import { Text } from '@/components/ui/text';
-import { formatMoney } from '@/features/budget/services/money';
+import { MoneyText } from '@/features/budget/components/money-text';
 import type { CategorySlice } from '@/features/budget/types/budget.types';
 
 type Props = {
@@ -42,27 +42,49 @@ export function ExpenseDonut({ categories, totalCents, currency }: Props) {
   return (
     <View className="items-center gap-4">
       <DonutChart data={slices} size={180} strokeWidth={26}>
-        <View className="items-center">
+        <View className="w-full items-center">
           <Text variant="caption">{t('budget.spent')}</Text>
-          <Text
-            className="font-sora-extrabold text-xl text-foreground"
-            style={{ fontVariant: ['tabular-nums'] }}
-          >
-            {formatMoney(totalCents, currency)}
-          </Text>
+          <MoneyText
+            cents={totalCents}
+            currency={currency}
+            size={20}
+            minSize={13}
+            align="center"
+            className="font-sora-extrabold text-foreground"
+          />
         </View>
       </DonutChart>
 
+      {/* Two columns with a 24px gutter down the middle. Without it the left
+          column's percentage sat flush against the right column's swatch, so
+          "12%" and the next category's dot read as one run of marks and the
+          eye had nothing to tell it where one entry ended. The percentages are
+          also given a fixed end-aligned box, which turns them into a column
+          that can be compared down rather than six numbers at six different
+          indents. */}
       <View className="w-full flex-row flex-wrap">
-        {legend.map((item) => (
-          <View key={item.categoryId} className="w-1/2 flex-row items-center gap-2 py-1">
+        {legend.map((item, index) => (
+          <View
+            key={item.categoryId}
+            className={
+              index % 2 === 0
+                ? 'w-1/2 flex-row items-center gap-2 py-1.5 pe-3'
+                : 'w-1/2 flex-row items-center gap-2 py-1.5 ps-3'
+            }
+          >
             <View className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.tint }} />
             <Text variant="caption" className="flex-1" numberOfLines={1}>
               {item.label}
             </Text>
-            <Text variant="caption" className="font-sora-semibold">
-              {Math.round(item.share * 100)}%
-            </Text>
+            <View className="items-end" style={{ minWidth: 34 }}>
+              <Text
+                variant="caption"
+                className="font-sora-semibold text-foreground"
+                style={{ fontVariant: ['tabular-nums'] }}
+              >
+                {Math.round(item.share * 100)}%
+              </Text>
+            </View>
           </View>
         ))}
       </View>
