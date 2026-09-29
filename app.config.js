@@ -71,7 +71,7 @@ function credentialsHelp(missing) {
  * to survive Metro's inlining), these two are only ever consumed here, inside
  * the `react-native-google-mobile-ads` config plugin, at prebuild/EAS-build
  * time — plain `process.env` in a build-server Node process, same as
- * SENTRY_ORG/SENTRY_PROJECT below.
+ * the AdMob app ids below.
  */
 const ADMOB_ANDROID_APP_ID = (process.env.ADMOB_ANDROID_APP_ID ?? '').trim();
 const ADMOB_IOS_APP_ID = (process.env.ADMOB_IOS_APP_ID ?? '').trim();
@@ -165,41 +165,6 @@ module.exports = ({ config }) => {
       (profile ? ` profile=${profile}` : '') +
       ` supabase=${ref ?? '(none)'}`,
   );
-
-  /**
-   * Sentry is optional, and eas.json disables the source-map upload on every
-   * profile so a build can never fail for want of a Sentry token. The cost is
-   * real but silent — production stack traces arrive minified, which is the
-   * difference between a stack trace and a wall of `a.b.c(d)` — so it is said
-   * out loud here rather than discovered during an incident.
-   *
-   * Same shape as the AdMob warning below: a soft default that still ships,
-   * with the consequence stated. Contrast the Supabase checks above, which
-   * throw, because those produce an app that cannot work at all.
-   */
-  if (environment === 'production' && onBuildServer) {
-    const uploadDisabled = (process.env.SENTRY_DISABLE_AUTO_UPLOAD ?? '').trim() === 'true';
-    const hasSentryCreds = ['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN'].every((name) =>
-      (process.env[name] ?? '').trim(),
-    );
-
-    if (!(process.env.EXPO_PUBLIC_SENTRY_DSN ?? '').trim()) {
-      console.warn(
-        '[daykeep] EXPO_PUBLIC_SENTRY_DSN not set for the "production" build — crash and ' +
-          'error reporting is OFF. Nothing will be reported from real devices. See .env.example.',
-      );
-    } else if (uploadDisabled) {
-      console.warn(
-        '[daykeep] Sentry source-map upload is disabled — production stack traces will be ' +
-          'MINIFIED and largely unreadable. To enable it: set SENTRY_ORG, SENTRY_PROJECT and ' +
-          'SENTRY_AUTH_TOKEN in the production EAS environment, then remove ' +
-          'SENTRY_DISABLE_AUTO_UPLOAD from the "production" profile in eas.json.' +
-          (hasSentryCreds
-            ? ' (The three variables are already set — only eas.json is holding it back.)'
-            : ''),
-      );
-    }
-  }
 
   if (
     process.env.EAS_BUILD_PROFILE === 'production' &&

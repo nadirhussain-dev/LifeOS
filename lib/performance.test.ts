@@ -3,9 +3,7 @@ import {
   STARTUP_GATES,
   markStartupGate,
   reportStartupIfComplete,
-  resetMetricSink,
   resetStartupTimings,
-  setMetricSink,
   startupGateTiming,
 } from '@/lib/performance';
 
@@ -18,17 +16,16 @@ import {
  * summing concurrent gates (reporting a wait nobody had) and taking the last
  * timestamp for a gate whose effect re-ran (reporting a wait shorter than the
  * one that happened). Both are pinned below.
+ *
+ * These read the return value rather than a registered sink. The sink was
+ * Sentry's and went with it, so the reading is handed back to the caller
+ * instead — which is what keeps the budget flag and the per-gate attribution
+ * observable at all.
  */
 
-const sink = jest.fn();
-
 beforeEach(() => {
-  jest.clearAllMocks();
   resetStartupTimings();
-  setMetricSink(sink);
 });
-
-afterEach(() => resetMetricSink());
 
 /** Opens every gate but the one named, so a test can control the last one. */
 function openAllExcept(except: (typeof STARTUP_GATES)[number], at: number) {
@@ -40,15 +37,14 @@ describe('reporting', () => {
     openAllExcept('database', Date.now());
 
     expect(reportStartupIfComplete()).toBeNull();
-    expect(sink).not.toHaveBeenCalled();
   });
 
   it('reports once every gate is open', () => {
     for (const gate of STARTUP_GATES) markStartupGate(gate, Date.now());
 
-    expect(reportStartupIfComplete()).not.toBeNull();
-    expect(sink).toHaveBeenCalledTimes(1);
-    expect(sink.mock.calls[0][0]).toBe('app.startup');
+    const report = reportStartupIfComplete();
+    expect(report).not.toBeNull();
+    expect(typeof report!.total).toBe('number');
   });
 
   it('reports only once, however often it is called', () => {
@@ -56,11 +52,11 @@ describe('reporting', () => {
     // one cold start into a series whose average means nothing.
     for (const gate of STARTUP_GATES) markStartupGate(gate, Date.now());
 
-    reportStartupIfComplete();
-    reportStartupIfComplete();
-    reportStartupIfComplete();
-
-    expect(sink).toHaveBeenCalledTimes(1);
+    expect(reportStartupIfComplete()).not.toBeNull();
+    // Null on every call after the first, which is how "reported once" is
+    // observable now that there is no sink to count calls on.
+    expect(reportStartupIfComplete()).toBeNull();
+    expect(reportStartupIfComplete()).toBeNull();
   });
 });
 
@@ -75,13 +71,27 @@ describe('the reported duration', () => {
     markStartupGate('profile', start + 150);
     markStartupGate('database', start + 400);
 
-    const total = reportStartupIfComplete();
-    const [, reported] = sink.mock.calls[0];
+    const total = reportStartupIfComplete()!.total;
 
-    // Within a few ms of the slowest gate, and nowhere near their sum (850).
-    expect(total).toBeGreaterThanOrEqual(390);
-    expect(total).toBeLessThan(500);
-    expect(reported).toBe(total);
+    /*
+     * Asserted against the gates themselves rather than against 400.
+     *
+     * Every timing is measured from `moduleLoadedAt`, which is fixed when this
+     * module is first imported — not when the test runs. The old bounds
+     * (>= 390, < 500) therefore held only while those two moments were close
+     * together, which is true running this file alone and false in a full
+     * parallel suite: the module can be minutes old by the time the test
+     * executes, and `total` is then `(start + 400) - moduleLoadedAt`, far past
+     * 500. It failed exactly that way once during this change.
+     *
+     * The property has nothing to do with wall-clock distance from import. It
+     * is that the reported number is the largest gate and not their sum.
+     */
+    const timings = STARTUP_GATES.map((gate) => startupGateTiming(gate) ?? 0);
+    expect(total).toBe(Math.max(...timings));
+    expect(total).toBeLessThan(timings.reduce((sum, value) => sum + value, 0));
+    // ...and the gates really were staggered, or the line above proves nothing.
+    expect(new Set(timings).size).toBeGreaterThan(1);
   });
 
   it('keeps the first time a gate opened, not the last', () => {
@@ -103,8 +113,7 @@ describe('the budget', () => {
     openAllExcept('database', start);
     markStartupGate('database', start + STARTUP_BUDGET_MS + 500);
 
-    reportStartupIfComplete();
-    const [, , context] = sink.mock.calls[0];
+    const { context } = reportStartupIfComplete()!;
 
     expect(context.overBudget).toBe(true);
     expect(context.budgetMs).toBe(STARTUP_BUDGET_MS);
@@ -113,8 +122,7 @@ describe('the budget', () => {
   it('does not flag a start inside it', () => {
     for (const gate of STARTUP_GATES) markStartupGate(gate, Date.now());
 
-    reportStartupIfComplete();
-    const [, , context] = sink.mock.calls[0];
+    const { context } = reportStartupIfComplete()!;
 
     expect(context.overBudget).toBe(false);
   });
@@ -125,20 +133,8 @@ describe('the budget', () => {
     // cannot explain.
     for (const gate of STARTUP_GATES) markStartupGate(gate, Date.now());
 
-    reportStartupIfComplete();
-    const [, , context] = sink.mock.calls[0];
+    const { context } = reportStartupIfComplete()!;
 
     for (const gate of STARTUP_GATES) expect(typeof context[gate]).toBe('number');
-  });
-});
-
-describe('without a sink', () => {
-  it('is inert rather than throwing', () => {
-    // Dev and unconfigured builds never register one. Startup measurement must
-    // never be the thing that stops the app booting.
-    resetMetricSink();
-    for (const gate of STARTUP_GATES) markStartupGate(gate, Date.now());
-
-    expect(() => reportStartupIfComplete()).not.toThrow();
   });
 });

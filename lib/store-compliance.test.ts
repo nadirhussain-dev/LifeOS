@@ -200,39 +200,20 @@ describe('ios submit profile', () => {
   });
 });
 
-/**
- * Sentry source maps on the profile whose stack traces nobody can read.
+/*
+ * Removed with Sentry: the two 'production crash reports' assertions.
  *
- * `SENTRY_DISABLE_AUTO_UPLOAD` is set on every build profile, which is what
- * lets a build succeed without a Sentry token — a deliberate trade, and the
- * right one for development and staging. On production it means every crash
- * report arrives minified: the difference between a stack trace and a wall of
- * `a.b.c(d)`, discovered during the first incident rather than before it.
+ * They pinned the build-time warnings — that a production build says out loud
+ * when its stack traces will be minified, and when the DSN is missing
+ * entirely. Both described a reporting backend this app no longer has.
  *
- * Not asserted as "must be enabled", because enabling it makes a production
- * build fail when the token is absent, and that is a decision about release
- * process rather than about code. Asserted instead is that the cost is stated
- * where somebody running the build will see it — app.config.js warns, and this
- * pins the warning so it cannot be deleted as noise.
+ * What replaced them is nothing, and that is worth stating rather than
+ * leaving as an absence: there is now no crash or error reporting in
+ * production at all. `reportError` is still the single choke point every catch
+ * block goes through, so adding a backend is one edit in
+ * `lib/error-reporting.ts` — and whatever lands there should bring a test like
+ * these two back with it.
  */
-describe('production crash reports', () => {
-  it('says out loud when production stack traces will be minified', () => {
-    const config = read('app.config.js');
-    expect(config).toContain('SENTRY_DISABLE_AUTO_UPLOAD');
-    expect(config).toMatch(/MINIFIED/);
-    // And names the three variables, so the warning is actionable rather than
-    // just alarming.
-    for (const name of ['SENTRY_ORG', 'SENTRY_PROJECT', 'SENTRY_AUTH_TOKEN']) {
-      expect(config).toContain(name);
-    }
-  });
-
-  it('warns when the DSN itself is missing, which turns reporting off entirely', () => {
-    const config = read('app.config.js');
-    expect(config).toContain('EXPO_PUBLIC_SENTRY_DSN');
-    expect(config).toMatch(/reporting is OFF/i);
-  });
-});
 
 /**
  * `expo-updates` is a dependency, and there is no `updates` block in app.json.

@@ -18,9 +18,6 @@
     "staging": {
       "distribution": "internal",
       "environment": "preview",
-      "env": {
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
-      },
       "android": {
         "buildType": "apk"
       }
@@ -30,17 +27,11 @@
     },
     "production": {
       "autoIncrement": true,
-      "environment": "production",
-      "env": {
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
-      }
+      "environment": "production"
     },
     "production-apk": {
       "extends": "production",
       "distribution": "internal",
-      "env": {
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
-      },
       "android": {
         "buildType": "apk"
       }

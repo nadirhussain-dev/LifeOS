@@ -253,9 +253,8 @@ excludes gambling, alcohol and sexual content.
 
 ## Crash reporting
 
-If a crash-reporting service (Sentry) is configured for a build, technical error
-reports (no journal/financial/personal content) may be sent to help fix bugs.
-Builds without it configured send nothing.
+Daykeep sends no crash or error reports anywhere. Errors are logged on the
+device only and are not transmitted, stored or seen by us.
 
 ## Children
 

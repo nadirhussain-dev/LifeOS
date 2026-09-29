@@ -6,6 +6,16 @@ Date: 2026-07-24. Scope: architecture & code quality, backend/sync/security, UX/
 
 Severity: 🔴 Critical · 🟠 High · 🟡 Medium · 🟢 Low. Each item tagged by area.
 
+> **Later change, noted here so nobody chases it.** Sentry has since been
+> removed from the app entirely — SDK, config plugin, env vars and the
+> `setErrorSink` / `setMetricSink` seams it was the only consumer of. Every
+> recommendation below that names it, and the "Sentry-ready via `setErrorSink`"
+> line in the 2026-07-25 pass, describe a state that no longer exists. The
+> underlying finding stands and is now unmitigated: **there is no production
+> error or crash visibility.** `reportError` remains the single choke point, so
+> re-attaching a backend is one edit in `lib/error-reporting.ts`. The entries
+> below are left as written because this file is a dated record.
+
 ---
 
 ## ✅ Fixed in the remediation pass (2026-07-25)
