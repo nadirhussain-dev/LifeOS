@@ -12,8 +12,7 @@ import {
   passwordProblemKey,
   PASSWORD_MIN_LENGTH,
 } from '@/features/auth/services/password-policy';
-import { onboardingScope } from '@/features/onboarding/services/onboarding-scope';
-import { useProfileStore } from '@/features/profile/store/profile-store';
+import { postAuthDestination } from '@/features/auth/services/post-auth-destination';
 import { useSplashStore } from '@/hooks/use-splash-store';
 
 export default function CreatePasswordScreen() {
@@ -70,15 +69,7 @@ export default function CreatePasswordScreen() {
     // unlike most auth actions, navigating onward is this screen's own job.
     // A brand-new account has no onboardingCompletedAt yet; an existing one
     // redoing this flow (passwordless sign-in re-used the sign-up form) does.
-    const auth = useAuthStore.getState();
-    const profileState = useProfileStore.getState();
-    const { onboarded } = onboardingScope({
-      userId: auth.session?.user.id ?? null,
-      onboardedUserIds: profileState.onboardedUserIds,
-      deviceOnboarded: profileState.onboardingComplete,
-      accountOnboardedAt: auth.profile?.onboardingCompletedAt ?? null,
-    });
-    router.replace(onboarded ? '/(tabs)' : '/(onboarding)');
+    router.replace(postAuthDestination());
   };
 
   return (

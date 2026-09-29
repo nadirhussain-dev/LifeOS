@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
+import { Button } from '@/components/ui/button';
 import { CloudOff, RefreshCw, ShieldCheck } from '@/components/ui/icons';
 import { Text } from '@/components/ui/text';
 import { SocialAuthButtons } from '@/features/auth/components/social-auth-buttons';
@@ -71,18 +72,29 @@ export function AccountStep({
       title={t('onboarding.accountTitle')}
       body={isGuest ? t('onboarding.accountBodyGuest') : t('onboarding.accountBody')}
       footer={
-        <Pressable
-          accessibilityRole="button"
-          onPress={onContinueAsGuest}
-          className="items-center py-3"
-        >
-          <Text className="font-sora-semibold" style={{ color: c.foreground }}>
-            {isGuest ? t('onboarding.keepOnThisDevice') : t('onboarding.continueOnThisDevice')}
-          </Text>
-          <Text variant="caption" className="mt-0.5 text-center">
+        /* A button, at the same size as the ones above it.
+ 
+           The header of this file has claimed since it was written that this is
+           "a genuine choice between three real options, stated at the same
+           weight". It was not: Google and Apple were filled buttons, email was
+           an outlined one, and this was unstyled text in the footer. Somebody
+           who did not want an account had to read past three buttons to find
+           the sentence telling them they did not have to. Saying a path is
+           supported and drawing it as the thing you do when you give up are
+           different messages, and people read the second one. */
+        <View className="gap-1">
+          <Button
+            label={
+              isGuest ? t('onboarding.keepOnThisDevice') : t('onboarding.continueOnThisDevice')
+            }
+            variant="secondary"
+            size="lg"
+            onPress={onContinueAsGuest}
+          />
+          <Text variant="caption" className="text-center">
             {t('onboarding.continueOnThisDeviceHint')}
           </Text>
-        </Pressable>
+        </View>
       }
     >
       <View className="gap-5">

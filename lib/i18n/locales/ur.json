@@ -734,6 +734,7 @@
     "name": "نام",
     "forgotPassword": "پاس ورڈ بھول گئے؟",
     "continueGuest": "بغیر اکاؤنٹ کے جاری رکھیں",
+    "continueGuestHint": "سب کچھ آف لائن کام کرتا ہے۔ بعد میں سائن اِن کریں، آپ کا سارا ڈیٹا ساتھ آ جائے گا۔",
     "signingIn": "سائن ان ہو رہا ہے…",
     "passwordPlaceholder": "آپ کا پاس ورڈ",
     "enterEmailPassword": "اپنا ای میل اور پاس ورڈ درج کریں۔",

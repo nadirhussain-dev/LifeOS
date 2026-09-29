@@ -86,7 +86,11 @@ describe('completing the sign-in', () => {
    *  route is in neither — so it has to route itself or the user waits forever
    *  on a spinner. */
   it('sends the user somewhere once it succeeds', () => {
-    expect(callback).toMatch(/router\.replace\(.*\(tabs\).*\(onboarding\)/s);
+    // Through the shared decision rather than an inlined ternary: this screen
+    // spelled the branch out itself, and two other exits from the auth stack
+    // spelled a *different* one — straight to the tabs — which stranded
+    // first-time users. See features/auth/post-auth-destination.test.ts.
+    expect(callback).toContain('router.replace(postAuthDestination())');
   });
 
   /** Cancelling on the consent screen is not a fault and must not be shown as

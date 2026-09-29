@@ -734,6 +734,7 @@
     "name": "Name",
     "forgotPassword": "Forgot password?",
     "continueGuest": "Continue without an account",
+    "continueGuestHint": "Everything works offline. Sign in later and it all comes with you.",
     "signingIn": "Signing in…",
     "passwordPlaceholder": "Your password",
     "enterEmailPassword": "Enter your email and password.",
