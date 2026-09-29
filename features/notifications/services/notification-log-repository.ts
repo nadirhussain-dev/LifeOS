@@ -332,6 +332,19 @@ export function markNotificationRead(logId: string): void {
     .run();
 }
 
+/**
+ * Puts a row back to unread.
+ *
+ * The inbox could only ever move in one direction: opening a notification
+ * marked it read, and nothing anywhere could undo that. Tapping one to see what
+ * it said therefore destroyed the only record that you had not dealt with it
+ * yet — which is what the unread state is *for*. "Mark all read" made the same
+ * trip for every row at once, with no way back.
+ */
+export function markNotificationUnread(logId: string): void {
+  getDb().update(notificationLog).set({ readAt: null }).where(eq(notificationLog.id, logId)).run();
+}
+
 export function markAllNotificationsRead(): void {
   getDb()
     .update(notificationLog)

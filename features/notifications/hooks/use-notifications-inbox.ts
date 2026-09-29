@@ -6,6 +6,7 @@ import {
   listNotificationLog,
   markAllNotificationsRead,
   markNotificationRead,
+  markNotificationUnread,
   unreadNotificationCount,
 } from '@/features/notifications/services/notification-log-repository';
 
@@ -43,6 +44,10 @@ export function useNotificationActions() {
     mutationFn: async (logId: string) => markNotificationRead(logId),
     onSuccess: invalidate,
   });
+  const markUnread = useMutation({
+    mutationFn: async (logId: string) => markNotificationUnread(logId),
+    onSuccess: invalidate,
+  });
   const markAllRead = useMutation({
     mutationFn: async () => markAllNotificationsRead(),
     onSuccess: invalidate,
@@ -56,5 +61,5 @@ export function useNotificationActions() {
     onSuccess: invalidate,
   });
 
-  return { markRead, markAllRead, remove, clearAll };
+  return { markRead, markUnread, markAllRead, remove, clearAll };
 }

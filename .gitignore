@@ -66,3 +66,12 @@ supabase/.env
 # who clones the repo.
 .claude/settings.local.json
 .claude/settings.json.tmp*
+
+# This project is npm — `package-lock.json` is the lockfile CI installs from
+# (`npm ci`) and the only one that should exist. A stray pnpm run leaves these
+# behind, and a second lockfile is how two machines quietly resolve different
+# dependency trees from the same package.json. Ignored so they cannot be
+# committed by accident; delete them if they appear.
+pnpm-lock.yaml
+pnpm-workspace.yaml
+yarn.lock

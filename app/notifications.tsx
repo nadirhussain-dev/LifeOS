@@ -30,12 +30,15 @@ function NotificationRow({
   count = 1,
   onPress,
   onDelete,
+  onToggleRead,
 }: {
   item: LoggedNotification;
   /** Schedules this row stands for — see groupScheduled. */
   count?: number;
   onPress: () => void;
   onDelete: () => void;
+  /** Flips this row between read and unread. */
+  onToggleRead: () => void;
 }) {
   const scheme = useColorScheme() ?? 'light';
   const { t } = useTranslation();
@@ -77,7 +80,39 @@ function NotificationRow({
           <Text className="flex-1 font-sora-semibold text-foreground" numberOfLines={1}>
             {item.title}
           </Text>
-          {unread && <View className="h-2 w-2 rounded-full" style={{ backgroundColor: tint }} />}
+          {/* The dot was decorative, and read was a one-way door: opening a
+              notification marked it read and nothing could undo that. Tapping
+              one to find out what it said therefore destroyed the only record
+              that you had not dealt with it — which is the entire job of the
+              unread state. "Mark all read" did it to every row at once.
+
+              So the dot is the control. Filled means unread and tapping marks
+              it read; hollow means read and tapping puts it back. Drawn in both
+              states rather than only when unread, because a control that
+              appears only on the rows that already have it offers no way to
+              reach the ones that do not.
+
+              Its own hit target, kept off the row's: the row navigates, and a
+              toggle that also navigated would be indistinguishable from the
+              thing it is meant to be an alternative to. */}
+          {status === 'delivered' && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={unread ? t('notif.markRead') : t('notif.markUnread')}
+              onPress={onToggleRead}
+              hitSlop={12}
+              className="h-5 w-5 items-center justify-center"
+            >
+              <View
+                className="h-2.5 w-2.5 rounded-full"
+                style={
+                  unread
+                    ? { backgroundColor: tint }
+                    : { borderWidth: 1.5, borderColor: theme.mutedForeground }
+                }
+              />
+            </Pressable>
+          )}
         </View>
         {!!item.body && (
           <Text variant="muted" numberOfLines={2}>
@@ -115,7 +150,7 @@ export default function NotificationsInboxScreen() {
   const { t } = useTranslation();
   const theme = colors[scheme];
   const { notifications } = useNotificationInbox();
-  const { markRead, markAllRead, remove, clearAll } = useNotificationActions();
+  const { markRead, markUnread, markAllRead, remove, clearAll } = useNotificationActions();
   // Strictly false — null is "not checked yet", not "blocked".
   const permissionRevoked = useNotificationsStore((s) => s.systemPermissionGranted === false);
 
@@ -136,6 +171,11 @@ export default function NotificationsInboxScreen() {
     // ones stay individual and newest-first, as the query returns them.
     return { upcoming: groupScheduled(up), recent: rec, hasUnread: unread };
   }, [notifications]);
+
+  const toggleRead = (item: LoggedNotification) => {
+    if (item.readAt) markUnread.mutate(item.id);
+    else markRead.mutate(item.id);
+  };
 
   const handlePress = (item: LoggedNotification) => {
     if (!item.readAt) markRead.mutate(item.id);
@@ -264,6 +304,7 @@ export default function NotificationsInboxScreen() {
                 item={item}
                 onPress={() => handlePress(item)}
                 onDelete={() => remove.mutate(item.id)}
+                onToggleRead={() => toggleRead(item)}
               />
             ))}
           </View>
@@ -282,6 +323,7 @@ export default function NotificationsInboxScreen() {
                 // removing one slot of fourteen would look like nothing
                 // happened.
                 onDelete={() => group.ids.forEach((id) => remove.mutate(id))}
+                onToggleRead={() => toggleRead(group.lead)}
               />
             ))}
           </View>

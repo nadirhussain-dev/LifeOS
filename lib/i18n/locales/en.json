@@ -1464,6 +1464,8 @@
     "emptyTitle": "You’re all caught up",
     "emptyBody": "Reminders you schedule across Daykeep show up here. Turn them on from any item or from Settings → Notifications.",
     "markAllRead": "Mark all read",
+    "markRead": "Mark as read",
+    "markUnread": "Mark as unread",
     "clear": "Clear",
     "upcoming": "Upcoming",
     "recent": "Recent",
