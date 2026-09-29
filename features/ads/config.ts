@@ -40,6 +40,13 @@ export const AD_PLACEMENTS = [
   'notes-bottom',
   'goals-bottom',
   'budget-bottom',
+  /* Woven into the list itself rather than anchored under it — see
+     services/list-ads.ts for the placement rules and why the inventory is
+     shaped this way. One placement id per list, not per position: the position
+     is the list's business and an id per slot would be eight ids that all mean
+     "tasks". */
+  'tasks-inline',
+  'notes-inline',
 ] as const;
 
 export type AdPlacement = (typeof AD_PLACEMENTS)[number];

@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   useWindowDimensions,
   View,
   type LayoutChangeEvent,
   type StyleProp,
   type TextStyle,
+  type NativeSyntheticEvent,
+  type TextLayoutEventData,
 } from 'react-native';
 
 import { Text } from '@/components/ui/text';
@@ -108,11 +110,34 @@ export function FittedText({
   testID,
 }: Props) {
   const [width, setWidth] = useState(0);
+  /**
+   * How much the estimate was out by, learned from what the text actually
+   * measured. 1 until the first `onTextLayout` says otherwise.
+   *
+   * ## Why an estimate needed a correction at all
+   *
+   * `textWidth` multiplies a character count by a per-character advance taken
+   * from reading Sora's metrics. That was close enough for `$1,234.56` and
+   * wrong for a hero balance in a currency with a three-letter code: the app
+   * shipped `PKR 5,550,000....`, ellipsised, at full size — the estimate said
+   * it fitted, the text engine disagreed, and `numberOfLines={1}` did the only
+   * thing left. A shipped ellipsis in the largest number on the screen is
+   * worse than either a smaller number or an abbreviated one, and it was the
+   * one outcome the fallback existed to prevent.
+   *
+   * Guessing harder is not the fix. Advances differ by weight, by platform,
+   * by the font actually loaded, and by whatever the OS substitutes when Sora
+   * has not loaded yet — so the number to use is not knowable in advance and
+   * is trivially knowable afterwards. `onTextLayout` reports the line's real
+   * width; the ratio of that to the estimate is carried into the next fit, and
+   * one correction settles it for every subsequent render of that instance.
+   */
+  const [scale, setScale] = useState(1);
   const { fontScale } = useWindowDimensions();
 
   // `Text` caps dynamic type at 1.4×; fit against the width that is left once
-  // the OS has had its multiplier.
-  const available = width / Math.min(Math.max(fontScale, 1), 1.4);
+  // the OS has had its multiplier, and once the measured correction is applied.
+  const available = width / Math.min(Math.max(fontScale, 1), 1.4) / scale;
 
   const fitted = fitFontSize(text, available, size, minSize);
   const truncated = fitted === null;
@@ -123,11 +148,28 @@ export function FittedText({
       : minSize
     : fitted;
 
+  // A new string is a new measurement; keeping the old correction would apply
+  // one string's error to another's.
+  useEffect(() => setScale(1), [text, fallback]);
+
   const onLayout = (event: LayoutChangeEvent) => {
     const next = event.nativeEvent.layout.width;
     // Guarded: setting state unconditionally on every layout pass re-renders a
     // screen full of these on every scroll-driven relayout.
     setWidth((current) => (Math.abs(current - next) > 0.5 ? next : current));
+  };
+
+  const onTextLayout = (event: NativeSyntheticEvent<TextLayoutEventData>) => {
+    const line = event.nativeEvent.lines[0];
+    if (!line || width <= 0 || !fontSize) return;
+    const predicted = textWidth(shown, fontSize);
+    if (predicted <= 0 || line.width <= 0) return;
+    const observed = line.width / predicted;
+    // Only ever widen the estimate. A line reported narrower than predicted is
+    // usually a line the engine already truncated, and trusting it would shrink
+    // the correction on exactly the render that proves it is needed.
+    if (observed <= 1.01) return;
+    setScale((current) => (observed > current * 1.01 ? observed : current));
   };
 
   return (
@@ -138,6 +180,7 @@ export function FittedText({
     >
       <Text
         numberOfLines={1}
+        onTextLayout={onTextLayout}
         className={className}
         // The exact value still reaches a screen reader when the compact form
         // is what is drawn — the abbreviation is a space compromise, not a

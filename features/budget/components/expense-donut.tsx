@@ -39,6 +39,21 @@ export function ExpenseDonut({ categories, totalCents, currency }: Props) {
       : []),
   ];
 
+  /*
+   * A month with no spending still gets the ring.
+   *
+   * The whole card used to disappear on `categories.length > 0`, so a budget
+   * opened at the start of a month — or any month nothing was logged in — lost
+   * its most legible element and the screen became a column of text. The chart
+   * is the thing people come to this screen for; hiding it exactly when the
+   * numbers are smallest is the wrong way round.
+   *
+   * `DonutChart` already draws its track when nothing sums, so an empty ring is
+   * the honest picture of "nothing spent" rather than a blank. The centre says
+   * the total, which is zero, and the legend has nothing to list.
+   */
+  const isEmpty = slices.length === 0 || totalCents <= 0;
+
   return (
     <View className="items-center gap-4">
       <DonutChart data={slices} size={180} strokeWidth={26}>
@@ -62,6 +77,12 @@ export function ExpenseDonut({ categories, totalCents, currency }: Props) {
           also given a fixed end-aligned box, which turns them into a column
           that can be compared down rather than six numbers at six different
           indents. */}
+      {isEmpty ? (
+        <Text variant="caption" className="text-center">
+          {t('budget.noSpendYet')}
+        </Text>
+      ) : null}
+
       <View className="w-full flex-row flex-wrap">
         {legend.map((item, index) => (
           <View

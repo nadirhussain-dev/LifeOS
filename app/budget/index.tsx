@@ -296,8 +296,12 @@ export default function BudgetScreen() {
             </View>
           )}
 
-          {/* Expense donut */}
-          {categories.length > 0 && (
+          {/* Expense donut — always present.
+              It used to be gated on `categories.length > 0`, so the screen's
+              most legible element vanished in any month nothing had been
+              logged in yet, which is precisely when somebody is most likely to
+              be looking at a fresh budget. The chart handles empty itself. */}
+          {
             <View className={cardClass({ padding: 'md' }, 'gap-3')}>
               <Text variant="subheading">{t('budget.whereItWent')}</Text>
               <ExpenseDonut
@@ -306,7 +310,7 @@ export default function BudgetScreen() {
                 currency={currency}
               />
             </View>
-          )}
+          }
 
           <SectionHeader
             title={t('budget.recurring')}
