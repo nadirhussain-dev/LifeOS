@@ -37,8 +37,13 @@ export function CategoryBudgetList({ statuses, currency }: Props) {
           <View key={status.category} className="gap-1.5 py-3">
             <View className="flex-row items-center gap-2.5">
               <Icon size={15} color={tint} />
-              <Text className="flex-1 font-sora-medium">{meta.label}</Text>
-              <Text variant="caption" style={{ color: tint }}>
+              <Text className="flex-1 font-sora-medium" numberOfLines={1}>
+                {meta.label}
+              </Text>
+              {/* "$900 left of $1,000" is two amounts in a slot sized for one.
+                  Allowed to shrink and truncate rather than push the category
+                  name off its own row. */}
+              <Text variant="caption" className="shrink" numberOfLines={1} style={{ color: tint }}>
                 {status.isOver
                   ? t('budget.overBy', {
                       amount: formatMoney(-status.remainingCents, currency),

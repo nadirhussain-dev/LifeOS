@@ -40,14 +40,36 @@ function formatMoneyManual(cents: number, currency: string): string {
   return `${negative ? '-' : ''}${symbol}${body}`;
 }
 
-/** Compact format for chart axes / tight tiles: "$1.2k", "$950". */
+/** Thousands, millions, billions. The k step existed alone, which was fine
+ * while this only labelled chart axes and stopped being fine the moment it
+ * became the fallback for a slot too narrow for the full amount: a nine-figure
+ * balance came out as "$10000k", longer than several of the strings it was
+ * supposed to be rescuing and unreadable besides. */
+const COMPACT_STEPS = [
+  { at: 1e9, suffix: 'b' },
+  { at: 1e6, suffix: 'm' },
+  { at: 1e3, suffix: 'k' },
+] as const;
+
+/** Compact format for chart axes and slots too narrow for the real figure:
+ * "$1.2k", "$3.4m", "$950". One decimal below ten, none above — "$12.3m" and
+ * "$12m" carry the same information at a glance and the shorter one is the
+ * point. */
 export function formatMoneyCompact(cents: number, currency = 'USD'): string {
   const symbol = currencySymbol(currency);
   const abs = Math.abs(Math.round(cents));
   const dollars = abs / 100;
   const sign = cents < 0 ? '-' : '';
-  if (dollars >= 1000)
-    return `${sign}${symbol}${(dollars / 1000).toFixed(dollars >= 10000 ? 0 : 1)}k`;
+  for (const step of COMPACT_STEPS) {
+    if (dollars >= step.at) {
+      const scaled = dollars / step.at;
+      // Rounded first, then compared: 9.99 formats to "10.0", and "$10.0m"
+      // should be "$10m" like every other value of ten and over.
+      const oneDecimal = Math.round(scaled * 10) / 10;
+      const body = oneDecimal >= 10 ? String(Math.round(scaled)) : oneDecimal.toFixed(1);
+      return `${sign}${symbol}${body}${step.suffix}`;
+    }
+  }
   return `${sign}${symbol}${Math.round(dollars)}`;
 }
 

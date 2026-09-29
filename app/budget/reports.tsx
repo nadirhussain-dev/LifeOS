@@ -77,20 +77,25 @@ export default function BudgetReportsScreen() {
               key={row.label}
               className={
                 index === summaryRows.length - 1
-                  ? 'flex-row items-center justify-between border-t border-border pt-2.5'
-                  : 'flex-row items-center justify-between'
+                  ? 'flex-row items-center justify-between gap-3 border-t border-border pt-2.5'
+                  : 'flex-row items-center justify-between gap-3'
               }
             >
               <Text
+                numberOfLines={1}
                 className={
                   index === summaryRows.length - 1
-                    ? 'font-sora-semibold text-foreground'
-                    : 'text-muted-foreground'
+                    ? 'shrink font-sora-semibold text-foreground'
+                    : 'shrink text-muted-foreground'
                 }
               >
                 {row.label}
               </Text>
-              <Text className="font-sora-bold" style={{ color: row.color }}>
+              <Text
+                className="font-sora-bold"
+                numberOfLines={1}
+                style={{ color: row.color, fontVariant: ['tabular-nums'] }}
+              >
                 {formatMoney(row.value, currency)}
               </Text>
             </View>
