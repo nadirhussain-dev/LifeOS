@@ -9,6 +9,16 @@ Written against the code as it stands on `feat/challenge-season-console`
 (f3f528f). Every file path below is real; every "already built" claim was read,
 not assumed.
 
+> **Superseded in part.** The streak challenge has since been removed from the
+> app entirely — schema, screens, reminders and ad coupling — to be rebuilt from
+> scratch. Its three specification documents (`REWARDS_PROGRAM.md`,
+> `REWARDS_STRATEGY.md`, `STREAK_IMPLEMENTATION.md`) went with it; they are in
+> git history if the numbers are wanted. Every section below that reasons _from_
+> the streak — the enrolled ad surface, the funding argument, the shield gates —
+> is therefore history rather than plan. The ad strategy is being rewritten
+> separately, and the subscription tier those revenue comparisons assume is also
+> being removed, so the modelling here should not be used as-is.
+
 ---
 
 ## 0. The three decisions, and what they settled
@@ -41,8 +51,8 @@ Shipped as migration `0065_challenge_live_writes.sql` and
 **Decided: the firewall holds. Rewarded video buys something else.**
 
 Three separate places in this repo already forbade it and all three were right:
-`0048_streak_challenge.sql`'s "what is not here, on purpose" section,
-`docs/REWARDS_STRATEGY.md` §11, and Google's own policy on incentivised traffic
+`0048_streak_challenge.sql`'s "what is not here, on purpose" section, the
+removed `REWARDS_STRATEGY.md` §11, and Google's own policy on incentivised traffic
 — which is the one that can cost the AdMob account rather than just the design.
 
 The product reason outlives the policy one: a shield you can buy with thirty
@@ -601,7 +611,7 @@ accepting that onboarding drop-off is permanently unmeasurable.
 **5.5 The challenge reporter's offline comment is wrong** (§2.1). Small, but it
 is the kind of comment that makes a future reader trust the wrong thing.
 
-**5.6 `docs/REWARDS_STRATEGY.md` already models ad revenue at ~$540 per
+**5.6 The removed `REWARDS_STRATEGY.md` modelled ad revenue at ~$540 per
 1,000-user season against ~$1,200 from Plus conversions.** That is worth
 re-reading before committing heavily to §1: the strategy you already wrote says
 subscriptions are the larger line, and the season is your best conversion window.
@@ -684,7 +694,7 @@ yet) and the copy branches instead of interpolating — this lands on a lock
 screen, and a notification cannot be corrected.
 
 _Gate: the share of runs that spend at least one shield lands in the 40–70% band
-`REWARDS_STRATEGY.md` §9 calls green._
+the removed `REWARDS_STRATEGY.md` §9 called green. Moot while there are no runs._
 
 ### Phase 6 — New ad formats — MOSTLY DONE
 

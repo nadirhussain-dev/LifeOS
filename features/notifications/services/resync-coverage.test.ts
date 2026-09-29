@@ -146,7 +146,6 @@ describe('resync coverage', () => {
     // cannot pass by finding no roots and therefore no orphans.
     expect(roots).toContain('features/private/services/register-reminders.ts');
     expect(roots).toContain('features/insights/services/register-reminders.ts');
-    expect(roots).toContain('features/challenge/services/register-reminders.ts');
   });
 
   it('registration modules are actually imported by the app', () => {

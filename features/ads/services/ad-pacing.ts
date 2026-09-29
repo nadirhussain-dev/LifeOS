@@ -50,9 +50,6 @@ export const AD_FREE_SEGMENTS = [
   // full-screen ad fires on a *navigation*, so that argument stops being
   // available and this list has to be real.
   'private',
-  // The streak. An ad on top of somebody's daily commitment is the app
-  // interrupting the one thing it asked them to do.
-  'challenge',
   // Sign-in, sign-up, password reset. An interstitial over an auth flow reads
   // as a phishing screen.
   '(auth)',
@@ -74,34 +71,6 @@ export const HONEYMOON_DAYS = 3;
 /** Full-screen ads allowed in one app session. */
 export const SESSION_CAP = 2;
 
-/**
- * The cap for a free account inside a run.
- *
- * ## Why an enrolled user carries more, and why that is not a punishment
- *
- * The streak programme is free, it pays out cosmetics and bounded Premium
- * windows, and — at Gate B — a physical box. Somebody has to fund it, and the
- * options are the people who benefit or the people who do not. REWARDS_PROGRAM
- * §2.2's own conclusion is that ad revenue never closes the gap on a box; what
- * it can do is stop the programme being a straight loss against the free tier
- * it is recruiting from.
- *
- * Enrolled free users are also, by construction, the most engaged population in
- * the app: they open it every day, deliberately, and they have a reason to come
- * back that is not the ad. That is exactly the cohort an extra impression costs
- * the least retention on — and the one where a *badly placed* impression costs
- * the most, which is why the placement rules below get stricter rather than
- * looser at the same time.
- *
- * Three, not five. The gap, the honeymoon, the first-session exemption and the
- * breakpoint allowlist all still apply, so this is a ceiling on a number that
- * rarely reaches two.
- *
- * **Plus subscribers are unaffected**, because `mayShowAdNow` never reaches
- * this file for them — the `ads` entitlement is checked first and is false.
- */
-export const ENROLLED_SESSION_CAP = 3;
-
 /** Floor between any two full-screen ads, whatever their format. */
 export const MIN_GAP_SECONDS = 180;
 
@@ -120,66 +89,24 @@ export const AD_BREAKPOINTS = [
   'sleep-log-saved',
 ] as const;
 
-/**
- * The extra breakpoints an enrolled free user carries, and the module each one
- * belongs to.
- *
- * ## The rule these obey that the ones above do not
- *
- * Every one of these fires **after the write has committed and after the day
- * has been credited**, never before and never as a condition of either. That
- * is not politeness, it is REWARDS_PROGRAM §0.1: an ad may never be part of how
- * a day or a shield is earned. An interstitial sitting between the Save button
- * and the saved row would be an ad on the path that earns progress toward a
- * prize, which is the shape a regulator calls paid entry and AdMob calls
- * incentivised traffic — the same placement, refused for two independent
- * reasons.
- *
- * So the call sites are all *after* `mutate()` and after the navigation away,
- * exactly like the two above, and nothing awaits the result.
- *
- * ## Why they are keyed to a module
- *
- * These only fire inside the modules somebody actually committed to. Two
- * reasons, and the second is the one that decided it:
- *
- *  - It keeps the extra load proportional to the thing being funded. The
- *    programme is what added the impression, so the programme's own surfaces
- *    are where it lands.
- *  - It keeps the surface small and predictable. "Every save in the app" would
- *    be a placement nobody chose, spread across forty screens; three to five
- *    committed modules is a set the user picked themselves and can change.
- *
- * A module the user did not commit to behaves exactly as it does for somebody
- * who never enrolled — no extra breakpoint at all.
- */
-export const CHALLENGE_BREAKPOINTS: Record<string, string> = {
-  /** A task was composed and added, and the sheet closed behind it. */
-  'task-saved': 'tasks',
-  /** A note was composed and added, same shape. */
-  'note-saved': 'notes',
-  /** Progress was logged against a goal from the log sheet. */
-  'goal-logged': 'goals',
-};
-
 /*
- * Two committed modules deliberately have no breakpoint, and the reasons are
- * different enough to be worth writing down — both are the kind of omission a
- * later edit "fixes" without knowing why it was there.
+ * The streak programme used to add three more breakpoints — a saved task, a
+ * saved note, a logged goal — available only to somebody enrolled in a run and
+ * only inside the modules they had committed to, on the argument that the
+ * programme should fund itself. The programme has been removed, so those
+ * breakpoints have no population and no justification and are gone with it.
  *
- *  - **Habits.** Logging a habit is a tap on the tab screen, and the header of
- *    this file already names that loop as the thing an ad must never sit in
- *    front of: "open, tick a habit, close", often from a reminder. It is the
- *    app's best habit and the highest-frequency action in it. An interstitial
- *    there would be the most lucrative placement in the app and the one most
- *    certain to cost more retained days than it earns.
- *  - **Journal.** The editor autosaves, so there is no moment at which somebody
- *    has *finished*. A breakpoint needs a boundary, and inventing one — on
- *    blur, on back — would be an ad fired by navigation rather than by
- *    completion, which is precisely what the allowlist exists to prevent.
+ * They are worth knowing about rather than forgetting: "composed something,
+ * committed it, navigated away" is the same shape as the two breakpoints that
+ * remain, and whether any of them should become universal is an ads question
+ * rather than a streak one. It is decided in the ads pass, not here.
  *
- * The three above are all the same shape as the two base breakpoints: composed
- * something, committed it, and navigated away.
+ * Habits and Journal were deliberately excluded even then, and both reasons
+ * outlive the programme. Logging a habit is a tap on a tab screen and is the
+ * loop this file's header names as the one an ad must never sit in front of.
+ * The journal editor autosaves, so there is no moment at which somebody has
+ * finished — and inventing one, on blur or on back, would be an ad fired by
+ * navigation rather than by completion.
  */
 
 // "Returning to the Hub from a module" was the obvious third and is
@@ -201,22 +128,12 @@ export type AdRefusal =
   | 'too-soon'
   | 'ad-free-route'
   | 'not-a-breakpoint'
-  | 'launch'
-  /** A challenge breakpoint fired for somebody who is not in a run, or in a
-   *  module they did not commit to. Named separately from `not-a-breakpoint`
-   *  because it is the one refusal that is about *who* rather than *where*, and
-   *  conflating the two would hide how much of the extra surface is actually
-   *  reachable. */
-  | 'not-enrolled';
+  | 'launch';
 
 export type AdPacingInput = {
   /** Expo Router segments for the screen the user is on right now. */
   segments: string[];
   breakpoint: string;
-  /** Whether there is a live run on this account. */
-  challengeEnrolled: boolean;
-  /** The modules committed to in that run. Empty when not enrolled. */
-  committedModules: string[];
   /** Milliseconds since the install was first recorded. */
   installAgeMs: number;
   /** Full-screen ads already shown in this app session. */
@@ -262,25 +179,12 @@ export function mayShowFullScreenAd(input: AdPacingInput): AdPacingResult {
     // is the one that earns the revenue.
     return { allowed: false, reason: 'first-session-of-day' };
   }
-  /*
-   * Two allowlists, checked in order of who they apply to.
-   *
-   * A base breakpoint fires for everybody who reaches this file. A challenge
-   * breakpoint fires only inside a live run, and only for a module that run
-   * actually committed to — so somebody who never enrolled sees exactly the
-   * placements they saw before this existed, and an enrolled user sees nothing
-   * extra in a module they did not pick.
-   */
-  const base = (AD_BREAKPOINTS as readonly string[]).includes(input.breakpoint);
-  const committedTo = CHALLENGE_BREAKPOINTS[input.breakpoint];
-  if (!base && committedTo === undefined) {
+  // One allowlist, applying to everybody who reaches this file. It was two
+  // while the streak programme carried extra placements for the people it was
+  // funding itself from; with the programme gone there is a single population
+  // and a single list.
+  if (!(AD_BREAKPOINTS as readonly string[]).includes(input.breakpoint)) {
     return { allowed: false, reason: 'not-a-breakpoint' };
-  }
-  if (
-    !base &&
-    (!input.challengeEnrolled || !input.committedModules.includes(committedTo as string))
-  ) {
-    return { allowed: false, reason: 'not-enrolled' };
   }
   if (isAdFreeRoute(input.segments)) {
     return { allowed: false, reason: 'ad-free-route' };
@@ -292,12 +196,7 @@ export function mayShowFullScreenAd(input: AdPacingInput): AdPacingResult {
   if (input.sessionAgeMs < 10_000) {
     return { allowed: false, reason: 'launch' };
   }
-  // The higher ceiling applies to the whole session once somebody is in a run,
-  // not only to the challenge breakpoints — it is a property of the account,
-  // not of the placement, and splitting it per breakpoint would make the third
-  // ad of a session depend on which screen happened to ask for it.
-  const cap = input.challengeEnrolled ? ENROLLED_SESSION_CAP : SESSION_CAP;
-  if (input.shownThisSession >= cap) {
+  if (input.shownThisSession >= SESSION_CAP) {
     return { allowed: false, reason: 'session-cap' };
   }
   if (input.lastShownAt !== null && input.now - input.lastShownAt < MIN_GAP_SECONDS * 1000) {

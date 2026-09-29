@@ -55,7 +55,6 @@ import { useDeviceSessionSync } from '@/features/auth/hooks/use-device-session';
 import { DeviceGateOverlay } from '@/features/auth/components/device-gate-overlay';
 import { useUsageReporter } from '@/features/analytics/hooks/use-usage-reporter';
 import { useAdSession } from '@/features/ads/hooks/use-ad-session';
-import { useChallengeTracking } from '@/features/challenge/hooks/use-challenge-tracking';
 import { AmbientBackground } from '@/components/ui/ambient-background';
 import { DialogHost } from '@/components/ui/dialog-host';
 import { Grain } from '@/components/ui/grain';
@@ -76,10 +75,6 @@ import { syncCycleReminders } from '@/features/private/services/cycle-reminders'
 // comment on why.
 import '@/features/private/services/register-reminders';
 import '@/features/insights/services/register-reminders';
-// Likewise for the streak reminders, which were the one scheduler the launch
-// rebuild could not see — so its cancel-all deleted them and nothing put them
-// back. See features/challenge/services/register-reminders.ts.
-import '@/features/challenge/services/register-reminders';
 import { usePrivateStore } from '@/features/private/store/private-store';
 import { useSplashStore } from '@/hooks/use-splash-store';
 import { useSyncTrigger } from '@/features/sync/hooks/use-sync';
@@ -187,13 +182,6 @@ function WidgetSync() {
  * live inside the router (reads the pathname). Renders nothing. */
 function UsageReporter() {
   useUsageReporter();
-  return null;
-}
-
-/** Observes database writes and hands the day's evidence to the server. Only
- *  does anything once somebody is actually in a run. Renders nothing. */
-function ChallengeTracking() {
-  useChallengeTracking();
   return null;
 }
 
@@ -347,11 +335,6 @@ function AppNavigator({ background }: { background: string }) {
       <Stack.Screen name="notes" />
       <Stack.Screen name="music" />
       <Stack.Screen name="insights/index" />
-      <Stack.Screen name="challenge/index" />
-      <Stack.Screen name="challenge/join" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="challenge/swap" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="challenge/timeline" />
-      <Stack.Screen name="challenge/rewards" />
       <Stack.Screen name="goals/index" />
       <Stack.Screen name="goals/[id]" />
       <Stack.Screen name="goals/[id]/edit" options={{ presentation: 'modal' }} />
@@ -555,7 +538,6 @@ export default function RootLayout() {
               <DeviceSessionBridge />
               <BillingSyncBridge />
               <UsageReporter />
-              <ChallengeTracking />
               <AdSession />
               <WidgetSync />
               <LanguageBridge />

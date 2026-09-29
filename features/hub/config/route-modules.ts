@@ -22,10 +22,6 @@ export const SEGMENT_TO_MODULE: Record<string, string> = {
   routine: 'habits',
   journal: 'journal',
   hub: 'hub',
-  // The operator's switch for the whole streak program. Named `rewards` rather
-  // than `challenge` because that is the id `module_flags` is seeded with, and
-  // this map is what makes the flag actually gate the routes.
-  challenge: 'rewards',
   goals: 'goals',
   insights: 'insights',
   study: 'study',

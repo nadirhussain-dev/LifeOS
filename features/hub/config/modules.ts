@@ -2,7 +2,6 @@ import { format } from 'date-fns/format';
 
 import {
   Clock3,
-  Flame,
   GlassWater,
   GraduationCap,
   Images,
@@ -82,27 +81,6 @@ export const HUB_SECTIONS: HubSection[] = [
     id: 'growth',
     labelKey: 'hubSection.growth',
     modules: [
-      {
-        // The operator's kill switch for the whole streak program is seeded
-        // under this id in `module_flags`, and `route-modules.ts` maps the
-        // `/challenge` segment to it, so the tile and the routes are gated by
-        // one switch rather than two that have to agree.
-        id: 'rewards',
-        titleKey: 'hubModule.challengeTitle',
-        subtitleKey: 'hubModule.challengeSubtitle',
-        icon: Flame,
-        // Emerald — the same tint habits carries. The challenge is not a
-        // thirteenth life area competing for a hue; it is a way of doing the
-        // ones that already exist, and borrowing the streak colour says so.
-        tint: moduleTints.habit,
-        status: 'ready',
-        getRoute: () => '/challenge',
-        // Owns no local tables: the ledger lives on the server, which is the
-        // whole point of it. Nothing to move into the private space.
-        tables: [],
-        searchKinds: [],
-        canBePrivate: false,
-      },
       {
         id: 'insights',
         titleKey: 'hubModule.insightsTitle',

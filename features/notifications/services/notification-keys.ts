@@ -9,29 +9,9 @@
  *
  * A key names the reminder, not the notification. Two notifications with the
  * same key are the same reminder scheduled twice, and exactly one of them
- * should survive — which is what makes `challenge:at-risk` one key rather than
- * one per evening.
+ * should survive — which is what makes a hydration slot one key per time of day
+ * rather than one per scheduling pass.
  */
-
-/** The 20:00 last call, rebuilt on every write to the day's checklist. */
-export const CHALLENGE_AT_RISK_KEY = 'challenge:at-risk';
-
-/** The 22:00 second call, scheduled only for a run holding no shields. */
-export const CHALLENGE_LAST_CALL_KEY = 'challenge:last-call';
-
-/** The single nudge 48 hours after a run breaks. */
-export const CHALLENGE_WIN_BACK_KEY = 'challenge:win-back';
-
-/**
- * A rung paying out (0071), announced only when the app is not in front of the
- * user — the milestone sheet is what they get when it is.
- *
- * One key rather than one per rung, deliberately. Two payouts landing in the
- * same flush is a real case (a run restored by an operator settles arrears for
- * several rungs at once) and it is one event to the person receiving it; a key
- * per rung would put four notifications on their lock screen for one moment.
- */
-export const CHALLENGE_REWARD_KEY = 'challenge:reward';
 
 /* One reminder per row, keyed by the row it belongs to. Deleting the item is
  * what retires the key, and the launch rebuild only schedules keys for rows
