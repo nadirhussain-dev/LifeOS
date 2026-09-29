@@ -16,7 +16,20 @@ import { useModuleFlagsStore } from '@/features/module-flags/store/module-flags-
 import { useTheme } from '@/hooks/use-theme';
 import { env } from '@/lib/env';
 
-type Props = { placement: AdPlacement };
+type Props = {
+  placement: AdPlacement;
+  /**
+   * `anchored` is the footer banner this component has always been.
+   *
+   * `inline` is the same banner sitting inside a scrolling list, and differs in
+   * two ways that both matter. It takes the medium-rectangle-ish inline
+   * adaptive size, which is the format Google prices for a scroll position
+   * rather than a fixed anchor; and it draws a hairline above and below itself,
+   * because a banner between two tasks with no separation is a banner
+   * presentable as a task. The "AD" eyebrow does the same job and is kept.
+   */
+  variant?: 'anchored' | 'inline';
+};
 
 /**
  * One ad slot — see config.ts for the placement list, the "never in
@@ -57,7 +70,7 @@ type Props = { placement: AdPlacement };
  * stacking app UI on top of an ad (or making app UI behave like part of the
  * ad) is exactly what ad-network policies exist to prevent.
  */
-export function AdSlot({ placement }: Props) {
+export function AdSlot({ placement, variant = 'anchored' }: Props) {
   const router = useRouter();
   const { t } = useTranslation();
   const { c } = useTheme();
@@ -107,7 +120,7 @@ export function AdSlot({ placement }: Props) {
     // No gap until the banner has height, or the two invisible children would
     // space themselves apart and reintroduce the hole this closes.
     <View
-      className="items-center"
+      className={variant === 'inline' ? 'items-center border-y border-border py-3' : 'items-center'}
       style={loaded ? { gap: 8 } : undefined}
       testID={`ad-slot-${placement}`}
     >
@@ -120,7 +133,11 @@ export function AdSlot({ placement }: Props) {
         // table on every screen wider than a 2016 phone. The `loaded` gate
         // below already handles the variable height: nothing is drawn around
         // the banner until it reports a real ad on screen.
-        size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+        size={
+          variant === 'inline'
+            ? BannerAdSize.INLINE_ADAPTIVE_BANNER
+            : BannerAdSize.ANCHORED_ADAPTIVE_BANNER
+        }
         onAdLoaded={() => {
           setLoaded(true);
           // The honest impression signal: an ad that is actually on screen,

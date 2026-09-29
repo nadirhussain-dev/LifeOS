@@ -17,6 +17,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { AdSlot } from '@/features/ads/components/ad-slot';
+import { insertListAds, type ListAdRow } from '@/features/ads/services/list-ads';
 import { TaskRow } from '@/features/tasks/components/task-row';
 import { useTaskMutations } from '@/features/tasks/hooks/use-task-mutations';
 import { useNoteTags } from '@/features/notes/hooks/use-notes';
@@ -29,7 +30,8 @@ import { toast } from '@/lib/toast-store';
 
 type ListItem =
   | { type: 'header'; bucket: TaskDueBucket; labelKey: string; count: number }
-  | { type: 'task'; task: Task };
+  | { type: 'task'; task: Task }
+  | ListAdRow;
 
 const FILTER_TABS: { value: TaskListFilter; labelKey: string }[] = [
   { value: 'active', labelKey: 'tasks.filterActive' },
@@ -103,18 +105,23 @@ export default function TasksScreen() {
   };
 
   const items = useMemo<ListItem[]>(() => {
-    if (filter !== 'active') {
-      return tasks.map((task) => ({ type: 'task', task }) as const);
-    }
-    return groupTasksByDueDate(tasks).flatMap((section) => [
-      {
-        type: 'header',
-        bucket: section.bucket,
-        labelKey: section.labelKey,
-        count: section.tasks.length,
-      } as const,
-      ...section.tasks.map((task) => ({ type: 'task', task }) as const),
-    ]);
+    const rows: ListItem[] =
+      filter !== 'active'
+        ? tasks.map((task) => ({ type: 'task', task }) as const)
+        : groupTasksByDueDate(tasks).flatMap((section) => [
+            {
+              type: 'header',
+              bucket: section.bucket,
+              labelKey: section.labelKey,
+              count: section.tasks.length,
+            } as const,
+            ...section.tasks.map((task) => ({ type: 'task', task }) as const),
+          ]);
+    // Inventory that grows with scrolling rather than with interruption — a
+    // short list gets none at all. features/ads/services/list-ads.ts holds the
+    // rules and the reasons; `isHeader` is what keeps an ad from becoming the
+    // first thing under "Today".
+    return insertListAds(rows, { isHeader: (row) => row.type === 'header' });
   }, [tasks, filter]);
 
   return (
@@ -244,7 +251,11 @@ export default function TasksScreen() {
         <FlashList
           data={items}
           keyExtractor={(item) =>
-            item.type === 'header' ? `header-${item.labelKey}` : item.task.id
+            item.type === 'header'
+              ? `header-${item.labelKey}`
+              : item.type === 'ad'
+                ? item.key
+                : item.task.id
           }
           contentContainerStyle={{ paddingTop: 4, paddingBottom: layout.scrollBottomInset }}
           refreshControl={
@@ -257,7 +268,11 @@ export default function TasksScreen() {
             />
           }
           renderItem={({ item }) =>
-            item.type === 'header' ? (
+            item.type === 'ad' ? (
+              <View className="px-5 py-2">
+                <AdSlot placement="tasks-inline" variant="inline" />
+              </View>
+            ) : item.type === 'header' ? (
               <ListSectionHeader
                 label={t(item.labelKey)}
                 count={item.count}

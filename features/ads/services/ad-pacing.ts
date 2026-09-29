@@ -87,26 +87,52 @@ export const AD_BREAKPOINTS = [
   'study-session-end',
   /** A sleep entry was saved from the log screen. */
   'sleep-log-saved',
+  /** A task was composed and added, and the sheet closed behind it. */
+  'task-saved',
+  /** A note was composed and added, same shape. */
+  'note-saved',
+  /** Progress was logged against a goal from the log sheet. */
+  'goal-logged',
 ] as const;
 
 /*
- * The streak programme used to add three more breakpoints — a saved task, a
- * saved note, a logged goal — available only to somebody enrolled in a run and
- * only inside the modules they had committed to, on the argument that the
- * programme should fund itself. The programme has been removed, so those
- * breakpoints have no population and no justification and are gone with it.
+ * The last three were the streak programme's, available only to somebody
+ * enrolled in a run and only inside a module that run had committed to. The
+ * programme is gone; their call sites are not — `task/new.tsx`,
+ * `note/new.tsx` and `goals/[id]/log.tsx` all still call `showInterstitial`,
+ * and every one of those calls has been refused as `not-a-breakpoint` since.
+ * Three live call sites that could never fire.
  *
- * They are worth knowing about rather than forgetting: "composed something,
- * committed it, navigated away" is the same shape as the two breakpoints that
- * remain, and whether any of them should become universal is an ads question
- * rather than a streak one. It is decided in the ads pass, not here.
+ * ## Why adding them does not mean more ads
  *
- * Habits and Journal were deliberately excluded even then, and both reasons
- * outlive the programme. Logging a habit is a tap on a tab screen and is the
- * loop this file's header names as the one an ad must never sit in front of.
- * The journal editor autosaves, so there is no moment at which somebody has
- * finished — and inventing one, on blur or on back, would be an ad fired by
- * navigation rather than by completion.
+ * This is the part worth being precise about, because "more breakpoints" reads
+ * like "more interruptions" and is not.
+ *
+ * `SESSION_CAP` and `MIN_GAP_SECONDS` bound how many full-screen ads a person
+ * can be shown. Breakpoints do not add to that ceiling — they decide *where*
+ * the bounded slots may be filled. With two breakpoints, the ceiling of two was
+ * reached only by somebody who finished a study session and logged their sleep
+ * in the same session, which is a small fraction of use; everybody else saw
+ * fewer ads than the policy allows, not because the policy protected them but
+ * because the app ran out of places to offer one. That is revenue given up for
+ * no goodwill in return.
+ *
+ * Five breakpoints fill the same two slots more often, at moments that are all
+ * the same shape: composed something, committed it, navigated away. The cap,
+ * the three-minute gap, the honeymoon and the first-session-of-day exemption
+ * are untouched, which means the worst case for any one person is exactly what
+ * it was yesterday.
+ *
+ * ## Habits and Journal stay out
+ *
+ * Both exclusions predate the programme and outlive it. Logging a habit is a
+ * tap on a tab screen and is the loop this file's header names as the one an ad
+ * must never sit in front of — it would be the most lucrative placement in the
+ * app and the one most certain to cost more retained days than it earns. The
+ * journal editor autosaves, so there is no moment at which anybody has
+ * *finished*; inventing one on blur or on back would be an ad fired by
+ * navigation rather than by completion, which is what the allowlist exists to
+ * prevent.
  */
 
 // "Returning to the Hub from a module" was the obvious third and is

@@ -17,6 +17,7 @@ import { Text } from '@/components/ui/text';
 import { layout, moduleTints } from '@/constants/design-tokens';
 import { colors } from '@/constants/theme';
 import { AdSlot } from '@/features/ads/components/ad-slot';
+import { insertListAds, type ListAdRow } from '@/features/ads/services/list-ads';
 import { NoteCard } from '@/features/notes/components/note-card';
 import { useNoteMutations } from '@/features/notes/hooks/use-note-mutations';
 import { toast } from '@/lib/toast-store';
@@ -24,7 +25,8 @@ import { useArchivedNotes, useNoteCategories, useNotes } from '@/features/notes/
 import { useNotesFilterStore } from '@/features/notes/store/notes-filter-store';
 import type { Note } from '@/features/notes/types/note.types';
 
-type ListItem = { type: 'header'; label: string; count: number } | { type: 'note'; note: Note };
+type ListItem =
+  { type: 'header'; label: string; count: number } | { type: 'note'; note: Note } | ListAdRow;
 
 export default function NotesScreen() {
   const router = useRouter();
@@ -83,7 +85,12 @@ export default function NotesScreen() {
   );
 
   const items = useMemo<ListItem[]>(() => {
-    if (showArchived) return notes.map((note) => ({ type: 'note', note }) as const);
+    // Same shape and same reasons as the tasks list — see
+    // features/ads/services/list-ads.ts.
+    const weave = (rows: ListItem[]) =>
+      insertListAds(rows, { isHeader: (row) => row.type === 'header' });
+
+    if (showArchived) return weave(notes.map((note) => ({ type: 'note', note }) as const));
 
     const pinned = notes.filter((note) => note.isPinned);
     const rest = notes.filter((note) => !note.isPinned);
@@ -97,7 +104,7 @@ export default function NotesScreen() {
         sections.push({ type: 'header', label: t('notes.allNotes'), count: rest.length });
       sections.push(...rest.map((note) => ({ type: 'note', note }) as const));
     }
-    return sections;
+    return weave(sections);
   }, [notes, showArchived, t]);
 
   return (
@@ -148,7 +155,13 @@ export default function NotesScreen() {
       ) : (
         <FlashList
           data={items}
-          keyExtractor={(item) => (item.type === 'header' ? `header-${item.label}` : item.note.id)}
+          keyExtractor={(item) =>
+            item.type === 'header'
+              ? `header-${item.label}`
+              : item.type === 'ad'
+                ? item.key
+                : item.note.id
+          }
           contentContainerStyle={{ paddingTop: 4, paddingBottom: layout.scrollBottomInset }}
           refreshControl={
             <RefreshControl
@@ -160,7 +173,11 @@ export default function NotesScreen() {
             />
           }
           renderItem={({ item }) =>
-            item.type === 'header' ? (
+            item.type === 'ad' ? (
+              <View className="px-5 py-2">
+                <AdSlot placement="notes-inline" variant="inline" />
+              </View>
+            ) : item.type === 'header' ? (
               <ListSectionHeader label={item.label} count={item.count} />
             ) : (
               <NoteCard
