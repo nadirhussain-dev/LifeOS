@@ -64,3 +64,23 @@ jobs:
 
       - name: Test migrations
         run: npm run test:sql
+
+      # The job that was missing, and the reason a broken build shipped.
+      #
+      # Everything above reads the code or runs it under Node. Nothing bundled
+      # it for a device, and Metro's module resolution is not Node's — it has
+      # no `node:fs`, no `node:path`, no filesystem at all. So a file that
+      # imports one typechecks, lints, and passes its own jest suite, then
+      # kills `expo export`.
+      #
+      # That is exactly what happened: a completeness scan colocated under
+      # `app/` was pulled into the route tree by expo-router's `require.context`
+      # (its filter excludes three filenames and takes everything else), and
+      # every EAS build failed in the Bundle JavaScript phase for a week while
+      # CI stayed green.
+      #
+      # Android only, deliberately. The resolution graph is what this is
+      # guarding and it is shared; a second platform would double the slowest
+      # step here to re-prove the same thing.
+      - name: Bundle check
+        run: npm run bundle:check
