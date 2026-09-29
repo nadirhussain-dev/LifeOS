@@ -21,6 +21,7 @@
     "check:i18n": "node scripts/check-i18n.mjs",
     "docs:design": "node scripts/gen-design-doc.mjs && prettier --write docs/design-system.md --log-level warn",
     "test:sql": "node scripts/test-migrations.mjs",
+    "bundle:check": "expo export --platform android --output-dir .expo/bundle-check",
     "migrate": "node scripts/migrate.mjs",
     "migrate:status": "node scripts/migrate.mjs --status",
     "migrate:staging": "node scripts/migrate.mjs --env staging",
