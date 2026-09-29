@@ -21,43 +21,57 @@ export function DashboardHeader() {
   const unread = useUnreadNotificationCount();
 
   return (
-    <View
-      className="flex-row items-center justify-between pb-1"
-      style={{ paddingTop: insets.top + 10 }}
-    >
-      <View className="flex-1 gap-0.5">
-        <Text variant="sectionLabel">{dateLabel}</Text>
-        <Text className="font-sora-extrabold text-3xl tracking-tight text-foreground">
-          {greeting}
+    /*
+     * Two rows, where this used to be one.
+     *
+     * The greeting is 30px extrabold and shared a row with three 44px buttons.
+     * Those buttons and their gaps take ~150px, so on a 360px phone the
+     * greeting had ~165px to work with — about five characters per line at that
+     * size. "Good morning, Nadir Hussain" came out as three stacked lines
+     * filling a quarter of the screen before any content, and the longer the
+     * name the worse it got.
+     *
+     * Shrinking the type was the wrong fix: the greeting is the first thing on
+     * the home screen and is supposed to be the largest. Giving it the full
+     * width is the right one — the same words now wrap to two lines at most,
+     * and a short name fits on one.
+     *
+     * The date keeps the controls company on the top row. It is a 12px eyebrow,
+     * which is the one thing on this header that can sit beside a 44px button
+     * without either of them being compromised.
+     */
+    <View className="gap-1 pb-1" style={{ paddingTop: insets.top + 10 }}>
+      <View className="flex-row items-center justify-between">
+        <Text variant="sectionLabel" className="flex-1" numberOfLines={1}>
+          {dateLabel}
         </Text>
-      </View>
-      <View className="flex-row items-center gap-2">
-        {/* Search sits first because it is the most-reached-for control on a
+        <View className="flex-row items-center gap-2">
+          {/* Search sits first because it is the most-reached-for control on a
             home screen fronting twelve modules. */}
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push('/search')}
-          hitSlop={8}
-          accessibilityLabel={t('search.title')}
-          className="h-11 w-11 items-center justify-center rounded-full border border-border bg-surface"
-        >
-          <Search color={colors[scheme].foreground} size={20} />
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push('/notifications')}
-          hitSlop={8}
-          accessibilityLabel={
-            unread > 0
-              ? `${t('settings.notifications')}, ${t('notif.unreadCount', { count: unread })}`
-              : t('settings.notifications')
-          }
-          className="h-11 w-11 items-center justify-center rounded-full border border-border bg-surface"
-        >
-          <Bell color={colors[scheme].foreground} size={20} />
-          {unread > 0 && (
-            <View
-              /* On a round button the badge belongs on the rim, but `top-1.5
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/search')}
+            hitSlop={8}
+            accessibilityLabel={t('search.title')}
+            className="h-11 w-11 items-center justify-center rounded-full border border-border bg-surface"
+          >
+            <Search color={colors[scheme].foreground} size={20} />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/notifications')}
+            hitSlop={8}
+            accessibilityLabel={
+              unread > 0
+                ? `${t('settings.notifications')}, ${t('notif.unreadCount', { count: unread })}`
+                : t('settings.notifications')
+            }
+            className="h-11 w-11 items-center justify-center rounded-full border border-border bg-surface"
+          >
+            <Bell color={colors[scheme].foreground} size={20} />
+            {unread > 0 && (
+              <View
+                /* On a round button the badge belongs on the rim, but `top-1.5
                  end-1.5` insets it from the *square* bounding box: that put its
                  centre ~11px from the centre of a 22px-radius circle — halfway
                  in, overlapping the bell glyph rather than reading as a badge
@@ -68,43 +82,54 @@ export function DashboardHeader() {
                  look): Android clips children that leave the parent's bounds
                  whatever `overflow` says, so an overhang would lose a slice of
                  the circle on exactly the device this was reported on. */
-              className="absolute end-0 top-0 h-[18px] min-w-[18px] items-center justify-center rounded-full px-1"
-              style={{
-                backgroundColor: colors[scheme].destructive,
-                // Separates the red from the button's border and the glyph
-                // beneath it — without the ring they touch and read as one
-                // smudged shape at this size.
-                borderWidth: 2,
-                borderColor: colors[scheme].background,
-              }}
-            >
-              <Text
-                // The badge is a fixed 18px box, so OS font scaling has nowhere
-                // to go — the count would clip instead of growing. The label is
-                // on the Pressable above, which is what a screen reader gets.
-                allowFontScaling={false}
+                className="absolute end-0 top-0 h-[18px] min-w-[18px] items-center justify-center rounded-full px-1"
                 style={{
-                  color: '#ffffff',
-                  fontSize: 10,
-                  lineHeight: 12,
-                  fontFamily: 'Sora_700Bold',
+                  backgroundColor: colors[scheme].destructive,
+                  // Separates the red from the button's border and the glyph
+                  // beneath it — without the ring they touch and read as one
+                  // smudged shape at this size.
+                  borderWidth: 2,
+                  borderColor: colors[scheme].background,
                 }}
               >
-                {unread > 9 ? '9+' : unread}
-              </Text>
-            </View>
-          )}
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push('/settings')}
-          hitSlop={8}
-          accessibilityLabel={t('settings.title')}
-          className="h-11 w-11 items-center justify-center rounded-full border border-border bg-surface"
-        >
-          <Settings color={colors[scheme].foreground} size={20} />
-        </Pressable>
+                <Text
+                  // The badge is a fixed 18px box, so OS font scaling has nowhere
+                  // to go — the count would clip instead of growing. The label is
+                  // on the Pressable above, which is what a screen reader gets.
+                  allowFontScaling={false}
+                  style={{
+                    color: '#ffffff',
+                    fontSize: 10,
+                    lineHeight: 12,
+                    fontFamily: 'Sora_700Bold',
+                  }}
+                >
+                  {unread > 9 ? '9+' : unread}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/settings')}
+            hitSlop={8}
+            accessibilityLabel={t('settings.title')}
+            className="h-11 w-11 items-center justify-center rounded-full border border-border bg-surface"
+          >
+            <Settings color={colors[scheme].foreground} size={20} />
+          </Pressable>
+        </View>
       </View>
+
+      {/* Two lines at most. A name long enough to need a third is a name the
+          greeting should truncate rather than let push the whole dashboard
+          down — the content below it is the point of the screen. */}
+      <Text
+        className="font-sora-extrabold text-3xl tracking-tight text-foreground"
+        numberOfLines={2}
+      >
+        {greeting}
+      </Text>
     </View>
   );
 }

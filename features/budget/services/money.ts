@@ -52,9 +52,17 @@ const COMPACT_STEPS = [
 ] as const;
 
 /** Compact format for chart axes and slots too narrow for the real figure:
- * "$1.2k", "$3.4m", "$950". One decimal below ten, none above — "$12.3m" and
- * "$12m" carry the same information at a glance and the shorter one is the
- * point. */
+ * "$1.2k", "$23.5k", "$3.4m", "$950".
+ *
+ * One decimal below a hundred, none above. It was below *ten*, which rounded
+ * `23,500` to "24k" — and this is the fallback a Budget screen reaches for
+ * when an account balance will not fit, so a figure the user can read as
+ * precise while being five hundred out is the wrong trade. "23.5k" costs two
+ * characters and is right to three significant figures either side of the
+ * separator.
+ *
+ * A trailing ".0" is trimmed, so 9.99m still comes out as "10m" rather than
+ * "10.0m" — the rounding has to happen before the decision, not after. */
 export function formatMoneyCompact(cents: number, currency = 'USD'): string {
   const symbol = currencySymbol(currency);
   const abs = Math.abs(Math.round(cents));
@@ -63,10 +71,15 @@ export function formatMoneyCompact(cents: number, currency = 'USD'): string {
   for (const step of COMPACT_STEPS) {
     if (dollars >= step.at) {
       const scaled = dollars / step.at;
-      // Rounded first, then compared: 9.99 formats to "10.0", and "$10.0m"
-      // should be "$10m" like every other value of ten and over.
+      // Rounded first, then compared: 9.99 formats to "10.0", and a trailing
+      // ".0" is noise rather than precision.
       const oneDecimal = Math.round(scaled * 10) / 10;
-      const body = oneDecimal >= 10 ? String(Math.round(scaled)) : oneDecimal.toFixed(1);
+      const body =
+        oneDecimal >= 100
+          ? String(Math.round(scaled))
+          : Number.isInteger(oneDecimal)
+            ? String(oneDecimal)
+            : oneDecimal.toFixed(1);
       return `${sign}${symbol}${body}${step.suffix}`;
     }
   }
