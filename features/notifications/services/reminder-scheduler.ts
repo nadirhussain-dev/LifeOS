@@ -91,7 +91,7 @@ const extraSteps: ExtraReminderStep[] = [];
  * for calling this exactly once, early enough that it has run before the
  * first `resyncAllReminders()` — app/_layout.tsx's module-level init calls
  * are where every current registration happens, the same place
- * `initSentry()`/`initAds()` already run once at import time.
+ * `initAds()` already runs once at import time.
  */
 export function registerReminderStep(name: string, run: () => Promise<unknown>): void {
   extraSteps.push({ name, run });

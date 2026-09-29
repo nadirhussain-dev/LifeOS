@@ -35,9 +35,6 @@ export const env = {
   /** Where the password-reset email links back to. Optional — falls back to the
    * app's `daykeep://reset-password` deep link (see lib/supabase.ts). */
   EXPO_PUBLIC_SUPABASE_REDIRECT_URL: read(process.env.EXPO_PUBLIC_SUPABASE_REDIRECT_URL),
-  /** Sentry DSN. Optional — when absent, crash/error reporting stays local-only
-   * (console + dev banner). See lib/sentry.ts. */
-  EXPO_PUBLIC_SENTRY_DSN: read(process.env.EXPO_PUBLIC_SENTRY_DSN),
 
   /**
    * Base64 X25519 public key the vault master key is sealed to, enabling
@@ -197,7 +194,6 @@ export function envDiagnostics(): EnvDiagnostics {
       describe('EXPO_PUBLIC_APP_ENV'),
       describe('EXPO_PUBLIC_SUPABASE_URL'),
       describe('EXPO_PUBLIC_SUPABASE_ANON_KEY'),
-      describe('EXPO_PUBLIC_SENTRY_DSN'),
     ],
   };
 }

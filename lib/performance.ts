@@ -10,16 +10,16 @@
  * on and reports one number; it is not a tracing framework, and it costs a
  * `Date.now()` per gate.
  *
- * The sink mirrors `lib/error-reporting.ts` exactly — registered once at
- * startup, absent in dev and in unconfigured builds — so there is one way to
- * add a telemetry backend in this codebase rather than two.
+ * **The number currently goes nowhere in release.** It was reported through a
+ * sink that Sentry was the only thing to register, and Sentry has been removed;
+ * the sink went with it rather than being left behind, for the reason
+ * `lib/error-reporting.ts` gives at length. What survives is the measurement
+ * and the budget, which are the parts worth keeping: a stated budget is what
+ * makes "is startup slow?" answerable at all, and re-attaching a backend is one
+ * line at the bottom of `reportStartupIfComplete`.
  */
 
 export type MetricContext = Record<string, unknown>;
-
-type MetricSink = (name: string, milliseconds: number, context?: MetricContext) => void;
-
-let sink: MetricSink | null = null;
 
 /**
  * The boot gates the root layout blocks render on. Named rather than free-form
@@ -38,16 +38,6 @@ export type StartupGate = (typeof STARTUP_GATES)[number];
  * slow?" has no answer except an opinion.
  */
 export const STARTUP_BUDGET_MS = 2000;
-
-/** Registers the metric sink (e.g. Sentry). Mirrors `setErrorSink`. */
-export function setMetricSink(fn: MetricSink): void {
-  sink = fn;
-}
-
-/** Test seam: drops the sink so one suite cannot leak into the next. */
-export function resetMetricSink(): void {
-  sink = null;
-}
 
 /**
  * When this module was first evaluated, which is as close to process start as
@@ -75,14 +65,23 @@ export function startupGateTiming(gate: StartupGate): number | null {
   return gateTimings.get(gate) ?? null;
 }
 
+/** The one startup reading: how long it took, and what it is attributable to. */
+export type StartupReport = { total: number; context: MetricContext };
+
 /**
  * Reports cold start once every gate has opened, and does nothing until then.
  *
- * Returns the reported duration, or null if it is not yet time. Startup is the
- * *slowest* gate rather than the sum: the root layout awaits them concurrently,
- * so adding them up would report a number no user ever waited.
+ * Returns the reading, or null if it is not yet time. Startup is the *slowest*
+ * gate rather than the sum: the root layout awaits them concurrently, so adding
+ * them up would report a number no user ever waited.
+ *
+ * It returns the context as well as the total now that there is no sink to hand
+ * them to. That is what keeps the budget flag and the per-gate attribution
+ * observable — they were only ever visible through the sink's third argument,
+ * and deleting the sink without this would have deleted the coverage of both
+ * while leaving the code that computes them.
  */
-export function reportStartupIfComplete(): number | null {
+export function reportStartupIfComplete(): StartupReport | null {
   if (reported) return null;
   if (STARTUP_GATES.some((gate) => !gateTimings.has(gate))) return null;
 
@@ -96,8 +95,10 @@ export function reportStartupIfComplete(): number | null {
   };
   for (const gate of STARTUP_GATES) context[gate] = gateTimings.get(gate);
 
-  sink?.('app.startup', total, context);
-  return total;
+  // Dev only, because there is nowhere else for it to go. Silent in release
+  // rather than pretending: see this file's header.
+  if (__DEV__) console.log('[startup]', `${total}ms`, context);
+  return { total, context };
 }
 
 /** Test seam: forgets every gate and the reported flag. */

@@ -6,7 +6,7 @@ let initialized = false;
 
 /**
  * Prepares the Google Mobile Ads SDK once at startup — same shape as
- * `initSentry()` (lib/sentry.ts): a single idempotent call, tolerant of
+ * `initAds()`: a single idempotent call, tolerant of
  * failure, made once from app/_layout.tsx rather than lazily from whichever
  * screen happens to mount an `AdSlot` first.
  *
@@ -30,7 +30,7 @@ let initialized = false;
  *
  * Native module: this only does anything in a dev-client/EAS build, never
  * Expo Go — same constraint every other native plugin in app.json already
- * carries (the Android widgets, Face ID, Sentry's native layer). See
+ * carries (the Android widgets, Face ID). See
  * `loadAdsModule()` for why the import is a lazy, caught `require()` rather
  * than a static ES `import` that would throw at boot.
  */

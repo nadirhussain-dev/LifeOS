@@ -254,7 +254,6 @@
         }
       ],
       "expo-localization",
-      "@sentry/react-native",
       "expo-asset",
       [
         "react-native-google-mobile-ads",

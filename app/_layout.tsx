@@ -85,12 +85,8 @@ import { initAds } from '@/lib/ads-init';
 import { configureAndroidChannels, configureNotificationHandler } from '@/lib/notifications';
 import { queryClient } from '@/lib/query-client';
 import { markStartupGate, reportStartupIfComplete } from '@/lib/performance';
-import { initSentry } from '@/lib/sentry';
 
 SplashScreen.preventAutoHideAsync();
-
-// Route caught errors to Sentry when a DSN is configured (no-op otherwise).
-initSentry();
 
 // Google Mobile Ads SDK — see features/ads/config.ts for the placement
 // rules and lib/ads-init.ts for why this is safe to call unconditionally.

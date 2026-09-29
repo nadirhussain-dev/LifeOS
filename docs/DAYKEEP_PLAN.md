@@ -63,16 +63,16 @@ brand-free and also stay.
 
 ### 1.2 What actually changes
 
-| Surface                                    | From → to                                                                                                   | Note                                                                                       |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `app.json` `name` / `slug`                 | `Daykeep` → `Daykeep`                                                                                       |                                                                                            |
-| `scheme`                                   | `lifeos` → `daykeep`                                                                                        | Every deep link changes with it                                                            |
-| `ios.bundleIdentifier` / `android.package` | `com.daykeep.app` → `com.daykeep.app`                                                                       | **Last chance.** Permanent after first store publish                                       |
-| Android widget names                       | `DaykeepToday` / `DaykeepHabits`                                                                            | Must match the plugin config _and_ the task-handler map or widgets silently stop rendering |
-| `WIDGET_LINKS`                             | `daykeep:///tasks` → `daykeep:///tasks`                                                                     | Triple slash preserved                                                                     |
-| Locale strings                             | **43 occurrences × 4 locales = 172**                                                                        | Includes the share card's "Tracked with Daykeep"                                           |
-| Source files                               | ~25 files reference the name                                                                                | Mostly copy and comments                                                                   |
-| Elsewhere                                  | `package.json`, README, brand assets (`npm run assets`), EAS project, Sentry project, Supabase redirect URL |                                                                                            |
+| Surface                                    | From → to                                                                                   | Note                                                                                       |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `app.json` `name` / `slug`                 | `Daykeep` → `Daykeep`                                                                       |                                                                                            |
+| `scheme`                                   | `lifeos` → `daykeep`                                                                        | Every deep link changes with it                                                            |
+| `ios.bundleIdentifier` / `android.package` | `com.daykeep.app` → `com.daykeep.app`                                                       | **Last chance.** Permanent after first store publish                                       |
+| Android widget names                       | `DaykeepToday` / `DaykeepHabits`                                                            | Must match the plugin config _and_ the task-handler map or widgets silently stop rendering |
+| `WIDGET_LINKS`                             | `daykeep:///tasks` → `daykeep:///tasks`                                                     | Triple slash preserved                                                                     |
+| Locale strings                             | **43 occurrences × 4 locales = 172**                                                        | Includes the share card's "Tracked with Daykeep"                                           |
+| Source files                               | ~25 files reference the name                                                                | Mostly copy and comments                                                                   |
+| Elsewhere                                  | `package.json`, README, brand assets (`npm run assets`), EAS project, Supabase redirect URL |                                                                                            |
 
 ### 1.3 Verification
 

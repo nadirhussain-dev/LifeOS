@@ -2,27 +2,22 @@ import { useDevErrorStore } from '@/lib/dev-error-store';
 
 export type ErrorContext = Record<string, unknown> & { scope?: string };
 
-type Sink = (error: unknown, context?: ErrorContext) => void;
-
-let sink: Sink | null = null;
-
-/**
- * Registers the production error sink (e.g. Sentry). Call once at startup after
- * initializing the SDK:
- *   setErrorSink((e, ctx) => Sentry.captureException(e, { extra: ctx }))
- * Until a sink is registered, production errors are logged to the console only.
- */
-export function setErrorSink(fn: Sink): void {
-  sink = fn;
-}
-
 /**
  * The single choke point for reporting caught / non-fatal errors (failed
  * queries & mutations, render errors caught by the ErrorBoundary, swallowed
- * catches worth surfacing). Unlike the old `__DEV__`-gated path, this reports
- * in production too — to the console and any registered sink — so failed
- * syncs/DB reads are no longer invisible in release builds. In dev it also
- * drives the on-device DevErrorBanner.
+ * catches worth surfacing). In dev it logs and drives the on-device
+ * DevErrorBanner.
+ *
+ * **In release it reaches nobody.** This used to hand the error to a
+ * registered sink, and Sentry was the only thing that ever registered one; with
+ * Sentry removed there is no crash or error reporting in production at all, and
+ * `console.error` on somebody's phone is not a report. That is a deliberate
+ * choice rather than an oversight, and it is the reason the seam went with the
+ * SDK instead of being left behind: a `setErrorSink` nothing calls reads as
+ * "reporting is wired up", which is the opposite of true.
+ *
+ * Every call site stays. Keeping one choke point is what makes adding a backend
+ * later a single edit here rather than an audit of two hundred catch blocks.
  */
 export function reportError(error: unknown, context?: ErrorContext): void {
   const message = error instanceof Error ? error.message : String(error);
@@ -30,7 +25,5 @@ export function reportError(error: unknown, context?: ErrorContext): void {
 
   if (__DEV__) {
     useDevErrorStore.getState().setError(context?.scope ? `${context.scope}: ${message}` : message);
-    return;
   }
-  sink?.(error, context);
 }

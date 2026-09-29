@@ -103,8 +103,6 @@ default", and a dummy value replaces that default with a broken one:
 | --------------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `ADMOB_ANDROID_APP_ID` / `ADMOB_IOS_APP_ID`               | Google's universal test App IDs        | **Crashes the app on launch** — the Ads SDK aborts on an invalid App ID baked into the manifest |
 | `EXPO_PUBLIC_ADMOB_BANNER_UNIT_ID_ANDROID` / `_IOS`       | Google's test banner units             | Ads silently fail to fill                                                                       |
-| `EXPO_PUBLIC_SENTRY_DSN`                                  | Errors stay local (console + banner)   | Sentry init fails on a malformed DSN                                                            |
-| `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN`     | Source-map upload skipped              | Fatal `sentry-cli` exit **if** §2.5's flag is ever removed                                      |
 | `EXPO_PUBLIC_PRIVACY_URL` / `TERMS_URL` / `SUPPORT_EMAIL` | The published defaults in `lib/env.ts` | Overrides working links with dead ones                                                          |
 | `EXPO_PUBLIC_SUPABASE_REDIRECT_URL`                       | The app's own deep link                | Breaks password-reset return                                                                    |
 | `EXPO_PUBLIC_VAULT_ESCROW_PUBLIC_KEY`                     | Vault stays end-to-end encrypted       | Seals users' master keys to a key nobody holds                                                  |
@@ -118,14 +116,12 @@ eas env:set --environment production --name ADMOB_ANDROID_APP_ID --value "ca-app
 eas env:set --environment production --name ADMOB_IOS_APP_ID --value "ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY"
 eas env:set --environment production --name EXPO_PUBLIC_ADMOB_BANNER_UNIT_ID_ANDROID --value "ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ"
 eas env:set --environment production --name EXPO_PUBLIC_ADMOB_BANNER_UNIT_ID_IOS --value "ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ"
-eas env:set --environment production --name EXPO_PUBLIC_SENTRY_DSN --value "https://...@...ingest.sentry.io/..."
-eas env:set --environment production --name SENTRY_AUTH_TOKEN --value "..." --visibility secret
 ```
 
 `env:set` is create-or-update, so re-running one to change a value is fine.
-`secret` is worth using only for `SENTRY_AUTH_TOKEN`: an `EXPO_PUBLIC_` value is
-inlined into the JS bundle regardless, so hiding it in the dashboard buys
-nothing and only stops you reading it back.
+`secret` is only worth using for a value without an `EXPO_PUBLIC_` prefix: a
+prefixed one is inlined into the JS bundle regardless, so hiding it in the
+dashboard buys nothing and only stops you reading it back.
 
 ### 2.4 Per-environment services
 
@@ -153,38 +149,22 @@ breaks the feature, at runtime, only in staging:
 - **AdMob** — a second app and ad units, or leave `ADMOB_*` unset in the preview
   environment so staging keeps serving Google's self-labeled test ads. Unset is
   the better default.
-- **Sentry** — either a second project, or leave `EXPO_PUBLIC_SENTRY_DSN` unset
-  for staging so test crashes never land in the production issue stream.
 
-### 2.5 Sentry is optional
+### 2.5 There is no crash reporting
 
-Nothing about Sentry can fail a build. `eas.json` sets
-`SENTRY_DISABLE_AUTO_UPLOAD=true` on every profile, so the source-map upload is
-skipped and `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` are not needed
-at all.
+Worth stating because its absence looks like a gap rather than a decision.
+Sentry was removed from this app — SDK, config plugin, env vars and the
+`setErrorSink` / `setMetricSink` seams it was the only consumer of. Nothing
+takes its place.
 
-That flag is doing real work. Without it, an unset auth token is **fatal**:
-`sentry-cli` exits 1 with `An organization ID or slug is required (provide with
---org)` and the Gradle build dies — a confusing failure a long way from its
-cause.
+So a crash or a caught error on a real device reaches nobody: `reportError`
+logs to the console, which on somebody's phone is not a report. The startup
+budget in `lib/performance.ts` is measured and returned but likewise goes
+nowhere in release.
 
-The cost of leaving it off is that production stack traces arrive **minified**,
-which is the difference between a stack trace and a wall of `a.b.c(d)`.
-app.config.js warns about this on every production build so it is a decision
-rather than a discovery during an incident.
-
-To turn readable traces on, both steps are required:
-
-1. Set the three variables in the production EAS environment.
-2. Remove `SENTRY_DISABLE_AUTO_UPLOAD` from the `production` profile in
-   `eas.json`.
-
-Step 1 alone does nothing — and app.config.js says exactly that in the build log
-if it finds the variables set while the flag is still on.
-
-Runtime crash reporting is a separate, independent switch:
-`EXPO_PUBLIC_SENTRY_DSN`. Unset means no reporting at all; set means errors are
-reported, minified traces or not.
+`reportError` is still the single choke point every catch block in the app goes
+through, so attaching a backend later is one edit in `lib/error-reporting.ts`
+rather than an audit of two hundred call sites.
 
 ---
 

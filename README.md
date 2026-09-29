@@ -154,7 +154,7 @@ demand. Points worth knowing:
 | Backend      | Supabase — Postgres, Auth, Row Level Security, Edge Functions   |
 | Forms        | React Hook Form + Zod                                           |
 | i18n         | i18next / react-i18next, 4 locales, RTL-aware                   |
-| Errors       | Sentry (optional), with a local fallback sink                   |
+| Errors       | `reportError` choke point, on-device only — no backend          |
 | Tests        | Jest + jest-expo, Testing Library, PGlite for SQL               |
 
 ---
@@ -192,7 +192,6 @@ Every variable is documented in [.env.example](.env.example). The short version:
 | `EXPO_PUBLIC_SUPABASE_URL`            | For auth | Supabase project URL                          |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY`       | For auth | Anon key — safe client-side; RLS is the guard |
 | `EXPO_PUBLIC_SUPABASE_REDIRECT_URL`   | No       | Password-reset deep link override             |
-| `EXPO_PUBLIC_SENTRY_DSN`              | No       | Crash reporting; blank keeps errors local     |
 | `EXPO_PUBLIC_VAULT_ESCROW_PUBLIC_KEY` | No       | **Enables operator access to private spaces** |
 | `SUPABASE_DB_URL_STAGING`             | Migrate  | Staging Postgres — **`.env.db`, not `.env`**  |
 | `SUPABASE_DB_URL_PRODUCTION`          | Migrate  | Prod Postgres — **`.env.db`, not `.env`**     |
@@ -219,7 +218,7 @@ npm run migrate:production     # schema -> production DB, after confirming
 ```
 
 **[docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) is the setup guide** — the EAS
-environment variables, the second OAuth/AdMob/Sentry registrations that a
+environment variables, the second OAuth/AdMob registrations that a
 distinct package id requires, and the four build-time guards that stop a
 production build shipping against the staging database.
 
