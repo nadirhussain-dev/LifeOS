@@ -21,6 +21,11 @@ import {
   openSystemDoNotDisturb,
 } from '@/features/study/services/focus-mode';
 import { formatStudyDuration, formatTimer } from '@/features/study/services/study-stats';
+import {
+  alertKeysFor,
+  cancelPhaseEndAlert,
+  schedulePhaseEndAlert,
+} from '@/features/study/services/timer-alerts';
 import { useStudyMutations } from '@/features/study/hooks/use-study-mutations';
 import { useStudySubjects } from '@/features/study/hooks/use-study';
 import { useFocusModeStore } from '@/features/study/store/focus-mode-store';
@@ -125,6 +130,7 @@ export default function StudyTimerScreen() {
     if (savedRef.current || reflectOpen) return;
     const s = useStudyTimerStore.getState();
     const focusSecs = Math.round(focusSecondsNow(s, Date.now()));
+    cancelPhaseEndAlert();
     if (focusSecs < 60) {
       savedRef.current = true;
       store.reset();
@@ -194,6 +200,35 @@ export default function StudyTimerScreen() {
       if (!opened) toast.info(t('study.dndUnavailableBody'));
     });
   };
+
+  // The alarm for the phase that is running, booked with the OS so it fires
+  // whether or not this screen is still in front of anybody.
+  //
+  // Keyed on what makes a phase "the one running": which phase, whether the
+  // clock is moving, and the segment it started from — a pause followed by a
+  // resume produces a new `segmentStart` and therefore a new end time, which is
+  // the case a naive `[phase, running]` dependency gets wrong by leaving the
+  // pre-pause alarm queued. Stopwatch has no end to alarm for.
+  const { active, running, phase, mode, segmentStart } = store;
+  useEffect(() => {
+    if (!active || !running || mode === 'stopwatch') {
+      cancelPhaseEndAlert();
+      return;
+    }
+    const state = useStudyTimerStore.getState();
+    const { titleKey, bodyKey } = alertKeysFor(state.phase);
+    schedulePhaseEndAlert({
+      endsAt: Date.now() + remainingSeconds(state, Date.now()) * 1000,
+      text: { title: t(titleKey), body: t(bodyKey) },
+    });
+    // `t` is deliberately absent: a language switch mid-block should not
+    // reschedule the alarm, and the copy is already fixed in the OS queue.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, running, phase, mode, segmentStart]);
+
+  // Leaving the screen drops the alarm with the shield — an abandoned session
+  // must not fire an alert for a block nobody is in any more.
+  useEffect(() => cancelPhaseEndAlert, []);
 
   // Phase-completion handling.
   useEffect(() => {

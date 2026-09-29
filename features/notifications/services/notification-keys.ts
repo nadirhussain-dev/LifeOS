@@ -76,3 +76,18 @@ export const CYCLE_REMINDER_KEY = 'cycle:expected';
 /** Together's nearest-milestone nudge — one at a time, whichever milestone is
  *  soonest, so it is a singleton like the others. */
 export const TOGETHER_REMINDER_KEY = 'together:milestone';
+
+/**
+ * The pomodoro phase-end alarm (features/study/services/timer-alerts.ts).
+ *
+ * Deliberately NOT under `STUDY_KEY_PREFIX`. `study-reminders.ts` rebuilds its
+ * weekly set with `cancelScheduledByKeyPrefix('study:')`, so a key like
+ * `study:timer` would be cancelled by somebody opening study reminder settings
+ * mid-session — the timer would keep counting down and simply never go off,
+ * with nothing anywhere saying why.
+ *
+ * One key for both phases: only one phase is ever running, and the alarm for
+ * the phase you just left should be replaced by the one for the phase you just
+ * entered, not queued alongside it.
+ */
+export const TIMER_PHASE_END_KEY = 'timer:phase-end';

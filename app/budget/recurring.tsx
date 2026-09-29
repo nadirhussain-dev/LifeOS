@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Switch, View } from 'react-native';
 import { formatDate } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Fab } from '@/components/ui/fab';
 import { Repeat, Trash2 } from '@/components/ui/icons';
 import { QueryError } from '@/components/ui/query-error';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -33,6 +34,14 @@ const FREQUENCY_LABEL_KEY: Record<string, string> = {
  * the rules. Pausing a rule leaves its history alone, which is why "active" is a
  * switch rather than a delete: stopping a subscription should not erase the
  * eleven months you paid for it.
+ *
+ * The Fab is outside the empty/list branches on purpose. It used to be the
+ * `EmptyState`'s action and nothing else, so the way to add a rule existed only
+ * while there were no rules: saving the first one swapped in the list branch,
+ * which had no add affordance anywhere, and a second rule became unreachable
+ * from this screen or any other. Every other list in Budget (debts, savings,
+ * transactions) carries the Fab at this level; this one was the exception, and
+ * that is exactly how it went unnoticed.
  */
 export default function RecurringScreen() {
   const router = useRouter();
@@ -122,6 +131,11 @@ export default function RecurringScreen() {
           })}
         </ScrollView>
       )}
+
+      <Fab
+        onPress={() => router.push('/budget/recurring/new')}
+        accessibilityLabel={t('budget.addRecurring')}
+      />
     </View>
   );
 }
