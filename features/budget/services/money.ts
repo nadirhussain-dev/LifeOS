@@ -45,6 +45,54 @@ function formatMoneyManual(cents: number, currency: string): string {
  * became the fallback for a slot too narrow for the full amount: a nine-figure
  * balance came out as "$10000k", longer than several of the strings it was
  * supposed to be rescuing and unreadable besides. */
+/**
+ * The currency marker `formatMoney` would have used.
+ *
+ * These two must agree, and until this existed they did not. `formatMoney` goes
+ * through `Intl.NumberFormat`, which renders PKR as "PKR"; `formatMoneyCompact`
+ * used the local `currencySymbol` table, which renders it as "Rs". Both are
+ * correct spellings and both were on screen at once — a Budget hero reading
+ * "Rs5.6m · PKR 0.00 · PKR 6,500" across three columns of one row, and an
+ * account strip reading "Rs500k · PKR 50,000.00 · Rs5m". Three tiles, two
+ * currencies, one wallet.
+ *
+ * It only became visible when the compact form stopped being a chart-axis label
+ * and became the fallback a money figure falls back *to*, which put the two
+ * spellings side by side for the first time.
+ *
+ * Derived from `Intl` rather than hardcoded, by formatting zero and stripping
+ * the digits: whatever marker the full figure will carry on this device is the
+ * one taken, including the trailing space ICU puts after an alphabetic code.
+ * Falls back to the local table when Intl has no opinion, which is the same
+ * path `formatMoney` takes.
+ */
+function displaySymbol(currency: string): string {
+  const iso = findCurrency(currency)?.code;
+  if (iso) {
+    try {
+      const zero = new Intl.NumberFormat(deviceLocale(), {
+        style: 'currency',
+        currency: iso,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(0);
+      // Strip the number and keep everything else exactly as ICU wrote it —
+      // including the space it puts after an alphabetic code ("PKR ") and the
+      // absence of one after a glyph ("$"). Trimming here is what produced
+      // "$ 1.2k": the space belongs to PKR and not to the dollar.
+      const digits = /[\d\u0660-\u0669\u06F0-\u06F9.,]+/;
+      const prefix = zero.replace(new RegExp(`${digits.source}.*$`), '');
+      if (prefix) return prefix;
+      // Suffix-position currencies ("0 €") — take what follows the number.
+      const suffix = zero.replace(new RegExp(`^.*${digits.source}`), '');
+      if (suffix) return suffix;
+    } catch {
+      // Hermes without full Intl currency data — use the manual table.
+    }
+  }
+  return currencySymbol(currency);
+}
+
 const COMPACT_STEPS = [
   { at: 1e9, suffix: 'b' },
   { at: 1e6, suffix: 'm' },
@@ -64,7 +112,7 @@ const COMPACT_STEPS = [
  * A trailing ".0" is trimmed, so 9.99m still comes out as "10m" rather than
  * "10.0m" — the rounding has to happen before the decision, not after. */
 export function formatMoneyCompact(cents: number, currency = 'USD'): string {
-  const symbol = currencySymbol(currency);
+  const symbol = displaySymbol(currency);
   const abs = Math.abs(Math.round(cents));
   const dollars = abs / 100;
   const sign = cents < 0 ? '-' : '';

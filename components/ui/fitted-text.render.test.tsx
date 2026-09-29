@@ -80,3 +80,65 @@ describe('FittedText', () => {
     expect(view.getByText('$123,456,789.00').props.numberOfLines).toBe(1);
   });
 });
+
+describe('when the estimate is wrong', () => {
+  /**
+   * The shipped bug: `PKR 5,550,000....` in the Budget hero, ellipsised, at
+   * full size.
+   *
+   * `textWidth` multiplies a character count by an advance read off Sora's
+   * metrics. It was close enough for `$1,234.56` and out by enough for a
+   * three-letter currency code that the estimate said "fits" while the text
+   * engine truncated. `numberOfLines={1}` then did the only thing left to it.
+   *
+   * The correction is measurement rather than a better guess: `onTextLayout`
+   * reports what the line really was, and the ratio feeds the next fit.
+   */
+  const layoutText = (node: Element, width: number) =>
+    fireEvent(node, 'textLayout', { nativeEvent: { lines: [{ width }] } });
+
+  it('shrinks once the text reports itself wider than predicted', async () => {
+    const view = await render(
+      <FittedText testID="amount" text="PKR 5,550,000.00" size={36} minSize={22} />,
+    );
+    // Wide enough that the estimate starts well above the floor, so a shrink
+    // is observable. (The OS font-scale divisor applies here too, which is
+    // itself part of why this shipped: a phone with type scaled up reaches the
+    // floor on a string a default phone renders comfortably.)
+    await layout(view.getByTestId('amount'), 600);
+    const before = fontSizeOf(view.getByText('PKR 5,550,000.00'));
+
+    // The engine reports the line far wider than the estimate claimed.
+    await layoutText(view.getByText('PKR 5,550,000.00'), 900);
+
+    const after = fontSizeOf(view.getByText('PKR 5,550,000.00'));
+    expect(after).toBeLessThan(before!);
+  });
+
+  it('reaches the compact form rather than ellipsising', async () => {
+    // The outcome that matters. Once the real width is known, the exact figure
+    // cannot fit above the floor, so the fallback is what gets drawn — which is
+    // the whole reason the fallback exists.
+    const view = await render(
+      <MoneyText testID="amount" cents={555_000_000} currency="PKR" size={36} minSize={22} />,
+    );
+    await layout(view.getByTestId('amount'), 600);
+    const exact = view.queryByText(/5,550,000/);
+    if (exact) await layoutText(exact, 1400);
+
+    expect(view.queryByText(/5,550,000/)).toBeNull();
+    expect(view.getByText(/5\.5m|5\.6m/)).toBeTruthy();
+  });
+
+  it('ignores a line reported narrower than predicted', async () => {
+    // A short line is usually one the engine already truncated. Trusting it
+    // would relax the correction on exactly the render that proves it needed.
+    const view = await render(
+      <FittedText testID="amount" text="PKR 5,550,000.00" size={36} minSize={22} />,
+    );
+    await layout(view.getByTestId('amount'), 600);
+    const before = fontSizeOf(view.getByText('PKR 5,550,000.00'));
+    await layoutText(view.getByText('PKR 5,550,000.00'), 10);
+    expect(fontSizeOf(view.getByText('PKR 5,550,000.00'))).toBe(before);
+  });
+});
