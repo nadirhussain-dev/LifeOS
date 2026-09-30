@@ -525,6 +525,8 @@
     "oweMore": "عليك أكثر مما لك",
     "trackIous": "تتبّع الديون والمواعيد والتذكيرات",
     "monthlyBudget": "الميزانية الشهرية",
+    "budgetLimit": "الميزانية",
+    "percentUsed": "{{percent}}% مستخدم",
     "monthlyBudgetOptional": "الميزانية الشهرية (اختياري)",
     "whereItWent": "أين ذهبت",
     "noSpendYet": "لم تُنفق أي مبالغ هذا الشهر بعد.",

@@ -509,6 +509,8 @@
     "oweMore": "you owe more than you're owed",
     "trackIous": "Track IOUs, deadlines & reminders",
     "monthlyBudget": "Monthly budget",
+    "budgetLimit": "Budget",
+    "percentUsed": "{{percent}}% used",
     "monthlyBudgetOptional": "Monthly budget (optional)",
     "whereItWent": "Where it went",
     "noSpendYet": "Nothing spent this month yet.",

@@ -40,23 +40,24 @@ export function CategoryBudgetList({ statuses, currency }: Props) {
               <Text className="flex-1 font-sora-medium" numberOfLines={1}>
                 {meta.label}
               </Text>
-              {/* "$900 left of $1,000" is two amounts in a slot sized for one.
-                  Allowed to shrink and truncate rather than push the category
-                  name off its own row. */}
-              <Text variant="caption" className="shrink" numberOfLines={1} style={{ color: tint }}>
-                {status.isOver
-                  ? t('budget.overBy', {
-                      amount: formatMoney(-status.remainingCents, currency),
-                    })
-                  : t('budget.leftOf', {
-                      amount: formatMoney(status.remainingCents, currency),
-                      limit: formatMoney(status.limitCents, currency),
-                    })}
-              </Text>
             </View>
             {/* ProgressBar clamps internally, which is right for the bar and
-                wrong for the number beside it — hence both. */}
+                wrong for the number beneath it — hence both. */}
             <ProgressBar progress={status.ratio} color={tint} height={6} />
+            {/* "PKR 900.00 of PKR 1,000.00 left" is two amounts, and beside the
+                category name it had room for neither — it shipped truncated.
+                Under the bar it has the card's full width, and may wrap rather
+                than lose a digit. */}
+            <Text variant="caption" style={{ color: tint }}>
+              {status.isOver
+                ? t('budget.overBy', {
+                    amount: formatMoney(-status.remainingCents, currency),
+                  })
+                : t('budget.leftOf', {
+                    amount: formatMoney(status.remainingCents, currency),
+                    limit: formatMoney(status.limitCents, currency),
+                  })}
+            </Text>
           </View>
         );
       })}
