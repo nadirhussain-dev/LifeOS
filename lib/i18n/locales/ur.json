@@ -509,6 +509,8 @@
     "oweMore": "آپ کو لینے سے زیادہ دینا ہے",
     "trackIous": "قرضے، ڈیڈ لائنز اور یاد دہانیاں ٹریک کریں",
     "monthlyBudget": "ماہانہ بجٹ",
+    "budgetLimit": "بجٹ",
+    "percentUsed": "{{percent}}% استعمال",
     "monthlyBudgetOptional": "ماہانہ بجٹ (اختیاری)",
     "whereItWent": "کہاں خرچ ہوا",
     "noSpendYet": "اس مہینے ابھی تک کوئی خرچ نہیں ہوا۔",

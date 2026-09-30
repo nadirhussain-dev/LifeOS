@@ -509,6 +509,8 @@
     "oweMore": "आपको लेने से ज़्यादा देना है",
     "trackIous": "उधारी, समय-सीमा और अनुस्मारक ट्रैक करें",
     "monthlyBudget": "मासिक बजट",
+    "budgetLimit": "बजट",
+    "percentUsed": "{{percent}}% उपयोग",
     "monthlyBudgetOptional": "मासिक बजट (वैकल्पिक)",
     "whereItWent": "कहां खर्च हुआ",
     "noSpendYet": "इस महीने अभी तक कोई ख़र्च नहीं हुआ।",

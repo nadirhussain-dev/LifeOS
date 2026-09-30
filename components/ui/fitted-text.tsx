@@ -1,71 +1,96 @@
-import { useEffect, useState } from 'react';
 import {
-  useWindowDimensions,
-  View,
-  type LayoutChangeEvent,
-  type StyleProp,
-  type TextStyle,
-  type NativeSyntheticEvent,
-  type TextLayoutEventData,
-} from 'react-native';
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
+import { View, type LayoutChangeEvent, type StyleProp, type TextStyle } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 
+/** Headroom left on the measured width, so sub-pixel rounding between the
+ * measuring pass and the real one never lands a line a pixel over its slot. */
+const SAFETY = 0.97;
+
+/** Below this even the last-resort rendering stops being a number anybody can
+ * read, so it is the one floor that `minSize` cannot lower. */
+const ABSOLUTE_MIN = 8;
+
 /**
- * Per-character advance as a fraction of the font size, for the app's Sora
- * faces.
+ * Which rendering to draw, and at what size.
  *
- * Sora's figures are tabular — every digit has the same advance — so the width
- * of a money string (digits, group separators, a currency symbol) is
- * predictable from a character count in a way that prose is not. Three buckets
- * is all these strings need. The wide bucket is set to the heaviest weight's
- * advance rather than the average: overshooting costs a font step, undershooting
- * costs a clipped number, and only one of those is worth risking.
+ * `widths` are the *measured* natural widths of each candidate at `size`, in
+ * preference order. Text width is linear in font size, so the size at which a
+ * candidate exactly fills `available` is `size × available / width` — no
+ * per-glyph guessing involved. The first candidate that fits at or above
+ * `minSize` wins; if none does, the last (shortest) is shrunk as far as it
+ * needs, down to `ABSOLUTE_MIN`.
  */
-const ADVANCE = { narrow: 0.32, space: 0.3, wide: 0.64 } as const;
-const NARROW_CHARS = ".,:'’·";
-
-/** Safety margin on the estimate, so rounding never lands a string one pixel
- * over the edge of its slot. */
-const MARGIN = 1.02;
-
-/** Estimated rendered width of `text` at `size`, in px. */
-export function textWidth(text: string, size: number): number {
-  let em = 0;
-  for (const character of text) {
-    if (character === ' ' || character === ' ' || character === ' ') em += ADVANCE.space;
-    else if (NARROW_CHARS.includes(character)) em += ADVANCE.narrow;
-    else em += ADVANCE.wide;
+export function chooseFit(
+  widths: readonly number[],
+  available: number,
+  size: number,
+  minSize: number,
+): { index: number; fontSize: number } {
+  if (available <= 0 || widths.length === 0) return { index: 0, fontSize: size };
+  const fitAt = (width: number) =>
+    width <= 0 ? size : Math.min(size, Math.floor((size * available * SAFETY) / width));
+  for (let index = 0; index < widths.length; index += 1) {
+    const fontSize = fitAt(widths[index]);
+    if (fontSize >= minSize) return { index, fontSize };
   }
-  return em * size * MARGIN;
+  const last = widths.length - 1;
+  return { index: last, fontSize: Math.max(ABSOLUTE_MIN, fitAt(widths[last])) };
 }
 
+type Group = { size: number | null; report: (id: string, size: number | null) => void };
+const GroupContext = createContext<Group | null>(null);
+
 /**
- * The largest whole font size in `[min, max]` at which `text` fits `width`, or
- * `null` when even `min` overflows — which is the caller's signal to show a
- * shorter rendering of the same value rather than shrink past legibility.
+ * Makes every `FittedText` inside it render at the same size — the smallest
+ * any one of them needed.
+ *
+ * Three figures across a row are read as a set. Fitted independently, a
+ * `PKR 0.00` sat at 15px beside a `PKR 50,000.00` squeezed to 11px, and the row
+ * looked broken even though every number was whole.
  */
-export function fitFontSize(text: string, width: number, max: number, min: number): number | null {
-  if (width <= 0) return max;
-  for (let size = Math.round(max); size >= Math.round(min); size -= 1) {
-    if (textWidth(text, size) <= width) return size;
-  }
-  return null;
+export function FittedTextGroup({ children }: { children: ReactNode }) {
+  const [sizes, setSizes] = useState<Record<string, number>>({});
+  // Stable across size changes: members depend on it in effects, and a new
+  // function per report would have them unregister and re-register forever.
+  const report = useCallback((id: string, next: number | null) => {
+    setSizes((current) => {
+      if (next === null) {
+        if (!(id in current)) return current;
+        const { [id]: _removed, ...rest } = current;
+        return rest;
+      }
+      return current[id] === next ? current : { ...current, [id]: next };
+    });
+  }, []);
+  const all = Object.values(sizes);
+  const size = all.length > 0 ? Math.min(...all) : null;
+  const value = useMemo<Group>(() => ({ size, report }), [size, report]);
+  return <GroupContext.Provider value={value}>{children}</GroupContext.Provider>;
 }
 
 type Props = {
   /** The preferred, complete rendering. */
   text: string;
+  /**
+   * Shorter renderings of the same value, most faithful first ("PKR 50,000"
+   * before "PKR 50k"). Each is tried only when the one before it will not fit
+   * at `minSize`.
+   */
+  fallbacks?: readonly string[];
   /** Font size when the slot has room for `text`. */
   size: number;
-  /** Smallest size `text` may shrink to before `fallback` takes over. */
+  /** Smallest size a rendering may shrink to before the next one takes over. */
   minSize: number;
-  /**
-   * A shorter rendering of the same value ("$1.2m" for "$1,234,567.89"), used
-   * only when `text` will not fit even at `minSize`. Without one, `text` is
-   * rendered at `minSize` and truncated.
-   */
-  fallback?: string;
   /** Weight/colour classes only — never a text-size class, which would fight
    * the size this component computes. */
   className?: string;
@@ -83,117 +108,122 @@ const ALIGN = { start: 'flex-start', center: 'center', end: 'flex-end' } as cons
  * A single line of text that shrinks to fit the width it is given, and swaps in
  * a shorter rendering rather than shrinking past legibility.
  *
- * This exists because money has no upper bound. A fixed type size is a bet that
- * the number will be small, and the layouts that take that bet — three figures
- * side by side in a hero, a balance in the hole of a donut — fail by running
- * their numbers into each other, which reads as one long meaningless digit
- * string rather than as an overflow.
+ * ## Measured, not estimated
  *
- * The width comes from `onLayout` rather than from an assumption, so the same
- * component works in a third of a phone-width card and in a tablet-width one.
- * Until that first layout arrives the text renders at `size`; it is capped to
- * one line throughout, so the worst the first frame can do is ellipsize.
+ * This used to predict width from a character count times a per-glyph advance,
+ * then correct itself from `onTextLayout`. The prediction was short for
+ * `PKR 50,000.00`, and the correction could never fire: by the time the line
+ * was reported it had already been ellipsised to the slot's width, so it looked
+ * like a line that fitted. The Budget hero shipped `PKR 50,000....` because of
+ * it.
  *
- * The OS font-scale setting is folded in, because `Text` scales what we compute
- * by up to 1.4× afterwards and a fit that ignored that would overflow on
- * exactly the devices that can least afford it.
+ * Now every candidate is laid out once, invisibly, at `size` and with no width
+ * limit, in the same `Text` with the same classes — same font, same weight,
+ * same OS font scale. That is its true width, and the fit is arithmetic on it.
+ * The visible text stays transparent until those measurements are in, so no
+ * frame ever shows a truncated figure.
+ *
+ * `adjustsFontSizeToFit` stays on the visible line as a last guarantee: if the
+ * platform ever disagrees with the measurement, it shrinks instead of drawing
+ * an ellipsis.
  */
 export function FittedText({
   text,
+  fallbacks = [],
   size,
   minSize,
-  fallback,
   className,
   style,
   align = 'start',
   lineHeightRatio = 1.2,
   testID,
 }: Props) {
-  const [width, setWidth] = useState(0);
-  /**
-   * How much the estimate was out by, learned from what the text actually
-   * measured. 1 until the first `onTextLayout` says otherwise.
-   *
-   * ## Why an estimate needed a correction at all
-   *
-   * `textWidth` multiplies a character count by a per-character advance taken
-   * from reading Sora's metrics. That was close enough for `$1,234.56` and
-   * wrong for a hero balance in a currency with a three-letter code: the app
-   * shipped `PKR 5,550,000....`, ellipsised, at full size — the estimate said
-   * it fitted, the text engine disagreed, and `numberOfLines={1}` did the only
-   * thing left. A shipped ellipsis in the largest number on the screen is
-   * worse than either a smaller number or an abbreviated one, and it was the
-   * one outcome the fallback existed to prevent.
-   *
-   * Guessing harder is not the fix. Advances differ by weight, by platform,
-   * by the font actually loaded, and by whatever the OS substitutes when Sora
-   * has not loaded yet — so the number to use is not knowable in advance and
-   * is trivially knowable afterwards. `onTextLayout` reports the line's real
-   * width; the ratio of that to the estimate is carried into the next fit, and
-   * one correction settles it for every subsequent render of that instance.
-   */
-  const [scale, setScale] = useState(1);
-  const { fontScale } = useWindowDimensions();
+  const id = useId();
+  const group = useContext(GroupContext);
+  const [slot, setSlot] = useState(0);
+  const [measured, setMeasured] = useState<Record<string, number>>({});
 
-  // `Text` caps dynamic type at 1.4×; fit against the width that is left once
-  // the OS has had its multiplier, and once the measured correction is applied.
-  const available = width / Math.min(Math.max(fontScale, 1), 1.4) / scale;
+  const candidates = useMemo(
+    () => [text, ...fallbacks].filter((value, index, all) => all.indexOf(value) === index),
+    // Callers build `fallbacks` inline; the joined strings are the real identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [text, fallbacks.join('\u0000')],
+  );
+  const widths = candidates.map((candidate) => measured[candidate]);
+  const ready = slot > 0 && widths.every((width) => width !== undefined);
 
-  const fitted = fitFontSize(text, available, size, minSize);
-  const truncated = fitted === null;
-  const shown = truncated && fallback ? fallback : text;
-  const fontSize = truncated
-    ? fallback
-      ? (fitFontSize(fallback, available, size, minSize) ?? minSize)
-      : minSize
-    : fitted;
+  const fit = ready ? chooseFit(widths as number[], slot, size, minSize) : null;
+  const shown = fit ? candidates[fit.index] : text;
+  const ownSize = fit?.fontSize ?? size;
+  const fontSize = group?.size != null ? Math.min(ownSize, group.size) : ownSize;
 
-  // A new string is a new measurement; keeping the old correction would apply
-  // one string's error to another's.
-  useEffect(() => setScale(1), [text, fallback]);
+  const report = group?.report;
+  const reported = fit ? fit.fontSize : null;
+  useEffect(() => {
+    report?.(id, reported);
+  }, [report, id, reported]);
+  useEffect(() => () => report?.(id, null), [report, id]);
 
-  const onLayout = (event: LayoutChangeEvent) => {
+  const onSlotLayout = (event: LayoutChangeEvent) => {
     const next = event.nativeEvent.layout.width;
     // Guarded: setting state unconditionally on every layout pass re-renders a
     // screen full of these on every scroll-driven relayout.
-    setWidth((current) => (Math.abs(current - next) > 0.5 ? next : current));
+    setSlot((current) => (Math.abs(current - next) > 0.5 ? next : current));
   };
 
-  const onTextLayout = (event: NativeSyntheticEvent<TextLayoutEventData>) => {
-    const line = event.nativeEvent.lines[0];
-    if (!line || width <= 0 || !fontSize) return;
-    const predicted = textWidth(shown, fontSize);
-    if (predicted <= 0 || line.width <= 0) return;
-    const observed = line.width / predicted;
-    // Only ever widen the estimate. A line reported narrower than predicted is
-    // usually a line the engine already truncated, and trusting it would shrink
-    // the correction on exactly the render that proves it is needed.
-    if (observed <= 1.01) return;
-    setScale((current) => (observed > current * 1.01 ? observed : current));
+  const onMeasure = (candidate: string) => (event: LayoutChangeEvent) => {
+    const next = event.nativeEvent.layout.width;
+    setMeasured((current) =>
+      current[candidate] !== undefined && Math.abs(current[candidate] - next) <= 0.5
+        ? current
+        : { ...current, [candidate]: next },
+    );
   };
+
+  const textStyle = (px: number): StyleProp<TextStyle> => [
+    { fontSize: px, lineHeight: Math.round(px * lineHeightRatio), fontVariant: ['tabular-nums'] },
+    style,
+  ];
 
   return (
     <View
       testID={testID}
-      onLayout={onLayout}
+      onLayout={onSlotLayout}
       style={{ alignSelf: 'stretch', alignItems: ALIGN[align] }}
     >
+      {/* The measuring pass. Absolutely positioned and far wider than any
+          figure, so each candidate lays out at its natural width; hidden from
+          sight and from assistive tech. */}
+      <View
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={{ position: 'absolute', top: 0, left: 0, width: 10000, opacity: 0 }}
+      >
+        {candidates.map((candidate, index) => (
+          <Text
+            key={candidate}
+            testID={testID ? `${testID}-measure-${index}` : undefined}
+            numberOfLines={1}
+            onLayout={onMeasure(candidate)}
+            className={className}
+            style={[textStyle(size), { alignSelf: 'flex-start' }]}
+          >
+            {candidate}
+          </Text>
+        ))}
+      </View>
+
       <Text
         numberOfLines={1}
-        onTextLayout={onTextLayout}
+        adjustsFontSizeToFit
+        minimumFontScale={0.5}
         className={className}
-        // The exact value still reaches a screen reader when the compact form
-        // is what is drawn — the abbreviation is a space compromise, not a
+        // The exact value still reaches a screen reader when a shorter form is
+        // what is drawn — the abbreviation is a space compromise, not a
         // decision that the reader does not need the figure.
         accessibilityLabel={shown === text ? undefined : text}
-        style={[
-          {
-            fontSize,
-            lineHeight: Math.round(fontSize * lineHeightRatio),
-            fontVariant: ['tabular-nums'],
-          },
-          style,
-        ]}
+        style={[textStyle(fontSize), ready ? null : { opacity: 0 }]}
       >
         {shown}
       </Text>

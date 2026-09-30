@@ -10,6 +10,7 @@ import { formatDate } from '@/lib/date-format';
 import { cardClass } from '@/components/ui/card';
 import { ChevronBack, ChevronForward } from '@/components/ui/directional-icon';
 import { EmptyState } from '@/components/ui/empty-state';
+import { FittedTextGroup } from '@/components/ui/fitted-text';
 import { BarChart3, HandCoins, PiggyBank, Plus, Settings2, Wallet } from '@/components/ui/icons';
 import { QueryError } from '@/components/ui/query-error';
 import { Fab } from '@/components/ui/fab';
@@ -168,70 +169,75 @@ export default function BudgetScreen() {
                   no gap and no shrink, so any figure past four digits ran into
                   its neighbours and the row read as one unbroken number. The
                   gap is what separates them; the fit is what keeps each one
-                  inside its own third. */}
-              <View
-                className="flex-row gap-2 rounded-2xl p-3"
-                style={{ backgroundColor: alpha('#ffffff', 0.15) }}
-              >
-                {[
-                  { label: t('budget.income'), value: summary.incomeCents, dot: '#dcfce7' },
-                  { label: t('budget.expenses'), value: summary.expenseCents, dot: '#fee2e2' },
-                  { label: t('budget.savings'), value: summary.savingsCents, dot: '#e0e7ff' },
-                ].map((item) => (
-                  <View key={item.label} className="flex-1 items-center gap-1">
-                    <MoneyText
-                      cents={item.value}
-                      currency={currency}
-                      size={15}
-                      minSize={11}
-                      align="center"
-                      className="font-sora-bold"
-                      style={{ color: '#ffffff' }}
-                    />
-                    <View className="flex-row items-center gap-1">
-                      <View
-                        className="h-1.5 w-1.5 rounded-full"
-                        style={{ backgroundColor: item.dot }}
+                  inside its own third, and the group keeps all three at one
+                  size so the row reads as a set. */}
+              <FittedTextGroup>
+                <View
+                  className="flex-row gap-1.5 rounded-2xl px-2 py-3"
+                  style={{ backgroundColor: alpha('#ffffff', 0.15) }}
+                >
+                  {[
+                    { label: t('budget.income'), value: summary.incomeCents, dot: '#dcfce7' },
+                    { label: t('budget.expenses'), value: summary.expenseCents, dot: '#fee2e2' },
+                    { label: t('budget.savings'), value: summary.savingsCents, dot: '#e0e7ff' },
+                  ].map((item) => (
+                    <View key={item.label} className="flex-1 items-center gap-1">
+                      <MoneyText
+                        cents={item.value}
+                        currency={currency}
+                        size={16}
+                        minSize={12}
+                        align="center"
+                        className="font-sora-bold"
+                        style={{ color: '#ffffff' }}
                       />
-                      <Text style={{ color: alpha('#ffffff', 0.85), fontSize: 11 }}>
-                        {item.label}
-                      </Text>
+                      <View className="flex-row items-center gap-1">
+                        <View
+                          className="h-1.5 w-1.5 rounded-full"
+                          style={{ backgroundColor: item.dot }}
+                        />
+                        <Text style={{ color: alpha('#ffffff', 0.85), fontSize: 11 }}>
+                          {item.label}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                ))}
-              </View>
+                  ))}
+                </View>
+              </FittedTextGroup>
             </View>
           </HeroCard>
 
           {/* Account balances */}
-          <View className="flex-row gap-2.5">
-            {accounts.map((entry) => {
-              const meta = accountMeta.get(entry.account);
-              const Icon = meta?.icon ?? Wallet;
-              return (
-                <View
-                  key={entry.account}
-                  className={cardClass(
-                    { padding: 'none' },
-                    'flex-1 items-center gap-1.5 px-2 py-3.5',
-                  )}
-                >
-                  <Icon size={16} color={colors[scheme].mutedForeground} />
-                  <MoneyText
-                    cents={entry.balanceCents}
-                    currency={currency}
-                    size={15}
-                    minSize={11}
-                    align="center"
-                    className="font-sora-bold text-foreground"
-                  />
-                  <Text variant="caption" numberOfLines={1}>
-                    {meta?.label}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
+          <FittedTextGroup>
+            <View className="flex-row gap-2.5">
+              {accounts.map((entry) => {
+                const meta = accountMeta.get(entry.account);
+                const Icon = meta?.icon ?? Wallet;
+                return (
+                  <View
+                    key={entry.account}
+                    className={cardClass(
+                      { padding: 'none' },
+                      'flex-1 items-center gap-1.5 px-2 py-3.5',
+                    )}
+                  >
+                    <Icon size={16} color={colors[scheme].mutedForeground} />
+                    <MoneyText
+                      cents={entry.balanceCents}
+                      currency={currency}
+                      size={16}
+                      minSize={12}
+                      align="center"
+                      className="font-sora-bold text-foreground"
+                    />
+                    <Text variant="caption" numberOfLines={1}>
+                      {meta?.label}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          </FittedTextGroup>
 
           {/* Borrow & Lend */}
           <Pressable
@@ -261,25 +267,66 @@ export default function BudgetScreen() {
 
           {/* Budget vs actual */}
           {monthlyBudgetCents != null && monthlyBudgetCents > 0 && (
-            <View className={cardClass({ padding: 'md' }, 'gap-2.5')}>
-              {/* Two amounts sat beside the heading with nothing able to give
-                  way, so a large budget pushed the pair straight through the
-                  heading. Both sides shrink and truncate now; neither can
-                  overrun the other. */}
+            <View className={cardClass({ padding: 'md' }, 'gap-3')}>
+              {/* The heading and "PKR 20,000.00 of PKR 100,000.00" used to
+                  share one line, so on a phone both were cut short —
+                  "Monthly budg…" beside "PKR 100,000…". The amounts now sit
+                  under the bar with a column each, and the heading only
+                  shares its row with a short percentage. */}
               <View className="flex-row items-center justify-between gap-3">
-                <Text variant="subheading" className="shrink" numberOfLines={1}>
+                <Text variant="subheading" className="flex-1">
                   {t('budget.monthlyBudget')}
                 </Text>
-                <Text variant="caption" className="shrink" numberOfLines={1}>
-                  {formatMoney(summary.expenseCents, currency)}{' '}
-                  {t('budget.ofAmount', { amount: formatMoney(monthlyBudgetCents, currency) })}
-                </Text>
+                <View
+                  className="rounded-full px-2.5 py-1"
+                  style={{
+                    backgroundColor: alpha(
+                      overBudget ? colors[scheme].destructive : colors[scheme].success,
+                      0.12,
+                    ),
+                  }}
+                >
+                  <Text
+                    variant="caption"
+                    className="font-sora-semibold"
+                    style={{
+                      color: overBudget ? colors[scheme].destructive : colors[scheme].success,
+                    }}
+                  >
+                    {t('budget.percentUsed', { percent: Math.round(budgetRatio * 100) })}
+                  </Text>
+                </View>
               </View>
               <ProgressBar
                 progress={Math.min(1, budgetRatio)}
                 color={overBudget ? colors[scheme].destructive : colors[scheme].success}
                 height={8}
               />
+              <FittedTextGroup>
+                <View className="flex-row gap-3">
+                  <View className="flex-1 gap-0.5">
+                    <Text variant="micro">{t('budget.spent')}</Text>
+                    <MoneyText
+                      cents={summary.expenseCents}
+                      currency={currency}
+                      size={16}
+                      minSize={12}
+                      className="font-sora-bold text-foreground"
+                    />
+                  </View>
+                  <View className="flex-1 items-end gap-0.5">
+                    <Text variant="micro">{t('budget.budgetLimit')}</Text>
+                    <MoneyText
+                      cents={monthlyBudgetCents}
+                      currency={currency}
+                      size={16}
+                      minSize={12}
+                      align="end"
+                      className="font-sora-bold text-foreground"
+                    />
+                  </View>
+                </View>
+              </FittedTextGroup>
               <Text
                 variant="caption"
                 style={{ color: overBudget ? colors[scheme].destructive : colors[scheme].success }}

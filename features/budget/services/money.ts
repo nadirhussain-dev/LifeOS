@@ -29,6 +29,31 @@ export function formatMoney(cents: number, currency = 'USD'): string {
   return formatMoneyManual(cents, currency);
 }
 
+/**
+ * `formatMoney` without a fraction that says nothing: "PKR 50,000" for
+ * `PKR 50,000.00`. Identical to `formatMoney` whenever there are cents to show,
+ * so it is the one shorter rendering that loses no information — which is why a
+ * narrow slot reaches for it before the compact form.
+ */
+export function formatMoneyWhole(cents: number, currency = 'USD'): string {
+  const rounded = Math.round(cents);
+  if (rounded % 100 !== 0) return formatMoney(rounded, currency);
+  const iso = findCurrency(currency)?.code;
+  if (iso) {
+    try {
+      return new Intl.NumberFormat(deviceLocale(), {
+        style: 'currency',
+        currency: iso,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(rounded / 100);
+    } catch {
+      // Same fallback as formatMoney, which already drops a zero fraction.
+    }
+  }
+  return formatMoneyManual(rounded, currency);
+}
+
 function formatMoneyManual(cents: number, currency: string): string {
   const symbol = currencySymbol(currency);
   const negative = cents < 0;
